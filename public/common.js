@@ -114,3 +114,49 @@ function renderReport(sim) {
   ${rw ? `<div class="card" style="margin-top:20px"><h2>Réécritures suggérées</h2>${rw}</div>` : ""}
   <div class="card" style="margin-top:20px"><h2>Transcription</h2><pre class="transcript">${esc(transcriptText(sim.log))}</pre></div>`;
 }
+
+/* ===== Notifications élégantes (glissent du haut de l'écran) =====
+   notify("Vente validée", "40 € ajoutés à la compta", "ok" | "info" | "err") */
+const NTF_ICONS = { ok: "M5 12.5 10 17.5 19 7", info: "M12 8v5M12 16.5v.01", err: "M6 6l12 12M18 6 6 18" };
+function notify(title, sub = "", kind = "ok") {
+  let box = document.getElementById("ntfBox");
+  if (!box) { box = document.createElement("div"); box.id = "ntfBox"; box.className = "ntfs"; box.setAttribute("role", "status"); box.setAttribute("aria-live", "polite"); document.body.appendChild(box); }
+  const n = document.createElement("div"); n.className = "ntf " + kind;
+  n.innerHTML = `<span class="ni"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${NTF_ICONS[kind] || NTF_ICONS.ok}"/></svg></span>
+    <div class="nt"><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</div><span class="nl"><i></i></span>`;
+  const bye = () => { n.classList.add("out"); setTimeout(() => n.remove(), 300); };
+  n.onclick = bye; box.appendChild(n);
+  while (box.children.length > 3) box.firstChild.remove();
+  setTimeout(bye, 3400);
+}
+
+/* ===== Coche de validation : un cercle et une coche se dessinent sur l'élément ===== */
+function stamp(el, kind = "ok") {
+  const s = document.createElement("div"); s.className = "stamp " + kind;
+  s.innerHTML = kind === "ok"
+    ? `<svg width="58" height="58" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="20"/><path d="M15 24.5 21 30.5 33 18"/></svg>`
+    : `<svg width="58" height="58" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="20"/><path d="M17 17l14 14M31 17 17 31"/></svg>`;
+  if (getComputedStyle(el).position === "static") el.style.position = "relative";
+  el.appendChild(s);
+  return new Promise(r => setTimeout(r, 1000));
+}
+// fait disparaître un élément en glissant puis en se repliant
+function slideAway(el) {
+  return new Promise(r => {
+    el.style.maxHeight = el.offsetHeight + "px"; el.classList.add("leave");
+    requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.add("leaving"); }));
+    setTimeout(r, 650);
+  });
+}
+
+/* ===== Chargements : cartes grises avec un reflet ===== */
+const SK = {
+  line: (w = "100%", h = 12, mb = 12) => `<div class="sk" style="width:${w};height:${h}px;margin-bottom:${mb}px"></div>`,
+  kpis: (n = 4) => `<div class="sk-kpis">${Array.from({ length: n }, () => `<div class="card sk-card">${SK.line("60%", 10, 14)}${SK.line("45%", 20, 0)}</div>`).join("")}</div>`,
+  cards: (n = 2, rows = 3) => `<div class="sk-grid">${Array.from({ length: n }, () => `<div class="card sk-card">${SK.line("140px", 14, 20)}${Array.from({ length: rows }, (_, i) => SK.line(["100%", "85%", "92%", "70%"][i % 4])).join("")}</div>`).join("")}</div>`,
+  tiles: (n = 6, h = 230) => `<div class="sk-tiles">${Array.from({ length: n }, () => `<div class="card sk-card" style="padding:0;overflow:hidden"><div class="sk" style="height:${h * 0.6}px;border-radius:0"></div><div style="padding:12px">${SK.line("50%", 18, 8)}${SK.line("70%", 10, 0)}</div></div>`).join("")}</div>`,
+  table: (n = 5) => `<div class="card sk-card">${SK.line("160px", 14, 20)}${Array.from({ length: n }, () => `<div class="sk-row">${SK.line("22%", 12, 0)}${SK.line("30%", 12, 0)}${SK.line("15%", 12, 0)}</div>`).join("")}</div>`
+};
+
+/* ===== Appli installable (écran d'accueil iPhone / installation sur ordinateur) ===== */
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));

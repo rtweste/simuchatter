@@ -1,9 +1,17 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Planning — StellADS</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StellADS">
+
 <link rel="stylesheet" href="/style.css">
 <style>
 .clock{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
@@ -33,6 +41,35 @@
 .live .chip{display:flex;align-items:center;gap:8px}
 .list-sm{font-size:13px;line-height:1.7;margin:0;padding:0;list-style:none}
 .list-sm li{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0}
+/* ===== Ma journée ===== */
+.dayhero{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;margin-bottom:20px}
+@media(min-width:900px){.dayhero{grid-template-columns:minmax(0,1fr) 290px;align-items:center}}
+.dh-big{font-family:Outfit,Inter,sans-serif;font-size:24px;font-weight:300;line-height:1.3;margin-top:6px}
+.dh-big b{font-weight:500;color:#fff}
+@media(max-width:600px){.dh-big{font-size:21px}}
+.tl{position:relative;margin-top:30px}
+.tl .track{position:relative;height:8px;border-radius:8px;background:#1b1b1b;overflow:hidden}
+.tl .past{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#242424,#3a3a3a);transition:width 1s linear}
+.tl .lanes{position:absolute;left:0;right:0;top:-6px}
+.tl .blk{position:absolute;height:20px;border-radius:7px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.35);box-sizing:border-box;animation:fadeUp .6s cubic-bezier(.2,.75,.2,1) both}
+.tl .blk.mine{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.6)}
+.tl .blk span{position:absolute;bottom:calc(100% + 3px);left:0;font-size:10.5px;color:#cfcfcf;white-space:nowrap;font-weight:600}
+.tl .blk.r span{left:auto;right:0}
+.tl .now{position:absolute;top:-12px;width:2px;height:32px;margin-left:-1px;background:#fff;border-radius:2px;box-shadow:0 0 10px rgba(255,255,255,.7);transition:left 1s linear;z-index:3}
+.tl .now::before{content:"";position:absolute;left:-4px;top:-6px;width:10px;height:10px;border-radius:50%;background:#fff;animation:nowP 2s ease-out infinite}
+@keyframes nowP{0%{box-shadow:0 0 0 0 rgba(255,255,255,.45)}100%{box-shadow:0 0 0 10px rgba(255,255,255,0)}}
+.tl .ticks{display:flex;justify-content:space-between;font-size:10px;color:#666;margin-top:12px}
+.cdn{display:flex;gap:8px}
+.cdn div{flex:1;background:#151515;border:1px solid #222;border-radius:12px;padding:10px 0;text-align:center}
+.cdn b{display:block;font-family:Outfit,Inter,sans-serif;font-size:26px;font-weight:400;font-variant-numeric:tabular-nums}
+.cdn small{font-size:10.5px;color:#8f8f8f}
+.cdn-l{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8f8f8f;margin-bottom:8px}
+.tlist{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.tlist span{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#bdbdbd;background:#151515;border:1px solid #232323;border-radius:20px;padding:5px 10px}
+.tlist i{width:7px;height:7px;border-radius:50%;background:#444}
+.tlist span.on i{background:#3ccf91;box-shadow:0 0 0 3px rgba(60,207,145,.15)}
+.tlist span.on{color:#fff}
+.grid7 th.today{background:rgba(255,255,255,.04);border-radius:8px 8px 0 0}
 </style>
 </head>
 <body>
@@ -41,6 +78,12 @@
 <main class="main-area">
 <div class="wrap">
   <div class="pagehead"><div><div class="eyebrow">Organisation</div><h1>Planning</h1></div></div>
+
+  <!-- Ma journée -->
+  <div class="card dayhero fade-in" id="dayHero">
+    <div><div class="sk" style="width:180px;height:10px"></div><div class="sk" style="width:80%;height:24px;margin-top:12px"></div><div class="sk" style="height:8px;margin-top:34px"></div></div>
+    <div><div class="sk" style="height:66px"></div></div>
+  </div>
 
   <!-- Pointage -->
   <div class="card" style="margin-bottom:20px">
@@ -159,7 +202,7 @@ document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {
 let tick = null;
 async function loadMine() {
   CLOCK = await api("/api/clock/me");
-  renderClock(); renderMine();
+  renderClock(); renderMine(); renderDay(true);
 }
 function renderClock() {
   const c = CLOCK; clearInterval(tick);
@@ -168,7 +211,8 @@ function renderClock() {
       <div class="spacer"></div><button class="btn" id="outBtn">Terminer mon shift</button>`;
     const upd = () => { const s = Math.floor((Date.now() - c.open.start_at) / 1000); $("timer").textContent = `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s % 3600 / 60))}:${pad(s % 60)}`; };
     upd(); tick = setInterval(upd, 1000);
-    $("outBtn").onclick = async () => { $("outBtn").disabled = true; try { await api("/api/clock/out", { body: {} }); } catch (e) { alertMsg(e.message); } await loadMine(); };
+    $("outBtn").onclick = async () => { $("outBtn").disabled = true; const dur = (Date.now() - c.open.start_at) / 3.6e6;
+      try { await api("/api/clock/out", { body: {} }); notify("Shift terminé", `${hrs(dur)} pointées sur ${c.open.model_name}`, "ok"); } catch (e) { notify("Impossible de terminer le shift", e.message, "err"); } await loadMine(); };
   } else {
     // créatrice pré-sélectionnée : celle du prochain créneau du jour, s'il y en a un
     const today = iso(new Date());
@@ -177,7 +221,8 @@ function renderClock() {
       <div class="spacer"></div><label for="inModel" class="hidden">Créatrice</label>
       <select id="inModel">${c.models.map(m => `<option value="${m.id}" ${next && next.model_id === m.id ? "selected" : ""}>${esc(m.name)}</option>`).join("")}</select>
       <button class="btn" id="inBtn">Commencer mon shift</button>`;
-    $("inBtn").onclick = async () => { $("inBtn").disabled = true; try { await api("/api/clock/in", { body: { model_id: $("inModel").value } }); } catch (e) { alertMsg(e.message); } await loadMine(); };
+    $("inBtn").onclick = async () => { $("inBtn").disabled = true; const name = $("inModel").selectedOptions[0]?.textContent || "";
+      try { await api("/api/clock/in", { body: { model_id: $("inModel").value } }); notify("Shift commencé", `${name} · bon courage !`, "ok"); } catch (e) { notify("Impossible de pointer", e.message, "err"); } await loadMine(); };
   }
 }
 function alertMsg(m) { $("clockBox").insertAdjacentHTML("beforeend", `<div class="err" style="width:100%">${esc(m)}</div>`); }
@@ -191,8 +236,72 @@ function renderMine() {
     : "<li style='color:var(--muted)'>Aucun pointage sur cette période.</li>";
 }
 
+/* ---------- Ma journée : frise des 24 h + compte à rebours ---------- */
+let TODAY = [], dayTick = null;
+const toDT = (date, hm) => new Date(`${date}T${hm}:00`);
+const span = s => { const a = toDT(s.date, s.start); let b = toDT(s.date, s.end); if (b <= a) b = new Date(b.getTime() + 864e5); return [a, b]; };
+async function loadToday() {
+  const t = iso(new Date());
+  try { const d = await api(`/api/shifts?from=${iso(addDays(new Date(), -1))}&to=${t}`); TODAY = d.shifts; } catch (e) { TODAY = []; }
+  renderDay(true);
+}
+function renderDay(first) {
+  if (!CLOCK) return;
+  const now = new Date(), today = iso(now), pad2 = n => String(n).padStart(2, "0");
+  const mine = s => s.user_id === ME.id;
+  // shifts qui touchent aujourd'hui (y compris ceux d'hier soir qui débordent après minuit)
+  const dayStart = new Date(today + "T00:00:00"), dayEnd = new Date(dayStart.getTime() + 864e5);
+  const pool = (IS_ADMIN ? TODAY : TODAY.filter(mine)).map(s => ({ s, r: span(s) })).filter(x => x.r[1] > dayStart && x.r[0] < dayEnd);
+  const ongoing = pool.filter(x => x.r[0] <= now && now < x.r[1]);
+  // prochain shift (aujourd'hui, ou plus tard pour le chatter grâce à « upcoming »)
+  const futurePool = IS_ADMIN ? pool : [...pool, ...CLOCK.upcoming.map(s => ({ s: { ...s, user_id: ME.id }, r: span(s) }))];
+  const next = futurePool.filter(x => x.r[0] > now).sort((a, b) => a.r[0] - b.r[0])[0];
+  const clock = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+  const left = ms => { const m = Math.round(ms / 6e4); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? " " + pad2(m % 60) : ""}`; };
+  const dayName = d => d.toLocaleDateString("fr-FR", { weekday: "long" });
+  let txt, target = null, tlabel = "Prochain shift dans";
+  if (ongoing.length && !IS_ADMIN) {
+    const o = ongoing[0]; target = o.r[1]; tlabel = "Fin du shift dans";
+    txt = `Ton shift sur <b>${esc(o.s.model_name)}</b> est en cours, il se termine dans <b>${left(o.r[1] - now)}</b>${CLOCK.open ? "" : ". Pense à pointer !"}`;
+  } else if (IS_ADMIN && ongoing.length) {
+    txt = `Il est <b>${clock}</b> · <b>${ongoing.length}</b> shift${ongoing.length > 1 ? "s" : ""} en cours (${ongoing.map(o => esc(o.s.username)).join(", ")})` + (next ? `, prochain : ${esc(next.s.username)} à <b>${next.s.start}</b>` : "");
+    if (next) target = next.r[0];
+  } else if (next && iso(next.r[0]) === today) {
+    target = next.r[0];
+    txt = IS_ADMIN ? `Il est <b>${clock}</b>, le prochain shift (${esc(next.s.username)} sur ${esc(next.s.model_name)}) commence dans <b>${left(next.r[0] - now)}</b>`
+                   : `Il est <b>${clock}</b>, ton shift sur ${esc(next.s.model_name)} commence dans <b>${left(next.r[0] - now)}</b>`;
+  } else if (next) {
+    target = next.r[0];
+    txt = `Pas de shift ${IS_ADMIN ? "prévu" : "pour toi"} aujourd'hui. Prochain : <b>${dayName(next.r[0])} à ${next.s.start}</b> · ${esc(next.s.model_name)}`;
+  } else txt = IS_ADMIN ? `Il est <b>${clock}</b> · aucun shift prévu aujourd'hui` : `Il est <b>${clock}</b> · aucun shift prévu pour le moment`;
+  const pct = d => Math.max(0, Math.min(100, (d - dayStart) / 864e5 * 100));
+  // couloirs pour que les shifts qui se chevauchent ne se recouvrent pas
+  const lanes = []; pool.sort((a, b) => a.r[0] - b.r[0]).forEach(x => { let l = lanes.findIndex(end => end <= x.r[0]); if (l === -1) { l = lanes.length; lanes.push(0); } lanes[l] = x.r[1]; x.lane = l; });
+  const nL = Math.max(1, lanes.length);
+  const rem = target ? Math.max(0, Math.floor((target - now) / 1000)) : null;
+  const H = rem == null ? null : [Math.floor(rem / 3600), Math.floor(rem % 3600 / 60), rem % 60].map(pad2);
+  if (first || !$("tlNow")) {
+    $("dayHero").innerHTML = `<div>
+      <div class="eyebrow" style="margin:0">Aujourd'hui · ${now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</div>
+      <div class="dh-big" id="dhTxt">${txt}</div>
+      <div class="tl" style="padding-top:${(nL - 1) * (IS_ADMIN ? 26 : 30)}px">
+        <div class="track"><div class="past" id="tlPast" style="width:${pct(now)}%"></div></div>
+        <div class="lanes">${pool.map((x, i) => { const l = pct(x.r[0]), w = pct(x.r[1]) - l; return `<div class="blk ${mine(x.s) ? "mine" : ""} ${l > 60 ? "r" : ""}" style="left:${l}%;width:${w}%;top:${-x.lane * 30}px;animation-delay:${0.1 + i * 0.06}s">${IS_ADMIN ? "" : `<span>${esc(x.s.model_name)} ${x.s.start}–${x.s.end}</span>`}</div>`; }).join("")}</div>
+        <div class="now" id="tlNow" style="left:${pct(now)}%"></div>
+        <div class="ticks"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div>
+      </div>${IS_ADMIN && pool.length ? `<div class="tlist">${pool.map(x => { const on = x.r[0] <= now && now < x.r[1]; return `<span class="${on ? "on" : ""}"><i></i><b>${esc(x.s.username)}</b> · ${esc(x.s.model_name)} · ${x.s.start}–${x.s.end}</span>`; }).join("")}</div>` : ""}</div>
+      <div id="cdnBox">${H ? `<div class="cdn-l">${tlabel}</div><div class="cdn"><div><b id="cdH">${H[0]}</b><small>heures</small></div><div><b id="cdM">${H[1]}</b><small>minutes</small></div><div><b id="cdS">${H[2]}</b><small>secondes</small></div></div>` : `<div class="cdn-l">Planning</div><div style="color:var(--muted);font-size:13px;line-height:1.5">Aucun shift à venir dans les prochains jours.</div>`}</div>`;
+  } else {
+    $("dhTxt").innerHTML = txt; $("tlPast").style.width = pct(now) + "%"; $("tlNow").style.left = pct(now) + "%";
+    if (H && $("cdH")) { $("cdH").textContent = H[0]; $("cdM").textContent = H[1]; $("cdS").textContent = H[2]; }
+    if (rem === 0) renderDay(true);
+  }
+  clearInterval(dayTick); dayTick = setInterval(() => renderDay(false), 1000);
+}
+
 /* ---------- Semaine ---------- */
 async function loadWeek() {
+  if (!DATA) $("weekGrid").innerHTML = SK.table(4).replace('class="card sk-card"', 'class="sk-card"');
   const from = iso(weekStart), to = iso(addDays(weekStart, 6));
   DATA = await api(`/api/shifts?from=${from}&to=${to}`);
   $("weekLabel").textContent = `Semaine du ${fmtDay(weekStart)} au ${fmtDay(addDays(weekStart, 6))}`;
@@ -251,10 +360,11 @@ function openShift(s, preset = {}) {
 $("shiftForm").onsubmit = async e => {
   e.preventDefault();
   const body = { user_id: $("sUser").value, model_id: $("sModel").value, date: $("sDate").value, start: $("sStart").value, end: $("sEnd").value, note: $("sNote").value, repeatWeeks: $("sRepeat").value };
-  try { await api(editShift ? `/api/admin/shifts/${editShift.id}` : "/api/admin/shifts", { method: editShift ? "PUT" : "POST", body }); close(); loadWeek(); }
+  try { await api(editShift ? `/api/admin/shifts/${editShift.id}` : "/api/admin/shifts", { method: editShift ? "PUT" : "POST", body }); close(); loadWeek(); loadToday();
+    notify(editShift ? "Créneau modifié" : "Créneau ajouté", `${$("sStart").value} – ${$("sEnd").value}`, "ok"); }
   catch (err) { $("sErr").textContent = err.message; }
 };
-$("sDelete").onclick = async () => { await api(`/api/admin/shifts/${editShift.id}`, { method: "DELETE" }); close(); loadWeek(); };
+$("sDelete").onclick = async () => { await api(`/api/admin/shifts/${editShift.id}`, { method: "DELETE" }); close(); loadWeek(); loadToday(); notify("Créneau supprimé", "", "info"); };
 
 /* ---------- Pointages (manager) ---------- */
 let CL = null;
@@ -302,7 +412,7 @@ $("cDelete").onclick = async () => { await api(`/api/admin/clocks/${editClock.id
   renderShell("planning", ME);
   if (IS_ADMIN) { $("tabClocks").classList.remove("hidden"); $("addShift").classList.remove("hidden"); }
   weekStart = monday(new Date());
-  await Promise.all([loadWeek(), loadMine()]);
+  await Promise.all([loadWeek(), loadToday().then(() => loadMine())]);
 })();
 </script>
 </body>

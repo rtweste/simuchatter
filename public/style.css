@@ -161,3 +161,48 @@ body:has(#chatScreen:not(.hidden)) .main-area{padding-bottom:0}
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .lg-sh .shine{display:none}.lg-sh .base{opacity:1}
 }
+
+/* ===== Notifications ===== */
+.ntfs{position:fixed;right:22px;top:22px;z-index:200;display:flex;flex-direction:column;gap:8px;width:360px;max-width:calc(100vw - 24px);pointer-events:none}
+@media(max-width:860px){.ntfs{left:12px;right:12px;width:auto;top:calc(64px + env(safe-area-inset-top))}}
+.ntf{position:relative;display:flex;align-items:center;gap:11px;background:rgba(24,24,24,.94);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border:1px solid #2c2c2c;border-radius:16px;padding:11px 14px 13px;box-shadow:0 14px 40px rgba(0,0,0,.55);pointer-events:auto;cursor:pointer;animation:ntfIn .55s cubic-bezier(.3,1.4,.5,1) both;transition:opacity .3s,transform .3s}
+.ntf.out{opacity:0;transform:translateY(-12px) scale(.97)}
+@keyframes ntfIn{from{opacity:0;transform:translateY(-24px) scale(.96)}to{opacity:1;transform:none}}
+.ntf .ni{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(255,255,255,.08);color:#e6e6e6}
+.ntf.ok .ni{background:rgba(95,211,162,.14);color:#5fd3a2}
+.ntf.err .ni{background:rgba(217,154,154,.14);color:#e0a3a3}
+.ntf .ni path{stroke-dasharray:30;stroke-dashoffset:30;animation:ntfDraw .45s ease .25s forwards}
+@keyframes ntfDraw{to{stroke-dashoffset:0}}
+.ntf .nt{min-width:0}
+.ntf b{display:block;font-size:13px}
+.ntf small{display:block;font-size:11.5px;color:#9a9a9a;margin-top:1px}
+.ntf .nl{position:absolute;left:14px;right:14px;bottom:5px;height:2px;border-radius:2px;background:rgba(255,255,255,.08);overflow:hidden}
+.ntf .nl i{display:block;height:100%;background:rgba(255,255,255,.32);transform-origin:left;animation:ntfLife 3.4s linear forwards}
+@keyframes ntfLife{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+
+/* ===== Coche de validation ===== */
+.stamp{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;background:rgba(10,14,12,.86);border-radius:inherit;color:#5fd3a2;animation:stIn .2s ease both}
+.stamp.ko{color:#e0a3a3;background:rgba(16,10,10,.86)}
+@keyframes stIn{from{opacity:0}to{opacity:1}}
+.stamp circle{stroke-dasharray:126;stroke-dashoffset:126;animation:stCirc .5s cubic-bezier(.6,0,.3,1) .05s forwards}
+.stamp path{stroke-dasharray:40;stroke-dashoffset:40;animation:ntfDraw .35s ease .45s forwards}
+.stamp svg{animation:stPop .5s cubic-bezier(.3,1.6,.5,1) .7s}
+@keyframes stCirc{to{stroke-dashoffset:0}}
+@keyframes stPop{50%{transform:scale(1.15)}}
+.leave{overflow:hidden;transition:opacity .35s,transform .45s cubic-bezier(.6,0,.4,1),max-height .4s .25s,margin .4s .25s,padding .4s .25s}
+.leaving{opacity:0;transform:translateX(60px);max-height:0!important;margin-top:0!important;margin-bottom:0!important;padding-top:0!important;padding-bottom:0!important}
+
+/* ===== Chargements ===== */
+.sk{background:#151515;border-radius:10px;position:relative;overflow:hidden}
+.sk::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.06) 50%,transparent 70%);transform:translateX(-100%);animation:skShim 1.3s ease-in-out infinite}
+@keyframes skShim{to{transform:translateX(100%)}}
+.sk-card{pointer-events:none}
+.sk-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.sk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:20px}
+.sk-grid .sk-card{min-height:170px}
+.sk-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.sk-row{display:flex;gap:16px;padding:12px 0;border-bottom:1px solid var(--line)}
+.fade-in{animation:fadeUp .5s cubic-bezier(.2,.75,.2,1) both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media(max-width:600px){.sk-grid{grid-template-columns:1fr}.sk-kpis{grid-template-columns:1fr 1fr}.sk-tiles{grid-template-columns:1fr 1fr}}
+@media (prefers-reduced-motion:reduce){.sk::after,.ntf,.stamp *{animation:none!important}.stamp path,.stamp circle,.ntf .ni path{stroke-dashoffset:0}}

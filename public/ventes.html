@@ -1,9 +1,17 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ventes — StellADS</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StellADS">
+
 <link rel="stylesheet" href="/style.css">
 <style>
 .drop{border:1.5px dashed #3a3a3a;border-radius:12px;padding:18px;text-align:center;color:var(--muted);cursor:pointer;transition:.15s;position:relative}
@@ -31,6 +39,33 @@
 .mine .grow{flex:1;min-width:0;font-size:13px;line-height:1.5}
 .mine .grow b{font-size:14px}
 .strike{text-decoration:line-through;color:var(--muted);font-weight:400;margin-right:6px}
+/* ===== Mes ventes en cartes ===== */
+.seg{display:flex;background:#141414;border:1px solid #222;border-radius:12px;padding:3px;gap:2px;margin-bottom:14px}
+.seg button{flex:1;height:32px;border:0;border-radius:9px;background:transparent;color:#8f8f8f;font:inherit;font-size:12.5px;font-weight:600;padding:0 6px;white-space:nowrap;transition:background .3s,color .3s}
+.seg button.on{background:#ededed;color:#0a0a0a}
+.vg{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.vc{position:relative;background:#111;border:1px solid #1f1f1f;border-radius:16px;overflow:hidden;animation:fadeUp .5s cubic-bezier(.2,.75,.2,1) both;transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s}
+.vc:hover{transform:translateY(-2px);border-color:#2e2e2e}
+.vc .shot{height:150px;background:#161616;position:relative;cursor:zoom-in;overflow:hidden}
+.vc .shot img{width:100%;height:100%;object-fit:cover;object-position:top;display:block;opacity:0;transition:opacity .4s}
+.vc .shot img.ld{opacity:1}
+.vc .shot::after{content:"";position:absolute;left:0;right:0;bottom:0;height:44px;background:linear-gradient(transparent,#111);pointer-events:none}
+.vc .meta{padding:9px 12px 12px}
+.vc .amt{font-family:Outfit,Inter,sans-serif;font-size:21px;font-weight:400}
+.vc .amt .strike{font-size:13px}
+.vc small{display:block;color:#8f8f8f;font-size:11.5px;margin-top:2px;line-height:1.4}
+.vc .why{font-size:11.5px;color:#d99a9a;margin-top:6px;line-height:1.4}
+.bd{position:absolute;top:8px;left:8px;z-index:2;display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;border-radius:20px;padding:4px 9px;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.bd i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.bd.validated{color:#5fd3a2;background:rgba(18,38,30,.88)}
+.bd.pending{color:#e0b060;background:rgba(40,32,16,.88)}
+.bd.pending i{animation:blink 1.4s ease-in-out infinite}
+.bd.refused{color:#e0a3a3;background:rgba(40,20,20,.88)}
+@keyframes blink{50%{opacity:.25}}
+.vc .del{position:absolute;top:6px;right:6px;z-index:3;width:30px;height:30px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#ddd;display:flex;align-items:center;justify-content:center;padding:0}
+.emptyv{color:var(--muted);font-size:13px;padding:10px 2px}
+.qcard{position:relative;transition:border-color .3s}
+@media(max-width:600px){.vg{grid-template-columns:1fr 1fr;gap:10px}.vc .shot{height:130px}.seg button{font-size:11.5px;padding:0 3px}}
 </style>
 </head>
 <body>
@@ -59,7 +94,9 @@
       <div>
         <div class="eyebrow" id="myPeriod" style="margin:0 0 8px"></div>
         <div class="grid3" id="myKpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px"></div>
-        <div class="card"><h2>Mes ventes</h2><ul class="mine" id="myList"></ul></div>
+        <div class="card"><h2>Mes ventes</h2>
+          <div class="seg" id="mySeg" role="group" aria-label="Filtrer"><button data-f="" class="on">Toutes</button><button data-f="pending">En attente</button><button data-f="validated">Validées</button><button data-f="refused">Refusées</button></div>
+          <div class="vg" id="myList"></div></div>
       </div>
     </div>
   </div>
@@ -140,7 +177,8 @@ $("saleForm").onsubmit = async e => {
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || "Erreur " + r.status);
     FILE = null; $("fFile").value = ""; $("fAmount").value = ""; $("fNote").value = "";
-    $("dropTxt").innerHTML = "✅ Vente envoyée pour validation<br><small>Touchez pour ajouter la suivante</small>";
+    $("dropTxt").innerHTML = "Vente envoyée pour validation<br><small>Touchez pour ajouter la suivante</small>";
+    notify("Vente envoyée", `${eur(amount)} · en attente de validation par le manager`, "ok");
     $("fDate").value = toLocalInput(Date.now());
     loadMine();
   } catch (err) { $("fErr").textContent = err.message; }
@@ -148,6 +186,7 @@ $("saleForm").onsubmit = async e => {
 };
 
 async function loadMine() {
+  if (!MINE.length && !$("myList").children.length) $("myList").innerHTML = SK.tiles(4, 200).replace('class="sk-tiles"', 'class="sk-tiles" style="grid-column:1/-1"');
   const d = await api("/api/sales/mine");
   if (!$("fModel").options.length) $("fModel").innerHTML = d.models.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join("");
   const cur = periodKey(Date.now()), inP = d.sales.filter(s => s.period === cur);
@@ -155,15 +194,26 @@ async function loadMine() {
   $("myKpis").innerHTML = [["Validé", eur(sum("validated")), "var(--good)"], ["En attente", eur(sum("pending")), "var(--warn)"], ["Refusées", inP.filter(s => s.status === "refused").length, ""]]
     .map(([l, v, c]) => `<div class="card kpi" style="padding:14px"><small>${l}</small><b style="font-size:18px;${c ? "color:" + c : ""}">${v}</b></div>`).join("");
   $("myPeriod").textContent = `Période du ${periodLabel(cur)}`;
-  $("myList").innerHTML = !d.sales.length ? "<li style='color:var(--muted)'>Aucune vente déclarée pour l'instant.</li>" :
-    d.sales.map(s => `<li><img class="thumb" src="${img(s.id)}" alt="Capture" loading="lazy" data-z="${s.id}">
-      <div class="grow"><b>${s.amount !== s.declared_amount ? `<span class="strike">${eur(s.declared_amount)}</span>` : ""}${eur(s.amount)}</b> · ${esc(s.model_name)}<br>
-      <span style="color:var(--muted)">${fmtDT(s.sold_at)}${s.note ? " · " + esc(s.note) : ""}</span>
-      ${s.status === "refused" && s.reason ? `<br><span style="color:var(--bad)">Motif : ${esc(s.reason)}</span>` : ""}</div>
-      <span class="st ${s.status}">${STATUS[s.status]}</span>
-      ${s.status === "pending" ? `<button class="btn ghost small" data-del="${s.id}" aria-label="Supprimer">✕</button>` : ""}</li>`).join("");
-  document.querySelectorAll("[data-z]").forEach(i => i.onclick = () => zoom(img(i.dataset.z)));
-  document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { await api(`/api/sales/${b.dataset.del}`, { method: "DELETE" }); loadMine(); });
+  MINE = d.sales; renderMine();
+}
+let MINE = [], FILTER = "";
+document.querySelectorAll("#mySeg button").forEach(b => b.onclick = () => { FILTER = b.dataset.f; document.querySelectorAll("#mySeg button").forEach(x => x.classList.toggle("on", x === b)); renderMine(); });
+function renderMine() {
+  const list = MINE.filter(s => !FILTER || s.status === FILTER);
+  $("myList").innerHTML = !list.length ? `<div class="emptyv">${MINE.length ? "Aucune vente dans ce filtre." : "Aucune vente déclarée pour l'instant."}</div>` :
+    list.map((s, i) => `<div class="vc" style="animation-delay:${Math.min(i, 10) * 0.05}s">
+      <span class="bd ${s.status}"><i></i>${STATUS[s.status]}</span>
+      ${s.status === "pending" ? `<button class="del" data-del="${s.id}" aria-label="Supprimer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>` : ""}
+      <div class="shot" data-z="${s.id}"><img src="${img(s.id)}" alt="Capture de la vente" loading="lazy" onload="this.classList.add('ld')"></div>
+      <div class="meta"><div class="amt">${s.amount !== s.declared_amount ? `<span class="strike">${eur(s.declared_amount)}</span>` : ""}${eur(s.amount)}</div>
+        <small>${esc(s.model_name)} · ${fmtDT(s.sold_at)}${s.note ? "<br>" + esc(s.note) : ""}</small>
+        ${s.status === "refused" && s.reason ? `<div class="why">${esc(s.reason)}</div>` : ""}</div></div>`).join("");
+  document.querySelectorAll("#myList [data-z]").forEach(i => i.onclick = () => zoom(img(i.dataset.z)));
+  document.querySelectorAll("#myList [data-del]").forEach(b => b.onclick = async e => {
+    e.stopPropagation(); const card = b.closest(".vc");
+    await api(`/api/sales/${b.dataset.del}`, { method: "DELETE" }); await slideAway(card);
+    notify("Vente supprimée", "", "info"); loadMine();
+  });
 }
 
 /* ================= MANAGER ================= */
@@ -174,11 +224,12 @@ document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
 });
 
 async function loadQueue() {
+  if (!$("queue").children.length) $("queue").innerHTML = SK.tiles(3, 380).replace('class="sk-tiles"', 'class="sk-tiles" style="grid-column:1/-1;grid-template-columns:repeat(auto-fill,minmax(270px,1fr))"');
   const d = await api("/api/admin/sales?status=pending");
   $("tabQueue").textContent = `À valider (${d.pending})`;
   updateBadge(d.pending);
-  $("queue").innerHTML = !d.sales.length ? "<div class='card' style='color:var(--muted)'>Aucune vente en attente. 👍</div>" :
-    d.sales.map(s => `<div class="qcard" id="q${s.id}">
+  $("queue").innerHTML = !d.sales.length ? "<div class='card fade-in' style='color:var(--muted)'>Aucune vente en attente : tout est à jour.</div>" :
+    d.sales.map((s, i) => `<div class="qcard fade-in" id="q${s.id}" style="animation-delay:${Math.min(i, 8) * 0.05}s">
       <div class="img" data-z="${s.id}"><img src="${img(s.id)}" alt="Capture de la vente" loading="lazy"></div>
       <div class="body">
         <div><b>${esc(s.username)}</b> · ${esc(s.model_name)}</div>
@@ -192,9 +243,14 @@ async function loadQueue() {
   const review = async (id, decision) => {
     const amount = document.querySelector(`[data-amt="${id}"]`).value, reason = document.querySelector(`[data-reason="${id}"]`).value;
     try {
+      const card = $("q" + id), who = card.querySelector(".body b").textContent;
+      card.querySelectorAll("button").forEach(x => x.disabled = true);
       await api(`/api/admin/sales/${id}/review`, { body: { decision, amount, reason } });
-      const card = $("q" + id); card.style.transition = "opacity .25s"; card.style.opacity = 0; setTimeout(loadQueue, 250);
-    } catch (e) { $("qe" + id).textContent = e.message; }
+      await stamp(card, decision === "validated" ? "ok" : "ko");
+      notify(decision === "validated" ? "Vente validée" : "Vente refusée",
+        decision === "validated" ? `${eur(parseNum(amount))} ajoutés à la compta de ${who}` : `${who} sera prévenu${reason ? " · " + reason : ""}`, decision === "validated" ? "ok" : "info");
+      await slideAway(card); loadQueue();
+    } catch (e) { $("qe" + id).textContent = e.message; $("q" + id).querySelectorAll("button").forEach(x => x.disabled = false); }
   };
   document.querySelectorAll("[data-val]").forEach(b => b.onclick = () => review(b.dataset.val, "validated"));
   document.querySelectorAll("[data-ref]").forEach(b => b.onclick = () => review(b.dataset.ref, "refused"));
@@ -202,6 +258,7 @@ async function loadQueue() {
 
 let HP = null;
 async function loadHist() {
+  if (!$("hist").children.length) $("hist").innerHTML = SK.table(6);
   const q = new URLSearchParams();
   if ($("hStatus").value) q.set("status", $("hStatus").value);
   if ($("hUser").value) q.set("user", $("hUser").value);

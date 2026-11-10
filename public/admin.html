@@ -1,9 +1,17 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Gestion — StellADS</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StellADS">
+
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -112,6 +120,9 @@ document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
 });
 
 async function init() {
+  const skRows = n => Array.from({ length: n }, () => `<div class="sk-row">${SK.line("25%", 12, 0)}${SK.line("35%", 12, 0)}${SK.line("15%", 12, 0)}</div>`).join("");
+  ["team", "models", "board", "sessions"].forEach(id => $(id) && ($(id).innerHTML = skRows(3)));
+  if ($("kpis")) $("kpis").innerHTML = SK.kpis(4).replace(/^<div class="sk-kpis">|<\/div>$/g, "");
   const me = await api("/api/me");
   if (me.role !== "admin") { location.href = "/app"; return; }
   renderShell("admin", me);
@@ -188,7 +199,8 @@ async function loadUsers() {
       <button class="btn ${u.active ? "danger" : "ghost"} small" data-act="${u.id}" data-v="${u.active ? 0 : 1}">${u.active ? "Désactiver" : "Réactiver"}</button></td></tr>`).join("") + "</table></div>";
   document.querySelectorAll("[data-pw]").forEach(b => b.onclick = () => { pwTarget = b.dataset.pw; $("pwUser").textContent = b.dataset.n; $("pwVal").value = ""; $("pwErr").textContent = ""; $("pwModal").classList.remove("hidden"); });
   document.querySelectorAll("[data-act]").forEach(b => b.onclick = async () => {
-    try { await api("/api/admin/users/" + b.dataset.act, { method: "PATCH", body: { active: b.dataset.v === "1" } }); loadUsers(); }
+    try { await api("/api/admin/users/" + b.dataset.act, { method: "PATCH", body: { active: b.dataset.v === "1" } }); loadUsers();
+      notify(b.dataset.v === "1" ? "Compte réactivé" : "Compte désactivé", "", "info"); }
     catch (e) { alertBox(e.message); }
   });
   if (SIMS.length || USERS.length) renderOverview();
@@ -197,13 +209,14 @@ function alertBox(m) { $("nuErr").textContent = m; }
 let pwTarget = null;
 $("pwForm").onsubmit = async e => {
   e.preventDefault();
-  try { await api("/api/admin/users/" + pwTarget, { method: "PATCH", body: { password: $("pwVal").value } }); $("pwModal").classList.add("hidden"); }
+  try { await api("/api/admin/users/" + pwTarget, { method: "PATCH", body: { password: $("pwVal").value } }); $("pwModal").classList.add("hidden"); notify("Mot de passe modifié", $("pwUser").textContent, "ok"); }
   catch (err) { $("pwErr").textContent = err.message; }
 };
 $("newUser").onsubmit = async e => {
   e.preventDefault(); $("nuErr").textContent = "";
   try {
     await api("/api/admin/users", { body: { username: $("nuName").value, password: $("nuPass").value, role: $("nuRole").value } });
+    notify("Compte créé", `${$("nuName").value} peut maintenant se connecter`, "ok");
     $("nuName").value = ""; $("nuPass").value = ""; loadUsers();
   } catch (err) { $("nuErr").textContent = err.message; }
 };
@@ -220,7 +233,7 @@ async function loadModels() {
     $("mfTitle").textContent = "Modifier " + m.name;
   });
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
-    try { await api("/api/admin/models/" + b.dataset.del, { method: "DELETE" }); loadModels(); }
+    try { await api("/api/admin/models/" + b.dataset.del, { method: "DELETE" }); loadModels(); notify("Créatrice supprimée", "", "info"); }
     catch (e) { $("mfErr").textContent = e.message; }
   });
 }
@@ -229,7 +242,9 @@ $("mfReset").onclick = resetModelForm;
 $("modelForm").onsubmit = async e => {
   e.preventDefault();
   try {
+    const edit = !!$("mfId").value, nm = $("mfName").value;
     await api("/api/admin/models", { body: { id: $("mfId").value || undefined, name: $("mfName").value, style: $("mfStyle").value, prices: $("mfPrices").value } });
+    notify(edit ? "Créatrice modifiée" : "Créatrice ajoutée", nm, "ok");
     resetModelForm(); loadModels();
   } catch (err) { $("mfErr").textContent = err.message; }
 };
