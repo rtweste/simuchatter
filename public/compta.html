@@ -118,6 +118,10 @@ tr.total td{font-weight:700;border-top:1px solid #3a3a3a}
       <label for="baseSel">Commission des chatters calculée sur</label>
       <select id="baseSel"><option value="net">le CA net</option><option value="brut">le CA brut</option></select>
       <p class="hint" id="modeHint"></p>
+      <label for="goalCa">Objectif de CA brut par période (accueil du manager)</label>
+      <div class="row"><input id="goalCa" class="money" inputmode="decimal" style="width:130px"> <span>€</span></div>
+      <label for="goalCh">Objectif de commission par chatter et par période (accueil des chatters)</label>
+      <div class="row"><input id="goalCh" class="money" inputmode="decimal" style="width:130px"> <span>€</span></div>
     </div>
   </div>
 
@@ -200,6 +204,7 @@ function render() {
   const t = C.totals;
   $("pLabel").textContent = C.period.label;
   $("baseSel").value = C.base; $("feeInp").value = fix2(C.fee); $("modeSel").value = C.mode;
+  if (C.goals) { $("goalCa").value = fix2(C.goals.ca); $("goalCh").value = fix2(C.goals.chatter); }
   $("modeHint").innerHTML = C.mode === "ventes"
     ? "Chaque chatter est crédité des <b>ventes qu'il a déclarées et que vous avez validées</b> (page Ventes). Si la commission est calculée sur le CA net, la commission de la plateforme est déduite de ses ventes brutes. Vous pouvez corriger un montant dans le détail ci-dessous."
     : "Les ventes de chaque créatrice sont réparties entre les chatters <b>selon leurs heures pointées</b> sur ce compte pendant la période. Vous pouvez corriger un montant dans le détail ci-dessous.";
@@ -252,6 +257,8 @@ function render() {
   });
 }
 
+$("goalCa").onchange = () => save("/api/admin/settings", { goal_ca: parseNum($("goalCa").value) }, $("goalCa"));
+$("goalCh").onchange = () => save("/api/admin/settings", { goal_chatter: parseNum($("goalCh").value) }, $("goalCh"));
 $("feeInp").onchange = () => save("/api/admin/settings", { platform_fee: parseNum($("feeInp").value), period: PERIOD }, $("feeInp"));
 $("modeSel").onchange = () => save("/api/admin/settings", { attribution_mode: $("modeSel").value }, $("modeSel"));
 $("baseSel").onchange = () => save("/api/admin/settings", { commission_base: $("baseSel").value }, $("baseSel"));

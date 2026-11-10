@@ -123,7 +123,7 @@ $("f").onsubmit = async e => {
   try { v.muted = false; const p = v.play(); if (p) p.then(() => { if (!$("intro").classList.contains("show")) { v.pause(); v.currentTime = 0; } }).catch(() => {}); } catch (_) {}
   try {
     await api("/api/login", { body: { username: $("u").value, password: $("p").value } });
-    try { sessionStorage.removeItem("stNav"); } catch (_) {}  // rejoue l'entrée du menu après l'intro
+    try { sessionStorage.removeItem("stNav"); sessionStorage.removeItem("stHome"); } catch (_) {}  // rejoue l'entrée du menu après l'intro
     $("lp").classList.add("warp");                             // saut dans les étoiles
     await sleep(matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 950);
     $("intro").classList.add("show");
