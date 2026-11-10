@@ -58,32 +58,76 @@ function renderShell(active, me) {
   const el = document.getElementById("sidebar"); if (!el) return;
   const mods = MODULES.filter(m => m.roles.includes(me.role));
   const badge = m => m.id === "ventes" && me.role === "admin";
-  let html = `<a class="logo" href="/home" aria-label="StellADS — Accueil">${logoHTML()}</a><nav>`, sec;
+  let html = `<div class="sb-top"><a class="logo" href="/home" aria-label="StellADS — Accueil">${logoHTML()}</a><button class="sb-col" type="button" aria-label="Réduire le menu" title="Réduire le menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button></div><nav>`, sec;
   mods.forEach((m, i) => {
     if (m.section && m.section !== sec) { sec = m.section; html += `<div class="sec">${esc(sec)}</div>`; }
-    html += `<a href="${m.href}" style="--i:${i}" class="${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""}>${icon(m.icon)}<span>${esc(m.label)}</span>${badge(m) ? '<em class="navbadge hidden" data-badge></em>' : ""}</a>`;
+    html += `<a href="${m.href}" style="--i:${i}" data-tip="${esc(m.label)}" class="${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""}>${icon(m.icon)}<span class="lb">${chars(m.label)}</span><span class="sr">${esc(m.label)}</span>${badge(m) ? '<em class="navbadge hidden" data-badge></em>' : ""}</a>`;
   });
-  html += `</nav><div class="me"><span class="av">${esc(me.username[0])}</span><div><b>${esc(me.username)}</b><small>${me.role === "admin" ? "Manager" : "Chatter"}</small></div>
+  html += `<span class="nv-line" aria-hidden="true"></span></nav><div class="me"><span class="av">${esc(me.username[0])}</span><div><b>${esc(me.username)}</b><small>${me.role === "admin" ? "Manager" : "Chatter"}</small></div>
     <button onclick="logout()" title="Déconnexion" aria-label="Déconnexion">${icon("logout")}</button></div>`;
   el.innerHTML = html;
+  // mode réduit (ordinateur) : mémorisé d'une page à l'autre
+  const col = el.querySelector(".sb-col");
+  const setMini = (on, anim) => { el.classList.toggle("mini", on); el.classList.toggle("mini-anim", !!anim); col.setAttribute("aria-label", on ? "Agrandir le menu" : "Réduire le menu"); col.title = col.getAttribute("aria-label");
+    document.documentElement.classList.toggle("sb-mini", on); try { localStorage.setItem("stMini", on ? "1" : ""); } catch (_) {} };
+  let mini = false; try { mini = localStorage.getItem("stMini") === "1"; } catch (_) {}
+  setMini(mini, false);
+  col.addEventListener("click", () => { setMini(!el.classList.contains("mini"), true); setTimeout(() => dispatchEvent(new Event("resize")), 560); });
   // Le menu de gauche glisse en place une seule fois par session (après l'intro)
   
   // Dock flottant (téléphone)
   let dock = document.getElementById("dock");
   if (!dock) { dock = document.createElement("nav"); dock.id = "dock"; dock.className = "dock"; dock.setAttribute("aria-label", "Navigation principale"); document.body.appendChild(dock); }
-  dock.innerHTML = mods.map(m => `<a href="${m.href}" class="di ${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""} aria-label="${esc(m.label)}">${icon(m.icon)}<span class="lb">${esc(m.short || m.label)}</span>${badge(m) ? '<em class="navbadge hidden" data-badge></em>' : ""}</a>`).join("");
+  dock.innerHTML = `<span class="dk-line" aria-hidden="true"></span>` + mods.map(m => `<a href="${m.href}" class="di ${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""} aria-label="${esc(m.label)}">${icon(m.icon)}<span class="lb">${chars(m.short || m.label)}</span>${badge(m) ? '<em class="navbadge hidden" data-badge></em>' : ""}</a>`).join("");
   // Le menu de gauche et le dock font leur entrée une seule fois par session (après l'intro)
   try { if (!sessionStorage.getItem("stNav")) { el.classList.add("nav-in"); dock.classList.add("dock-in"); sessionStorage.setItem("stNav", "1"); } } catch (e) {}
   dock.querySelectorAll("a").forEach(a => a.addEventListener("click", e => {
     if (a.classList.contains("on") || e.metaKey || e.ctrlKey) return;
     e.preventDefault();
     dock.querySelector(".on")?.classList.remove("on");
-    a.classList.add("on");
-    setTimeout(() => go(a.getAttribute("href")), 230); // laisse l'onglet s'ouvrir avant de changer de page
+    a.classList.add("on"); NAVFX.dock?.to(a, true); const iv = setInterval(() => NAVFX.dock?.to(a, false), 30); setTimeout(() => clearInterval(iv), 460);
+    setTimeout(() => go(a.getAttribute("href")), 260); // laisse le trait glisser avant de changer de page
   }));
+  // menu de gauche : on note d'où l'on part pour que le trait glisse sur la page suivante
+  el.querySelectorAll("nav a").forEach(a => a.addEventListener("click", e => {
+    if (a.classList.contains("on") || e.metaKey || e.ctrlKey) return;
+    const o = el.querySelector("nav a.on"); try { if (o) sessionStorage.setItem("stNavFrom", JSON.stringify({ y: o.offsetTop, h: o.offsetHeight })); } catch (_) {}
+  }));
+  NAVFX.side = navLine(el.querySelector("nav"), el.querySelector(".nv-line"), "y");
+  NAVFX.dock = navLine(dock, dock.querySelector(".dk-line"), "x");
   if (me.role === "admin") api("/api/admin/sales/count").then(c => updateBadge(c.pending)).catch(() => {});
 }
-function updateBadge(n) { document.querySelectorAll("[data-badge]").forEach(b => { b.textContent = n; b.classList.toggle("hidden", !n); }); }
+// lettres séparées : elles basculent une à une quand la page devient active
+const chars = t => [...String(t)].map((c, i) => `<span class="ch" aria-hidden="true" style="--i:${i}">${c === " " ? "&nbsp;" : esc(c)}</span>`).join("");
+const NAVFX = {};
+// trait lumineux à ressort : le bord qui avance part en premier, l'indicateur s'étire puis se rétracte
+function navLine(wrap, line, ax) {
+  if (!wrap || !line) return null;
+  const X = ax === "x", S = (x, k) => ({ x, t: x, v: 0, k, c: 21 });
+  const P = (el) => X ? [el.offsetLeft + 12, el.offsetLeft + el.offsetWidth - 12] : [el.offsetTop, el.offsetTop + el.offsetHeight];
+  const on = wrap.querySelector("a.on"); if (!on) { line.style.opacity = 0; return null; }
+  let [a0, z0] = P(on); const A = S(a0, 200), Z = S(z0, 200);
+  let from = null; if (!X) try { from = JSON.parse(sessionStorage.getItem("stNavFrom") || "null"); sessionStorage.removeItem("stNavFrom"); } catch (_) {}
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (from && !reduce) { A.x = from.y; Z.x = from.y + from.h; on.querySelector(".lb")?.classList.add("fin"); }
+  let raf = 0, last = 0;
+  const draw = () => { if (X) { line.style.transform = `translateX(${A.x.toFixed(2)}px)`; line.style.width = Math.max(4, Z.x - A.x).toFixed(2) + "px"; }
+    else { line.style.transform = `translateY(${A.x.toFixed(2)}px)`; line.style.height = Math.max(4, Z.x - A.x).toFixed(2) + "px"; } };
+  const tick = now => { const dt = Math.min(.05, (now - (last || now)) / 1000); last = now;
+    for (let k = 0; k < 3; k++) [A, Z].forEach(s => { s.v += (-s.k * (s.x - s.t) - s.c * s.v) * dt / 3; s.x += s.v * dt / 3; });
+    draw(); if (Math.abs(A.x - A.t) + Math.abs(Z.x - Z.t) + Math.abs(A.v) + Math.abs(Z.v) > .05) raf = requestAnimationFrame(tick); else { raf = 0; last = 0; } };
+  const to = (el, flip) => { const [a, z] = P(el); if (a > A.x) { Z.k = 320; A.k = 130; } else { A.k = 320; Z.k = 130; } A.t = a; Z.t = z;
+    if (flip) { const lb = el.querySelector(".lb"); lb?.classList.remove("fin"); void lb?.offsetWidth; lb?.classList.add("fin"); }
+    if (reduce) { A.x = a; Z.x = z; draw(); return; } if (!raf) raf = requestAnimationFrame(tick); };
+  draw(); to(on, false);
+  addEventListener("resize", () => { const o = wrap.querySelector("a.on"); if (o) { const [a, z] = P(o); A.x = A.t = a; Z.x = Z.t = z; draw(); } });
+  return { to };
+}
+// pastille des ventes à valider : le chiffre défile quand il change
+function updateBadge(n) { document.querySelectorAll("[data-badge]").forEach(b => { b.classList.toggle("hidden", !n); const s = String(n), old = b.dataset.v; if (old === s) return; b.dataset.v = s;
+  b.innerHTML = s.split("").map(d => `<span class="dg"><span style="transform:translateY(${old ? 10 : -d * 10}%)">${[...Array(10).keys()].join("<br>")}</span></span>`).join("");
+  if (old) { requestAnimationFrame(() => requestAnimationFrame(() => b.querySelectorAll(".dg > span").forEach((sp, i) => { sp.style.transition = `transform .9s cubic-bezier(.2,1.4,.4,1) ${i * .06}s`; sp.style.transform = `translateY(${-s[i] * 10}%)`; })));
+    b.classList.remove("bump"); void b.offsetWidth; b.classList.add("bump"); } }); }
 
 async function logout() { await api("/api/logout", { method: "POST" }).catch(() => {}); go("/"); }
 

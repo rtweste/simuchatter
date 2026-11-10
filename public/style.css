@@ -126,7 +126,19 @@ ul{padding-left:18px;line-height:1.6;margin:6px 0}
 .sidebar .logo{text-decoration:none}
 
 /* ===== Menu de gauche : indicateur lumineux + entrée ===== */
-.sidebar nav a.on::before{content:"";position:absolute;left:-14px;top:9px;bottom:9px;width:2px;border-radius:2px;background:#fff;box-shadow:0 0 10px rgba(255,255,255,.8)}
+/* M1 : trait lumineux qui s'étire + typo cinétique */
+.sidebar nav{position:relative}
+.sidebar nav a{font-weight:700;letter-spacing:-.01em}
+.sidebar nav a.on{font-weight:800;background:linear-gradient(90deg,rgba(255,255,255,.07),transparent 85%)}
+.sidebar .sec{font-weight:800;font-size:10px;letter-spacing:.16em;color:#5a5a5a}
+.nv-line{position:absolute;left:-14px;top:0;width:3px;height:36px;border-radius:2px;background:#fff;box-shadow:0 0 10px rgba(255,255,255,.9),0 0 26px rgba(255,255,255,.35);pointer-events:none;will-change:transform,height}
+.ch{display:inline-block;transform-origin:50% 60%;backface-visibility:hidden}
+.lb.fin .ch{animation:chIn .55s cubic-bezier(.3,1.4,.5,1) both;animation-delay:calc(var(--i) * 28ms)}
+@keyframes chIn{0%{transform:rotateX(90deg) translateY(4px);opacity:0;filter:blur(2px)}60%{opacity:1;filter:none}100%{transform:none}}
+.navbadge .dg{display:inline-block;height:1.2em;line-height:1.2em;overflow:hidden;vertical-align:top}.navbadge .dg > span{display:block}
+.navbadge.bump{animation:nbBump .6s cubic-bezier(.3,1.9,.5,1)}
+@keyframes nbBump{35%{transform:scale(1.35)}}
+.dk-line{display:none}
 .sidebar nav a{transition:background .2s,color .2s}
 .sidebar.nav-in nav a{opacity:0;transform:translateX(-8px);animation:navIn .5s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(.15s + var(--i,0) * 70ms)}
 @keyframes navIn{to{opacity:1;transform:none}}
@@ -140,7 +152,8 @@ ul{padding-left:18px;line-height:1.6;margin:6px 0}
   .dock .di svg{width:21px;height:21px;flex-shrink:0;transition:transform .3s cubic-bezier(.3,1.5,.5,1)}
   .dock .di:active svg{transform:scale(.85)}
   .dock .di .lb{max-width:0;opacity:0;overflow:hidden;transition:max-width .45s cubic-bezier(.3,1.3,.5,1),opacity .3s}
-  .dock .di.on{background:#f5f5f5;color:#0a0a0a;gap:8px;padding:0 15px}
+  .dock .di.on{background:rgba(255,255,255,.06);color:#fff;gap:8px;padding:0 15px;font-weight:800}
+  .dock .dk-line{display:block;position:absolute;left:0;bottom:3px;height:2px;width:30px;border-radius:2px;background:#fff;box-shadow:0 0 8px rgba(255,255,255,.9),0 0 18px rgba(255,255,255,.35);pointer-events:none;z-index:2}
   .dock .di.on .lb{max-width:84px;opacity:1}
   .dock .navbadge{position:absolute;top:3px;right:3px;margin:0;padding:0 5px;min-width:16px;font-size:10px;line-height:16px;box-shadow:0 0 0 2px #161616}
   .shell{view-transition-name:none}
@@ -206,3 +219,34 @@ body:has(#chatScreen:not(.hidden)) .main-area{padding-bottom:0}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @media(max-width:600px){.sk-grid{grid-template-columns:1fr}.sk-kpis{grid-template-columns:1fr 1fr}.sk-tiles{grid-template-columns:1fr 1fr}}
 @media (prefers-reduced-motion:reduce){.sk::after,.ntf,.stamp *{animation:none!important}.stamp path,.stamp circle,.ntf .ni path{stroke-dashoffset:0}}
+
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* ===== Menu de gauche : mode réduit (ordinateur) ===== */
+.sb-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sb-col{width:28px;height:28px;flex-shrink:0;border-radius:9px;border:1px solid #232323;background:#121212;color:#9a9a9a;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;margin-bottom:22px;transition:background .2s,color .2s,transform .55s cubic-bezier(.5,0,.15,1)}
+.sb-col:hover{background:#1a1a1a;color:#fff}
+.sb-col svg{width:15px;height:15px}
+@media(min-width:861px){
+  .sidebar{transition:none;overflow:visible}
+  .sidebar.mini-anim{transition:width .55s cubic-bezier(.5,0,.15,1),padding .55s cubic-bezier(.5,0,.15,1)}
+  .sidebar .logo{transition:opacity .3s,width .45s cubic-bezier(.5,0,.15,1);overflow:hidden}
+  .sidebar.mini{width:76px;padding-left:12px;padding-right:12px}
+  .sidebar.mini .sb-top{justify-content:center}
+  .sidebar.mini .logo{width:0;padding:0;opacity:0}
+  .sidebar.mini .sb-col{transform:rotate(180deg)}
+  .sidebar nav a .lb,.sidebar .sec,.sidebar .me div{transition:opacity .25s}
+  .sidebar.mini nav a{justify-content:center;padding-left:0;padding-right:0}
+  .sidebar nav a .lb{white-space:nowrap}
+  .sidebar.mini nav a .lb{opacity:0;width:0;overflow:hidden}
+  .sidebar.mini .sec{opacity:0;white-space:nowrap;overflow:hidden}
+  .sidebar.mini .navbadge{position:absolute;top:2px;right:6px;margin:0;padding:0 4px;min-width:16px;font-size:9.5px;line-height:16px}
+  .sidebar.mini .nv-line{left:-12px}
+  .sidebar.mini .me{justify-content:center;padding-left:0;padding-right:0;flex-direction:column;gap:10px}
+  .sidebar.mini .me div{display:none}
+  .sidebar.mini .me button{margin:0}
+  /* nom de la page en bulle au survol */
+  .sidebar.mini nav a::after{content:attr(data-tip);position:absolute;left:calc(100% + 14px);top:50%;transform:translate(-6px,-50%);background:#ededed;color:#0a0a0a;font-size:12px;font-weight:800;border-radius:8px;padding:5px 9px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s,transform .2s;z-index:60}
+  .sidebar.mini nav a:hover::after{opacity:1;transform:translate(0,-50%)}
+}
+@media(max-width:860px){.sb-col{display:none}.sb-top{display:contents}}
