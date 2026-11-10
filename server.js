@@ -196,12 +196,12 @@ app.post("/api/logout", (req, res) => {
 app.get("/api/me", auth, (req, res) => {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const used = db.prepare("SELECT COUNT(*) n FROM sims WHERE user_id = ? AND started_at >= ?").get(req.user.id, today.getTime()).n;
-  res.json({ username: req.user.username, role: req.user.role, dailyLimit: DAILY_LIMIT, usedToday: used });
+  res.json({ id: req.user.id, username: req.user.username, role: req.user.role, dailyLimit: DAILY_LIMIT, usedToday: used });
 });
 
 /* ----- Données de configuration ----- */
 app.get("/api/personas", auth, (req, res) => res.json(PERSONAS.map(publicPersona)));
-app.get("/api/models", auth, (req, res) => res.json(db.prepare("SELECT * FROM models ORDER BY name").all()));
+app.get("/api/models", auth, (req, res) => res.json(db.prepare(req.user.role === "admin" ? "SELECT * FROM models ORDER BY name" : "SELECT id, name, style, prices FROM models ORDER BY name").all()));
 
 /* ----- Simulation (chatter) ----- */
 function ownSim(req, res) {
@@ -374,6 +374,9 @@ app.delete("/api/admin/models/:id", auth, admin, (req, res) => {
   db.prepare("DELETE FROM models WHERE id = ?").run(parseInt(req.params.id, 10));
   res.json({ ok: true });
 });
+
+/* ----- Planning & compta ----- */
+require("./compta")(app, db, auth, admin);
 
 /* ----- Pages ----- */
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html"] }));
