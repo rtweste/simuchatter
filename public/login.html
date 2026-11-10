@@ -112,7 +112,7 @@ let leaving = false, frame = null, frameReady = false;
 // le son reste autorisé (il vient du clic sur « Se connecter ») et l'ouverture est sonorisée.
 function prepareHome() {
   try {
-    frame = document.createElement("iframe"); frame.src = "/home"; frame.title = "Accueil"; frame.id = "homeFrame";
+    frame = document.createElement("iframe"); frame.src = "/home"; frame.setAttribute("aria-label", "Accueil"); frame.id = "homeFrame";
     frame.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;z-index:40;opacity:0;pointer-events:none;background:#0a0a0a;transition:opacity .35s";
     document.body.appendChild(frame);
   } catch (e) { frame = null; }

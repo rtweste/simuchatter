@@ -145,6 +145,98 @@
 @keyframes hSwp{0%{opacity:1;background-position:120% 0}100%{opacity:1;background-position:-20% 0}}
 .kick .lg-sh .star{animation:hKick .6s cubic-bezier(.3,1.6,.5,1) .05s}
 @keyframes hKick{40%{transform:scale(2.2) rotate(45deg)}100%{transform:none}}
+
+/* ===================== Accueil manager v2 ===================== */
+.hm.adm .a-goal{grid-column:1/-1;grid-row:auto}.hm.adm .a-k1{grid-column:1}.hm.adm .a-k2{grid-column:2}.hm.adm .a-k3{display:block;grid-column:1/-1}
+@media(min-width:1000px){
+  .hm.adm{min-height:calc(100dvh - 76px);grid-template-rows:auto auto minmax(260px,1fr)}
+  .hm.adm .a-goal{grid-column:4;grid-row:1/3}.hm.adm .a-k1{grid-column:1}.hm.adm .a-k2{grid-column:2}.hm.adm .a-k3{grid-column:3}
+  .hm.adm .a-feed{overflow:hidden}
+}
+@media(hover:hover) and (min-width:1000px){
+  .b{transition:translate .35s cubic-bezier(.2,.8,.2,1),border-color .35s,box-shadow .35s}
+  .b::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .4s;background:radial-gradient(420px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.06),transparent 45%)}
+  .b:hover{translate:0 -3px;border-color:#2c2c2c;box-shadow:0 18px 40px -18px rgba(0,0,0,.9)}
+  .b:hover::after{opacity:1}
+}
+.hero2{position:relative;display:flex;flex-direction:column;gap:18px}
+@media(min-width:1000px){.hero2{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:stretch}.hero2 .hl{display:flex;flex-direction:column}.adm .hi{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:32px}}
+.acts{position:relative;display:flex;gap:6px;margin-top:16px}
+@media(min-width:1000px){.acts{flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:16px}}
+.act{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 10px;border-radius:11px;border:1px solid #2a2a2a;background:rgba(255,255,255,.03);color:#d6d6d6;font-size:12px;font-weight:600;white-space:nowrap;text-decoration:none;transition:background .25s,border-color .25s,color .25s;flex:1 1 auto;min-width:0}
+@media(min-width:1000px){.act{flex:0 0 auto}}
+.act:hover{background:rgba(255,255,255,.07);border-color:#3a3a3a;color:#fff}
+.act.hot{background:#ededed;color:#0a0a0a;border-color:#ededed}.act.hot:hover{background:#fff;color:#0a0a0a}
+.act .n{min-width:18px;height:18px;border-radius:9px;background:#e0a050;color:#0a0a0a;font-size:11px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;box-sizing:border-box}
+.act.dim{color:#6f6f6f;border-style:dashed}.act.dim .n{background:#262626;color:#8f8f8f}
+.act svg{width:14px;height:14px;flex-shrink:0}
+@media(max-width:999px){.act svg,.act .lx{display:none}}
+.chart{position:relative;display:flex;flex-direction:column;min-width:0}
+.chart .hd{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.chart .hd small{font-size:12px;color:#8f8f8f}
+.chart .hd b{font-family:Outfit,Inter,sans-serif;font-weight:400;font-size:24px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chart .lg2{display:flex;gap:12px;font-size:11px;color:#8f8f8f;margin-top:2px;flex-wrap:wrap}
+.chart .lg2 i{display:inline-block;width:14px;height:0;border-top:2px solid #ededed;vertical-align:middle;margin-right:5px}
+.chart .lg2 i.d{border-top:2px dashed #6a6a6a}.chart .lg2 i.p{border-top:2px dotted #5fd3a2}.chart .lg2 i.p.o{border-color:#e0a050}
+.plot{position:relative;flex:1;min-height:110px;margin-top:10px}
+.plot svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.today{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:#fff;animation:hTdy 2.4s ease-out infinite}
+@keyframes hTdy{0%{box-shadow:0 0 0 0 rgba(255,255,255,.45)}100%{box-shadow:0 0 0 12px rgba(255,255,255,0)}}
+.hz{position:absolute;top:0;bottom:0}
+.hz .gl{position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.12);opacity:0;transition:opacity .15s}
+.hz .tt,.bw .tt{position:absolute;left:50%;bottom:calc(100% + 4px);transform:translate(-50%,4px);white-space:nowrap;background:#1d1d1d;border:1px solid #333;border-radius:8px;padding:5px 8px;font-size:11px;color:#bdbdbd;opacity:0;transition:opacity .15s,transform .15s;pointer-events:none;z-index:5}
+.hz .tt b,.bw .tt b{color:#fff}
+.hz:hover .gl,.hz:hover .tt,.bw:hover .tt{opacity:1}.hz:hover .tt,.bw:hover .tt{transform:translate(-50%,0)}
+.xax{display:flex;justify-content:space-between;font-size:10.5px;color:#5f5f5f;margin-top:6px;font-variant-numeric:tabular-nums}
+.open .cl{stroke-dasharray:1000;stroke-dashoffset:1000;animation:hDraw 1.6s cubic-bezier(.4,0,.2,1) forwards;animation-delay:1.4s}
+.open .ca,.open .cp,.open .today{opacity:0;animation:hOn .8s ease forwards;animation-delay:2.6s}
+.open .today{animation:hOn .3s ease 2.9s forwards,hTdy 2.4s ease-out 3s infinite}
+.ringw.r2{width:134px;height:134px;margin:0;flex-shrink:0}
+@media(min-width:1000px){.ringw.r2{width:190px;height:190px;margin:12px auto 6px}.ringw.r2 .ctr b{font-size:28px}}
+.ringw.r2 .ctr b{font-size:16px}.ringw.r2 .ctr small{font-size:10.5px}
+.ringw.r2 svg.tk{transform:none;position:absolute;inset:0}
+.tick{stroke:#262626;stroke-width:1.4;stroke-linecap:round}.tick.lit{stroke:#7a7a7a}
+.open .tick.lit{opacity:0;animation:hOn .2s ease forwards}
+.pace{position:absolute;width:10px;height:10px;margin:-5px 0 0 -5px}
+.open .pace{opacity:0;animation:hOn .4s ease 3.4s forwards}
+.status{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;border-radius:20px;padding:4px 10px;white-space:nowrap}
+.status.g{color:#5fd3a2;background:rgba(95,211,162,.1)}.status.o{color:#e0a050;background:rgba(224,160,80,.1)}.status.n{color:#9a9a9a;background:#1a1a1a}
+.status i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.legend{font-size:11px;color:#6f6f6f;display:flex;align-items:center;gap:5px}
+.a-goal.g2{gap:8px}
+.a-goal.g2 h3{margin-bottom:2px}
+@media(max-width:999px){.a-goal.g2{flex-direction:row;align-items:center;text-align:left;gap:16px}.g2 .gtx{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0}}
+@media(min-width:1000px){.a-goal.g2{justify-content:center}.g2 .gtx{display:contents}}
+.bars{display:flex;align-items:flex-end;gap:5px;height:46px;margin-top:12px}
+.bw{flex:1;height:100%;display:flex;align-items:flex-end;position:relative}
+.br{width:100%;border-radius:4px 4px 2px 2px;background:#2a2a2a;transform-origin:bottom;min-height:3px}
+.bw:last-child .br{background:#ededed}
+.bw:hover .br{background:#5a5a5a}.bw:last-child:hover .br{background:#fff}
+.open .br{transform:scaleY(0);animation:hGrow .7s cubic-bezier(.2,.9,.25,1.1) forwards;animation-delay:var(--bd,1.8s)}
+.days{display:flex;gap:5px;margin-top:5px}.days span{flex:1;text-align:center;font-size:10px;color:#5a5a5a;text-transform:uppercase}
+.kp .tr{white-space:nowrap}
+.kp .tr.nw{color:#8f8f8f;background:#1a1a1a;border:1px solid #262626;border-radius:20px;padding:2px 8px}
+.okz,.nxt2{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;min-height:44px;border-radius:12px;border:1px dashed #262626;font-size:12.5px;padding:6px 10px;text-align:center;box-sizing:border-box}
+.okz{color:#5fd3a2}.nxt2{color:#8f8f8f}.nxt2 b{color:#e6e6e6}
+.okz svg{width:14px;height:14px}
+.avs{display:flex;align-items:center;margin-top:14px}
+.avs .a{width:32px;height:32px;border-radius:50%;background:#1d1d1d;border:2px solid #111;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-left:-8px;position:relative;text-transform:uppercase;flex-shrink:0}
+.avs .a:first-child{margin-left:0}
+.avs .a::after{content:"";position:absolute;right:-1px;bottom:-1px;width:9px;height:9px;border-radius:50%;background:#3ccf91;border:2px solid #111}
+.avs .who{margin-left:10px;font-size:11.5px;color:#9a9a9a;line-height:1.35;min-width:0}
+.avs .who b{color:#e6e6e6;font-weight:600}
+.open .avs .a{opacity:0;animation:hPop .5s cubic-bezier(.3,1.6,.5,1) forwards;animation-delay:var(--pd,2s)}
+.ghost .bar{background:transparent!important;border:1px dashed #2e2e2e!important;color:#3a3a3a!important}
+.ghost .pa{background:transparent!important;border:1px dashed #3a3a3a!important;color:#4a4a4a!important;box-shadow:none!important}
+.ghost .pn,.ghost .pm{color:#4a4a4a}
+.ghost-note{text-align:center;font-size:12.5px;color:#9a9a9a;margin-top:12px;line-height:1.5}.ghost-note b{color:#fff}
+.fi .ic{width:30px;height:30px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#1a1a1a;color:#bdbdbd;border:1px solid #262626}
+.fi .ic svg{width:15px;height:15px}
+.fi .ic.g{color:#5fd3a2;background:rgba(95,211,162,.08);border-color:rgba(95,211,162,.18)}
+.fi .ic.o{color:#e0a050;background:rgba(224,160,80,.08);border-color:rgba(224,160,80,.18)}
+.fi .ic.r{color:#e07a7a;background:rgba(224,122,122,.08);border-color:rgba(224,122,122,.18)}
+.fi.new{background:linear-gradient(90deg,rgba(255,255,255,.04),transparent 70%);border-radius:10px}
+@media (prefers-reduced-motion:reduce){.open .cl,.open .ca,.open .cp,.open .today,.open .tick.lit,.open .pace,.open .br,.open .avs .a{animation:none!important;opacity:1;transform:none;stroke-dashoffset:0}}
 @media (prefers-reduced-motion:reduce){.open .b,.quick .b,.open .spl,.open .pc .bar,.open .pc .pa{animation:none!important;opacity:1;transform:none;stroke-dashoffset:0}.fx{display:none}}
 </style>
 </head>
@@ -305,31 +397,125 @@ function bindShift() {
 }
 
 /* ---------------- Manager ---------------- */
+const eur0 = n => eur(n).replace(/,00(?=\s?€)/, "");
+const IC = { clock: '<path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>' };
+const svgI = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+// courbe du CA cumulé sur la période, avec le rythme de l'objectif et la projection
+function chartB(brut, ahead) {
+  const W = 400, H = 130, N = D.nDays, top = Math.max(D.goal, D.projection, brut, 1) * 1.08;
+  const X = d => d / N * W, Y = v => H - v / top * H;
+  const pts = [{ day: 0, brut: 0 }, ...D.caPts.filter(p => p.day >= 1 && p.day <= N)];
+  const last = pts[pts.length - 1], line = "M" + pts.map(p => `${X(p.day).toFixed(1)} ${Y(p.brut).toFixed(1)}`).join(" L");
+  const pc = brut <= 0 ? "#6a6a6a" : ahead ? "#5fd3a2" : "#e0a050";
+  const sv = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+    <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+    ${[.5, 1].map(k => `<line x1="0" x2="${W}" y1="${Y(D.goal * k).toFixed(1)}" y2="${Y(D.goal * k).toFixed(1)}" stroke="#1a1a1a" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join("")}
+    <line class="cp" x1="0" y1="${H}" x2="${W}" y2="${Y(D.goal).toFixed(1)}" stroke="#5a5a5a" stroke-width="1.4" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/>
+    ${pts.length > 1 ? `<path class="ca" d="${line} L${X(last.day).toFixed(1)} ${H} Z" fill="url(#cg)"/>` : ""}
+    <path class="cl" d="${line}" fill="none" stroke="#ededed" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    ${brut > 0 && last.day < N ? `<line class="cp" x1="${X(last.day).toFixed(1)}" y1="${Y(last.brut).toFixed(1)}" x2="${W}" y2="${Y(D.projection).toFixed(1)}" stroke="${pc}" stroke-width="2" stroke-dasharray="2 5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>` : ""}</svg>`;
+  const dot = last.day > 0 ? `<span class="today" style="left:${(X(last.day) / W * 100).toFixed(2)}%;top:${(Y(last.brut) / H * 100).toFixed(2)}%"></span>` : "";
+  const dlbl = d => new Date(d + "T12:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+  // zones de survol : une par photo du CA, puis la projection
+  const zones = pts.slice(1).map((p, i) => { const a = pts[i].day, w = p.day - a;
+    return `<span class="hz" style="left:${(a / N * 100).toFixed(2)}%;width:${(w / N * 100).toFixed(2)}%"><span class="gl" style="left:100%"></span><span class="tt" style="left:100%">${esc(dlbl(p.date))} · <b>${eur0(p.brut)}</b></span></span>`; }).join("")
+    + (brut > 0 && last.day < N ? `<span class="hz" style="left:${(last.day / N * 100).toFixed(2)}%;width:${((N - last.day) / N * 100).toFixed(2)}%"><span class="gl" style="left:100%"></span><span class="tt" style="left:auto;right:0;transform:none">Projection fin de période · <b style="color:${pc}">${eur0(D.projection)}</b></span></span>` : "");
+  const d1 = +D.period.from.slice(8), d2 = +D.period.to.slice(8), mo = new Date(D.period.from + "T12:00").toLocaleDateString("fr-FR", { month: "short" });
+  return `<div class="chart"><div class="hd"><small>CA de la période</small><b>${odo(eur0(brut))}</b></div>
+    <div class="lg2"><span><i></i>CA cumulé</span><span><i class="d"></i>rythme objectif</span>${brut > 0 ? `<span><i class="p ${ahead ? "" : "o"}"></i>projection</span>` : ""}</div>
+    <div class="plot">${sv}${dot}${zones}</div>
+    <div class="xax"><span>${d1} ${esc(mo)}</span><span>${Math.round((d1 + d2) / 2)}</span><span>${d2} ${esc(mo)}</span></div></div>`;
+}
+function heroAdm(line, brut, ahead) {
+  const h = new Date().getHours(), hello = h < 5 ? "Bonne nuit" : h < 18 ? "Bonjour" : "Bonsoir";
+  const date = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
+  const n = D.pendingSales.n;
+  const chips = `<a class="act ${n ? "hot" : "dim"}" href="/ventes">${icon("receipt")}<span>Valider<span class="lx"> les ventes</span></span><span class="n">${n}</span></a>`
+    + `<a class="act ${n ? "" : "hot"}" href="/compta">${icon("euro")}Saisir le CA</a>`
+    + `<a class="act" href="/planning">${icon("calendar")}Planning</a>`;
+  return `<div class="b hero a-hero" style="${wv("hero")}"><div class="stars">${stars()}</div><span class="glow"></span>
+    <div class="hero2"><div class="hl"><div class="eyebrow" style="position:relative;margin:0">${esc(date)}<span class="hp"> · période du ${esc(D.period.label.replace(/ \d{4}$/, ""))}</span></div>
+      <div class="hi" id="hello">${hello} ${esc(ME.username.charAt(0).toUpperCase() + ME.username.slice(1))}</div>
+      <div class="hline">${line}</div><div class="acts">${chips}</div></div>
+    ${chartB(brut, ahead)}</div></div>`;
+}
+function goalAdm(brut, ahead, pace) {
+  const S = 200, cx = 100, R = 78, sw = 11, C = 2 * Math.PI * R, p = D.goal ? Math.max(0, Math.min(1, brut / D.goal)) : 0;
+  let ticks = "";
+  for (let i = 0; i < 60; i++) {
+    const a = i / 60 * 2 * Math.PI - Math.PI / 2, r1 = R + sw / 2 + 5, r2 = R + sw / 2 + (i % 5 ? 8 : 10), lit = i / 60 < p;
+    ticks += `<line class="tick ${lit ? "lit" : ""}" ${lit ? `style="animation-delay:${(2.2 + i / 60 * 1.6).toFixed(2)}s"` : ""} x1="${(cx + r1 * Math.cos(a)).toFixed(1)}" y1="${(cx + r1 * Math.sin(a)).toFixed(1)}" x2="${(cx + r2 * Math.cos(a)).toFixed(1)}" y2="${(cx + r2 * Math.sin(a)).toFixed(1)}"/>`;
+  }
+  const a = pace * 2 * Math.PI - Math.PI / 2, rp = R + sw / 2 + 13, px = cx + rp * Math.cos(a), py = cx + rp * Math.sin(a);
+  const st = brut <= 0 ? `<span class="status n"><i></i>CA pas encore saisi</span>` : ahead ? `<span class="status g"><i></i>En avance sur l'objectif</span>` : `<span class="status o"><i></i>Sous le rythme attendu</span>`;
+  const proj = brut > 0 ? `<div class="proj">Projection fin de période :${desk() ? "<br>" : " "}<b style="color:${ahead ? "#5fd3a2" : "#e0a050"}">${eur0(D.projection)}</b></div>`
+    : `<div class="proj">Saisis le CA brut dans la <a href="/compta" style="color:#fff">Compta</a> pour suivre l'objectif</div>`;
+  const leg = `<div class="legend"><svg width="8" height="8" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 9 9 2H1Z" fill="#ededed"/></svg>où tu devrais être aujourd'hui</div>`;
+  return `<div class="b a-goal g2 ${p >= 1 ? "goal-done" : ""}" style="${wv("goal")}">${desk() ? "<h3>Objectif CA de la période</h3>" : ""}
+    <div class="ringw r2"><svg class="tk" viewBox="0 0 ${S} ${S}" aria-hidden="true">${ticks}</svg>
+      <svg viewBox="0 0 ${S} ${S}" aria-hidden="true"><circle cx="${cx}" cy="${cx}" r="${R}" fill="none" stroke="#1b1b1b" stroke-width="${sw}"/>
+      <circle class="fg" cx="${cx}" cy="${cx}" r="${R}" fill="none" stroke="#ededed" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}" data-off="${(C * (1 - p)).toFixed(1)}" style="filter:drop-shadow(0 0 6px rgba(255,255,255,.25))"/></svg>
+      <span class="pace" style="left:${(px / S * 100).toFixed(2)}%;top:${(py / S * 100).toFixed(2)}%"><svg width="10" height="10" viewBox="0 0 10 10" style="display:block;transform:rotate(${(pace * 360 + 180).toFixed(0)}deg)" aria-hidden="true"><path d="M5 1 9 8H1Z" fill="#ededed"/></svg></span>
+      <div class="ctr" role="img" aria-label="${esc(eur0(brut))} sur ${esc(eur0(D.goal))}"><b>${odo(eur0(brut))}</b><small>sur ${esc(eur0(D.goal))}</small></div></div>
+    <div class="gtx">${desk() ? "" : "<h3>Objectif CA de la période</h3>"}${st}${proj}${leg}</div></div>`;
+}
+function barsB(vals, tips, labels, delay) {
+  const mx = Math.max(...vals, 0) || 1;
+  return `<div class="bars">${vals.map((v, i) => `<span class="bw"><span class="br" style="height:${Math.max(6, v / mx * 100).toFixed(0)}%;--bd:${(delay + i * .06).toFixed(2)}s"></span><span class="tt">${tips[i]}</span></span>`).join("")}</div>`
+    + (labels ? `<div class="days">${labels.map(l => `<span>${esc(l)}</span>`).join("")}</div>` : "");
+}
+function kpiAdm(k, label, valStr, trend, body, href) {
+  const [tt, tc] = trend;
+  return `<a class="b kp a-${k}" href="${href}" style="text-decoration:none;color:inherit;${wv(k)}"><small>${label}</small>
+    <div class="v"><b>${odo(valStr)}</b><span class="tr ${tc}">${tt}</span></div>${body}</a>`;
+}
+function podAdm(rows) {
+  if (rows.length) return podB(rows, rows[1] ? `Écart 1ʳᵉ – 2ᵉ : <b>${eur(rows[0].total - rows[1].total)}</b>` : "");
+  const H = desk() ? { 1: 130, 2: 96, 3: 72 } : { 1: 110, 2: 80, 3: 60 }, DL = { 2: 1.85, 1: 2, 3: 2.15 }, N = { 1: "1ʳᵉ place", 2: "2ᵉ", 3: "3ᵉ" };
+  return `<div class="b a-pod ghost" style="${wv("pod")};display:flex;flex-direction:column"><h3>Classement de la période</h3>
+    <div class="pod" style="flex:1">${[2, 1, 3].map(r => `<div class="pc p${r}"><span class="pa" style="--pd:${DL[r] + .5}s">?</span><span class="pn">${N[r]}</span><span class="pm">—</span>
+      <div class="bar" style="height:${H[r]}px;--bd:${DL[r]}s">${r}</div></div>`).join("")}</div>
+    <div class="ghost-note">Aucune vente validée pour l'instant.<br><b>Le premier à valider une vente prend la 1ʳᵉ place.</b></div></div>`;
+}
 function renderAdmin() {
-  const t = D.totals, ps = D.pendingSales;
-  const line = ps.n ? `<b>${ps.n} vente${ps.n > 1 ? "s" : ""}</b> attend${ps.n > 1 ? "ent" : ""} ta validation · <a href="/ventes" style="color:#fff">Valider →</a>`
-    : D.missingRevenue.length ? `CA brut à saisir pour <b>${D.missingRevenue.map(esc).join(", ")}</b> · <a href="/compta" style="color:#fff">Compta →</a>`
+  const t = D.totals, ps = D.pendingSales, brut = t.brut || 0;
+  const pace = Math.min(1, (+D.today.slice(8) - +D.period.from.slice(8) + 1) / D.nDays), ahead = D.projection >= D.goal;
+  const line = ps.n ? `<span><b>${ps.n} vente${ps.n > 1 ? "s" : ""}</b> attend${ps.n > 1 ? "ent" : ""} ta validation</span>`
+    : D.missingRevenue.length ? `CA brut à saisir pour <b>${D.missingRevenue.map(esc).join(", ")}</b>`
     : `Tout est à jour. Belle période !`;
-  const proj = t.brut > 0 ? `Projection fin de période :<br><b>${eur(D.projection)}</b>` : `Saisissez le CA brut dans la Compta<br>pour suivre l'objectif`;
-  const goalTxt = desk() ? eur(t.brut).replace(/,00/, "") : (t.brut >= 1000 ? (Math.round(t.brut / 100) / 10).toString().replace(".", ",") + " k€" : eur(t.brut));
+  const wd = D.days.map(d => new Date(d + "T12:00").toLocaleDateString("fr-FR", { weekday: "narrow" }));
+  const dl = D.days.map(d => new Date(d + "T12:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" }));
+  const mh = D.marginHist, mt = D.prevMargin > 0 ? trendTxt(D.marginTrend) : ["nouvelle période", "nw"];
+  const k1 = barsB(mh.map(x => Math.max(0, x.margin)), mh.map(x => `${esc(x.label)} · <b>${eur(x.margin)}</b>`), null, 1.9)
+    + `<div class="days"><span style="text-align:left;text-transform:none">${mh.length} dernières périodes</span></div>`;
+  const k2 = ps.n ? barsB(D.series.pending, D.series.pending.map((v, i) => `${esc(dl[i])} · <b>${v} déclarée${v > 1 ? "s" : ""}</b>`), wd, 1.95)
+    : `<div class="okz">${svgI(IC.check)}Rien à valider</div>`;
+  const nx = D.nextShift, nxTxt = nx ? `Prochain : <b>${esc(nx.username)}</b> · ${esc(nx.model_name)} ${nx.date === D.today ? "à " + nx.start : dayLbl(nx.date).toLowerCase() + " " + nx.start}` : "Aucun shift prévu";
+  const k3 = D.live.length ? `<div class="avs">${D.live.slice(0, 5).map((l, i) => `<span class="a" style="--pd:${(2 + i * .1).toFixed(2)}s">${esc(l.username[0])}</span>`).join("")}
+      <span class="who">${D.live.slice(0, 3).map(l => `<b>${esc(l.username)}</b> · ${esc(l.model_name)}`).join("<br>")}${D.live.length > 3 ? `<br>+ ${D.live.length - 3} autre${D.live.length > 4 ? "s" : ""}` : ""}</span></div>`
+    : `<div class="nxt2"><span>${nxTxt}</span></div>`;
   $("hm").className = "hm adm " + MODE;
-  $("hm").innerHTML = heroB(ME.username, `${D.live.length} chatter${D.live.length > 1 ? "s" : ""} en shift`, D.live.length > 0, line)
-    + goalB("Objectif CA de la période", goalTxt, desk() ? eur(D.goal).replace(/,00/, "") : (D.goal >= 1000 ? Math.round(D.goal / 1000) + " k€" : eur(D.goal)), D.goal ? t.brut / D.goal : 0, proj)
-    + kpiB("k1", "Marge de l'agence", eur(t.margin), trendTxt(D.marginTrend), D.series.sales, "/compta")
-    + kpiB("k2", "Ventes à valider", String(ps.n), [eur(ps.total) + " brut", "nt"], D.series.pending, "/ventes")
-    + kpiB("k3", "En shift maintenant", String(D.live.length), [`sur ${D.activeChatters}`, "nt"], D.series.shifts, "/planning")
+  $("hm").innerHTML = heroAdm(line, brut, ahead)
+    + goalAdm(brut, ahead, pace)
+    + kpiAdm("k1", "Marge de l'agence", eur(t.margin), mt, k1, "/compta")
+    + kpiAdm("k2", "Ventes à valider", String(ps.n), [eur(ps.total) + " brut", ps.n ? "dn" : "nt"], k2, "/ventes")
+    + kpiAdm("k3", "En shift maintenant", String(D.live.length), [`sur ${D.activeChatters}`, D.live.length ? "" : "nt"], k3, "/planning")
     + feedB()
-    + podB(D.leaderboard.slice(0, 3), "");
+    + podAdm(D.leaderboard.slice(0, 3));
 }
 let FEED_KEYS = new Set();
 function feedB() {
   const items = D.feed.slice(0, desk() ? 6 : 5);
+  const ic = e => e.k === "e" ? icon("euro") : e.k === "s" ? icon("chat") : svgI(IC.clock);
   const html = items.map(e => { const k = e.t + e.who + e.text, isNew = FEED_KEYS.size && !FEED_KEYS.has(k);
-    return `<div class="fi ${isNew ? "new" : ""}"><span class="fa">${esc(e.who[0])}</span><span class="ft"><b>${esc(e.who)}</b> ${esc(e.text)}${e.tag ? `<span class="tg ${e.cls}">${esc(e.tag)}</span>` : ""}</span><span class="ago">${ago(e.t)}</span></div>`; }).join("");
+    return `<div class="fi ${isNew ? "new" : ""}"><span class="ic ${e.cls || ""}">${ic(e)}</span><span class="ft"><b>${esc(e.who)}</b> ${esc(e.text)}${e.tag ? `<span class="tg ${e.cls}">${esc(e.tag)}</span>` : ""}</span><span class="ago">${ago(e.t)}</span></div>`; }).join("");
   FEED_KEYS = new Set(items.map(e => e.t + e.who + e.text));
   return `<div class="b a-feed" style="${wv("feed")}"><h3>Activité en direct</h3><span class="livebadge"><i></i>en direct</span>
     <div class="feed" id="feed">${html || `<div class="empty2">Rien pour l'instant. Les ventes, pointages et simulations apparaîtront ici.</div>`}</div></div>`;
 }
+// reflet qui suit la souris sur les cartes
+addEventListener("pointermove", e => { const c = e.target.closest?.(".b"); if (!c) return; const r = c.getBoundingClientRect();
+  c.style.setProperty("--mx", (e.clientX - r.left) + "px"); c.style.setProperty("--my", (e.clientY - r.top) + "px"); }, { passive: true });
 
 /* ---------------- Ouverture ---------------- */
 function opening() {
