@@ -286,6 +286,83 @@ body:has(#reportScreen:not(.hidden)) .main-area{padding-bottom:0}
 .rp.static .st::before,.rp.static .sic *,.rp.static .face.front::after{animation:none!important;stroke-dashoffset:0}
 .rp.static .tagp{animation:none!important}
 .rp.static .again{animation:none!important}
+/* encadré éthique */
+.eflag{display:flex;gap:12px;align-items:flex-start;background:#150f0f;border:1px solid #3d2424;border-radius:16px;padding:13px 15px;color:#d99a9a}
+.eflag svg{flex-shrink:0;margin-top:1px}
+.eflag b{display:block;color:#e8b4b4;font-size:12.5px;margin-bottom:3px}
+.eflag p{margin:0;font-size:12.5px;line-height:1.5;color:#bfa3a3}
+/* analyse détaillée */
+.rp .rp-detail{opacity:0;transform:translateY(14px);transition:opacity .7s,transform .7s cubic-bezier(.2,.8,.2,1)}
+.rp.j5 .rp-detail,.rp.static .rp-detail{opacity:1;transform:none}
+.dh{display:flex;align-items:center;gap:14px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#7a7a7a;margin:6px 0 2px}
+.dh::after{content:"";flex:1;height:1px;background:#1f1f1f}
+.dgrid{display:grid;grid-template-columns:1fr;gap:14px}
+.rp .dcard{padding:18px 20px}
+.rp .dcard h2{display:flex;align-items:center;gap:8px;font-size:14px;margin:0 0 10px}
+.rp .dcard ul{margin:0;padding-left:18px;line-height:1.6;font-size:13.5px;color:#d0d0d0}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.dot.g{background:#5fd3a2}.dot.o{background:#c99a62}
+.cgrid{display:grid;grid-template-columns:1fr;gap:4px 24px}
+details.dcard summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+details.dcard summary::-webkit-details-marker{display:none}
+details.dcard summary h2{margin:0!important}
+details.dcard summary::after{content:"Afficher";font-size:12px;color:#8f8f8f}
+details.dcard[open] summary::after{content:"Masquer"}
+details.dcard[open] summary{margin-bottom:12px}
+
+/* ===================== Rapport — ordinateur ===================== */
+@media(min-width:1000px){
+  #reportScreen .wrap{padding-top:28px;padding-bottom:40px}
+  .rp-top{max-width:1120px;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;
+    grid-template-areas:"hero stats" "crits best" "act act"}
+  .rp.has-flag .rp-top{grid-template-areas:"hero stats" "flag flag" "crits best" "act act"}
+  .rp:not(.has-best) .rp-top{grid-template-areas:"hero stats" "crits crits" "act act"}
+  .rp.has-flag:not(.has-best) .rp-top{grid-template-areas:"hero stats" "flag flag" "crits crits" "act act"}
+  .rp .hero{grid-area:hero;padding:24px 28px;gap:28px}
+  .rp .eflag{grid-area:flag}
+  .rp .crits{grid-area:crits;padding:20px 22px}
+  .rp .stats2{grid-area:stats;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .rp .flip{grid-area:best;height:auto;min-height:190px}
+  .rp .rp-actions{grid-area:act;flex-direction:row;justify-content:center;align-items:center;gap:18px;margin-top:4px}
+  .rp .again{width:340px}
+  .rp .more{display:none}
+  .rp .ringw{width:156px;height:156px}
+  .rp .ringw svg{width:156px;height:156px}
+  .odo{font-size:56px}
+  .rp .num small{font-size:12px}
+  .halo,.ripple{left:106px}
+  .ripple{width:156px;height:156px;margin:-78px 0 0 -78px}
+  .flashg{background:radial-gradient(circle at 106px 50%,rgba(239,228,200,.3),rgba(214,189,134,.07) 35%,transparent 65%)}
+  .rp .win{font-size:20px;letter-spacing:.22em;line-height:1.25}
+  .rp .verdict{font-size:14px;max-width:440px}
+  .cmpv{font-size:12px;margin-top:12px}
+  .rp .card h3{font-size:13px;margin-bottom:14px}
+  .crg{row-gap:16px;column-gap:28px}
+  .rp .cr .row{font-size:13px}
+  .rp .bar{height:4px;margin-top:7px}
+  .tagp{font-size:9px}
+  .st{padding:16px 16px 14px;border-radius:16px}
+  .st .v{font-size:30px;margin-top:12px}
+  .st .v em{font-size:13px}
+  .st small{font-size:12px;margin-top:4px}
+  .sic{width:18px;height:18px}
+  .bar2{margin-top:10px;height:4px}
+  .dots{margin-top:10px}.dots i{width:7px;height:7px}
+  .cap{font-size:11px;margin-top:7px}
+  .coin{width:16px;height:16px;margin-left:-8px}
+  .face.front{padding:20px 22px;display:flex;flex-direction:column}
+  .face.front h3{font-size:11px;margin-bottom:14px}
+  .face.front .q{font-size:14.5px;padding:11px 15px;-webkit-line-clamp:4}
+  .face.front p{font-size:13px;margin-top:12px;-webkit-line-clamp:3}
+  .face.back small{font-size:10.5px}
+  .face.back svg{width:32px;height:32px}
+  .rp-detail{max-width:1120px;margin-top:30px}
+  .dgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dwide{grid-column:1/-1}
+  .cgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .eflag{padding:16px 20px}
+  .eflag p,.eflag b{font-size:13.5px}
+}
 @media (prefers-reduced-motion:reduce){.rp *{animation:none!important;transition:none!important}}
 </style>
 </head>

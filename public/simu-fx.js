@@ -86,12 +86,12 @@ const FX = (() => {
     const crits = (r.criteria || []).slice(0, 6).map(c => ({ name: shortName(c.name), s: Math.max(0, Math.min(10, Math.round(Number(c.score) || 0))) }));
     const ppvs = (sim.log || []).filter(l => l.who === "ppv"), bought = ppvs.filter(p => p.status === "acheté").length;
     const jackpot = score >= 80;
-    const title = score >= 80 ? "Excellent<br>travail" : score >= 65 ? "Bon<br>travail" : score >= 50 ? "Peut mieux<br>faire" : "À<br>retravailler";
+    const title = score >= 80 ? "Excellent travail" : score >= 65 ? "Bon travail" : score >= 50 ? "Peut mieux faire" : "À retravailler";
     const prev = opts.prevScore, delta = prev == null ? null : score - prev;
     const rt = sim.avgRt, rtLabel = rt == null ? "" : rt <= 60 ? "Rapide" : rt <= 120 ? "Correct" : "Lent";
     const rtFill = rt == null ? 0 : Math.max(8, Math.min(100, (150 - rt) / 150 * 100));
     const best = r.best && r.best.message ? r.best : null;
-    const scoreTxt = String(score).padStart(2, "0");
+    const scoreTxt = String(score);
     const digits = scoreTxt.split("").map(Number);
     const CIRC = 352;
 
@@ -101,7 +101,7 @@ const FX = (() => {
     const dots = ppvs.slice(0, 8).map((p, i) => `<i class="${p.status === "acheté" ? "ok" : ""}" style="transition-delay:${1 + i * 0.08}s"></i>`).join("");
 
     root.innerHTML = `
-    <div class="rp ${jackpot ? "is-jack" : "is-land"}">
+    <div class="rp ${jackpot ? "is-jack" : "is-land"} ${r.ethics_flag ? "has-flag" : ""} ${best ? "has-best" : ""}">
       <div class="rp-top">
         <div class="hero">
           <div class="halo"></div><span class="ripple"></span><span class="ripple" style="animation-delay:.2s"></span><span class="ripple" style="animation-delay:.4s"></span>
@@ -116,7 +116,7 @@ const FX = (() => {
             <p class="verdict">${esc(r.verdict || "")}</p>
           </div>
         </div>
-        ${r.ethics_flag ? `<div class="flag">⚠️ <b>Point éthique :</b> ${esc(r.ethics_flag)}</div>` : ""}
+        ${r.ethics_flag ? `<div class="eflag"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/></svg><div><b>Point éthique</b><p>${esc(r.ethics_flag)}</p></div></div>` : ""}
         ${crits.length ? `<div class="card crits"><h3>Détail par critère</h3><div class="crg">${crits.map(c => `
           <div class="cr"><div class="row"><span>${esc(c.name)}${c.s === 10 ? '<em class="tagp">Parfait</em>' : ""}</span><b><span class="pop">0</span><span class="of">/10</span></b></div><div class="bar"><i></i></div></div>`).join("")}</div></div>` : ""}
         <div class="stats2">
@@ -142,6 +142,7 @@ const FX = (() => {
     const tiles = $$(".st"), revEl = $q("[data-rev]"), deltaEl = $q("[data-delta]"), bar2 = $q(".bar2 i");
     const minis = tiles.map(t => [...t.querySelectorAll(".mcol")].map(m => ({ s: m.querySelector(".strip"), d: Number(m.dataset.d) })));
     $q("[data-new]").onclick = () => opts.onNew && opts.onNew();
+    if (matchMedia("(min-width: 1000px)").matches) $q(".rp-detail").classList.remove("hidden");
     $q("[data-more]").onclick = e => { const d = $q(".rp-detail"), o = d.classList.toggle("hidden"); e.currentTarget.setAttribute("aria-expanded", !o); e.currentTarget.textContent = o ? "Voir l'analyse complète" : "Masquer l'analyse"; if (!o) d.scrollIntoView({ behavior: "smooth", block: "start" }); };
 
     // couleurs des jauges
@@ -215,13 +216,17 @@ const FX = (() => {
     const r = sim.report || {};
     const crit = (r.criteria || []).map(c => `<div class="crit"><div class="row"><b>${esc(c.name)}</b><b>${esc(c.score)}/10</b></div><p>${esc(c.comment)}</p></div>`).join("");
     const rw = (r.rewrites || []).map(x => `<div class="rewrite"><div class="o">✗ ${esc(x.original)}</div><div class="n">✓ ${esc(x.better)}</div><div style="color:var(--muted);margin-top:4px">${esc(x.why)}</div></div>`).join("");
+    const li = a => (a || []).map(s => `<li>${esc(s)}</li>`).join("");
     return `
-      <div class="card"><h2>Points forts</h2><ul>${(r.strengths || []).map(s => `<li>${esc(s)}</li>`).join("")}</ul>
-        <h2 style="margin-top:14px">À améliorer</h2><ul>${(r.improvements || []).map(s => `<li>${esc(s)}</li>`).join("")}</ul>
-        ${sim.hints ? `<p class="sub" style="margin:12px 0 0">Score avant pénalité des conseils : ${esc(r.rawScore)} − ${sim.hints * 3} pts.</p>` : ""}</div>
-      ${crit ? `<div class="card"><h2>Commentaires par critère</h2>${crit}</div>` : ""}
-      ${rw ? `<div class="card"><h2>Réécritures suggérées</h2>${rw}</div>` : ""}
-      <div class="card"><h2>Transcription</h2><pre class="transcript">${esc(transcriptText(sim.log))}</pre></div>`;
+      <div class="dh"><span>Analyse détaillée</span></div>
+      <div class="dgrid">
+        <div class="card dcard"><h2><i class="dot g"></i>Points forts</h2><ul>${li(r.strengths) || "<li>—</li>"}</ul>
+          <h2 style="margin-top:16px"><i class="dot o"></i>À améliorer</h2><ul>${li(r.improvements) || "<li>—</li>"}</ul>
+          ${sim.hints ? `<p class="sub" style="margin:12px 0 0">Score avant pénalité des conseils : ${esc(r.rawScore)} − ${sim.hints * 3} pts.</p>` : ""}</div>
+        ${rw ? `<div class="card dcard"><h2>Réécritures suggérées</h2>${rw}</div>` : ""}
+        ${crit ? `<div class="card dcard dwide"><h2>Commentaires par critère</h2><div class="cgrid">${crit}</div></div>` : ""}
+        <details class="card dcard dwide"><summary><h2>Transcription de la conversation</h2></summary><pre class="transcript">${esc(transcriptText(sim.log))}</pre></details>
+      </div>`;
   }
 
   return { unlock, sound: S, report, soundOn, setSound: on => { try { localStorage.setItem("stSound", on ? "1" : "0"); } catch (e) {} } };
