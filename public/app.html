@@ -384,6 +384,105 @@ details.dcard[open] summary{margin-bottom:12px}
   .eflag p,.eflag b{font-size:13.5px}
 }
 @media (prefers-reduced-motion:reduce){.rp *{animation:none!important;transition:none!important}}
+/* ===================== Simu Chatter : écran de départ ===================== */
+.s-wrap{max-width:1180px}
+.s-hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:20px;flex-wrap:wrap}
+.s-ttl{font-family:Inter,sans-serif;font-weight:900;letter-spacing:-.045em;font-size:40px;line-height:1.02;margin:6px 0 0}
+.s-ttl em{font-style:italic;font-weight:900;background:linear-gradient(100deg,#fff,#8a8a8a 55%,#e6e6e6);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.08em}
+.s-stats{display:flex;gap:8px}
+.s-stt{background:#111;border:1px solid #1f1f1f;border-radius:14px;padding:10px 14px;min-width:104px}
+.s-stt small{display:block;font-size:10.5px;color:#7a7a7a;font-weight:700}
+.s-stt b{display:block;font-weight:900;letter-spacing:-.04em;font-size:22px;margin-top:2px;font-variant-numeric:tabular-nums}
+.s-stt b span{font-size:13px;color:#6f6f6f;letter-spacing:0}
+.s-stt .tr{font-style:normal;font-size:11px;font-weight:800;color:#5fd3a2;margin-left:4px;letter-spacing:0}.s-stt .tr.dn{color:#e07a7a}
+.s-grid{align-items:start}.s-fans{grid-auto-rows:1fr}
+.s-card{background:#111;border:1px solid #1f1f1f;border-radius:22px;padding:20px;position:relative;overflow:hidden;animation:sUp .7s cubic-bezier(.2,.8,.2,1) var(--d,0s) both}
+@keyframes sUp{from{opacity:0;transform:translateY(14px)}}
+.s-h{margin:0;font-size:15px;font-weight:800;letter-spacing:-.02em}.s-h em{font-style:italic}
+.s-h .n{display:inline-flex;width:22px;height:22px;border-radius:7px;background:#1d1d1d;border:1px solid #2a2a2a;align-items:center;justify-content:center;font-size:11px;font-weight:900;margin-right:8px;vertical-align:1px}
+.s-hrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.s-hint2{font-size:12px;color:#7a7a7a}
+.s-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+.s-fans{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.s-fan{position:relative;border-radius:16px;background:#141414;border:1px solid #222;padding:14px;cursor:pointer;transition:translate .35s cubic-bezier(.2,.8,.2,1),border-color .3s,background .3s;display:flex;flex-direction:column;gap:8px;min-height:168px;overflow:hidden;animation:sUp .6s cubic-bezier(.2,.8,.2,1) calc(.2s + var(--i) * .06s) both;outline:none}
+.s-fan:hover{translate:0 -3px;border-color:#2e2e2e}
+.s-fan:focus-visible{box-shadow:0 0 0 2px #fff}
+.s-fan::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .3s;background:radial-gradient(240px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.06),transparent 50%)}
+.s-fan:hover::after{opacity:1}
+.s-fan .top{display:flex;align-items:center;gap:10px;padding-right:22px}
+.s-fan .fav{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;background:linear-gradient(135deg,#2a2a2a,#161616);border:1px solid #333;flex-shrink:0}
+.s-fan .nm b{display:block;font-weight:900;letter-spacing:-.02em;font-size:15px}
+.s-fan .nm i{font-style:italic;font-weight:700;color:#9a9a9a;font-size:12.5px}
+.s-fan p{margin:0;font-size:12px;color:#8a8a8a;line-height:1.45;flex:1}
+.s-lvl{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;color:#8f8f8f}
+.s-lvl .bars{display:flex;gap:3px}.s-lvl .bars i{width:14px;height:5px;border-radius:3px;background:#262626}
+.s-lvl.l1 .bars i.on{background:#5fd3a2}.s-lvl.l2 .bars i.on{background:#e0a050}.s-lvl.l3 .bars i.on{background:#e07a7a}
+.s-fan .chk{position:absolute;top:12px;right:12px;width:22px;height:22px;border-radius:50%;background:#ededed;color:#0a0a0a;display:flex;align-items:center;justify-content:center;transform:scale(0);transition:transform .45s cubic-bezier(.3,1.8,.5,1)}
+.s-fan .chk svg{width:13px;height:13px}
+.s-fan.on{background:linear-gradient(160deg,#1b1b1b,#141414);border-color:transparent}
+.s-fan.on .chk{transform:scale(1)}
+@property --sfa{syntax:"<angle>";inherits:false;initial-value:0deg}
+.s-fan.on::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:conic-gradient(from var(--sfa),rgba(255,255,255,.15) 0 55%,#fff 75%,rgba(255,255,255,.15) 92%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:sSpin 3.5s linear infinite;pointer-events:none}
+@keyframes sSpin{to{--sfa:360deg}}
+.s-fan.on .fav{box-shadow:0 0 0 3px rgba(255,255,255,.08),0 0 20px rgba(255,255,255,.15)}
+.s-sess{display:flex;flex-direction:column;gap:14px;margin-top:16px}
+.s-lab{font-size:11px;font-weight:800;letter-spacing:.12em;color:#6a6a6a;margin-bottom:8px}
+.s-creas{display:flex;gap:8px;flex-wrap:wrap}
+.s-crea{flex:1;min-width:96px;border-radius:14px;background:#141414;border:1px solid #222;padding:10px;display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--text);font:inherit;transition:border-color .3s,background .3s}
+.s-crea:hover{border-color:#333}
+.s-crea .ca{width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,#2c2c2c,#161616);border:1px solid #333;display:flex;align-items:center;justify-content:center;font-weight:900;flex-shrink:0;text-transform:uppercase}
+.s-crea b{font-weight:900;letter-spacing:-.02em;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-crea.on{border-color:#ededed;background:#191919}
+.s-cinfo{border-radius:14px;background:#0f0f0f;border:1px solid #1c1c1c;padding:12px 14px;font-size:12.5px;color:#9a9a9a;line-height:1.5;white-space:pre-line}
+.s-cinfo .tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;white-space:normal}
+.s-cinfo .tags span{font-size:11.5px;font-weight:800;color:#e6e6e6;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:3px 10px}
+.s-seg{position:relative;display:flex;background:#141414;border:1px solid #222;border-radius:13px;padding:3px}
+.s-seg .ind{position:absolute;top:3px;bottom:3px;left:3px;width:calc((100% - 6px) / 3);border-radius:10px;background:#ededed;transition:transform .5s cubic-bezier(.3,1.4,.5,1);transform:translateX(100%)}
+.s-seg button{position:relative;z-index:1;flex:1;border:0;background:transparent;color:#8f8f8f;font:inherit;font-weight:800;font-size:13px;height:36px;border-radius:10px;cursor:pointer;transition:color .3s}
+.s-seg button.on{color:#0a0a0a}
+.s-dhint{font-size:12px;color:#8a8a8a;margin-top:8px;min-height:18px}
+.s-recap{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#9a9a9a;flex-wrap:wrap}
+.s-recap b{color:#fff;font-weight:800}.s-recap .sep{width:4px;height:4px;border-radius:50%;background:#3a3a3a}
+.s-go{position:relative;height:56px;border-radius:16px;border:0;background:#ededed;color:#0a0a0a;font:inherit;font-weight:900;font-size:16px;letter-spacing:-.02em;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;overflow:hidden;transition:transform .2s,box-shadow .3s,opacity .2s;box-shadow:0 10px 30px -10px rgba(255,255,255,.35)}
+.s-go:hover{transform:translateY(-2px);box-shadow:0 16px 40px -12px rgba(255,255,255,.45)}
+.s-go:disabled{opacity:.6;transform:none}
+.s-go::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.9) 50%,transparent 65%);background-size:250% 100%;animation:sGsh 3.2s ease-in-out 1.5s infinite;mix-blend-mode:overlay;pointer-events:none}
+@keyframes sGsh{0%{background-position:130% 0}40%,100%{background-position:-30% 0}}
+.s-go svg{width:18px;height:18px;transition:transform .3s}.s-go:hover svg{transform:translateX(4px)}
+.s-lim{font-size:11.5px;color:#6f6f6f;text-align:center}
+.s-hist{display:grid;grid-template-columns:1fr 1.35fr;gap:16px;margin-top:6px}
+.s-chart{position:relative;height:150px;margin-top:14px}
+.s-chart svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.s-chart .cl{stroke-dasharray:1000;stroke-dashoffset:1000;animation:sDraw 1.8s cubic-bezier(.4,0,.2,1) .5s forwards}
+@keyframes sDraw{to{stroke-dashoffset:0}}
+.s-chart .ar{opacity:0;animation:sOn .6s ease 1.6s forwards}
+.s-chart .pt{opacity:0;animation:sOn .3s ease calc(.7s + var(--i) * .12s) forwards}
+@keyframes sOn{to{opacity:1}}
+.s-chart .goal{position:absolute;right:0;font-size:10.5px;font-weight:800;color:#5fd3a2}
+.s-cax{display:flex;justify-content:space-between;font-size:10.5px;color:#5a5a5a;margin-top:6px}
+.s-rows{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.s-row{display:grid;grid-template-columns:44px 1fr auto auto;align-items:center;gap:12px;padding:8px 10px;border-radius:13px;background:#141414;border:1px solid #1f1f1f;cursor:pointer;color:var(--text);font:inherit;text-align:left;transition:background .25s,border-color .25s,translate .3s;animation:sUp .5s cubic-bezier(.2,.8,.2,1) calc(.6s + var(--i) * .06s) both}
+.s-row:hover{background:#181818;border-color:#2c2c2c;translate:3px 0}
+.s-ring{position:relative;width:40px;height:40px}
+.s-ring svg{width:40px;height:40px;transform:rotate(-90deg)}
+.s-ring b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12.5px;letter-spacing:-.03em}
+.s-row .who{min-width:0}.s-row .who b{font-weight:800;font-size:13.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.s-row .who i{font-weight:700;color:#9a9a9a}
+.s-row .who small{display:block;font-size:11.5px;color:#7a7a7a}
+.s-row .pill{font-size:10.5px;font-weight:800;border-radius:20px;padding:3px 9px;background:#1c1c1c;color:#bdbdbd;white-space:nowrap}
+.s-row .meta{text-align:right;font-size:11.5px;color:#7a7a7a;white-space:nowrap}.s-row .meta b{color:#fff;font-weight:800;display:block;font-size:13px}
+.s-empty{color:var(--muted);font-size:13px;margin-top:12px}
+@media(max-width:1000px){.s-grid{grid-template-columns:1fr}.s-hist{grid-template-columns:1fr}}
+@media(max-width:860px){
+  .s-ttl{font-size:34px}
+  .s-stats{width:100%;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}.s-stats::-webkit-scrollbar{display:none}
+  .s-stt{flex-shrink:0;min-width:110px}
+  .s-fans{grid-template-columns:1fr 1fr}.s-fan{min-height:0}.s-fan p{display:none}
+  .s-fan .top{padding-right:0}.s-fan .nm{min-width:0}.s-fan .chk{top:8px;left:42px;right:auto;width:20px;height:20px}
+  .s-hint2{display:none}
+  .s-row{grid-template-columns:40px 1fr auto}.s-row .pill,.s-row .who i{display:none}
+}
+@media (prefers-reduced-motion:reduce){.s-card,.s-fan,.s-row,.s-chart .cl,.s-chart .pt,.s-chart .ar{animation:none!important;opacity:1;stroke-dashoffset:0}.s-fan.on::before,.s-go::after{animation:none}}
+
 </style>
 </head>
 <body>
@@ -393,33 +492,25 @@ details.dcard[open] summary{margin-bottom:12px}
 
 <!-- ============ ACCUEIL ============ -->
 <div id="homeScreen">
-  <div class="wrap">
-    <div class="pagehead"><div><div class="eyebrow">Formation</div><h1>Simu Chatter</h1></div></div>
-    <div class="grid">
-      <div class="card">
-        <h2>1. Profil du fan</h2>
-        <div class="personas" id="personas"></div>
-      </div>
-      <div class="card">
-        <h2>2. Session</h2>
-        <label>Créatrice incarnée</label>
-        <select id="model"></select>
-        <div class="notice" id="modelInfo" style="margin-top:8px"></div>
-        <label>Difficulté</label>
-        <select id="difficulty">
-          <option value="facile">Facile — fan patient et indulgent</option>
-          <option value="normal" selected>Normal — réaliste</option>
-          <option value="difficile">Difficile — exigeant, décroche vite</option>
-        </select>
-        <button class="btn" id="startBtn" style="width:100%;margin-top:18px">Lancer la simulation</button>
-        <div class="err" id="startErr"></div>
-        <div class="notice" id="quota"></div>
-      </div>
+  <div class="wrap s-wrap">
+    <div class="s-hdr"><div><div class="eyebrow">Formation</div><h1 class="s-ttl">Simu <em>Chatter.</em></h1></div><div class="s-stats" id="sStats"></div></div>
+    <div class="s-grid">
+      <section class="s-card" style="--d:.05s"><h2 class="s-h"><span class="n">1</span>Choisis ton <em>fan</em></h2><div class="s-fans" id="personas"></div></section>
+      <section class="s-card" style="--d:.12s"><h2 class="s-h"><span class="n">2</span>Prépare ta <em>session</em></h2>
+        <div class="s-sess">
+          <div><div class="s-lab">CRÉATRICE INCARNÉE</div><div class="s-creas" id="creas" role="radiogroup" aria-label="Créatrice incarnée"></div><input type="hidden" id="model"></div>
+          <div class="s-cinfo" id="modelInfo"></div>
+          <div><div class="s-lab">DIFFICULTÉ</div>
+            <div class="s-seg" id="segDiff" role="radiogroup" aria-label="Difficulté"><span class="ind"></span><button type="button" data-d="facile" role="radio">Facile</button><button type="button" data-d="normal" role="radio" class="on" aria-checked="true">Normal</button><button type="button" data-d="difficile" role="radio">Difficile</button></div>
+            <input type="hidden" id="difficulty" value="normal"><div class="s-dhint" id="dHint"></div></div>
+          <div class="s-recap" id="recap"></div>
+          <button class="s-go" id="startBtn"><span id="startLbl">Lancer la simulation</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <div class="err" id="startErr"></div>
+          <div class="s-lim" id="quota"></div>
+        </div></section>
     </div>
-    <div class="card" style="margin-top:20px">
-      <h2>Mes sessions</h2>
-      <div id="history"></div>
-    </div>
+    <section class="s-card" style="--d:.2s;margin-top:16px"><div class="s-hrow"><h2 class="s-h">Mes <em>sessions</em></h2><span class="s-hint2">Touche une session pour revoir le rapport</span></div>
+      <div id="history"></div></section>
   </div>
 </div>
 
@@ -496,45 +587,85 @@ let PERSONAS = [], MODELS = [], selPersona = null, SIM = null, busy = false, cha
 async function init() {
   const me = await api("/api/me");
   renderShell("simu", me);
-  $("quota").textContent = me.role === "admin" ? "Compte manager : pas de limite quotidienne." :
+  $("quota").textContent = me.role === "admin" ? "Compte manager : pas de limite quotidienne" :
     `Simulations aujourd'hui : ${me.usedToday} / ${me.dailyLimit}`;
   [PERSONAS, MODELS] = await Promise.all([api("/api/personas"), api("/api/models")]);
   selPersona = selPersona || PERSONAS[0].id;
   renderPersonas();
-  $("model").innerHTML = MODELS.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join("");
-  showModel();
+  $("model").value = $("model").value || MODELS[0]?.id || "";
+  renderCreas(); showModel(); setDiff($("difficulty").value, false);
   loadHistory();
 }
 const FAN_COLORS = { nouveau: "#2c3a52", radin: "#3d3350", baleine: "#4a3b2a", froid: "#2d4440", agressif: "#4a2c32", fragile: "#3a3a46" };
 const fanColor = id => FAN_COLORS[id] || "#333";
 function renderPersonas() {
-  $("personas").innerHTML = PERSONAS.map(p => `<div class="persona ${p.id === selPersona ? "sel" : ""}" data-id="${p.id}" role="button" tabindex="0" aria-pressed="${p.id === selPersona}">
-    <span class="pav" style="background:${fanColor(p.id)}">${esc(p.name[0])}</span>
-    <span class="pbody"><b>${esc(p.name)} · ${esc(p.label)}</b><span class="d">${esc(p.desc)}</span>
-    <span class="lvl">${[1, 2, 3].map(n => `<i class="${n <= p.level ? "on" : ""}"></i>`).join("")}<span class="lvlt">${LEVEL[p.level][0]}</span></span></span></div>`).join("");
-  document.querySelectorAll(".persona").forEach(el => {
-    el.onclick = () => { selPersona = el.dataset.id; renderPersonas(); };
+  $("personas").innerHTML = PERSONAS.map((p, i) => `<div class="s-fan ${p.id === selPersona ? "on" : ""}" data-id="${p.id}" role="radio" tabindex="0" aria-checked="${p.id === selPersona}" style="--i:${i}">
+    <span class="chk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+    <div class="top"><span class="fav">${esc(p.name[0])}</span><div class="nm"><b>${esc(p.name)}</b><i>${esc(p.label)}</i></div></div>
+    <p>${esc(p.desc)}</p>
+    <div class="s-lvl l${p.level}"><span class="bars">${[1, 2, 3].map(n => `<i class="${n <= p.level ? "on" : ""}"></i>`).join("")}</span>${LEVEL[p.level][0]}</div></div>`).join("");
+  document.querySelectorAll(".s-fan").forEach(el => {
+    el.onclick = () => { selPersona = el.dataset.id; document.querySelectorAll(".s-fan").forEach(x => { x.classList.toggle("on", x === el); x.setAttribute("aria-checked", x === el); }); recap(); };
     el.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.click(); } };
+    el.onpointermove = e => { const r = el.getBoundingClientRect(); el.style.setProperty("--mx", (e.clientX - r.left) + "px"); el.style.setProperty("--my", (e.clientY - r.top) + "px"); };
   });
+  recap();
+}
+function renderCreas() {
+  $("creas").innerHTML = MODELS.map(m => `<button type="button" class="s-crea ${m.id == $("model").value ? "on" : ""}" data-id="${m.id}" role="radio" aria-checked="${m.id == $("model").value}"><span class="ca">${esc(m.name[0])}</span><b>${esc(m.name)}</b></button>`).join("");
+  document.querySelectorAll(".s-crea").forEach(b => b.onclick = () => { $("model").value = b.dataset.id; document.querySelectorAll(".s-crea").forEach(x => { x.classList.toggle("on", x === b); x.setAttribute("aria-checked", x === b); }); showModel(); });
 }
 function showModel() {
   const m = MODELS.find(x => x.id == $("model").value);
-  $("modelInfo").innerHTML = m ? `${esc(m.style)}<br><br><b>Prix :</b> ${esc(m.prices)}` : "";
+  $("modelInfo").innerHTML = m ? `${esc(m.style)}${m.prices ? `<div class="tags">${m.prices.split(/\s*[·|]\s*|\n+/).filter(Boolean).map(t => `<span>${esc(t)}</span>`).join("")}</div>` : ""}` : "";
+  recap();
 }
-$("model").onchange = showModel;
+const DHINT = { facile: "Fan patient et indulgent : idéal pour s'entraîner aux bases.", normal: "Réaliste : il réagit comme un vrai abonné.", difficile: "Exigeant : il décroche vite si tu le perds." };
+function setDiff(d, anim = true) {
+  const bts = [...document.querySelectorAll("#segDiff button")], i = bts.findIndex(b => b.dataset.d === d);
+  bts.forEach((b, k) => { b.classList.toggle("on", k === i); b.setAttribute("aria-checked", k === i); });
+  const ind = document.querySelector("#segDiff .ind"); if (!anim) { ind.style.transition = "none"; requestAnimationFrame(() => ind.style.transition = ""); }
+  ind.style.transform = `translateX(${i * 100}%)`; $("difficulty").value = d; $("dHint").textContent = DHINT[d]; recap();
+}
+document.querySelectorAll("#segDiff button").forEach(b => b.onclick = () => setDiff(b.dataset.d));
+function recap() {
+  const p = PERSONAS.find(x => x.id === selPersona), m = MODELS.find(x => x.id == $("model").value), d = document.querySelector("#segDiff button.on");
+  if (!p || !$("recap")) return;
+  $("recap").innerHTML = `Tu vas parler à <b>${esc(p.name)}</b><span class="sep"></span>en tant que <b>${esc(m?.name || "—")}</b><span class="sep"></span><b>${esc(d?.textContent || "")}</b>`;
+}
 async function loadHistory() {
   const h = await api("/api/my-sims");
-  $("history").innerHTML = !h.length ? "<div style='color:var(--muted)'>Aucune session terminée pour l'instant.</div>" :
-    `<div class="tablewrap"><table><tr><th>Date</th><th>Fan</th><th>Créatrice</th><th>Difficulté</th><th>Score</th><th>Revenu</th><th>Tps rép.</th></tr>` +
-    h.map(r => `<tr class="click" data-id="${r.id}"><td>${fmtDate(r.started_at)}</td><td>${esc(r.persona)}</td><td>${esc(r.creator_name)}</td><td>${esc(r.difficulty)}</td>
-      <td><b style="color:${scoreColor(r.score)}">${r.score}</b>/100</td><td>${r.revenue} €</td><td>${r.avgRt !== null ? r.avgRt + " s" : "—"}</td></tr>`).join("") + "</table></div>";
-  document.querySelectorAll("#history tr.click").forEach(tr => tr.onclick = async () => showReport(await api("/api/sims/" + tr.dataset.id), false));
+  // compteurs : score moyen (5 dernières vs 5 d'avant), meilleur score, sessions sur 7 jours, série de jours
+  const sc = h.map(r => r.score), avg = a => a.length ? Math.round(a.reduce((t, x) => t + x, 0) / a.length) : null;
+  const a5 = avg(sc.slice(0, 5)), p5 = avg(sc.slice(5, 10)), best = sc.length ? Math.max(...sc) : null;
+  const wk = h.filter(r => Date.now() - r.started_at < 7 * 864e5).length;
+  const daysSet = new Set(h.map(r => new Date(r.started_at).toDateString())); let streak = 0;
+  for (let d = new Date(); daysSet.has(d.toDateString()); d.setDate(d.getDate() - 1)) streak++;
+  const diff = a5 != null && p5 != null ? a5 - p5 : null;
+  $("sStats").innerHTML = `<div class="s-stt"><small>Score moyen</small><b>${a5 ?? "—"}${a5 != null ? "<span>/100</span>" : ""}${diff ? `<i class="tr ${diff < 0 ? "dn" : ""}">${diff > 0 ? "↑" : "↓"} ${Math.abs(diff)}</i>` : ""}</b></div>
+    <div class="s-stt"><small>Meilleur score</small><b>${best ?? "—"}${best != null ? "<span>/100</span>" : ""}</b></div>
+    <div class="s-stt"><small>Sessions · 7 jours</small><b>${wk}</b></div><div class="s-stt"><small>Série</small><b>${streak}<span> jour${streak > 1 ? "s" : ""}</span></b></div>`;
+  if (!h.length) { $("history").innerHTML = "<div class='s-empty'>Aucune session terminée pour l'instant. Lance ta première simulation !</div>"; return; }
+  // courbe de progression (du plus ancien au plus récent)
+  const pts = h.slice(0, 12).reverse(), W = 400, H = 140, n = pts.length, X = i => n > 1 ? i / (n - 1) * W : W / 2, Y = v => H - v / 100 * H;
+  const path = pts.map((r, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(r.score).toFixed(1)}`).join(" ");
+  const chart = `<div class="s-chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".12"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+    <line x1="0" x2="${W}" y1="${Y(70)}" y2="${Y(70)}" stroke="#5fd3a2" stroke-opacity=".5" stroke-dasharray="4 5" vector-effect="non-scaling-stroke"/>
+    ${n > 1 ? `<path class="ar" d="${path} L${W} ${H} L0 ${H} Z" fill="url(#sg)"/>` : ""}<path class="cl" d="${path}" fill="none" stroke="#ededed" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    ${pts.map((r, i) => `<circle class="pt" style="--i:${i}" cx="${X(i).toFixed(1)}" cy="${Y(r.score).toFixed(1)}" r="3.5" fill="#0a0a0a" stroke="#ededed" stroke-width="2" vector-effect="non-scaling-stroke"/>`).join("")}</svg>
+    <span class="goal" style="top:calc(${(Y(70) / H * 100).toFixed(1)}% - 16px)">objectif 70</span></div><div class="s-cax"><span>il y a ${n} session${n > 1 ? "s" : ""}</span><span>maintenant</span></div>`;
+  const ring = v => { const C = 2 * Math.PI * 16, col = scoreColor(v); return `<span class="s-ring" aria-label="Score ${v} sur 100"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#222" stroke-width="4"/><circle cx="20" cy="20" r="16" fill="none" stroke="${col}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - v / 100)).toFixed(1)}"/></svg><b>${v}</b></span>`; };
+  const lab = name => PERSONAS.find(p => p.name === name)?.label || "";
+  const rows = h.slice(0, 8).map((r, i) => `<button type="button" class="s-row" data-id="${r.id}" style="--i:${i}">${ring(r.score)}<span class="who"><b>${esc(r.persona)}<i> · ${esc(lab(r.persona))}</i></b><small>${esc(r.creator_name)} · ${esc(fmtDate(r.started_at))}</small></span>
+    <span class="pill">${esc(r.difficulty.charAt(0).toUpperCase() + r.difficulty.slice(1))}</span><span class="meta"><b>${r.revenue} €</b>${r.avgRt !== null ? r.avgRt + " s de réponse" : "—"}</span></button>`).join("");
+  $("history").innerHTML = `<div class="s-hist"><div><div class="s-lab" style="margin-top:14px">PROGRESSION DU SCORE</div>${chart}</div><div class="s-rows">${rows}</div></div>`;
+  document.querySelectorAll("#history .s-row").forEach(tr => tr.onclick = async () => showReport(await api("/api/sims/" + tr.dataset.id), false));
 }
 
 $("startBtn").onclick = async () => {
   FX.unlock();
   $("startBtn").disabled = true; $("startErr").textContent = "";
-  $("startBtn").textContent = "Démarrage…";
+  $("startLbl").textContent = "Démarrage…";
   try {
     const r = await api("/api/sims", { body: { personaId: selPersona, difficulty: $("difficulty").value, modelId: $("model").value } });
     $("homeScreen").classList.add("leaving"); await sleep(260); $("homeScreen").classList.remove("leaving");
@@ -543,7 +674,7 @@ $("startBtn").onclick = async () => {
     else sys("Le fan est inactif depuis 3 semaines. À vous d'ouvrir la conversation.");
     setBusy(false); $("input").focus();
   } catch (e) { $("startErr").textContent = e.message; }
-  $("startBtn").disabled = false; $("startBtn").textContent = "Lancer la simulation";
+  $("startBtn").disabled = false; $("startLbl").textContent = "Lancer la simulation";
 };
 
 /* ---------- Chat ---------- */
