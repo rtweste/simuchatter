@@ -1,7 +1,7 @@
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
-const Database = require("better-sqlite3");
+const { DatabaseSync } = require("node:sqlite");
 const crypto = require("crypto");
 const path = require("path");
 const fs = require("fs");
@@ -23,8 +23,8 @@ if (!ai.MOCK && !process.env.ANTHROPIC_API_KEY) {
 
 /* ================= Base de données ================= */
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-const db = new Database(DB_PATH);
-db.pragma("journal_mode = WAL");
+const db = new DatabaseSync(DB_PATH);
+db.exec("PRAGMA journal_mode = WAL");
 db.exec(`
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL, pass_hash TEXT NOT NULL,

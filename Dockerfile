@@ -1,9 +1,9 @@
-FROM node:22-slim
+FROM node:24-slim
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+COPY package*.json ./
+RUN npm install --omit=dev --no-audit --no-fund
 COPY . .
 ENV NODE_ENV=production
 ENV DB_PATH=/data/app.db
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["node", "--no-warnings", "server.js"]
