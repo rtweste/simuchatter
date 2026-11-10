@@ -26,16 +26,24 @@ const ICONS = {
   home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
   chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/>',
   team: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/>',
-  logout: '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H3"/>'
+  logout: '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H3"/>',
+  calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  euro: '<path d="M18 7.5A7 7 0 1 0 18 16.5"/><path d="M4 10.5h9M4 13.5h9"/>'
 };
 const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ""}</svg>`;
 const MODULES = [
   { id: "home", label: "Accueil", href: "/home", icon: "home", section: null, roles: ["admin", "chatter"] },
   { id: "simu", label: "Simu Chatter", href: "/app", icon: "chat", section: "Formation", roles: ["admin", "chatter"],
     desc: "Entraînez-vous face à un fan simulé par l'IA et recevez une évaluation détaillée." },
+  { id: "planning", label: "Planning", href: "/planning", icon: "calendar", section: "Organisation", roles: ["admin", "chatter"],
+    desc: "Créneaux de la semaine et pointage des shifts." },
+  { id: "compta", label: "Compta", href: "/compta", icon: "euro", section: "Manager", roles: ["admin"],
+    desc: "Revenus par période de 15 jours, part des créatrices, commissions des chatters." },
   { id: "admin", label: "Gestion", href: "/admin", icon: "team", section: "Manager", roles: ["admin"],
     desc: "Équipe, créatrices et résultats des simulations." }
 ];
+const eur = n => (n == null || isNaN(n)) ? "—" : Number(n).toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
+const hrs = h => { const m = Math.round((h || 0) * 60); return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}`; };
 function renderShell(active, me) {
   const el = document.getElementById("sidebar"); if (!el) return;
   const mods = MODULES.filter(m => m.roles.includes(me.role));

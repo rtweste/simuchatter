@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Planning — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+<style>
+.clock{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.clock .dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0}
+.clock .dot.on{background:var(--good);box-shadow:0 0 0 4px rgba(60,207,145,.15)}
+.clock .timer{font-family:Outfit,Inter,sans-serif;font-size:30px;font-weight:300;letter-spacing:.02em}
+.clock select{width:auto;min-width:180px}
+.weeknav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.weeknav b{min-width:210px;text-align:center}
+.grid7{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;min-width:860px}
+.grid7 th{font-size:12px;color:var(--muted);font-weight:500;padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
+.grid7 th.today{color:var(--text)}
+.grid7 td{border-bottom:1px solid var(--line);padding:6px;vertical-align:top;height:58px}
+.grid7 td.who{width:120px;font-weight:600;font-size:13px;padding-top:12px}
+.grid7 tr.mine td{background:rgba(255,255,255,.025)}
+.cell{min-height:46px;border-radius:8px;display:flex;flex-direction:column;gap:4px}
+.cell.add{cursor:pointer}
+.cell.add:hover{background:var(--panel2)}
+.cell.add:hover::after{content:"+";color:var(--muted);font-size:18px;text-align:center;margin:auto}
+.cell.add:has(.chip):hover::after{content:none}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px 7px;font-size:12px;line-height:1.3;cursor:default}
+.chip b{display:block;font-weight:600}
+.chip span{color:var(--muted)}
+.chip.edit{cursor:pointer}.chip.edit:hover{border-color:#444}
+.badge{font-size:11px;padding:2px 7px;border-radius:20px;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+.live{display:flex;gap:8px;flex-wrap:wrap}
+.live .chip{display:flex;align-items:center;gap:8px}
+.list-sm{font-size:13px;line-height:1.7;margin:0;padding:0;list-style:none}
+.list-sm li{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area">
+<div class="wrap">
+  <div class="pagehead"><div><div class="eyebrow">Organisation</div><h1>Planning</h1></div></div>
+
+  <!-- Pointage -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="clock" id="clockBox"></div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button data-t="week" class="on">Semaine</button>
+    <button data-t="mine" id="tabMine">Mes heures</button>
+    <button data-t="clocks" id="tabClocks" class="hidden">Pointages</button>
+  </div>
+
+  <!-- Semaine -->
+  <section id="t-week">
+    <div class="card">
+      <div class="weeknav">
+        <button class="btn ghost small" id="prevW" aria-label="Semaine précédente">←</button>
+        <b id="weekLabel"></b>
+        <button class="btn ghost small" id="nextW" aria-label="Semaine suivante">→</button>
+        <button class="btn ghost small" id="todayW">Aujourd'hui</button>
+        <div class="spacer"></div>
+        <button class="btn small hidden" id="addShift">+ Ajouter un créneau</button>
+      </div>
+      <div class="tablewrap" id="weekGrid"></div>
+      <div class="notice" id="weekHint"></div>
+    </div>
+  </section>
+
+  <!-- Mes heures -->
+  <section id="t-mine" class="hidden">
+    <div class="grid">
+      <div class="card"><h2>Prochains créneaux</h2><ul class="list-sm" id="upcoming"></ul></div>
+      <div class="card"><h2 id="mineTitle">Mes pointages</h2><div class="kpi" style="margin-bottom:12px"><small>Total de la période</small><b id="mineTotal">—</b></div><ul class="list-sm" id="mineList"></ul></div>
+    </div>
+  </section>
+
+  <!-- Pointages (manager) -->
+  <section id="t-clocks" class="hidden">
+    <div class="card" style="margin-bottom:20px">
+      <h2>En shift en ce moment</h2>
+      <div class="live" id="liveList"></div>
+    </div>
+    <div class="card">
+      <div class="weeknav">
+        <button class="btn ghost small" id="prevP" aria-label="Période précédente">←</button>
+        <b id="periodLabel"></b>
+        <button class="btn ghost small" id="nextP" aria-label="Période suivante">→</button>
+        <div class="spacer"></div>
+        <button class="btn small" id="addClock">+ Ajouter un pointage</button>
+      </div>
+      <div id="clockSummary" style="margin-bottom:14px"></div>
+      <div class="tablewrap" id="clockTable"></div>
+    </div>
+  </section>
+</div>
+</main>
+</div>
+
+<!-- Créneau -->
+<div class="modal hidden" id="shiftModal">
+  <form class="card" id="shiftForm">
+    <h2 id="shiftTitle">Nouveau créneau</h2>
+    <label>Chatter</label><select id="sUser" required></select>
+    <label>Créatrice</label><select id="sModel" required></select>
+    <label>Date</label><input id="sDate" type="date" required>
+    <div class="row"><div style="flex:1"><label>Début</label><input id="sStart" type="time" required></div><div style="flex:1"><label>Fin</label><input id="sEnd" type="time" required></div></div>
+    <div id="sRepeatBox"><label>Répéter chaque semaine</label>
+      <select id="sRepeat"><option value="0">Non</option><option value="1">+1 semaine</option><option value="3">+3 semaines (1 mois)</option><option value="7">+7 semaines (2 mois)</option></select></div>
+    <label>Note (optionnel)</label><input id="sNote" maxlength="200" placeholder="ex. couvrir les messages du soir">
+    <div class="row" style="margin-top:16px">
+      <button type="button" class="btn danger small hidden" id="sDelete">Supprimer</button><div class="spacer"></div>
+      <button type="button" class="btn ghost small" data-close>Annuler</button><button class="btn small">Enregistrer</button>
+    </div>
+    <div class="err" id="sErr"></div>
+  </form>
+</div>
+
+<!-- Pointage manuel -->
+<div class="modal hidden" id="clockModal">
+  <form class="card" id="clockForm">
+    <h2 id="clockTitle">Pointage</h2>
+    <label>Chatter</label><select id="cUser" required></select>
+    <label>Créatrice</label><select id="cModel" required></select>
+    <label>Début</label><input id="cStart" type="datetime-local" required>
+    <label>Fin</label><input id="cEnd" type="datetime-local">
+    <div class="row" style="margin-top:16px">
+      <button type="button" class="btn danger small hidden" id="cDelete">Supprimer</button><div class="spacer"></div>
+      <button type="button" class="btn ghost small" data-close>Annuler</button><button class="btn small">Enregistrer</button>
+    </div>
+    <div class="err" id="cErr"></div>
+  </form>
+</div>
+
+<script src="/common.js"></script>
+<script>
+let ME, IS_ADMIN, weekStart, DATA = null, CLOCK = null, PERIOD = null, editShift = null, editClock = null;
+const DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+const pad = n => String(n).padStart(2, "0");
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const monday = d => { const x = new Date(d); x.setHours(12, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
+const fmtDay = d => d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+const fmtDT = ms => new Date(ms).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const toLocalInput = ms => { const d = new Date(ms); return `${iso(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const close = () => document.querySelectorAll(".modal").forEach(m => m.classList.add("hidden"));
+document.querySelectorAll("[data-close]").forEach(b => b.onclick = close);
+
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
+  ["week", "mine", "clocks"].forEach(t => $("t-" + t).classList.toggle("hidden", t !== b.dataset.t));
+  if (b.dataset.t === "clocks") loadClocks();
+  if (b.dataset.t === "mine") loadMine();
+});
+
+/* ---------- Pointage ---------- */
+let tick = null;
+async function loadMine() {
+  CLOCK = await api("/api/clock/me");
+  renderClock(); renderMine();
+}
+function renderClock() {
+  const c = CLOCK; clearInterval(tick);
+  if (c.open) {
+    $("clockBox").innerHTML = `<span class="dot on"></span><div><div class="eyebrow" style="margin:0">En shift sur ${esc(c.open.model_name)}</div><div class="timer" id="timer"></div></div>
+      <div class="spacer"></div><button class="btn" id="outBtn">Terminer mon shift</button>`;
+    const upd = () => { const s = Math.floor((Date.now() - c.open.start_at) / 1000); $("timer").textContent = `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s % 3600 / 60))}:${pad(s % 60)}`; };
+    upd(); tick = setInterval(upd, 1000);
+    $("outBtn").onclick = async () => { $("outBtn").disabled = true; try { await api("/api/clock/out", { body: {} }); } catch (e) { alertMsg(e.message); } await loadMine(); };
+  } else {
+    // créatrice pré-sélectionnée : celle du prochain créneau du jour, s'il y en a un
+    const today = iso(new Date());
+    const next = c.upcoming.find(s => s.date === today);
+    $("clockBox").innerHTML = `<span class="dot"></span><div><div class="eyebrow" style="margin:0">Pointage</div><div style="font-weight:600">Pas de shift en cours</div></div>
+      <div class="spacer"></div><label for="inModel" class="hidden">Créatrice</label>
+      <select id="inModel">${c.models.map(m => `<option value="${m.id}" ${next && next.model_id === m.id ? "selected" : ""}>${esc(m.name)}</option>`).join("")}</select>
+      <button class="btn" id="inBtn">Commencer mon shift</button>`;
+    $("inBtn").onclick = async () => { $("inBtn").disabled = true; try { await api("/api/clock/in", { body: { model_id: $("inModel").value } }); } catch (e) { alertMsg(e.message); } await loadMine(); };
+  }
+}
+function alertMsg(m) { $("clockBox").insertAdjacentHTML("beforeend", `<div class="err" style="width:100%">${esc(m)}</div>`); }
+function renderMine() {
+  const c = CLOCK;
+  $("upcoming").innerHTML = c.upcoming.length ? c.upcoming.map(s => `<li><span>${new Date(s.date + "T12:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" })} · <b>${esc(s.model_name)}</b></span><span>${s.start} – ${s.end}</span></li>`).join("")
+    : "<li style='color:var(--muted)'>Aucun créneau prévu.</li>";
+  $("mineTitle").textContent = `Mes pointages · ${c.period.label}`;
+  $("mineTotal").textContent = hrs(c.hours);
+  $("mineList").innerHTML = c.clocks.length ? c.clocks.map(k => `<li><span>${fmtDT(k.start_at)} · ${esc(k.model_name)}</span><span>${k.end_at ? hrs((k.end_at - k.start_at) / 3.6e6) : "<span class='badge'>en cours</span>"}</span></li>`).join("")
+    : "<li style='color:var(--muted)'>Aucun pointage sur cette période.</li>";
+}
+
+/* ---------- Semaine ---------- */
+async function loadWeek() {
+  const from = iso(weekStart), to = iso(addDays(weekStart, 6));
+  DATA = await api(`/api/shifts?from=${from}&to=${to}`);
+  $("weekLabel").textContent = `Semaine du ${fmtDay(weekStart)} au ${fmtDay(addDays(weekStart, 6))}`;
+  const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
+  const today = iso(new Date());
+  // lignes : chatters actifs + toute personne ayant un créneau cette semaine
+  const ids = new Set(DATA.people.filter(p => p.role === "chatter").map(p => p.id));
+  DATA.shifts.forEach(s => ids.add(s.user_id));
+  const people = DATA.people.filter(p => ids.has(p.id)).sort((a, b) => (b.id === ME.id) - (a.id === ME.id) || a.username.localeCompare(b.username));
+  if (!people.length) { $("weekGrid").innerHTML = "<div style='color:var(--muted)'>Aucun chatter. Ajoutez des comptes dans « Gestion ».</div>"; return; }
+  if (window.innerWidth < 700) {   // téléphone : liste jour par jour
+    $("weekGrid").innerHTML = days.map((d, i) => {
+      const ds = iso(d), list = DATA.shifts.filter(s => s.date === ds).sort((a, b) => (b.user_id === ME.id) - (a.user_id === ME.id) || a.start.localeCompare(b.start));
+      return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div style="font-weight:600;margin-bottom:6px;${ds === today ? "" : "color:var(--muted)"}">${d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" })}</div>
+        ${list.length ? list.map(s => `<div class="chip ${IS_ADMIN ? "edit" : ""}" data-id="${s.id}" style="margin-bottom:6px;${s.user_id === ME.id ? "border-color:#555" : ""}"><b style="display:inline">${esc(s.username)}</b> · ${esc(s.model_name)} <span style="float:right">${s.start} – ${s.end}</span></div>`).join("")
+          : `<div style="color:var(--muted);font-size:13px">—</div>`}</div>`;
+    }).join("");
+    $("weekHint").textContent = IS_ADMIN ? "Touchez un créneau pour le modifier, ou « + Ajouter un créneau »." : "Vos créneaux sont encadrés. Seul le manager peut modifier le planning.";
+    if (IS_ADMIN) document.querySelectorAll(".chip.edit").forEach(c => c.onclick = () => openShift(DATA.shifts.find(s => s.id == c.dataset.id)));
+    return;
+  }
+  let h = `<table class="grid7"><tr><th style="width:120px"></th>${days.map((d, i) => `<th class="${iso(d) === today ? "today" : ""}">${DAYS[i]} ${d.getDate()}</th>`).join("")}</tr>`;
+  for (const p of people) {
+    h += `<tr class="${p.id === ME.id ? "mine" : ""}"><td class="who">${esc(p.username)}${p.id === ME.id ? " <span class='badge'>vous</span>" : ""}</td>`;
+    for (const d of days) {
+      const ds = iso(d), list = DATA.shifts.filter(s => s.user_id === p.id && s.date === ds);
+      h += `<td><div class="cell ${IS_ADMIN ? "add" : ""}" data-u="${p.id}" data-d="${ds}">${list.map(s =>
+        `<div class="chip ${IS_ADMIN ? "edit" : ""}" data-id="${s.id}" title="${esc(s.note || "")}"><b>${esc(s.model_name)}</b><span>${s.start} – ${s.end}</span></div>`).join("")}</div></td>`;
+    }
+    h += "</tr>";
+  }
+  $("weekGrid").innerHTML = h + "</table>";
+  $("weekHint").textContent = IS_ADMIN ? "Cliquez dans une case pour ajouter un créneau, ou sur un créneau pour le modifier." : "Votre ligne est mise en avant. Seul le manager peut modifier le planning.";
+  if (IS_ADMIN) {
+    document.querySelectorAll(".cell.add").forEach(c => c.onclick = e => { if (e.target.closest(".chip")) return; openShift(null, { user_id: +c.dataset.u, date: c.dataset.d }); });
+    document.querySelectorAll(".chip.edit").forEach(c => c.onclick = () => openShift(DATA.shifts.find(s => s.id == c.dataset.id)));
+  }
+}
+$("prevW").onclick = () => { weekStart = addDays(weekStart, -7); loadWeek(); };
+$("nextW").onclick = () => { weekStart = addDays(weekStart, 7); loadWeek(); };
+$("todayW").onclick = () => { weekStart = monday(new Date()); loadWeek(); };
+$("addShift").onclick = () => openShift(null, { date: iso(new Date()) });
+
+function openShift(s, preset = {}) {
+  editShift = s;
+  $("sUser").innerHTML = DATA.people.map(p => `<option value="${p.id}">${esc(p.username)}</option>`).join("");
+  $("sModel").innerHTML = DATA.models.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join("");
+  $("shiftTitle").textContent = s ? "Modifier le créneau" : "Nouveau créneau";
+  $("sUser").value = s ? s.user_id : (preset.user_id || DATA.people.find(p => p.role === "chatter")?.id || "");
+  $("sModel").value = s ? s.model_id : (DATA.models[0]?.id || "");
+  $("sDate").value = s ? s.date : preset.date; $("sStart").value = s ? s.start : "18:00"; $("sEnd").value = s ? s.end : "00:00";
+  $("sNote").value = s ? (s.note || "") : ""; $("sRepeat").value = "0";
+  $("sRepeatBox").classList.toggle("hidden", !!s); $("sDelete").classList.toggle("hidden", !s); $("sErr").textContent = "";
+  $("shiftModal").classList.remove("hidden");
+}
+$("shiftForm").onsubmit = async e => {
+  e.preventDefault();
+  const body = { user_id: $("sUser").value, model_id: $("sModel").value, date: $("sDate").value, start: $("sStart").value, end: $("sEnd").value, note: $("sNote").value, repeatWeeks: $("sRepeat").value };
+  try { await api(editShift ? `/api/admin/shifts/${editShift.id}` : "/api/admin/shifts", { method: editShift ? "PUT" : "POST", body }); close(); loadWeek(); }
+  catch (err) { $("sErr").textContent = err.message; }
+};
+$("sDelete").onclick = async () => { await api(`/api/admin/shifts/${editShift.id}`, { method: "DELETE" }); close(); loadWeek(); };
+
+/* ---------- Pointages (manager) ---------- */
+let CL = null;
+async function loadClocks(p) {
+  CL = await api("/api/admin/clocks" + (p || PERIOD ? `?period=${p || PERIOD}` : ""));
+  PERIOD = CL.period.key;
+  $("periodLabel").textContent = CL.period.label;
+  $("liveList").innerHTML = CL.live.length ? CL.live.map(c => `<div class="chip"><span class="dot on" style="width:8px;height:8px;border-radius:50%;background:var(--good)"></span><b style="display:inline">${esc(c.username)}</b> sur ${esc(c.model_name)} · depuis ${hrs((Date.now() - c.start_at) / 3.6e6)}</div>`).join("")
+    : "<div style='color:var(--muted)'>Personne n'est en shift.</div>";
+  const tot = {}; CL.clocks.filter(c => c.end_at).forEach(c => tot[c.username] = (tot[c.username] || 0) + (c.end_at - c.start_at) / 3.6e6);
+  $("clockSummary").innerHTML = Object.keys(tot).length ? `<div class="live">${Object.entries(tot).sort((a, b) => b[1] - a[1]).map(([u, h]) => `<span class="chip"><b style="display:inline">${esc(u)}</b> ${hrs(h)}</span>`).join("")}</div>` : "";
+  $("clockTable").innerHTML = !CL.clocks.length ? "<div style='color:var(--muted)'>Aucun pointage sur cette période.</div>" :
+    `<table><tr><th>Début</th><th>Chatter</th><th>Créatrice</th><th>Fin</th><th>Durée</th><th></th></tr>` +
+    CL.clocks.map(c => `<tr><td style="white-space:nowrap">${fmtDT(c.start_at)}</td><td><b>${esc(c.username)}</b></td><td>${esc(c.model_name)}</td>
+      <td style="white-space:nowrap">${c.end_at ? fmtDT(c.end_at) : "<span class='badge'>en cours</span>"}</td>
+      <td>${c.end_at ? hrs((c.end_at - c.start_at) / 3.6e6) : "—"} ${c.edited ? "<span class='badge' title='Modifié par le manager'>corrigé</span>" : ""}</td>
+      <td style="text-align:right"><button class="btn ghost small" data-c="${c.id}">Modifier</button></td></tr>`).join("") + "</table>";
+  document.querySelectorAll("[data-c]").forEach(b => b.onclick = () => openClock(CL.clocks.find(c => c.id == b.dataset.c)));
+}
+$("prevP").onclick = () => loadClocks(CL.period.prev);
+$("nextP").onclick = () => loadClocks(CL.period.next);
+$("addClock").onclick = () => openClock(null);
+function openClock(c) {
+  editClock = c;
+  $("cUser").innerHTML = CL.people.map(p => `<option value="${p.id}">${esc(p.username)}</option>`).join("");
+  $("cModel").innerHTML = CL.models.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join("");
+  $("clockTitle").textContent = c ? "Corriger le pointage" : "Ajouter un pointage";
+  if (c) { $("cUser").value = c.user_id; $("cModel").value = c.model_id; $("cStart").value = toLocalInput(c.start_at); $("cEnd").value = c.end_at ? toLocalInput(c.end_at) : ""; }
+  else { const n = Date.now(); $("cStart").value = toLocalInput(n - 4 * 3.6e6); $("cEnd").value = toLocalInput(n); }
+  $("cDelete").classList.toggle("hidden", !c); $("cErr").textContent = "";
+  $("clockModal").classList.remove("hidden");
+}
+$("clockForm").onsubmit = async e => {
+  e.preventDefault();
+  const body = { user_id: $("cUser").value, model_id: $("cModel").value, start_at: new Date($("cStart").value).getTime(), end_at: $("cEnd").value ? new Date($("cEnd").value).getTime() : null };
+  try { await api(editClock ? `/api/admin/clocks/${editClock.id}` : "/api/admin/clocks", { method: editClock ? "PUT" : "POST", body }); close(); loadClocks(); loadMine(); }
+  catch (err) { $("cErr").textContent = err.message; }
+};
+$("cDelete").onclick = async () => { await api(`/api/admin/clocks/${editClock.id}`, { method: "DELETE" }); close(); loadClocks(); loadMine(); };
+
+/* ---------- Démarrage ---------- */
+(async () => {
+  ME = await api("/api/me");
+  IS_ADMIN = ME.role === "admin";
+  renderShell("planning", ME);
+  if (IS_ADMIN) { $("tabClocks").classList.remove("hidden"); $("addShift").classList.remove("hidden"); }
+  weekStart = monday(new Date());
+  await Promise.all([loadWeek(), loadMine()]);
+})();
+</script>
+</body>
+</html>

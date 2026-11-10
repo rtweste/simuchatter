@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compta — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+<style>
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px}
+.kpis .card b{font-size:22px}
+.kpis .card.main{border-color:#3a3a3a}
+.money{width:120px;text-align:right;padding:7px 9px}
+.pct{width:72px;text-align:right;padding:7px 9px}
+td.num,th.num{text-align:right;white-space:nowrap}
+tr.total td{font-weight:700;border-top:1px solid #3a3a3a}
+.warn{color:var(--warn);font-size:12px}
+.saved{outline:1px solid var(--good)!important}
+.weeknav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.weeknav b{min-width:170px;text-align:center}
+.hint{font-size:12px;color:var(--muted);margin:8px 0 0;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area">
+<div class="wrap">
+  <div class="pagehead"><div><div class="eyebrow">Manager</div><h1>Compta</h1></div><div class="spacer"></div>
+    <div class="weeknav">
+      <button class="btn ghost small" id="prevP" aria-label="Période précédente">←</button>
+      <b id="pLabel"></b>
+      <button class="btn ghost small" id="nextP" aria-label="Période suivante">→</button>
+      <button class="btn small" id="exportBtn">Exporter pour Excel</button>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+  <div id="alerts"></div>
+
+  <div class="card" style="margin-bottom:20px">
+    <h2>Revenus par créatrice</h2>
+    <div class="tablewrap" id="modelsTable"></div>
+    <p class="hint">Saisissez le CA brut et le CA net de la période (comme dans votre Excel). « % créatrice » est la part du CA net qui revient à la créatrice. Tout s'enregistre automatiquement.</p>
+  </div>
+
+  <div class="grid" style="margin-bottom:20px">
+    <div class="card">
+      <h2>À payer aux chatters</h2>
+      <div class="tablewrap" id="chattersTable"></div>
+      <p class="hint">« Taux » = pourcentage de commission du chatter sur les ventes qui lui sont attribuées.</p>
+    </div>
+    <div class="card">
+      <h2>Réglages</h2>
+      <label for="baseSel">Commission calculée sur</label>
+      <select id="baseSel"><option value="net">le CA net</option><option value="brut">le CA brut</option></select>
+      <p class="hint">Les ventes de chaque créatrice sont réparties entre les chatters <b>selon leurs heures pointées</b> sur ce compte pendant la période. Vous pouvez corriger un montant dans le détail ci-dessous.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Détail par chatter et par créatrice</h2>
+    <div class="tablewrap" id="linesTable"></div>
+    <p class="hint">Laissez « Montant retenu » vide pour utiliser le calcul automatique (au prorata des heures). Saisissez un montant pour le remplacer.</p>
+  </div>
+</div>
+</main>
+</div>
+
+<script src="/common.js"></script>
+<script>
+let C = null, PERIOD = null;
+const parseNum = v => { const s = String(v).trim().replace(/\s/g, "").replace(",", "."); return s === "" ? "" : Number(s); };
+const fix2 = n => n == null ? "" : String(Math.round(n * 100) / 100).replace(".", ",");
+
+async function load(p) {
+  C = await api("/api/admin/compta" + (p || PERIOD ? `?period=${p || PERIOD}` : ""));
+  PERIOD = C.period.key; render();
+}
+function flash(el) { el.classList.add("saved"); setTimeout(() => el.classList.remove("saved"), 900); }
+async function save(path, body, el) {
+  try { await api(path, { method: "PUT", body }); flash(el); await load(); }
+  catch (e) { el.style.outline = "1px solid var(--bad)"; el.title = e.message; }
+}
+
+function render() {
+  const t = C.totals;
+  $("pLabel").textContent = C.period.label;
+  $("baseSel").value = C.base;
+  $("kpis").innerHTML = [
+    ["CA brut", eur(t.brut)], ["CA net", eur(t.net)], ["Part des créatrices", eur(t.creators)],
+    ["Commissions chatters", eur(t.chatters)], ["Marge de l'agence", eur(t.margin), true]
+  ].map(([l, v, main]) => `<div class="card kpi ${main ? "main" : ""}"><small>${l}</small><b ${main ? `style="color:${t.margin >= 0 ? "var(--good)" : "var(--bad)"}"` : ""}>${v}</b></div>`).join("");
+
+  // alertes
+  const al = [];
+  if (C.unattributed.length) al.push(`Aucune heure pointée pour : <b>${C.unattributed.map(esc).join(", ")}</b>. Leurs ventes ne sont attribuées à aucun chatter : ajoutez des pointages (Planning › Pointages) ou un montant manuel.`);
+  C.models.forEach(m => { if (m.commissionBase > 0 && m.attributed > 0 && Math.abs(m.attributed - m.commissionBase) > 1)
+    al.push(`<b>${esc(m.name)}</b> : ${eur(m.attributed)} attribués aux chatters pour ${eur(m.commissionBase)} de CA ${C.base}. Vérifiez les montants corrigés.`); });
+  $("alerts").innerHTML = al.map(a => `<div class="notice" style="margin:0 0 14px;border:1px solid #4d4020;background:#2a2414;color:#f3d999">⚠️ ${a}</div>`).join("");
+
+  // créatrices
+  $("modelsTable").innerHTML = `<table><tr><th>Créatrice</th><th class="num">CA brut</th><th class="num">CA net</th><th class="num">% créatrice</th><th class="num">Part créatrice</th><th class="num">Part agence</th><th class="num">Heures pointées</th></tr>` +
+    C.models.map(m => `<tr><td><b>${esc(m.name)}</b></td>
+      <td class="num"><input class="money" inputmode="decimal" data-rev="brut" data-m="${m.id}" value="${fix2(m.brut)}" placeholder="0" aria-label="CA brut ${esc(m.name)}"></td>
+      <td class="num"><input class="money" inputmode="decimal" data-rev="net" data-m="${m.id}" value="${fix2(m.net)}" placeholder="0" aria-label="CA net ${esc(m.name)}"></td>
+      <td class="num"><input class="pct" inputmode="decimal" data-cpct="${m.id}" value="${fix2(m.creator_pct)}" aria-label="% créatrice ${esc(m.name)}"> %</td>
+      <td class="num">${eur(m.creatorPay)}</td><td class="num">${eur(m.agencyShare)}</td><td class="num">${hrs(m.totalHours)}</td></tr>`).join("") +
+    `<tr class="total"><td>Total</td><td class="num">${eur(t.brut)}</td><td class="num">${eur(t.net)}</td><td></td><td class="num">${eur(t.creators)}</td><td class="num">${eur(t.agencyShare)}</td><td class="num">${hrs(C.models.reduce((a, m) => a + m.totalHours, 0))}</td></tr></table>`;
+  document.querySelectorAll("[data-rev]").forEach(inp => inp.onchange = () => {
+    const m = C.models.find(x => x.id == inp.dataset.m);
+    const brutEl = document.querySelector(`[data-rev=brut][data-m="${m.id}"]`), netEl = document.querySelector(`[data-rev=net][data-m="${m.id}"]`);
+    save("/api/admin/revenue", { period: PERIOD, model_id: m.id, brut: parseNum(brutEl.value), net: parseNum(netEl.value) }, inp);
+  });
+  document.querySelectorAll("[data-cpct]").forEach(inp => inp.onchange = () => save(`/api/admin/models/${inp.dataset.cpct}/pct`, { creator_pct: parseNum(inp.value) }, inp));
+
+  // chatters
+  const chs = C.chatters.filter(c => c.active || c.pay > 0);
+  $("chattersTable").innerHTML = !chs.length ? "<div style='color:var(--muted)'>Aucun chatter.</div>" :
+    `<table><tr><th>Chatter</th><th class="num">Taux</th><th class="num">Heures</th><th class="num">Ventes attribuées</th><th class="num">À payer</th></tr>` +
+    chs.map(c => `<tr><td><b>${esc(c.username)}</b></td><td class="num"><input class="pct" inputmode="decimal" data-upct="${c.id}" value="${fix2(c.commission_pct)}" aria-label="Taux ${esc(c.username)}"> %</td>
+      <td class="num">${hrs(c.hours)}</td><td class="num">${eur(c.sales)}</td><td class="num"><b>${eur(c.pay)}</b></td></tr>`).join("") +
+    `<tr class="total"><td>Total</td><td></td><td class="num">${hrs(chs.reduce((a, c) => a + c.hours, 0))}</td><td class="num">${eur(chs.reduce((a, c) => a + c.sales, 0))}</td><td class="num">${eur(t.chatters)}</td></tr></table>`;
+  document.querySelectorAll("[data-upct]").forEach(inp => inp.onchange = () => save(`/api/admin/users/${inp.dataset.upct}/commission`, { commission_pct: parseNum(inp.value) }, inp));
+
+  // détail
+  $("linesTable").innerHTML = !C.lines.length ? "<div style='color:var(--muted)'>Aucune heure pointée sur cette période. Les chatters pointent depuis la page Planning.</div>" :
+    `<table><tr><th>Chatter</th><th>Créatrice</th><th class="num">Heures</th><th class="num">Calcul auto</th><th class="num">Montant retenu</th><th class="num">Taux</th><th class="num">Commission</th></tr>` +
+    C.lines.map(l => `<tr><td><b>${esc(l.username)}</b></td><td>${esc(l.model_name)}</td><td class="num">${hrs(l.hours)}</td><td class="num">${eur(l.auto)}</td>
+      <td class="num"><input class="money" inputmode="decimal" data-attr="${l.user_id}:${l.model_id}" value="${l.override == null ? "" : fix2(l.override)}" placeholder="${fix2(l.auto)}" aria-label="Montant retenu"></td>
+      <td class="num">${fix2(l.pct)} %</td><td class="num">${eur(l.pay)}</td></tr>`).join("") + "</table>";
+  document.querySelectorAll("[data-attr]").forEach(inp => inp.onchange = () => {
+    const [u, m] = inp.dataset.attr.split(":"); const v = parseNum(inp.value);
+    save("/api/admin/attribution", { period: PERIOD, user_id: u, model_id: m, amount: v === "" ? null : v }, inp);
+  });
+}
+
+$("baseSel").onchange = () => save("/api/admin/settings", { commission_base: $("baseSel").value }, $("baseSel"));
+$("prevP").onclick = () => load(C.period.prev);
+$("nextP").onclick = () => load(C.period.next);
+
+// Export CSV lisible par Excel (point-virgule, virgule décimale, accents)
+$("exportBtn").onclick = () => {
+  const n = v => v == null ? "" : String(Math.round(v * 100) / 100).replace(".", ",");
+  const q = s => `"${String(s ?? "").replace(/"/g, '""')}"`;
+  const rows = [[`StellADS — Compta ${C.period.label}`], [],
+    ["REVENUS PAR CRÉATRICE"], ["Créatrice", "CA brut", "CA net", "% créatrice", "Part créatrice", "Part agence", "Heures pointées"],
+    ...C.models.map(m => [m.name, n(m.brut), n(m.net), n(m.creator_pct), n(m.creatorPay), n(m.agencyShare), n(m.totalHours)]),
+    ["Total", n(C.totals.brut), n(C.totals.net), "", n(C.totals.creators), n(C.totals.agencyShare)], [],
+    ["À PAYER AUX CHATTERS"], ["Chatter", "Taux %", "Heures", "Ventes attribuées", "À payer"],
+    ...C.chatters.filter(c => c.active || c.pay > 0).map(c => [c.username, n(c.commission_pct), n(c.hours), n(c.sales), n(c.pay)]),
+    ["Total", "", "", "", n(C.totals.chatters)], [],
+    ["DÉTAIL"], ["Chatter", "Créatrice", "Heures", "Calcul auto", "Montant retenu", "Taux %", "Commission"],
+    ...C.lines.map(l => [l.username, l.model_name, n(l.hours), n(l.auto), n(l.sales), n(l.pct), n(l.pay)]), [],
+    ["RÉSUMÉ"], ["Marge de l'agence", n(C.totals.margin)], [`Commission calculée sur le CA ${C.base}`]];
+  const csv = "﻿" + rows.map(r => r.map(q).join(";")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = `stellads-compta-${C.period.key}.csv`; document.body.appendChild(a); a.click(); a.remove();
+};
+
+(async () => {
+  const me = await api("/api/me");
+  if (me.role !== "admin") { location.href = "/home"; return; }
+  renderShell("compta", me);
+  await load();
+})();
+</script>
+</body>
+</html>
