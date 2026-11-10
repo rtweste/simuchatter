@@ -194,7 +194,7 @@ module.exports = function mount(app, db, auth, admin) {
     const totals = { brut: sum(modelRows, m => m.brut), net: sum(modelRows, m => m.net), creators: sum(modelRows, m => m.creatorPay),
       agencyShare: sum(modelRows, m => m.agencyShare), chatters: sum(chatters, c => c.pay) };
     totals.margin = totals.agencyShare - totals.chatters;
-    return { period: p, base, models: modelRows, lines, chatters, totals, unattributed };
+    return { period: p, base, fee: Number(getSetting("platform_fee", "25")), models: modelRows, lines, chatters, totals, unattributed };
   }
 
   app.get("/api/admin/compta", auth, admin, (req, res) => {
@@ -203,13 +203,15 @@ module.exports = function mount(app, db, auth, admin) {
   app.put("/api/admin/revenue", auth, admin, (req, res) => {
     const { period } = req.body || {}; const model_id = parseInt(req.body?.model_id, 10);
     if (!periodInfo(period) || !modelExists(model_id)) return res.status(400).json({ error: "Données invalides" });
-    const brut = req.body.brut === "" || req.body.brut == null ? null : num(req.body.brut, 0, 1e9);
-    const net = req.body.net === "" || req.body.net == null ? null : num(req.body.net, 0, 1e9);
-    if ((req.body.brut !== "" && req.body.brut != null && brut === null) || (req.body.net !== "" && req.body.net != null && net === null))
-      return res.status(400).json({ error: "Montant invalide" });
+    const empty = req.body.brut === "" || req.body.brut == null;
+    const brut = empty ? null : num(req.body.brut, 0, 1e9);
+    if (!empty && brut === null) return res.status(400).json({ error: "Montant invalide" });
+    // CA net = CA brut moins la commission de la plateforme (25 % par défaut)
+    const fee = Number(getSetting("platform_fee", "25"));
+    const net = brut === null ? null : Math.round(brut * (1 - fee / 100) * 100) / 100;
     db.prepare(`INSERT INTO revenues (period, model_id, brut, net) VALUES (?,?,?,?)
       ON CONFLICT(period, model_id) DO UPDATE SET brut = excluded.brut, net = excluded.net`).run(period, model_id, brut, net);
-    res.json({ ok: true });
+    res.json({ ok: true, net });
   });
   app.put("/api/admin/models/:id/pct", auth, admin, (req, res) => {
     const v = num(req.body?.creator_pct, 0, 100); if (v === null) return res.status(400).json({ error: "Pourcentage entre 0 et 100" });
@@ -232,8 +234,17 @@ module.exports = function mount(app, db, auth, admin) {
     res.json({ ok: true });
   });
   app.put("/api/admin/settings", auth, admin, (req, res) => {
-    const b = req.body?.commission_base; if (!["net", "brut"].includes(b)) return res.status(400).json({ error: "Valeur invalide" });
-    db.prepare("INSERT INTO settings (key, value) VALUES ('commission_base', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(b);
+    const set = (k, v) => db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(k, String(v));
+    if (req.body?.commission_base !== undefined) {
+      if (!["net", "brut"].includes(req.body.commission_base)) return res.status(400).json({ error: "Valeur invalide" });
+      set("commission_base", req.body.commission_base);
+    }
+    if (req.body?.platform_fee !== undefined) {
+      const f = num(req.body.platform_fee, 0, 90); if (f === null) return res.status(400).json({ error: "Pourcentage entre 0 et 90" });
+      set("platform_fee", f);
+      // recalcule le CA net de la période affichée avec le nouveau taux
+      if (periodInfo(req.body.period)) db.prepare("UPDATE revenues SET net = ROUND(brut * (1 - ? / 100.0), 2) WHERE period = ? AND brut IS NOT NULL").run(f, req.body.period);
+    }
     res.json({ ok: true });
   });
 
