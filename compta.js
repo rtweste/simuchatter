@@ -203,7 +203,8 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   }
 
   app.get("/api/admin/compta", auth, admin, (req, res) => {
-    res.json(computeCompta(periodInfo(req.query.period) ? req.query.period : currentPeriod()));
+    res.json({ ...computeCompta(periodInfo(req.query.period) ? req.query.period : currentPeriod()),
+      goals: { ca: Number(getSetting("goal_ca", "20000")), chatter: Number(getSetting("goal_chatter", "300")) } });
   });
   // Historique pour les graphiques : totaux des N dernières périodes jusqu'à la période demandée
   app.get("/api/admin/compta/history", auth, admin, (req, res) => {
@@ -259,6 +260,14 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       if (!["ventes", "heures"].includes(req.body.attribution_mode)) return res.status(400).json({ error: "Valeur invalide" });
       set("attribution_mode", req.body.attribution_mode);
     }
+    if (req.body?.goal_ca !== undefined) {
+      const g = num(req.body.goal_ca, 0, 1e8); if (g === null) return res.status(400).json({ error: "Objectif invalide" });
+      set("goal_ca", g);
+    }
+    if (req.body?.goal_chatter !== undefined) {
+      const g = num(req.body.goal_chatter, 0, 1e7); if (g === null) return res.status(400).json({ error: "Objectif invalide" });
+      set("goal_chatter", g);
+    }
     if (req.body?.platform_fee !== undefined) {
       const f = num(req.body.platform_fee, 0, 90); if (f === null) return res.status(400).json({ error: "Pourcentage entre 0 et 90" });
       set("platform_fee", f);
@@ -269,8 +278,19 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   });
 
   /* ================= ACCUEIL : résumé selon le rôle ================= */
+  // 7 derniers jours (heure de Paris), du plus ancien au plus récent
+  const lastDays = (n, now) => Array.from({ length: n }, (_, i) => parisDate(now - (n - 1 - i) * 864e5));
+  const pctTrend = (a, b) => b > 0 ? Math.round((a - b) / b * 100) : (a > 0 ? 100 : 0);
+  const periodElapsed = (p, today) => { const d = +today.slice(8), d1 = +p.from.slice(8), d2 = +p.to.slice(8); return Math.min(1, Math.max(1 / 16, (d - d1 + 1) / (d2 - d1 + 1))); };
+  const boardOf = (inP) => {
+    const board = {};
+    db.prepare("SELECT s.user_id, u.username, s.amount, s.sold_at FROM sales s JOIN users u ON u.id = s.user_id WHERE s.status = 'validated'").all()
+      .filter(s => inP(s.sold_at)).forEach(s => { const k = s.user_id; board[k] = board[k] || { user_id: k, username: s.username, total: 0 }; board[k].total += s.amount; });
+    return Object.values(board).sort((a, b) => b.total - a.total);
+  };
   app.get("/api/home", auth, (req, res) => {
     const p = periodInfo(currentPeriod()), now = Date.now(), today = parisDate(now);
+    const days = lastDays(7, now), days14 = lastDays(14, now), elapsed = periodElapsed(p, today);
     const week = now - 7 * 864e5;
     const inP = ms => periodOfDate(parisDate(ms)) === p.key;
     const fee = Number(getSetting("platform_fee", "25")), base = getSetting("commission_base", "net");
@@ -290,7 +310,24 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
         .filter(c => inP(c.start_at)).reduce((t, c) => t + ((c.end_at || now) - c.start_at) / 3.6e6, 0);
       const last = db.prepare("SELECT score, persona_id, started_at FROM sims WHERE user_id = ? AND status = 'done' ORDER BY started_at DESC LIMIT 1").get(req.user.id);
       const my7 = sims.filter(x => x.user_id === req.user.id);
+      // séries des 7 derniers jours + tendance par rapport aux 7 jours d'avant
+      const allMine = db.prepare("SELECT amount, status, sold_at FROM sales WHERE user_id = ?").all(req.user.id);
+      const clocksMine = db.prepare("SELECT start_at, end_at FROM clocks WHERE user_id = ?").all(req.user.id);
+      const salesDay = d => allMine.filter(x => x.status === "validated" && parisDate(x.sold_at) === d).reduce((t, x) => t + x.amount, 0);
+      const hoursDay = d => clocksMine.filter(c => parisDate(c.start_at) === d).reduce((t, c) => t + ((c.end_at || now) - c.start_at) / 3.6e6, 0);
+      const sum = (arr, f) => arr.reduce((t, d) => t + f(d), 0);
+      const series = { sales: days.map(salesDay), hours: days.map(hoursDay), pending: days.map(d => allMine.filter(x => x.status === "pending" && parisDate(x.sold_at) === d).length) };
+      const trend = { sales: pctTrend(sum(days14.slice(7), salesDay), sum(days14.slice(0, 7), salesDay)), hours: pctTrend(sum(days14.slice(7), hoursDay), sum(days14.slice(0, 7), hoursDay)) };
+      // record : meilleure période passée (ventes validées)
+      const byP = {}; allMine.filter(x => x.status === "validated").forEach(x => { const k = periodOfDate(parisDate(x.sold_at)); byP[k] = (byP[k] || 0) + x.amount; });
+      const best = Math.max(0, ...Object.entries(byP).filter(([k]) => k !== p.key).map(([, v]) => v));
+      const commission = Math.round(baseAmt * (u?.commission_pct || 0)) / 100;
+      const goal = Number(getSetting("goal_chatter", "300"));
+      const board = boardOf(inP), myIdx = board.findIndex(b => b.user_id === req.user.id);
       return res.json({ role: "chatter", period: p, open: openOf(req.user.id), upcoming: upcomingOf(req.user.id),
+        series, trend, best, goal, projection: Math.round(commission / elapsed * 100) / 100, elapsed,
+        rank: myIdx === -1 ? null : myIdx + 1, gap: myIdx > 0 ? Math.round((board[myIdx - 1].total - board[myIdx].total) * 100) / 100 : null, above: myIdx > 0 ? board[myIdx - 1].username : null,
+        leaderboard: board.slice(0, 3).map(b => ({ username: b.username, total: b.total, me: b.user_id === req.user.id })),
         models: db.prepare("SELECT id, name FROM models ORDER BY name").all(),
         sales: { validated, pending, count: mine.length, refused: mine.filter(s => s.status === "refused").length,
           commission: Math.round(baseAmt * (u?.commission_pct || 0)) / 100, pct: u?.commission_pct || 0 },
@@ -302,13 +339,38 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     const todayShifts = db.prepare(`SELECT s.start, s.end, u.username, m.name model_name FROM shifts s JOIN users u ON u.id = s.user_id
       JOIN models m ON m.id = s.model_id WHERE s.date = ? ORDER BY s.start`).all(today);
     const pendingSales = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(amount),0) total FROM sales WHERE status = 'pending'").get();
-    const board = {};
-    db.prepare("SELECT s.user_id, u.username, s.amount, s.sold_at FROM sales s JOIN users u ON u.id = s.user_id WHERE s.status = 'validated'").all()
-      .filter(s => inP(s.sold_at)).forEach(s => { board[s.username] = (board[s.username] || 0) + s.amount; });
-    res.json({ role: "admin", period: p, totals: c.totals,
+    const board = boardOf(inP);
+    // séries des 7 derniers jours
+    const allSales = db.prepare("SELECT amount, status, sold_at, created_at FROM sales").all();
+    const allClocks = db.prepare("SELECT user_id, start_at, end_at FROM clocks").all();
+    const series = {
+      sales: days.map(d => allSales.filter(x => x.status === "validated" && parisDate(x.sold_at) === d).reduce((t, x) => t + x.amount, 0)),
+      pending: days.map(d => allSales.filter(x => parisDate(x.created_at) === d).length),
+      shifts: days.map(d => new Set(allClocks.filter(k => parisDate(k.start_at) === d).map(k => k.user_id)).size)
+    };
+    const prevMargin = computeCompta(p.prev).totals.margin;
+    // fil d'activité : ventes déclarées / validées / refusées, pointages, simulations
+    const ev = [];
+    db.prepare(`SELECT s.amount, s.status, s.created_at, s.reviewed_at, u.username, m.name model_name FROM sales s JOIN users u ON u.id = s.user_id
+      JOIN models m ON m.id = s.model_id ORDER BY s.created_at DESC LIMIT 30`).all().forEach(x => {
+      ev.push({ t: x.created_at, who: x.username, text: `a déclaré une vente de ${x.amount.toLocaleString("fr-FR")} € · ${x.model_name}`, tag: x.status === "pending" ? "à valider" : "", cls: "o" });
+      if (x.reviewed_at && x.status !== "pending") ev.push({ t: x.reviewed_at, who: x.username, text: `: vente de ${x.amount.toLocaleString("fr-FR")} € ${x.status === "validated" ? "validée" : "refusée"}`, tag: x.status === "validated" ? "validée" : "refusée", cls: x.status === "validated" ? "g" : "r" });
+    });
+    db.prepare(`SELECT c.start_at, c.end_at, u.username, m.name model_name FROM clocks c JOIN users u ON u.id = c.user_id JOIN models m ON m.id = c.model_id
+      ORDER BY c.start_at DESC LIMIT 30`).all().forEach(k => {
+      ev.push({ t: k.start_at, who: k.username, text: `a commencé son shift sur ${k.model_name}` });
+      if (k.end_at) { const h = (k.end_at - k.start_at) / 3.6e6; ev.push({ t: k.end_at, who: k.username, text: `a terminé son shift · ${Math.floor(h)} h ${String(Math.round(h % 1 * 60)).padStart(2, "0")}` }); }
+    });
+    db.prepare(`SELECT x.score, x.ended_at, u.username FROM sims x JOIN users u ON u.id = x.user_id WHERE x.status = 'done' AND x.ended_at IS NOT NULL
+      ORDER BY x.ended_at DESC LIMIT 20`).all().forEach(x => ev.push({ t: x.ended_at, who: x.username, text: `a fait ${x.score}/100 au simulateur` }));
+    const feed = ev.filter(e => e.t).sort((a, b) => b.t - a.t).slice(0, 8);
+    const activeChatters = db.prepare("SELECT COUNT(*) n FROM users WHERE role = 'chatter' AND active = 1").get().n;
+    const goal = Number(getSetting("goal_ca", "20000"));
+    res.json({ role: "admin", period: p, totals: c.totals, series, goal, elapsed, projection: Math.round(c.totals.brut / elapsed), prevMargin,
+      marginTrend: pctTrend(c.totals.margin, prevMargin), feed, activeChatters,
       missingRevenue: c.models.filter(m => m.brut == null).map(m => m.name),
       pendingSales, live, todayShifts,
-      leaderboard: Object.entries(board).map(([username, total]) => ({ username, total })).sort((a, b) => b.total - a.total).slice(0, 5),
+      leaderboard: board.slice(0, 5).map(b => ({ username: b.username, total: b.total })),
       simu: { week: sims.length, avg: sims.length ? Math.round(sims.reduce((t, x) => t + x.score, 0) / sims.length) : null } });
   });
 
