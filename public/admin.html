@@ -2,15 +2,16 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Espace manager — Simulateur Chatter</title>
+<title>Gestion — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<div class="nav"><span class="brand">Espace manager</span><div class="spacer"></div>
-  <a href="/app" class="btn ghost small" style="text-decoration:none">Tester le simulateur</a>
-  <span class="who" id="who"></span><button class="btn ghost small" onclick="logout()">Déconnexion</button></div>
-
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area">
 <div class="wrap">
+  <div class="pagehead"><div><div class="eyebrow">Manager</div><h1>Gestion</h1></div></div>
   <div class="tabs">
     <button data-t="overview" class="on">Vue d'ensemble</button>
     <button data-t="sessions">Sessions</button>
@@ -77,6 +78,9 @@
   </section>
 </div>
 
+</main>
+</div>
+
 <!-- Détail session -->
 <div class="modal hidden" id="detail">
   <div class="card wide">
@@ -110,7 +114,7 @@ document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
 async function init() {
   const me = await api("/api/me");
   if (me.role !== "admin") { location.href = "/app"; return; }
-  $("who").textContent = me.username;
+  renderShell("admin", me);
   PERSONAS = await api("/api/personas");
   await Promise.all([loadUsers(), loadSims(), loadModels()]);
   $("fPersona").innerHTML = `<option value="">Tous les profils</option>` + PERSONAS.map(p => `<option value="${p.id}">${esc(p.name)} · ${esc(p.label)}</option>`).join("");

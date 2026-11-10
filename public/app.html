@@ -2,16 +2,17 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Simulateur Chatter</title>
+<title>Simu Chatter — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
 <style>
 .personas{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
 .persona{background:var(--panel2);border:1.5px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;transition:.15s}
 .persona:hover{border-color:#3d4354}
-.persona.sel{border-color:var(--accent);background:#132430}
+.persona.sel{border-color:var(--accent);background:#1f1f1f}
 .persona b{display:block;margin-bottom:4px}
 .persona span.d{font-size:12px;color:var(--muted);line-height:1.4;display:block;margin-bottom:8px}
-#chatScreen{height:100vh;display:flex;flex-direction:column}
+#chatScreen{height:100vh;height:100dvh;display:flex;flex-direction:column}
 .topbar{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
 .avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3a4256,#20242f);display:flex;align-items:center;justify-content:center;font-weight:700}
 .topbar .who b{display:block}.topbar .who span{font-size:12px;color:var(--muted)}
@@ -22,11 +23,11 @@
 #msgs{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:6px}
 .msg{max-width:70%;padding:9px 13px;border-radius:16px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
 .msg.fan{background:var(--them);align-self:flex-start;border-bottom-left-radius:4px}
-.msg.me{background:var(--me);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.msg.me{background:var(--me);color:#0a0a0a;align-self:flex-end;border-bottom-right-radius:4px}
 .sys{align-self:center;font-size:12px;color:var(--muted);padding:4px 10px;background:var(--panel2);border-radius:20px;margin:6px 0;text-align:center}
-.ppv{align-self:flex-end;width:250px;background:#10202a;border:1px solid #1f4a60;border-radius:14px;overflow:hidden}
-.ppv .lock{height:100px;background:repeating-linear-gradient(45deg,#18303d,#18303d 10px,#14283a 10px,#14283a 20px);display:flex;align-items:center;justify-content:center;font-size:28px}
-.ppv .info{padding:10px 12px}.ppv .info b{color:var(--accent)}.ppv .st{font-size:12px;margin-top:4px}
+.ppv{align-self:flex-end;width:250px;background:#161616;border:1px solid #333;border-radius:14px;overflow:hidden}
+.ppv .lock{height:100px;background:repeating-linear-gradient(45deg,#1c1c1c,#1c1c1c 10px,#151515 10px,#151515 20px);display:flex;align-items:center;justify-content:center;font-size:28px}
+.ppv .info{padding:10px 12px}.ppv .info b{color:var(--text)}.ppv .st{font-size:12px;margin-top:4px}
 .typing{align-self:flex-start;background:var(--them);padding:10px 14px;border-radius:16px;display:flex;gap:4px}
 .typing i{width:6px;height:6px;background:var(--muted);border-radius:50%;animation:b 1.2s infinite}
 .typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
@@ -41,11 +42,14 @@
 </style>
 </head>
 <body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area">
 
 <!-- ============ ACCUEIL ============ -->
 <div id="homeScreen">
-  <div class="nav"><span class="brand">Simulateur Chatter</span><div class="spacer"></div><span class="who" id="who"></span><button class="btn ghost small" onclick="logout()">Déconnexion</button></div>
   <div class="wrap">
+    <div class="pagehead"><div><div class="eyebrow">Formation</div><h1>Simu Chatter</h1></div></div>
     <div class="grid">
       <div class="card">
         <h2>1. Profil du fan</h2>
@@ -112,8 +116,8 @@
 
 <!-- ============ RAPPORT ============ -->
 <div id="reportScreen" class="hidden">
-  <div class="nav"><span class="brand">Évaluation de la session</span><div class="spacer"></div><button class="btn small" id="newBtn">Nouvelle session</button></div>
-  <div class="wrap"><p class="sub" id="repSub"></p><div id="repBody"></div></div>
+  <div class="wrap">
+    <div class="pagehead"><div><div class="eyebrow">Simu Chatter</div><h1>Évaluation de la session</h1></div><div class="spacer"></div><button class="btn small" id="newBtn">Nouvelle session</button></div><p class="sub" id="repSub"></p><div id="repBody"></div></div>
 </div>
 
 <!-- PPV -->
@@ -133,6 +137,8 @@
   </div>
 </div>
 
+</main>
+</div>
 <script src="/common.js"></script>
 <script>
 let PERSONAS = [], MODELS = [], selPersona = null, SIM = null, busy = false, chatterCount = 0;
@@ -140,8 +146,7 @@ let PERSONAS = [], MODELS = [], selPersona = null, SIM = null, busy = false, cha
 /* ---------- Accueil ---------- */
 async function init() {
   const me = await api("/api/me");
-  if (me.role === "admin") $("who").innerHTML = `${esc(me.username)} · <a href="/admin">Espace manager</a>`;
-  else $("who").textContent = me.username;
+  renderShell("simu", me);
   $("quota").textContent = me.role === "admin" ? "Compte manager : pas de limite quotidienne." :
     `Simulations aujourd'hui : ${me.usedToday} / ${me.dailyLimit}`;
   [PERSONAS, MODELS] = await Promise.all([api("/api/personas"), api("/api/models")]);

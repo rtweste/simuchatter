@@ -19,6 +19,36 @@ async function api(path, opts = {}) {
   return data;
 }
 
+/* ===== Portail StellADS : rubriques =====
+   Pour ajouter une rubrique : ajoutez une ligne ici et créez la page correspondante.
+   roles : qui la voit ("admin", "chatter"). */
+const ICONS = {
+  home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+  chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/>',
+  team: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/>',
+  logout: '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H3"/>'
+};
+const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ""}</svg>`;
+const MODULES = [
+  { id: "home", label: "Accueil", href: "/home", icon: "home", section: null, roles: ["admin", "chatter"] },
+  { id: "simu", label: "Simu Chatter", href: "/app", icon: "chat", section: "Formation", roles: ["admin", "chatter"],
+    desc: "Entraînez-vous face à un fan simulé par l'IA et recevez une évaluation détaillée." },
+  { id: "admin", label: "Gestion", href: "/admin", icon: "team", section: "Manager", roles: ["admin"],
+    desc: "Équipe, créatrices et résultats des simulations." }
+];
+function renderShell(active, me) {
+  const el = document.getElementById("sidebar"); if (!el) return;
+  const mods = MODULES.filter(m => m.roles.includes(me.role));
+  let html = `<a class="logo" href="/home"><img src="/logo.svg" alt="StellADS"></a><nav>`, sec;
+  for (const m of mods) {
+    if (m.section && m.section !== sec) { sec = m.section; html += `<div class="sec">${esc(sec)}</div>`; }
+    html += `<a href="${m.href}" class="${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""}>${icon(m.icon)}<span>${esc(m.label)}</span></a>`;
+  }
+  html += `</nav><div class="me"><span class="av">${esc(me.username[0])}</span><div><b>${esc(me.username)}</b><small>${me.role === "admin" ? "Manager" : "Chatter"}</small></div>
+    <button onclick="logout()" title="Déconnexion" aria-label="Déconnexion">${icon("logout")}</button></div>`;
+  el.innerHTML = html;
+}
+
 async function logout() { await api("/api/logout", { method: "POST" }).catch(() => {}); location.href = "/"; }
 
 // Rendu d'un rapport d'évaluation (utilisé côté chatter et côté manager)

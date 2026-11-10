@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accueil — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-area">
+    <div class="wrap">
+      <div class="pagehead"><div><div class="eyebrow">Portail StellADS</div><h1 id="hello">Bonjour</h1></div></div>
+      <div class="grid3" id="kpis" style="margin-bottom:22px"></div>
+      <div class="modules" id="modules"></div>
+    </div>
+  </main>
+</div>
+<script src="/common.js"></script>
+<script>
+(async () => {
+  const me = await api("/api/me");
+  renderShell("home", me);
+  $("hello").textContent = `Bonjour ${me.username}`;
+  $("modules").innerHTML = MODULES.filter(m => m.id !== "home" && m.roles.includes(me.role)).map(m => `
+    <a class="module" href="${m.href}"><div class="ic">${icon(m.icon)}</div><h3>${esc(m.label)}</h3><p>${esc(m.desc || "")}</p><div class="go">Ouvrir →</div></a>`).join("");
+  // Chiffres de la semaine
+  try {
+    const week = Date.now() - 7 * 864e5;
+    let list, label;
+    if (me.role === "admin") { list = (await api("/api/admin/sims")).filter(s => s.started_at >= week); label = "de l'équipe"; }
+    else { list = (await api("/api/my-sims")).filter(s => s.started_at >= week); label = ""; }
+    const avg = list.length ? Math.round(list.reduce((t, s) => t + s.score, 0) / list.length) : null;
+    const best = list.length ? Math.max(...list.map(s => s.score)) : null;
+    const kpi = (l, v, c) => `<div class="card kpi"><small>${l}</small><b ${c ? `style="color:${c}"` : ""}>${v}</b></div>`;
+    $("kpis").innerHTML =
+      kpi(`Simulations ${label} (7 j)`, list.length) +
+      kpi("Score moyen (7 j)", avg ?? "—", avg !== null ? scoreColor(avg) : "") +
+      kpi("Meilleur score (7 j)", best ?? "—", best !== null ? scoreColor(best) : "") +
+      (me.role === "admin" ? kpi("Simulations aujourd'hui", list.filter(s => s.started_at >= new Date().setHours(0,0,0,0)).length)
+                           : kpi("Restantes aujourd'hui", Math.max(0, me.dailyLimit - me.usedToday)));
+  } catch (e) { $("kpis").remove(); }
+})();
+</script>
+</body>
+</html>
