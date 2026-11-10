@@ -171,47 +171,6 @@ const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const desk = () => innerWidth >= 1000;
 let ME = null, D = null, MODE = "quick", tick = null, T0 = 0;
 
-/* ---------------- Sons (discrets : air et cristal) ---------------- */
-const SND = (() => {
-  let ctx = null, out = null;
-  const on = () => { try { return localStorage.getItem("stSound") !== "0"; } catch (e) { return true; } };
-  function ac() {
-    if (!on()) return null;
-    try { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
-      try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
-      if (!ctx) { ctx = new C(); out = ctx.createGain(); out.gain.value = 0.16; out.connect(ctx.destination); }
-      if (ctx.state === "suspended") ctx.resume(); return ctx; } catch (e) { return null; }
-  }
-  function tone(f, at, len, peak, type, glide) {
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = type || "sine"; o.frequency.setValueAtTime(f, at); if (glide) o.frequency.exponentialRampToValueAtTime(glide, at + len * .9);
-    g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(peak, at + Math.min(.02, len / 4)); g.gain.exponentialRampToValueAtTime(.0001, at + len);
-    o.connect(g); g.connect(out); o.start(at); o.stop(at + len + .05);
-  }
-  function air(at, len, f0, f1, peak, p0, p1) {
-    const n = Math.floor(ctx.sampleRate * len), buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0);
-    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / n);
-    const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
-    src.buffer = buf; bp.type = "bandpass"; bp.Q.value = 1.4; bp.frequency.setValueAtTime(f0, at); bp.frequency.exponentialRampToValueAtTime(f1, at + len);
-    g.gain.value = peak; src.connect(bp); bp.connect(g);
-    if (ctx.createStereoPanner && p0 != null) { const p = ctx.createStereoPanner(); p.pan.setValueAtTime(p0, at); p.pan.linearRampToValueAtTime(p1, at + len); g.connect(p); p.connect(out); } else g.connect(out);
-    src.start(at);
-  }
-  return {
-    opening(n) {
-      const c = ac(); if (!c || c.state !== "running") return; const t = c.currentTime + .03;
-      tone(2637, t + .05, .35, .06); tone(3951, t + .1, .3, .04);
-      air(t + .12, 1.0, 700, 4200, .5, -.8, .5); tone(1760, t + .2, .9, .025, "sine", 2637);
-      [[1318.5, 0, 1.3, .18], [1975.5, .07, 1.5, .14], [2637, .16, .7, .05], [3951, .22, .5, .03]].forEach(([f, d, l, p]) => tone(f, t + 1.05 + d, l, p));
-      [659.3, 784, 880, 987.8, 1174.7, 1318.5, 1568].slice(0, n).forEach((f, i) => tone(f, t + .95 + i * .07, .35, .045, "triangle"));
-      [0, 1, 2, 3].forEach(i => tone(1200 + i * 90, t + 2.25 + i * .12, .08, .05, "triangle"));
-      air(t + 2.5, 1.1, 2500, 8000, .22, .6, -.4); tone(2093, t + 2.7, 1.2, .03); tone(3136, t + 2.78, 1, .02);
-    },
-    shift() { const c = ac(); if (!c) return; const t = c.currentTime + .02; air(t, .6, 500, 3000, .35, -.6, .6); tone(987.8, t + .5, .5, .12); tone(1318.5, t + .57, .6, .1); },
-    unlock: ac
-  };
-})();
-
 /* ---------------- Petits outils ---------------- */
 const STAR4 = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5 14.2 9.8 22.5 12 14.2 14.2 12 22.5 9.8 14.2 1.5 12 9.8 9.8Z" fill="#fff"/></svg>';
 function stars() { let h = ""; for (let i = 0; i < 55; i++) { const r = (0.8 + Math.random() * 1.2).toFixed(1); h += `<i style="left:${(Math.random() * 100).toFixed(1)}%;top:${(Math.random() * 100).toFixed(1)}%;width:${r}px;height:${r}px;opacity:${(.25 + Math.random() * .55).toFixed(2)};animation-delay:${(-Math.random() * 5).toFixed(1)}s;animation-duration:${(3 + Math.random() * 4).toFixed(1)}s"></i>`; } return h; }
@@ -384,7 +343,16 @@ function opening() {
   fx.innerHTML = `<span class="comet" style="offset-path:path('${path}')"><span class="tail"></span>${STAR4}</span>
     <span class="burst" style="left:${ex}px;top:${ey}px"></span><span class="burst b2" style="left:${ex}px;top:${ey}px"></span><span class="sweep"></span>`;
   document.body.appendChild(fx); setTimeout(() => fx.remove(), 4200);
-  SND.opening(document.querySelectorAll("#hm .b").length);
+  const t0 = performance.now(), n = document.querySelectorAll("#hm .b").length;
+  // affiché juste après l'intro : c'est la page de connexion (qui a reçu le clic) qui joue les sons
+  if (EMBED) { try { window.top.postMessage({ type: "stSound", n }, location.origin); } catch (e) {} return; }
+  SND.opening(n, t0).then(ok => {
+    if (ok) return;
+    // son bloqué par le navigateur : au premier geste, on joue la suite de l'ouverture (ou un petit son de bienvenue si elle est finie)
+    const once = () => { removeEventListener("pointerdown", once, true); removeEventListener("keydown", once, true);
+      SND.unlock(); if (performance.now() - t0 < 3200) SND.opening(n, t0); else if (performance.now() - t0 < 8000) SND.welcome(); };
+    addEventListener("pointerdown", once, true); addEventListener("keydown", once, true);
+  });
 }
 function afterRender() {
   // cercle de l'objectif
@@ -402,12 +370,25 @@ async function load() {
   MODE = "static";
 }
 (async () => {
+  // préparé pendant l'intro : on charge tout, puis on attend le signal de la page de connexion
+  let pre = null;
+  if (EMBED) {
+    pre = api("/api/home");
+    await new Promise(res => {
+      const t = setTimeout(res, 20000);
+      addEventListener("message", e => { if (e.origin !== location.origin || e.data?.type !== "stOpen") return;
+        const r = document.documentElement.style; r.setProperty("--sat-in", (e.data.sat || 0) + "px"); r.setProperty("--sab-in", (e.data.sab || 0) + "px");
+        clearTimeout(t); res(); });
+      try { window.top.postMessage({ type: "stReady" }, location.origin); } catch (e) {}
+    });
+  }
   ME = await api("/api/me");
   renderShell("home", ME);
   // grande ouverture une seule fois par session (juste après l'intro), version courte ensuite
   try { if (!sessionStorage.getItem("stHome")) { MODE = "open"; sessionStorage.setItem("stHome", "1"); } } catch (e) {}
   if (MODE === "open") await new Promise(r => setTimeout(r, 120));
-  await load();
+  if (pre) { try { D = await pre; D.role === "admin" ? renderAdmin() : renderChatter(); afterRender(); MODE = "static"; } catch (e) { await load(); } }
+  else await load();
   // le manager voit le fil d'activité se mettre à jour tout seul
   if (ME.role === "admin") setInterval(async () => { try { const d = await api("/api/home"); if (JSON.stringify(d.feed) !== JSON.stringify(D.feed) || d.pendingSales.n !== D.pendingSales.n) { D = d; const f = document.querySelector(".a-feed"); if (f) { const tmp = document.createElement("div"); tmp.innerHTML = feedB(); f.replaceWith(tmp.firstElementChild); } updateBadge(d.pendingSales.n); } } catch (e) {} }, 30000);
   // redessine si on passe de téléphone à ordinateur (taille du podium, textes)

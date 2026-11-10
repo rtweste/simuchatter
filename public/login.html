@@ -107,9 +107,35 @@ stars($("far"), many ? 120 : 60, 0.6, 1.4);
 stars($("near"), many ? 40 : 20, 1.4, 2.4);
 
 const v = $("introV");
-let leaving = false;
+let leaving = false, frame = null, frameReady = false;
+// L'accueil est préparé pendant l'intro, puis affiché sans changer de page :
+// le son reste autorisé (il vient du clic sur « Se connecter ») et l'ouverture est sonorisée.
+function prepareHome() {
+  try {
+    frame = document.createElement("iframe"); frame.src = "/home"; frame.title = "Accueil"; frame.id = "homeFrame";
+    frame.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;z-index:40;opacity:0;pointer-events:none;background:#0a0a0a;transition:opacity .35s";
+    document.body.appendChild(frame);
+  } catch (e) { frame = null; }
+}
+addEventListener("message", e => {
+  if (e.origin !== location.origin) return;
+  if (e.data?.type === "stReady") frameReady = true;
+  if (e.data?.type === "stSound") SND.opening(e.data.n || 6, performance.now());
+});
+function safeArea() {
+  const p = document.createElement("div"); p.style.cssText = "position:fixed;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);visibility:hidden";
+  document.body.appendChild(p); const cs = getComputedStyle(p), r = { sat: parseFloat(cs.paddingTop) || 0, sab: parseFloat(cs.paddingBottom) || 0 }; p.remove(); return r;
+}
 function goHome() {
   if (leaving) return; leaving = true;
+  if (frame && frameReady) {
+    history.replaceState(null, "", "/home"); document.title = "Accueil — StellADS";
+    frame.style.opacity = "1"; frame.style.pointerEvents = "auto"; $("lp").style.visibility = "hidden";
+    frame.contentWindow.postMessage({ type: "stOpen", ...safeArea() }, location.origin);
+    $("intro").classList.add("out");
+    setTimeout(() => { $("intro").remove(); frame.focus(); }, 600);
+    return;
+  }
   $("intro").classList.add("out");
   setTimeout(() => location.href = "/home", 450);
 }
@@ -118,12 +144,14 @@ $("skip").onclick = goHome;
 
 $("f").onsubmit = async e => {
   e.preventDefault(); $("b").disabled = true; $("e").textContent = "";
+  SND.unlock();   // le clic autorise le son pour la suite (intro puis ouverture de l'accueil)
   $("b").innerHTML = '<span class="spin" aria-label="Connexion…"></span>';
   // Débloque la lecture avec le son pendant le clic (les navigateurs l'exigent), puis met en pause
   try { v.muted = false; const p = v.play(); if (p) p.then(() => { if (!$("intro").classList.contains("show")) { v.pause(); v.currentTime = 0; } }).catch(() => {}); } catch (_) {}
   try {
     await api("/api/login", { body: { username: $("u").value, password: $("p").value } });
     try { sessionStorage.removeItem("stNav"); sessionStorage.removeItem("stHome"); } catch (_) {}  // rejoue l'entrée du menu après l'intro
+    prepareHome();
     $("lp").classList.add("warp");                             // saut dans les étoiles
     await sleep(matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 950);
     $("intro").classList.add("show");

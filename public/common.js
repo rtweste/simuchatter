@@ -1,5 +1,9 @@
 // Fonctions partagées entre les pages
 const $ = id => document.getElementById(id);
+// Quand l'accueil est affiché dans le cadre de l'ouverture (après l'intro), les liens ouvrent la vraie page
+const EMBED = window !== window.top;
+if (EMBED) document.head.insertAdjacentHTML("afterbegin", '<base target="_top">');
+const go = url => { try { (EMBED ? window.top : window).location.href = url; } catch (e) { location.href = url; } };
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const fmtDate = t => new Date(t).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
@@ -13,7 +17,7 @@ async function api(path, opts = {}) {
     body: opts.body ? JSON.stringify(opts.body) : undefined,
     credentials: "same-origin"
   });
-  if (res.status === 401 && !opts.noRedirect && !path.includes("/login")) { location.href = "/"; throw new Error("Non connecté"); }
+  if (res.status === 401 && !opts.noRedirect && !path.includes("/login")) { go("/"); throw new Error("Non connecté"); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || "Erreur " + res.status);
   return data;
@@ -75,13 +79,13 @@ function renderShell(active, me) {
     e.preventDefault();
     dock.querySelector(".on")?.classList.remove("on");
     a.classList.add("on");
-    setTimeout(() => { location.href = a.getAttribute("href"); }, 230); // laisse l'onglet s'ouvrir avant de changer de page
+    setTimeout(() => go(a.getAttribute("href")), 230); // laisse l'onglet s'ouvrir avant de changer de page
   }));
   if (me.role === "admin") api("/api/admin/sales/count").then(c => updateBadge(c.pending)).catch(() => {});
 }
 function updateBadge(n) { document.querySelectorAll("[data-badge]").forEach(b => { b.textContent = n; b.classList.toggle("hidden", !n); }); }
 
-async function logout() { await api("/api/logout", { method: "POST" }).catch(() => {}); location.href = "/"; }
+async function logout() { await api("/api/logout", { method: "POST" }).catch(() => {}); go("/"); }
 
 // Rendu d'un rapport d'évaluation (utilisé côté chatter et côté manager)
 function transcriptText(log) {
@@ -160,3 +164,61 @@ const SK = {
 
 /* ===== Appli installable (écran d'accueil iPhone / installation sur ordinateur) ===== */
 if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+
+/* ---------------- Sons (discrets : air et cristal) ---------------- */
+const SND = window.SND = (() => {
+  let ctx = null, out = null;
+  const on = () => { try { return localStorage.getItem("stSound") !== "0"; } catch (e) { return true; } };
+  function ac() {
+    if (!on()) return null;
+    try { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
+      try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
+      if (!ctx) { ctx = new C(); out = ctx.createGain(); out.gain.value = 0.16; out.connect(ctx.destination); }
+      if (ctx.state === "suspended") ctx.resume(); return ctx; } catch (e) { return null; }
+  }
+  let tone = function (f, at, len, peak, type, glide) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type || "sine"; o.frequency.setValueAtTime(f, at); if (glide) o.frequency.exponentialRampToValueAtTime(glide, at + len * .9);
+    g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(peak, at + Math.min(.02, len / 4)); g.gain.exponentialRampToValueAtTime(.0001, at + len);
+    o.connect(g); g.connect(out); o.start(at); o.stop(at + len + .05);
+  };
+  let air = function (at, len, f0, f1, peak, p0, p1) {
+    const n = Math.floor(ctx.sampleRate * len), buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / n);
+    const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
+    src.buffer = buf; bp.type = "bandpass"; bp.Q.value = 1.4; bp.frequency.setValueAtTime(f0, at); bp.frequency.exponentialRampToValueAtTime(f1, at + len);
+    g.gain.value = peak; src.connect(bp); bp.connect(g);
+    if (ctx.createStereoPanner && p0 != null) { const p = ctx.createStereoPanner(); p.pan.setValueAtTime(p0, at); p.pan.linearRampToValueAtTime(p1, at + len); g.connect(p); p.connect(out); } else g.connect(out);
+    src.start(at);
+  };
+  // attend que le navigateur autorise le son (au plus ~1,5 s)
+  async function ready() {
+    const c = ac(); if (!c) return null;
+    if (c.state !== "running") { try { await Promise.race([c.resume(), new Promise(r => setTimeout(r, 3000))]); } catch (e) {} }
+    return c.state === "running" ? c : null;
+  }
+  return {
+    ready,
+    // t0 = moment (performance.now) où l'animation a commencé : les sons restent calés même si le son arrive en retard
+    async opening(n, t0) {
+      const c = await ready(); if (!c) return false;
+      const late = (performance.now() - t0) / 1000, t = c.currentTime - late + .03;
+      const _tone = tone, _air = air;
+      tone = (f, at, ...r) => { if (at >= c.currentTime) _tone(f, at, ...r); };
+      air = (at, ...r) => { if (at >= c.currentTime) _air(at, ...r); };
+      tone(2637, t + .05, .35, .06); tone(3951, t + .1, .3, .04);
+      air(t + .12, 1.0, 700, 4200, .5, -.8, .5); tone(1760, t + .2, .9, .025, "sine", 2637);
+      [[1318.5, 0, 1.3, .18], [1975.5, .07, 1.5, .14], [2637, .16, .7, .05], [3951, .22, .5, .03]].forEach(([f, d, l, p]) => tone(f, t + 1.05 + d, l, p));
+      [659.3, 784, 880, 987.8, 1174.7, 1318.5, 1568].slice(0, n).forEach((f, i) => tone(f, t + .95 + i * .07, .35, .045, "triangle"));
+      [0, 1, 2, 3].forEach(i => tone(1200 + i * 90, t + 2.25 + i * .12, .08, .05, "triangle"));
+      air(t + 2.5, 1.1, 2500, 8000, .22, .6, -.4); tone(2093, t + 2.7, 1.2, .03); tone(3136, t + 2.78, 1, .02);
+      tone = _tone; air = _air;
+      return true;
+    },
+    // petit son de bienvenue, si le navigateur a bloqué l'ouverture sonore
+    welcome() { const c = ac(); if (!c) return; const t = c.currentTime + .03; [[1318.5, 0, 1.1, .14], [1975.5, .08, 1.3, .1], [2637, .18, .6, .04]].forEach(([f, d, l, p]) => tone(f, t + d, l, p)); },
+    shift() { const c = ac(); if (!c) return; const t = c.currentTime + .02; air(t, .6, 500, 3000, .35, -.6, .6); tone(987.8, t + .5, .5, .12); tone(1318.5, t + .57, .6, .1); },
+    unlock: ac
+  };
+})();
+
