@@ -274,6 +274,16 @@ body:has(#reportScreen:not(.hidden)) .main-area{padding-bottom:0}
 .more{background:transparent;border:0;color:#8f8f8f;font:inherit;font-size:12.5px;padding:8px;opacity:0;transition:opacity .5s .3s}
 .more:hover{color:var(--text)}
 .rp.j5 .more{opacity:1}
+/* ===== Téléphone : conversation fixe, sans zoom ni page qui bouge ===== */
+@media(max-width:860px){
+  /* 16 px minimum : sinon l'iPhone zoome sur le champ quand on tape dedans */
+  .composer textarea,#ppvModal input,#ppvModal textarea{font-size:16px}
+  html:has(#chatScreen:not(.hidden)),body:has(#chatScreen:not(.hidden)){overflow:hidden;height:100%;overscroll-behavior:none}
+  #chatScreen{position:fixed;left:0;right:0;top:var(--ct,55px);height:var(--ch,calc(100dvh - 55px));z-index:10;background:var(--bg);will-change:transform}
+  #msgs{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .composer{padding-bottom:max(10px,env(safe-area-inset-bottom))}
+  #chatScreen,#chatScreen *{touch-action:manipulation}
+}
 .sndon{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:70;display:inline-flex;align-items:center;gap:8px;background:#ededed;color:#0a0a0a;border:0;border-radius:24px;padding:11px 18px;font:inherit;font-size:13.5px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:sndIn .45s cubic-bezier(.3,1.4,.5,1) both}
 @keyframes sndIn{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
 .skip{position:absolute;right:10px;top:10px;z-index:20;background:#161616;border:1px solid #2a2a2a;color:#8f8f8f;border-radius:20px;padding:6px 12px;font-size:12px}
@@ -541,9 +551,23 @@ function openChat(sim) {
   $("creatorInfo").innerHTML = `<b style="color:var(--text)">${esc(sim.creator_name)}</b><br>${esc(sim.creator_style)}`;
   $("priceInfo").textContent = sim.prices;
   sys(`Session démarrée — vous écrivez en tant que ${sim.creator_name}`);
+  fitChat();
   updateStats();
 }
 const scrollDown = () => { const m = $("msgs"); m.scrollTop = m.scrollHeight; };
+// Téléphone : la conversation occupe exactement la zone visible, même quand le clavier est ouvert
+function fitChat() {
+  const cs = $("chatScreen");
+  if (innerWidth > 860 || cs.classList.contains("hidden")) { cs.style.removeProperty("--ch"); cs.style.transform = ""; return; }
+  const vv = window.visualViewport, top = $("sidebar").offsetHeight;
+  const h = (vv ? vv.height : innerHeight) - top + (vv ? 0 : 0);
+  cs.style.setProperty("--ct", top + "px");
+  cs.style.setProperty("--ch", Math.max(200, h) + "px");
+  cs.style.transform = vv && vv.offsetTop ? `translateY(${vv.offsetTop}px)` : "";
+  window.scrollTo(0, 0);
+}
+if (window.visualViewport) { visualViewport.addEventListener("resize", () => { fitChat(); scrollDown(); }); visualViewport.addEventListener("scroll", fitChat); }
+addEventListener("resize", fitChat);
 function sys(t) { const d = document.createElement("div"); d.className = "sys"; d.textContent = t; $("msgs").appendChild(d); scrollDown(); }
 // accusé de lecture sous le dernier message envoyé : « Envoyé », puis « Vu » quand le fan répond
 function receipt() {
