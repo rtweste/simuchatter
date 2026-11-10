@@ -5,6 +5,14 @@
 <title>Connexion — StellADS</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
+<style>
+#intro{position:fixed;inset:0;background:#0a0a0a;z-index:50;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .35s ease}
+#intro.show{opacity:1;pointer-events:auto}
+#intro.out{opacity:0;transition:opacity .5s ease}
+#introV{width:min(100vw,100vh);height:min(100vw,100vh);object-fit:contain;background:#0a0a0a}
+#skip{position:absolute;right:20px;bottom:calc(20px + env(safe-area-inset-bottom));background:transparent;border:1px solid #333;color:#8f8f8f;padding:8px 14px;font-size:13px;border-radius:20px}
+#skip:hover{color:#f5f5f5;border-color:#555}
+</style>
 </head>
 <body>
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
@@ -19,15 +27,41 @@
     <div class="err" id="e"></div>
   </form>
 </div>
+
+<!-- Animation d'accueil, jouée après chaque connexion réussie -->
+<div id="intro" aria-hidden="true">
+  <video id="introV" src="/intro.mp4" playsinline preload="auto"></video>
+  <button type="button" id="skip">Passer</button>
+</div>
+
 <script src="/common.js"></script>
 <script>
-api("/api/me", { noRedirect: true }).then(me => location.href = "/home").catch(() => {});
+api("/api/me", { noRedirect: true }).then(() => location.href = "/home").catch(() => {});
+
+const v = $("introV");
+let leaving = false;
+function goHome() {
+  if (leaving) return; leaving = true;
+  $("intro").classList.add("out");
+  setTimeout(() => location.href = "/home", 450);
+}
+v.addEventListener("ended", goHome);
+$("skip").onclick = goHome;
+
 $("f").onsubmit = async e => {
   e.preventDefault(); $("b").disabled = true; $("e").textContent = "";
+  // Débloque la lecture avec le son pendant le clic (les navigateurs l'exigent), puis met en pause
+  try { v.muted = false; const p = v.play(); if (p) p.then(() => { if (!$("intro").classList.contains("show")) { v.pause(); v.currentTime = 0; } }).catch(() => {}); } catch (_) {}
   try {
-    const r = await api("/api/login", { body: { username: $("u").value, password: $("p").value } });
-    location.href = "/home";
-  } catch (err) { $("e").textContent = err.message; $("b").disabled = false; }
+    await api("/api/login", { body: { username: $("u").value, password: $("p").value } });
+    $("intro").classList.add("show");
+    v.currentTime = 0;
+    v.play().catch(() => { v.muted = true; v.play().catch(goHome); });  // si le son est bloqué : sans le son
+    setTimeout(goHome, 8000);  // sécurité si la vidéo ne se lance pas
+  } catch (err) {
+    try { v.pause(); v.currentTime = 0; } catch (_) {}
+    $("e").textContent = err.message; $("b").disabled = false;
+  }
 };
 </script>
 </body>
