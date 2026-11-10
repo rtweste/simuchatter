@@ -128,7 +128,7 @@ CONVERSATION :
 ${transcript(sim.log)}
 
 RÉPONDS UNIQUEMENT EN JSON :
-{"score": 0-100, "verdict": "une phrase de synthèse", "criteria": [{"name": "...", "score": 0-10, "comment": "1-2 phrases"}], "strengths": ["..."], "improvements": ["..."], "rewrites": [{"original": "message exact du chatter", "better": "version améliorée", "why": "courte raison"}], "ethics_flag": null ou "description du problème"}
+{"score": 0-100, "verdict": "une phrase de synthèse", "criteria": [{"name": "...", "score": 0-10, "comment": "1-2 phrases"}], "strengths": ["..."], "improvements": ["..."], "rewrites": [{"original": "message exact du chatter", "better": "version améliorée", "why": "courte raison"}], "best": {"message": "le message exact du chatter le plus réussi", "why": "pourquoi il fonctionne, en une phrase courte"}, "ethics_flag": null ou "description du problème"}
 Donne 2 à 3 réécritures des messages les plus perfectibles.`;
   if (MOCK) {
     return {
@@ -137,6 +137,7 @@ Donne 2 à 3 réécritures des messages les plus perfectibles.`;
         .map((n, i) => ({ name: n, score: [7, 6, 8, 6, 5, 9][i], comment: "Commentaire de test." })),
       strengths: ["Ton chaleureux"], improvements: ["Poser plus de questions avant de vendre"],
       rewrites: [{ original: sim.log.find(l => l.who === "chatter")?.text || "…", better: "Version améliorée de test", why: "Plus personnel" }],
+      best: { message: sim.log.filter(l => l.who === "chatter").slice(-1)[0]?.text || "…", why: "Message de test : rebond personnel sur ce que dit le fan." },
       ethics_flag: null
     };
   }
