@@ -205,6 +205,17 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   app.get("/api/admin/compta", auth, admin, (req, res) => {
     res.json(computeCompta(periodInfo(req.query.period) ? req.query.period : currentPeriod()));
   });
+  // Historique pour les graphiques : totaux des N dernières périodes jusqu'à la période demandée
+  app.get("/api/admin/compta/history", auth, admin, (req, res) => {
+    let key = periodInfo(req.query.period) ? req.query.period : currentPeriod();
+    const n = Math.max(2, Math.min(24, parseInt(req.query.n, 10) || 7)), out = [];
+    for (let i = 0; i < n; i++) {
+      const c = computeCompta(key), p = c.period;
+      out.unshift({ key: p.key, label: p.label, from: p.from, ...c.totals });
+      key = p.prev;
+    }
+    res.json({ periods: out });
+  });
   app.put("/api/admin/revenue", auth, admin, (req, res) => {
     const { period } = req.body || {}; const model_id = parseInt(req.body?.model_id, 10);
     if (!periodInfo(period) || !modelExists(model_id)) return res.status(400).json({ error: "Données invalides" });
