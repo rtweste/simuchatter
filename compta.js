@@ -20,7 +20,7 @@ function periodInfo(p) {
 }
 const currentPeriod = () => periodOfDate(parisDate(Date.now()));
 
-module.exports = function mount(app, db, auth, admin) {
+module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   /* ---------- Tables ---------- */
   const cols = (t) => db.prepare(`PRAGMA table_info(${t})`).all().map(c => c.name);
   if (!cols("models").includes("creator_pct")) db.exec("ALTER TABLE models ADD COLUMN creator_pct REAL NOT NULL DEFAULT 50");
@@ -154,6 +154,9 @@ module.exports = function mount(app, db, auth, admin) {
   function computeCompta(pkey) {
     const p = periodInfo(pkey);
     const base = getSetting("commission_base", "net"); // "net" ou "brut"
+    const mode = getSetting("attribution_mode", "ventes"); // "ventes" (ventes validées) ou "heures"
+    const fee = Number(getSetting("platform_fee", "25"));
+    const validated = validatedByPeriod ? validatedByPeriod(p.key) : {};
     const models = db.prepare(`SELECT m.id, m.name, m.creator_pct, r.brut, r.net FROM models m
       LEFT JOIN revenues r ON r.model_id = m.id AND r.period = ? ORDER BY m.name`).all(p.key);
     const users = db.prepare("SELECT id, username, role, active, commission_pct FROM users ORDER BY username").all();
@@ -175,12 +178,14 @@ module.exports = function mount(app, db, auth, admin) {
     });
     const lines = [];
     users.forEach(u => modelRows.forEach(m => {
-      const k = u.id + ":" + m.id, h = hours[k] || 0, ov = overrides[k];
-      if (!h && ov === undefined) return;
-      const auto = m.totalHours > 0 ? m.commissionBase * h / m.totalHours : 0;
+      const k = u.id + ":" + m.id, h = hours[k] || 0, ov = overrides[k], v = validated[k] || 0;
+      if (!h && ov === undefined && !v) return;
+      const auto = mode === "ventes"
+        ? (base === "brut" ? v : Math.round(v * (1 - fee / 100) * 100) / 100)
+        : (m.totalHours > 0 ? m.commissionBase * h / m.totalHours : 0);
       const sales = ov !== undefined ? ov : auto;
       lines.push({ user_id: u.id, username: u.username, model_id: m.id, model_name: m.name, hours: h,
-        auto, override: ov ?? null, sales, pct: u.commission_pct, pay: sales * u.commission_pct / 100 });
+        validatedBrut: v, auto, override: ov ?? null, sales, pct: u.commission_pct, pay: sales * u.commission_pct / 100 });
     }));
     modelRows.forEach(m => { m.attributed = lines.filter(l => l.model_id === m.id).reduce((t, l) => t + l.sales, 0); });
     const chatters = users.filter(u => u.role === "chatter" || lines.some(l => l.user_id === u.id)).map(u => {
@@ -189,12 +194,12 @@ module.exports = function mount(app, db, auth, admin) {
         hours: ls.reduce((t, l) => t + l.hours, 0), sales: ls.reduce((t, l) => t + l.sales, 0), pay: ls.reduce((t, l) => t + l.pay, 0) };
     });
     const sum = (arr, f) => arr.reduce((t, x) => t + (f(x) || 0), 0);
-    const unattributed = modelRows.filter(m => m.commissionBase > 0 && m.totalHours === 0 &&
+    const unattributed = mode === "ventes" ? [] : modelRows.filter(m => m.commissionBase > 0 && m.totalHours === 0 &&
       !lines.some(l => l.model_id === m.id)).map(m => m.name);
     const totals = { brut: sum(modelRows, m => m.brut), net: sum(modelRows, m => m.net), creators: sum(modelRows, m => m.creatorPay),
       agencyShare: sum(modelRows, m => m.agencyShare), chatters: sum(chatters, c => c.pay) };
     totals.margin = totals.agencyShare - totals.chatters;
-    return { period: p, base, fee: Number(getSetting("platform_fee", "25")), models: modelRows, lines, chatters, totals, unattributed };
+    return { period: p, base, mode, fee, models: modelRows, lines, chatters, totals, unattributed };
   }
 
   app.get("/api/admin/compta", auth, admin, (req, res) => {
@@ -238,6 +243,10 @@ module.exports = function mount(app, db, auth, admin) {
     if (req.body?.commission_base !== undefined) {
       if (!["net", "brut"].includes(req.body.commission_base)) return res.status(400).json({ error: "Valeur invalide" });
       set("commission_base", req.body.commission_base);
+    }
+    if (req.body?.attribution_mode !== undefined) {
+      if (!["ventes", "heures"].includes(req.body.attribution_mode)) return res.status(400).json({ error: "Valeur invalide" });
+      set("attribution_mode", req.body.attribution_mode);
     }
     if (req.body?.platform_fee !== undefined) {
       const f = num(req.body.platform_fee, 0, 90); if (f === null) return res.status(400).json({ error: "Pourcentage entre 0 et 90" });

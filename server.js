@@ -376,7 +376,8 @@ app.delete("/api/admin/models/:id", auth, admin, (req, res) => {
 });
 
 /* ----- Planning & compta ----- */
-require("./compta")(app, db, auth, admin);
+const validatedByPeriod = require("./sales")(app, db, auth, admin, path.dirname(DB_PATH));
+require("./compta")(app, db, auth, admin, validatedByPeriod);
 
 /* ----- Pages ----- */
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html"] }));
