@@ -362,17 +362,19 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     const ev = [];
     db.prepare(`SELECT s.amount, s.status, s.created_at, s.reviewed_at, u.username, m.name model_name FROM sales s JOIN users u ON u.id = s.user_id
       JOIN models m ON m.id = s.model_id ORDER BY s.created_at DESC LIMIT 30`).all().forEach(x => {
-      ev.push({ t: x.created_at, k: "e", who: x.username, text: `a déclaré une vente de ${x.amount.toLocaleString("fr-FR")} € · ${x.model_name}`, tag: x.status === "pending" ? "à valider" : "", cls: x.status === "pending" ? "o" : "" });
-      if (x.reviewed_at && x.status !== "pending") ev.push({ t: x.reviewed_at, k: "e", who: x.username, text: `: vente de ${x.amount.toLocaleString("fr-FR")} € ${x.status === "validated" ? "validée" : "refusée"}`, tag: x.status === "validated" ? "validée" : "refusée", cls: x.status === "validated" ? "g" : "r" });
+      ev.push({ t: x.created_at, k: "e", who: x.username, text: `a déclaré une vente de ${x.amount.toLocaleString("fr-FR")} € · ${x.model_name}`, tag: x.status === "pending" ? "à valider" : "", cls: x.status === "pending" ? "o" : "",
+        short: "a déclaré une vente", sub: x.model_name, amt: x.amount });
+      if (x.reviewed_at && x.status !== "pending") ev.push({ t: x.reviewed_at, k: "e", who: x.username, text: `: vente de ${x.amount.toLocaleString("fr-FR")} € ${x.status === "validated" ? "validée" : "refusée"}`, tag: x.status === "validated" ? "validée" : "refusée", cls: x.status === "validated" ? "g" : "r",
+        short: x.status === "validated" ? "vente validée" : "vente refusée", sub: x.model_name, amt: x.amount });
     });
     db.prepare(`SELECT c.start_at, c.end_at, u.username, m.name model_name FROM clocks c JOIN users u ON u.id = c.user_id JOIN models m ON m.id = c.model_id
       ORDER BY c.start_at DESC LIMIT 30`).all().forEach(k => {
-      ev.push({ t: k.start_at, k: "c", who: k.username, text: `a commencé son shift sur ${k.model_name}` });
-      if (k.end_at) { const h = (k.end_at - k.start_at) / 3.6e6; ev.push({ t: k.end_at, k: "c", who: k.username, text: `a terminé son shift · ${Math.floor(h)} h ${String(Math.round(h % 1 * 60)).padStart(2, "0")}` }); }
+      ev.push({ t: k.start_at, k: "c", who: k.username, text: `a commencé son shift sur ${k.model_name}`, short: "a commencé son shift", sub: k.model_name });
+      if (k.end_at) { const h = (k.end_at - k.start_at) / 3.6e6; const dur = `${Math.floor(h)} h ${String(Math.round(h % 1 * 60)).padStart(2, "0")}`; ev.push({ t: k.end_at, k: "c", who: k.username, text: `a terminé son shift · ${dur}`, short: "a terminé son shift", sub: dur }); }
     });
     db.prepare(`SELECT x.score, x.ended_at, u.username FROM sims x JOIN users u ON u.id = x.user_id WHERE x.status = 'done' AND x.ended_at IS NOT NULL
-      ORDER BY x.ended_at DESC LIMIT 20`).all().forEach(x => ev.push({ t: x.ended_at, k: "s", who: x.username, text: `a fait ${x.score}/100 au simulateur` }));
-    const feed = ev.filter(e => e.t).sort((a, b) => b.t - a.t).slice(0, 8);
+      ORDER BY x.ended_at DESC LIMIT 20`).all().forEach(x => ev.push({ t: x.ended_at, k: "s", who: x.username, text: `a fait ${x.score}/100 au simulateur`, short: `a fait ${x.score}/100`, sub: "simulateur" }));
+    const feed = ev.filter(e => e.t).sort((a, b) => b.t - a.t).slice(0, 24);
     const activeChatters = db.prepare("SELECT COUNT(*) n FROM users WHERE role = 'chatter' AND active = 1").get().n;
     const goal = Number(getSetting("goal_ca", "20000"));
     // courbe du CA : photos du CA saisi, jour par jour sur la période
