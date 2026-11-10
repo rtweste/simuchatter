@@ -161,7 +161,8 @@ app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
 app.use((req, res, next) => {
   res.set("X-Content-Type-Options", "nosniff");
-  res.set("X-Frame-Options", "DENY");
+  res.set("X-Frame-Options", "SAMEORIGIN");   // l'accueil peut être préparé dans la page de connexion (même site uniquement)
+  res.set("Content-Security-Policy", "frame-ancestors 'self'");
   res.set("Referrer-Policy", "same-origin");
   next();
 });
