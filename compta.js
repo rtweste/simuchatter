@@ -27,6 +27,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   if (!cols("users").includes("commission_pct")) db.exec("ALTER TABLE users ADD COLUMN commission_pct REAL NOT NULL DEFAULT 10");
   db.exec(`
   CREATE TABLE IF NOT EXISTS revenues (period TEXT NOT NULL, model_id INTEGER NOT NULL, brut REAL, net REAL, PRIMARY KEY (period, model_id));
+  CREATE TABLE IF NOT EXISTS ca_snaps (period TEXT NOT NULL, date TEXT NOT NULL, brut REAL NOT NULL, PRIMARY KEY (period, date));
   CREATE TABLE IF NOT EXISTS shifts (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, model_id INTEGER NOT NULL,
     date TEXT NOT NULL, start TEXT NOT NULL, end TEXT NOT NULL, note TEXT);
   CREATE INDEX IF NOT EXISTS shifts_date ON shifts(date);
@@ -228,6 +229,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     const net = brut === null ? null : Math.round(brut * (1 - fee / 100) * 100) / 100;
     db.prepare(`INSERT INTO revenues (period, model_id, brut, net) VALUES (?,?,?,?)
       ON CONFLICT(period, model_id) DO UPDATE SET brut = excluded.brut, net = excluded.net`).run(period, model_id, brut, net);
+    snapCA(period);
     res.json({ ok: true, net });
   });
   app.put("/api/admin/models/:id/pct", auth, admin, (req, res) => {
@@ -279,6 +281,13 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
 
   /* ================= ACCUEIL : résumé selon le rôle ================= */
   // 7 derniers jours (heure de Paris), du plus ancien au plus récent
+  // photo du CA brut total de la période, une par jour : sert à tracer la courbe de l'accueil
+  function snapCA(pkey) {
+    const p = periodInfo(pkey); if (!p) return;
+    const today = parisDate(Date.now()), date = today > p.to ? p.to : today < p.from ? p.from : today;
+    const brut = db.prepare("SELECT COALESCE(SUM(brut),0) t FROM revenues WHERE period = ?").get(pkey).t;
+    db.prepare(`INSERT INTO ca_snaps (period, date, brut) VALUES (?,?,?) ON CONFLICT(period, date) DO UPDATE SET brut = excluded.brut`).run(pkey, date, brut);
+  }
   const lastDays = (n, now) => Array.from({ length: n }, (_, i) => parisDate(now - (n - 1 - i) * 864e5));
   const pctTrend = (a, b) => b > 0 ? Math.round((a - b) / b * 100) : (a > 0 ? 100 : 0);
   const periodElapsed = (p, today) => { const d = +today.slice(8), d1 = +p.from.slice(8), d2 = +p.to.slice(8); return Math.min(1, Math.max(1 / 16, (d - d1 + 1) / (d2 - d1 + 1))); };
@@ -353,20 +362,32 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     const ev = [];
     db.prepare(`SELECT s.amount, s.status, s.created_at, s.reviewed_at, u.username, m.name model_name FROM sales s JOIN users u ON u.id = s.user_id
       JOIN models m ON m.id = s.model_id ORDER BY s.created_at DESC LIMIT 30`).all().forEach(x => {
-      ev.push({ t: x.created_at, who: x.username, text: `a déclaré une vente de ${x.amount.toLocaleString("fr-FR")} € · ${x.model_name}`, tag: x.status === "pending" ? "à valider" : "", cls: "o" });
-      if (x.reviewed_at && x.status !== "pending") ev.push({ t: x.reviewed_at, who: x.username, text: `: vente de ${x.amount.toLocaleString("fr-FR")} € ${x.status === "validated" ? "validée" : "refusée"}`, tag: x.status === "validated" ? "validée" : "refusée", cls: x.status === "validated" ? "g" : "r" });
+      ev.push({ t: x.created_at, k: "e", who: x.username, text: `a déclaré une vente de ${x.amount.toLocaleString("fr-FR")} € · ${x.model_name}`, tag: x.status === "pending" ? "à valider" : "", cls: x.status === "pending" ? "o" : "" });
+      if (x.reviewed_at && x.status !== "pending") ev.push({ t: x.reviewed_at, k: "e", who: x.username, text: `: vente de ${x.amount.toLocaleString("fr-FR")} € ${x.status === "validated" ? "validée" : "refusée"}`, tag: x.status === "validated" ? "validée" : "refusée", cls: x.status === "validated" ? "g" : "r" });
     });
     db.prepare(`SELECT c.start_at, c.end_at, u.username, m.name model_name FROM clocks c JOIN users u ON u.id = c.user_id JOIN models m ON m.id = c.model_id
       ORDER BY c.start_at DESC LIMIT 30`).all().forEach(k => {
-      ev.push({ t: k.start_at, who: k.username, text: `a commencé son shift sur ${k.model_name}` });
-      if (k.end_at) { const h = (k.end_at - k.start_at) / 3.6e6; ev.push({ t: k.end_at, who: k.username, text: `a terminé son shift · ${Math.floor(h)} h ${String(Math.round(h % 1 * 60)).padStart(2, "0")}` }); }
+      ev.push({ t: k.start_at, k: "c", who: k.username, text: `a commencé son shift sur ${k.model_name}` });
+      if (k.end_at) { const h = (k.end_at - k.start_at) / 3.6e6; ev.push({ t: k.end_at, k: "c", who: k.username, text: `a terminé son shift · ${Math.floor(h)} h ${String(Math.round(h % 1 * 60)).padStart(2, "0")}` }); }
     });
     db.prepare(`SELECT x.score, x.ended_at, u.username FROM sims x JOIN users u ON u.id = x.user_id WHERE x.status = 'done' AND x.ended_at IS NOT NULL
-      ORDER BY x.ended_at DESC LIMIT 20`).all().forEach(x => ev.push({ t: x.ended_at, who: x.username, text: `a fait ${x.score}/100 au simulateur` }));
+      ORDER BY x.ended_at DESC LIMIT 20`).all().forEach(x => ev.push({ t: x.ended_at, k: "s", who: x.username, text: `a fait ${x.score}/100 au simulateur` }));
     const feed = ev.filter(e => e.t).sort((a, b) => b.t - a.t).slice(0, 8);
     const activeChatters = db.prepare("SELECT COUNT(*) n FROM users WHERE role = 'chatter' AND active = 1").get().n;
     const goal = Number(getSetting("goal_ca", "20000"));
-    res.json({ role: "admin", period: p, totals: c.totals, series, goal, elapsed, projection: Math.round(c.totals.brut / elapsed), prevMargin,
+    // courbe du CA : photos du CA saisi, jour par jour sur la période
+    snapCA(p.key);
+    const nDays = +p.to.slice(8) - +p.from.slice(8) + 1;
+    const caPts = db.prepare("SELECT date, brut FROM ca_snaps WHERE period = ? ORDER BY date").all(p.key)
+      .map(x => ({ day: +x.date.slice(8) - +p.from.slice(8) + 1, date: x.date, brut: x.brut }));
+    // marge des périodes précédentes (barres)
+    const marginHist = []; let k = p.key;
+    for (let i = 0; i < 7; i++) { const pi = periodInfo(k); marginHist.unshift({ label: pi.label, margin: i === 0 ? c.totals.margin : computeCompta(k).totals.margin }); k = pi.prev; }
+    // prochain shift (si personne ne travaille)
+    const hm = new Date(now).toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" });
+    const nextShift = db.prepare(`SELECT s.date, s.start, s.end, u.username, m.name model_name FROM shifts s JOIN users u ON u.id = s.user_id
+      JOIN models m ON m.id = s.model_id WHERE s.date > ? OR (s.date = ? AND s.start > ?) ORDER BY s.date, s.start LIMIT 1`).get(today, today, hm) || null;
+    res.json({ role: "admin", today, nDays, caPts, marginHist, nextShift, days, period: p, totals: c.totals, series, goal, elapsed, projection: Math.round(c.totals.brut / elapsed), prevMargin,
       marginTrend: pctTrend(c.totals.margin, prevMargin), feed, activeChatters,
       missingRevenue: c.models.filter(m => m.brut == null).map(m => m.name),
       pendingSales, live, todayShifts,
