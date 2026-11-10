@@ -21,6 +21,7 @@
 .main{flex:1;display:flex;min-height:0}
 .chat{flex:1;display:flex;flex-direction:column;min-width:0}
 #msgs{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:6px}
+#msgs > *{flex-shrink:0}
 .msg{max-width:70%;padding:9px 13px;border-radius:16px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
 .msg.fan{background:var(--them);align-self:flex-start;border-bottom-left-radius:4px}
 .msg.me{background:var(--me);color:#0a0a0a;align-self:flex-end;border-bottom-right-radius:4px}
