@@ -37,16 +37,36 @@
 .shortcuts a{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;color:var(--text);text-decoration:none;font-weight:500;font-size:13px;background:var(--panel)}
 .shortcuts a:hover{border-color:#3a3a3a}
 .shortcuts svg{width:18px;height:18px;color:var(--muted)}
+/* ===== Motion design ===== */
+.kpis .card,.dash .card,.shortcuts a{transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s}
+.kpis .card:hover,.dash .card:hover,.shortcuts a:hover{transform:translateY(-3px);border-color:#3a3a3a}
+.kpis .card{position:relative;overflow:hidden}
+.kpis b{font-variant-numeric:tabular-nums}
+.play .rise{opacity:0;transform:translateY(16px);animation:rise .75s cubic-bezier(.2,.75,.2,1) forwards;animation-delay:calc(var(--i,0) * 70ms)}
+@keyframes rise{to{opacity:1;transform:none}}
+.play .kpis .card::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.07) 50%,transparent 70%);transform:translateX(-100%);animation:glint 1.4s ease-out forwards;animation-delay:calc(.5s + var(--i,0) * 70ms)}
+@keyframes glint{to{transform:translateX(100%)}}
+.play .list li{opacity:0;animation:rise .6s cubic-bezier(.2,.75,.2,1) forwards;animation-delay:calc(.35s + var(--i,0) * 70ms + var(--j,0) * 60ms);transform:translateY(8px)}
+.wrap.wait{opacity:0}
+.lb-row{flex-wrap:wrap}
+.lb-bar{flex-basis:100%;height:5px;border-radius:5px;background:var(--panel2);overflow:hidden;margin-top:2px}
+.lb-bar i{display:block;height:100%;border-radius:5px;background:var(--text);transform-origin:left;animation:grow 1.2s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(.6s + var(--j,0) * 100ms)}
+.lb-row:first-child .lb-bar i{background:var(--warn)}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.shift .dot.on,.live-dot{animation:pulse 2s ease-out infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(60,207,145,.5)}100%{box-shadow:0 0 0 10px rgba(60,207,145,0)}}
+.shift .timer{font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){.play .rise,.play .list li{opacity:1;transform:none}}
 </style>
 </head>
 <body>
 <div class="shell">
   <aside class="sidebar" id="sidebar"></aside>
   <main class="main-area">
-    <div class="wrap">
+    <div class="wrap wait">
       <div class="pagehead"><div><div class="eyebrow" id="today"></div><h1 id="hello">Bonjour</h1></div></div>
       <div id="content"></div>
-      <h2 style="font-size:13px;color:var(--muted);font-weight:500;margin:26px 0 10px">Accès rapide</h2>
+      <h2 id="shortcuts-title" style="font-size:13px;color:var(--muted);font-weight:500;margin:26px 0 10px">Accès rapide</h2>
       <div class="shortcuts" id="shortcuts"></div>
     </div>
   </main>
@@ -56,7 +76,8 @@
 const pad = n => String(n).padStart(2, "0");
 const todayIso = (() => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; })();
 const dayLbl = d => d === todayIso ? "Aujourd'hui" : new Date(d + "T12:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
-const kpi = (label, value, opts = {}) => `<${opts.href ? `a href="${opts.href}"` : "div"} class="card kpi"><small>${label}</small><b ${opts.color ? `style="color:${opts.color}"` : ""}>${value}</b>${opts.sub ? `<div style="font-size:12px;color:var(--muted);margin-top:4px">${opts.sub}</div>` : ""}</${opts.href ? "a" : "div"}>`;
+// opts.count = [nombre, format] : le chiffre défile jusqu'à sa valeur
+const kpi = (label, value, opts = {}) => `<${opts.href ? `a href="${opts.href}"` : "div"} class="card kpi"><small>${label}</small><b ${opts.color ? `style="color:${opts.color}"` : ""} ${opts.count ? `data-count="${Number(opts.count[0]) || 0}" data-fmt="${opts.count[1]}"` : ""}>${value}</b>${opts.sub ? `<div style="font-size:12px;color:var(--muted);margin-top:4px">${opts.sub}</div>` : ""}</${opts.href ? "a" : "div"}>`;
 let tick = null;
 
 /* ---------- Chatter ---------- */
@@ -66,10 +87,10 @@ function renderChatter(d) {
   <div class="card" style="margin-bottom:20px"><div class="shift" id="shiftBox"></div></div>
   <div class="eyebrow" style="margin:0 0 10px">Période du ${esc(d.period.label)}</div>
   <div class="kpis">
-    ${kpi("Ventes validées", eur(s.validated), { color: "var(--good)", href: "/ventes" })}
-    ${kpi("En attente de validation", eur(s.pending), { color: s.pending ? "var(--warn)" : "", href: "/ventes" })}
-    ${kpi("Commission estimée", eur(s.commission), { sub: `${String(s.pct).replace(".", ",")} % de vos ventes validées` })}
-    ${kpi("Heures pointées", hrs(d.hours), { href: "/planning" })}
+    ${kpi("Ventes validées", eur(s.validated), { color: "var(--good)", href: "/ventes", count: [s.validated, "eur"] })}
+    ${kpi("En attente de validation", eur(s.pending), { color: s.pending ? "var(--warn)" : "", href: "/ventes", count: [s.pending, "eur"] })}
+    ${kpi("Commission estimée", eur(s.commission), { count: [s.commission, "eur"], sub: `${String(s.pct).replace(".", ",")} % de vos ventes validées` })}
+    ${kpi("Heures pointées", hrs(d.hours), { href: "/planning", count: [d.hours, "hrs"] })}
   </div>
   <div class="dash">
     <div class="card"><h2>Mes prochains créneaux <a href="/planning">Planning →</a></h2>
@@ -107,29 +128,52 @@ function renderAdmin(d) {
   $("content").innerHTML = `
   <div class="eyebrow" style="margin:0 0 10px">Période du ${esc(d.period.label)}</div>
   <div class="kpis">
-    ${kpi("CA brut", eur(t.brut), { href: "/compta" })}
-    ${kpi("Marge de l'agence", eur(t.margin), { color: t.margin >= 0 ? "var(--good)" : "var(--bad)", href: "/compta" })}
-    ${kpi("Ventes à valider", d.pendingSales.n, { color: d.pendingSales.n ? "var(--warn)" : "", href: "/ventes", sub: d.pendingSales.n ? eur(d.pendingSales.total) + " brut" : "Tout est à jour" })}
-    ${kpi("En shift maintenant", d.live.length, { href: "/planning", color: d.live.length ? "var(--good)" : "" })}
+    ${kpi("CA brut", eur(t.brut), { href: "/compta", count: [t.brut, "eur"] })}
+    ${kpi("Marge de l'agence", eur(t.margin), { color: t.margin >= 0 ? "var(--good)" : "var(--bad)", href: "/compta", count: [t.margin, "eur"] })}
+    ${kpi("Ventes à valider", d.pendingSales.n, { color: d.pendingSales.n ? "var(--warn)" : "", href: "/ventes", count: [d.pendingSales.n, "int"], sub: d.pendingSales.n ? eur(d.pendingSales.total) + " brut" : "Tout est à jour" })}
+    ${kpi("En shift maintenant", d.live.length, { href: "/planning", color: d.live.length ? "var(--good)" : "", count: [d.live.length, "int"] })}
   </div>
   <div class="dash">
     <div class="card"><h2>À faire</h2>
       <ul class="list todo">${todo.length ? todo.map(([ic, txt, href]) => `<li><a href="${href}"><span class="ic">${icon(ic)}</span><span style="flex:1">${txt}</span><span class="muted">→</span></a></li>`).join("") : `<li class="empty">Rien à faire pour l'instant. 👍</li>`}</ul></div>
     <div class="card"><h2>En shift maintenant <a href="/planning">Planning →</a></h2>
-      <ul class="list">${d.live.length ? d.live.map(c => `<li><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--good);margin-right:8px"></span><b>${esc(c.username)}</b> <span class="muted">· ${esc(c.model_name)}</span></span><span class="muted">depuis ${hrs((Date.now() - c.start_at) / 3.6e6)}</span></li>`).join("") : `<li class="empty">Personne n'est en shift.</li>`}</ul></div>
+      <ul class="list">${d.live.length ? d.live.map(c => `<li><span><span class="live-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--good);margin-right:8px"></span><b>${esc(c.username)}</b> <span class="muted">· ${esc(c.model_name)}</span></span><span class="muted">depuis ${hrs((Date.now() - c.start_at) / 3.6e6)}</span></li>`).join("") : `<li class="empty">Personne n'est en shift.</li>`}</ul></div>
   </div>
   <div class="dash">
     <div class="card"><h2>Planning du jour <a href="/planning">Voir la semaine →</a></h2>
       <ul class="list">${d.todayShifts.length ? d.todayShifts.map(s => `<li><span><b>${esc(s.username)}</b> <span class="muted">· ${esc(s.model_name)}</span></span><span>${s.start} – ${s.end}</span></li>`).join("") : `<li class="empty">Aucun créneau aujourd'hui.</li>`}</ul></div>
     <div class="card"><h2>Meilleurs vendeurs <a href="/ventes">Ventes →</a></h2>
-      <ul class="list">${d.leaderboard.length ? d.leaderboard.map((r, i) => `<li><span class="rank"><i class="${i === 0 ? "g" : ""}">${i + 1}</i><b>${esc(r.username)}</b></span><span>${eur(r.total)}</span></li>`).join("") : `<li class="empty">Aucune vente validée sur la période.</li>`}</ul>
+      <ul class="list">${d.leaderboard.length ? d.leaderboard.map((r, i) => `<li class="lb-row"><span class="rank"><i class="${i === 0 ? "g" : ""}">${i + 1}</i><b>${esc(r.username)}</b></span><span>${eur(r.total)}</span><span class="lb-bar"><i style="--j:${i};width:${Math.max(4, Math.round(r.total / (d.leaderboard[0].total || 1) * 100))}%"></i></span></li>`).join("") : `<li class="empty">Aucune vente validée sur la période.</li>`}</ul>
       <p class="empty" style="margin-top:10px">Simulateur : ${d.simu.week} session(s) cette semaine${d.simu.avg !== null ? ` · score moyen ${d.simu.avg}/100` : ""}</p></div>
   </div>`;
+}
+
+/* ---------- Animations d'arrivée ---------- */
+let played = false;
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function fmtCount(v, f) { return f === "eur" ? eur(v) : f === "hrs" ? hrs(v) : Math.round(v).toLocaleString("fr-FR"); }
+function countUp(el) {
+  const to = Number(el.dataset.count), f = el.dataset.fmt, D = 1300, delay = 300 + (Number(el.closest(".rise")?.style.getPropertyValue("--i")) || 0) * 70;
+  if (!to || reduceMotion) return;
+  el.textContent = fmtCount(0, f);
+  const t0 = performance.now() + delay;
+  const step = now => { const x = Math.min(1, Math.max(0, (now - t0) / D)); el.textContent = fmtCount(to * (1 - Math.pow(1 - x, 3)), f); if (x < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+function animateIn() {
+  if (played) return; played = true;
+  document.querySelector(".wrap").classList.remove("wait");
+  const items = [document.querySelector(".pagehead"), ...document.querySelectorAll("#content > .card, #content > .eyebrow, .kpis > .card, .dash > .card, #shortcuts-title, .shortcuts > a")].filter(Boolean);
+  items.forEach((el, i) => { el.classList.add("rise"); el.style.setProperty("--i", i); el.querySelectorAll(".list li").forEach((li, j) => { li.style.setProperty("--i", i); li.style.setProperty("--j", j); }); });
+  document.querySelectorAll("[data-count]").forEach(countUp);
+  document.querySelector(".wrap").classList.add("play");
+  setTimeout(() => document.querySelector(".wrap").classList.remove("play"), 3500);  // les mises à jour suivantes s'affichent sans rejouer
 }
 
 async function load() {
   const d = await api("/api/home");
   d.role === "admin" ? renderAdmin(d) : renderChatter(d);
+  animateIn();
 }
 (async () => {
   const me = await api("/api/me");

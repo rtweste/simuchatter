@@ -87,13 +87,13 @@ ul{padding-left:18px;line-height:1.6;margin:6px 0}
 .eyebrow{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.14em;margin-bottom:6px}
 @media(max-width:860px){
   .shell{flex-direction:column}
-  .sidebar{width:auto;height:auto;position:static;flex-direction:row;align-items:center;padding:10px 14px;border-right:0;border-bottom:1px solid var(--line);gap:6px;overflow-x:auto}
-  .sidebar .logo{padding:0 8px 0 0}.sidebar .logo img{width:110px}
-  .sidebar .sec{display:none}
-  .sidebar nav{display:flex;gap:4px}
-  .sidebar nav a span{display:none}
-  .sidebar .me{margin:0 0 0 auto;border:0;padding:0}
-  .sidebar .me div,.sidebar .me .av{display:none}
+  .sidebar{width:auto;height:auto;position:sticky;top:0;z-index:30;flex-direction:row;align-items:center;padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top));border-right:0;border-bottom:1px solid var(--line);background:rgba(10,10,10,.85);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+  .sidebar .logo{padding:6px 0}.sidebar .logo .lg-sh{width:118px}
+  .sidebar nav{display:none}
+  .sidebar .me{margin:0 0 0 auto;border:0;padding:0;gap:6px}
+  .sidebar .me div{display:none}
+  .sidebar .me .av{width:30px;height:30px}
+  .main-area{padding-bottom:calc(104px + env(safe-area-inset-bottom))}
   .grid3{grid-template-columns:1fr 1fr}
   .wrap{padding:18px}
   .card{padding:16px}
@@ -116,4 +116,48 @@ ul{padding-left:18px;line-height:1.6;margin:6px 0}
 .grid > *, .grid3 > *, .kpis > * { min-width: 0 }
 .sidebar nav a{position:relative}
 .navbadge{margin-left:auto;font-style:normal;font-size:11px;font-weight:700;background:var(--warn);color:#1a1205;border-radius:20px;padding:1px 7px;min-width:20px;text-align:center}
-@media(max-width:860px){.navbadge{position:absolute;top:2px;right:0;margin:0;padding:0 5px;font-size:10px}}
+
+/* ===== Logo animé : reflet ===== */
+.lg-sh{position:relative;display:block;width:150px}
+.lg-sh svg{display:block;width:100%;height:auto;overflow:visible}
+.lg-sh .base{display:block;opacity:.68}
+.lg-sh .shine{position:absolute;inset:0;-webkit-mask-image:linear-gradient(105deg,transparent 42%,#000 50%,transparent 58%);mask-image:linear-gradient(105deg,transparent 42%,#000 50%,transparent 58%);-webkit-mask-size:300% 100%;mask-size:300% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;animation:lgSweep 5s ease-in-out infinite;filter:drop-shadow(0 0 6px rgba(255,255,255,.55))}
+@keyframes lgSweep{0%{-webkit-mask-position:120% 0;mask-position:120% 0}55%,100%{-webkit-mask-position:-20% 0;mask-position:-20% 0}}
+.sidebar .logo{text-decoration:none}
+
+/* ===== Menu de gauche : indicateur lumineux + entrée ===== */
+.sidebar nav a.on::before{content:"";position:absolute;left:-14px;top:9px;bottom:9px;width:2px;border-radius:2px;background:#fff;box-shadow:0 0 10px rgba(255,255,255,.8)}
+.sidebar nav a{transition:background .2s,color .2s}
+.sidebar.nav-in nav a{opacity:0;transform:translateX(-8px);animation:navIn .5s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(.15s + var(--i,0) * 70ms)}
+@keyframes navIn{to{opacity:1;transform:none}}
+
+/* ===== Dock flottant (téléphone) ===== */
+.dock{display:none}
+@media(max-width:860px){
+  .dock{display:flex;position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:40;gap:3px;padding:6px;max-width:calc(100vw - 16px);box-sizing:border-box;background:rgba(22,22,22,.8);-webkit-backdrop-filter:blur(20px) saturate(140%);backdrop-filter:blur(20px) saturate(140%);border:1px solid #2a2a2a;border-radius:26px;box-shadow:0 18px 40px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.05);view-transition-name:dock}
+  .dock.dock-in{animation:dockIn .6s cubic-bezier(.3,1.3,.5,1) both}
+  .dock .di{position:relative;display:flex;align-items:center;gap:0;height:46px;min-width:44px;padding:0 12px;box-sizing:border-box;border-radius:19px;color:#8a8a8a;text-decoration:none;font-weight:600;font-size:13px;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:background .45s cubic-bezier(.3,1.3,.5,1),color .3s,padding .45s cubic-bezier(.3,1.3,.5,1),gap .45s cubic-bezier(.3,1.3,.5,1)}
+  .dock .di svg{width:21px;height:21px;flex-shrink:0;transition:transform .3s cubic-bezier(.3,1.5,.5,1)}
+  .dock .di:active svg{transform:scale(.85)}
+  .dock .di .lb{max-width:0;opacity:0;overflow:hidden;transition:max-width .45s cubic-bezier(.3,1.3,.5,1),opacity .3s}
+  .dock .di.on{background:#f5f5f5;color:#0a0a0a;gap:8px;padding:0 15px}
+  .dock .di.on .lb{max-width:84px;opacity:1}
+  .dock .navbadge{position:absolute;top:3px;right:3px;margin:0;padding:0 5px;min-width:16px;font-size:10px;line-height:16px;box-shadow:0 0 0 2px #161616}
+  .shell{view-transition-name:none}
+  .sidebar{view-transition-name:topbar}
+}
+@media(max-width:360px){.dock .di{padding:0 10px;min-width:40px}.dock .di.on{padding:0 12px}}
+@keyframes dockIn{from{opacity:0;transform:translate(-50%,24px) scale(.96)}to{opacity:1;transform:translate(-50%,0)}}
+/* Pas de dock pendant une conversation du simulateur (il cacherait la zone de saisie) */
+body:has(#chatScreen:not(.hidden)) .dock{display:none}
+body:has(#chatScreen:not(.hidden)) .main-area{padding-bottom:0}
+
+/* ===== Transitions douces entre les pages (navigateurs récents) ===== */
+@view-transition{navigation:auto}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.22s}
+@media(min-width:861px){.sidebar{view-transition-name:sidebar}}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .lg-sh .shine{display:none}.lg-sh .base{opacity:1}
+}

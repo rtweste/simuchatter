@@ -54,6 +54,7 @@ $("f").onsubmit = async e => {
   try { v.muted = false; const p = v.play(); if (p) p.then(() => { if (!$("intro").classList.contains("show")) { v.pause(); v.currentTime = 0; } }).catch(() => {}); } catch (_) {}
   try {
     await api("/api/login", { body: { username: $("u").value, password: $("p").value } });
+    try { sessionStorage.removeItem("stNav"); } catch (_) {}  // rejoue l'entrée du menu après l'intro
     $("intro").classList.add("show");
     v.currentTime = 0;
     v.play().catch(() => { v.muted = true; v.play().catch(goHome); });  // si le son est bloqué : sans le son
