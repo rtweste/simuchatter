@@ -3,19 +3,28 @@
    ===================================================================== */
 const FX = (() => {
   /* ---------------- Sons ---------------- */
-  let ctx = null, out = null;
+  let ctx = null, out = null, keep = null;
   const soundOn = () => { try { return localStorage.getItem("stSound") !== "0"; } catch (e) { return true; } };
   function audio() {
     if (!soundOn()) return null;
     try {
       const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
+      // iPhone : jouer le son même quand le téléphone est en mode silencieux
+      try { if (navigator.audioSession && navigator.audioSession.type !== "playback") navigator.audioSession.type = "playback"; } catch (e) {}
       if (!ctx) { ctx = new C(); out = ctx.createGain(); out.gain.value = 0.2; out.connect(ctx.destination); }
       if (ctx.state === "suspended") ctx.resume();
       return ctx;
     } catch (e) { return null; }
   }
   // à appeler pendant un clic : les navigateurs n'autorisent le son qu'après une action
-  function unlock() { const c = audio(); if (c) { const b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0); } }
+  function unlock() {
+    const c = audio(); if (!c) return;
+    const b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0);
+    // signal inaudible permanent : empêche le navigateur de couper le son pendant l'attente de l'évaluation
+    if (!keep) { try { keep = c.createOscillator(); const g = c.createGain(); g.gain.value = 0.00001; keep.frequency.value = 30; keep.connect(g); g.connect(c.destination); keep.start(); } catch (e) {} }
+  }
+  // le son est-il vraiment actif ? (sinon on proposera un bouton)
+  const audioRunning = () => !soundOn() || (ctx && ctx.state === "running");
   function tone(f, at, len, peak, type, glideTo) {
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = type || "sine"; o.frequency.setValueAtTime(f, at); if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, at + len * 0.9);
@@ -205,7 +214,16 @@ const FX = (() => {
 
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!opts.animate || reduce) { rp.classList.add("static"); frame(1e9, true); return; }
+    audio();
     const t0 = performance.now(); let skipped = false;
+    setTimeout(() => {
+      if (audioRunning() || skipped) return;
+      const b = document.createElement("button"); b.className = "sndon"; b.type = "button";
+      b.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>Activer le son';
+      b.onclick = () => { unlock(); b.remove(); };
+      rp.appendChild(b);
+      const watch = setInterval(() => { if (audioRunning()) { b.remove(); clearInterval(watch); } }, 500);
+    }, 400);
     const skip = $q("[data-skip]");
     skip.onclick = () => { skipped = true; cancelAnimationFrame(raf); rp.classList.add("static"); rp.classList.remove("spinning"); frame(1e9, true); skip.remove(); };
     const step = now => { if (skipped) return; if (frame(now - t0)) raf = requestAnimationFrame(step); else skip.remove(); };
