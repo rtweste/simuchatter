@@ -5,42 +5,140 @@
 <title>Accueil — StellADS</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
+<style>
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.kpis .card{padding:18px}
+.kpis .card b{font-size:22px}
+.kpis a.card{text-decoration:none;color:var(--text);transition:.15s}
+.kpis a.card:hover{border-color:#3a3a3a}
+.dash{display:grid;grid-template-columns:1.2fr 1fr;gap:20px;margin-bottom:20px}
+@media(max-width:900px){.dash{grid-template-columns:1fr}}
+.dash > *{min-width:0}
+.card h2{display:flex;align-items:center;gap:8px}
+.card h2 a{margin-left:auto;font-size:12px;font-weight:500;color:var(--muted);text-decoration:none}
+.card h2 a:hover{color:var(--text)}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+.list li:last-child{border-bottom:0}
+.list .muted{color:var(--muted)}
+.empty{color:var(--muted);font-size:13px;padding:6px 0}
+.todo li a{color:var(--text);text-decoration:none;display:flex;align-items:center;gap:10px;width:100%}
+.todo .ic{width:28px;height:28px;border-radius:8px;background:var(--panel2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.todo .ic svg{width:15px;height:15px}
+.shift{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.shift .dot{width:10px;height:10px;border-radius:50%;background:var(--muted)}
+.shift .dot.on{background:var(--good);box-shadow:0 0 0 4px rgba(60,207,145,.15)}
+.shift .timer{font-family:Outfit,Inter,sans-serif;font-size:26px;font-weight:300}
+.shift select{width:auto;min-width:150px}
+.rank{display:flex;align-items:center;gap:10px}
+.rank i{font-style:normal;width:22px;height:22px;border-radius:50%;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--muted)}
+.rank i.g{background:#3d3218;color:var(--warn)}
+.shortcuts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.shortcuts a{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;color:var(--text);text-decoration:none;font-weight:500;font-size:13px;background:var(--panel)}
+.shortcuts a:hover{border-color:#3a3a3a}
+.shortcuts svg{width:18px;height:18px;color:var(--muted)}
+</style>
 </head>
 <body>
 <div class="shell">
   <aside class="sidebar" id="sidebar"></aside>
   <main class="main-area">
     <div class="wrap">
-      <div class="pagehead"><div><div class="eyebrow">Portail StellADS</div><h1 id="hello">Bonjour</h1></div></div>
-      <div class="grid3" id="kpis" style="margin-bottom:22px"></div>
-      <div class="modules" id="modules"></div>
+      <div class="pagehead"><div><div class="eyebrow" id="today"></div><h1 id="hello">Bonjour</h1></div></div>
+      <div id="content"></div>
+      <h2 style="font-size:13px;color:var(--muted);font-weight:500;margin:26px 0 10px">Accès rapide</h2>
+      <div class="shortcuts" id="shortcuts"></div>
     </div>
   </main>
 </div>
 <script src="/common.js"></script>
 <script>
+const pad = n => String(n).padStart(2, "0");
+const todayIso = (() => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; })();
+const dayLbl = d => d === todayIso ? "Aujourd'hui" : new Date(d + "T12:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
+const kpi = (label, value, opts = {}) => `<${opts.href ? `a href="${opts.href}"` : "div"} class="card kpi"><small>${label}</small><b ${opts.color ? `style="color:${opts.color}"` : ""}>${value}</b>${opts.sub ? `<div style="font-size:12px;color:var(--muted);margin-top:4px">${opts.sub}</div>` : ""}</${opts.href ? "a" : "div"}>`;
+let tick = null;
+
+/* ---------- Chatter ---------- */
+function renderChatter(d) {
+  const s = d.sales;
+  $("content").innerHTML = `
+  <div class="card" style="margin-bottom:20px"><div class="shift" id="shiftBox"></div></div>
+  <div class="eyebrow" style="margin:0 0 10px">Période du ${esc(d.period.label)}</div>
+  <div class="kpis">
+    ${kpi("Ventes validées", eur(s.validated), { color: "var(--good)", href: "/ventes" })}
+    ${kpi("En attente de validation", eur(s.pending), { color: s.pending ? "var(--warn)" : "", href: "/ventes" })}
+    ${kpi("Commission estimée", eur(s.commission), { sub: `${String(s.pct).replace(".", ",")} % de vos ventes validées` })}
+    ${kpi("Heures pointées", hrs(d.hours), { href: "/planning" })}
+  </div>
+  <div class="dash">
+    <div class="card"><h2>Mes prochains créneaux <a href="/planning">Planning →</a></h2>
+      <ul class="list">${d.upcoming.length ? d.upcoming.map(x => `<li><span><b>${dayLbl(x.date)}</b> <span class="muted">· ${esc(x.model_name)}</span></span><span>${x.start} – ${x.end}</span></li>`).join("") : `<li class="empty">Aucun créneau prévu pour l'instant.</li>`}</ul></div>
+    <div class="card"><h2>Simulateur <a href="/app">S'entraîner →</a></h2>
+      ${d.simu.last ? `<div class="kpi"><small>Dernier score</small><b style="font-size:30px;color:${scoreColor(d.simu.last.score)}">${d.simu.last.score}<span style="font-size:14px;color:var(--muted)"> /100</span></b></div>
+        <p class="empty">${d.simu.week} simulation(s) cette semaine${d.simu.avg !== null ? ` · moyenne ${d.simu.avg}/100` : ""}</p>`
+        : `<p class="empty">Pas encore de simulation. Entraînez-vous face à un fan simulé pour progresser.</p><a class="btn small" href="/app" style="text-decoration:none;display:inline-block;margin-top:6px">Lancer une simulation</a>`}
+    </div>
+  </div>`;
+  renderShift(d);
+}
+function renderShift(d) {
+  clearInterval(tick);
+  if (d.open) {
+    $("shiftBox").innerHTML = `<span class="dot on"></span><div><div class="eyebrow" style="margin:0">En shift sur ${esc(d.open.model_name)}</div><div class="timer" id="timer"></div></div><div class="spacer"></div><button class="btn" id="outBtn">Terminer mon shift</button>`;
+    const upd = () => { const t = Math.floor((Date.now() - d.open.start_at) / 1000); $("timer").textContent = `${pad(Math.floor(t / 3600))}:${pad(Math.floor(t % 3600 / 60))}:${pad(t % 60)}`; };
+    upd(); tick = setInterval(upd, 1000);
+    $("outBtn").onclick = async () => { $("outBtn").disabled = true; await api("/api/clock/out", { body: {} }).catch(() => {}); load(); };
+  } else {
+    const next = d.upcoming[0];
+    $("shiftBox").innerHTML = `<span class="dot"></span><div><div class="eyebrow" style="margin:0">Pointage</div><b>Pas de shift en cours</b></div><div class="spacer"></div>
+      <select id="inModel" aria-label="Créatrice">${d.models.map(m => `<option value="${m.id}" ${next && next.model_name === m.name ? "selected" : ""}>${esc(m.name)}</option>`).join("")}</select>
+      <button class="btn" id="inBtn">Commencer mon shift</button>`;
+    $("inBtn").onclick = async () => { $("inBtn").disabled = true; await api("/api/clock/in", { body: { model_id: $("inModel").value } }).catch(() => {}); load(); };
+  }
+}
+
+/* ---------- Manager ---------- */
+function renderAdmin(d) {
+  const t = d.totals, todo = [];
+  if (d.pendingSales.n) todo.push(["receipt", `<b>${d.pendingSales.n} vente(s)</b> à valider · ${eur(d.pendingSales.total)}`, "/ventes"]);
+  if (d.missingRevenue.length) todo.push(["euro", `CA brut à saisir pour <b>${d.missingRevenue.map(esc).join(", ")}</b>`, "/compta"]);
+  if (!d.todayShifts.length) todo.push(["calendar", "Aucun créneau prévu aujourd'hui", "/planning"]);
+  $("content").innerHTML = `
+  <div class="eyebrow" style="margin:0 0 10px">Période du ${esc(d.period.label)}</div>
+  <div class="kpis">
+    ${kpi("CA brut", eur(t.brut), { href: "/compta" })}
+    ${kpi("Marge de l'agence", eur(t.margin), { color: t.margin >= 0 ? "var(--good)" : "var(--bad)", href: "/compta" })}
+    ${kpi("Ventes à valider", d.pendingSales.n, { color: d.pendingSales.n ? "var(--warn)" : "", href: "/ventes", sub: d.pendingSales.n ? eur(d.pendingSales.total) + " brut" : "Tout est à jour" })}
+    ${kpi("En shift maintenant", d.live.length, { href: "/planning", color: d.live.length ? "var(--good)" : "" })}
+  </div>
+  <div class="dash">
+    <div class="card"><h2>À faire</h2>
+      <ul class="list todo">${todo.length ? todo.map(([ic, txt, href]) => `<li><a href="${href}"><span class="ic">${icon(ic)}</span><span style="flex:1">${txt}</span><span class="muted">→</span></a></li>`).join("") : `<li class="empty">Rien à faire pour l'instant. 👍</li>`}</ul></div>
+    <div class="card"><h2>En shift maintenant <a href="/planning">Planning →</a></h2>
+      <ul class="list">${d.live.length ? d.live.map(c => `<li><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--good);margin-right:8px"></span><b>${esc(c.username)}</b> <span class="muted">· ${esc(c.model_name)}</span></span><span class="muted">depuis ${hrs((Date.now() - c.start_at) / 3.6e6)}</span></li>`).join("") : `<li class="empty">Personne n'est en shift.</li>`}</ul></div>
+  </div>
+  <div class="dash">
+    <div class="card"><h2>Planning du jour <a href="/planning">Voir la semaine →</a></h2>
+      <ul class="list">${d.todayShifts.length ? d.todayShifts.map(s => `<li><span><b>${esc(s.username)}</b> <span class="muted">· ${esc(s.model_name)}</span></span><span>${s.start} – ${s.end}</span></li>`).join("") : `<li class="empty">Aucun créneau aujourd'hui.</li>`}</ul></div>
+    <div class="card"><h2>Meilleurs vendeurs <a href="/ventes">Ventes →</a></h2>
+      <ul class="list">${d.leaderboard.length ? d.leaderboard.map((r, i) => `<li><span class="rank"><i class="${i === 0 ? "g" : ""}">${i + 1}</i><b>${esc(r.username)}</b></span><span>${eur(r.total)}</span></li>`).join("") : `<li class="empty">Aucune vente validée sur la période.</li>`}</ul>
+      <p class="empty" style="margin-top:10px">Simulateur : ${d.simu.week} session(s) cette semaine${d.simu.avg !== null ? ` · score moyen ${d.simu.avg}/100` : ""}</p></div>
+  </div>`;
+}
+
+async function load() {
+  const d = await api("/api/home");
+  d.role === "admin" ? renderAdmin(d) : renderChatter(d);
+}
 (async () => {
   const me = await api("/api/me");
   renderShell("home", me);
   $("hello").textContent = `Bonjour ${me.username}`;
-  $("modules").innerHTML = MODULES.filter(m => m.id !== "home" && m.roles.includes(me.role)).map(m => `
-    <a class="module" href="${m.href}"><div class="ic">${icon(m.icon)}</div><h3>${esc(m.label)}</h3><p>${esc(m.desc || "")}</p><div class="go">Ouvrir →</div></a>`).join("");
-  // Chiffres de la semaine
-  try {
-    const week = Date.now() - 7 * 864e5;
-    let list, label;
-    if (me.role === "admin") { list = (await api("/api/admin/sims")).filter(s => s.started_at >= week); label = "de l'équipe"; }
-    else { list = (await api("/api/my-sims")).filter(s => s.started_at >= week); label = ""; }
-    const avg = list.length ? Math.round(list.reduce((t, s) => t + s.score, 0) / list.length) : null;
-    const best = list.length ? Math.max(...list.map(s => s.score)) : null;
-    const kpi = (l, v, c) => `<div class="card kpi"><small>${l}</small><b ${c ? `style="color:${c}"` : ""}>${v}</b></div>`;
-    $("kpis").innerHTML =
-      kpi(`Simulations ${label} (7 j)`, list.length) +
-      kpi("Score moyen (7 j)", avg ?? "—", avg !== null ? scoreColor(avg) : "") +
-      kpi("Meilleur score (7 j)", best ?? "—", best !== null ? scoreColor(best) : "") +
-      (me.role === "admin" ? kpi("Simulations aujourd'hui", list.filter(s => s.started_at >= new Date().setHours(0,0,0,0)).length)
-                           : kpi("Restantes aujourd'hui", Math.max(0, me.dailyLimit - me.usedToday)));
-  } catch (e) { $("kpis").remove(); }
+  const t = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  $("today").textContent = t.charAt(0).toUpperCase() + t.slice(1);
+  $("shortcuts").innerHTML = MODULES.filter(m => m.id !== "home" && m.roles.includes(me.role)).map(m => `<a href="${m.href}">${icon(m.icon)}${esc(m.label)}</a>`).join("");
+  await load();
 })();
 </script>
 </body>
