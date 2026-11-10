@@ -28,6 +28,7 @@ const ICONS = {
   team: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/>',
   logout: '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H3"/>',
   calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
   euro: '<path d="M18 7.5A7 7 0 1 0 18 16.5"/><path d="M4 10.5h9M4 13.5h9"/>'
 };
 const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ""}</svg>`;
@@ -37,6 +38,8 @@ const MODULES = [
     desc: "Entraînez-vous face à un fan simulé par l'IA et recevez une évaluation détaillée." },
   { id: "planning", label: "Planning", href: "/planning", icon: "calendar", section: "Organisation", roles: ["admin", "chatter"],
     desc: "Créneaux de la semaine et pointage des shifts." },
+  { id: "ventes", label: "Ventes", href: "/ventes", icon: "receipt", section: "Organisation", roles: ["admin", "chatter"],
+    desc: "Déclarez vos ventes avec la capture d'écran. Le manager les valide." },
   { id: "compta", label: "Compta", href: "/compta", icon: "euro", section: "Manager", roles: ["admin"],
     desc: "Revenus par période de 15 jours, part des créatrices, commissions des chatters." },
   { id: "admin", label: "Gestion", href: "/admin", icon: "team", section: "Manager", roles: ["admin"],
@@ -50,12 +53,14 @@ function renderShell(active, me) {
   let html = `<a class="logo" href="/home"><img src="/logo.svg" alt="StellADS"></a><nav>`, sec;
   for (const m of mods) {
     if (m.section && m.section !== sec) { sec = m.section; html += `<div class="sec">${esc(sec)}</div>`; }
-    html += `<a href="${m.href}" class="${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""}>${icon(m.icon)}<span>${esc(m.label)}</span></a>`;
+    html += `<a href="${m.href}" class="${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""}>${icon(m.icon)}<span>${esc(m.label)}</span>${m.id === "ventes" && me.role === "admin" ? '<em class="navbadge hidden" id="salesBadge"></em>' : ""}</a>`;
   }
   html += `</nav><div class="me"><span class="av">${esc(me.username[0])}</span><div><b>${esc(me.username)}</b><small>${me.role === "admin" ? "Manager" : "Chatter"}</small></div>
     <button onclick="logout()" title="Déconnexion" aria-label="Déconnexion">${icon("logout")}</button></div>`;
   el.innerHTML = html;
+  if (me.role === "admin") api("/api/admin/sales/count").then(c => updateBadge(c.pending)).catch(() => {});
 }
+function updateBadge(n) { const b = document.getElementById("salesBadge"); if (!b) return; b.textContent = n; b.classList.toggle("hidden", !n); }
 
 async function logout() { await api("/api/logout", { method: "POST" }).catch(() => {}); location.href = "/"; }
 

@@ -53,16 +53,18 @@ tr.total td{font-weight:700;border-top:1px solid #3a3a3a}
       <h2>Réglages</h2>
       <label for="feeInp">Commission de la plateforme (CA brut → CA net)</label>
       <div class="row"><input id="feeInp" class="pct" inputmode="decimal" style="width:90px"> <span>%</span></div>
+      <label for="modeSel">Ventes attribuées aux chatters</label>
+      <select id="modeSel"><option value="ventes">Ventes validées (captures d'écran)</option><option value="heures">Au prorata des heures pointées</option></select>
       <label for="baseSel">Commission des chatters calculée sur</label>
       <select id="baseSel"><option value="net">le CA net</option><option value="brut">le CA brut</option></select>
-      <p class="hint">Les ventes de chaque créatrice sont réparties entre les chatters <b>selon leurs heures pointées</b> sur ce compte pendant la période. Vous pouvez corriger un montant dans le détail ci-dessous.</p>
+      <p class="hint" id="modeHint"></p>
     </div>
   </div>
 
   <div class="card">
     <h2>Détail par chatter et par créatrice</h2>
     <div class="tablewrap" id="linesTable"></div>
-    <p class="hint">Laissez « Montant retenu » vide pour utiliser le calcul automatique (au prorata des heures). Saisissez un montant pour le remplacer.</p>
+    <p class="hint">Laissez « Montant retenu » vide pour utiliser le calcul automatique. Saisissez un montant pour le remplacer.</p>
   </div>
 </div>
 </main>
@@ -87,7 +89,10 @@ async function save(path, body, el) {
 function render() {
   const t = C.totals;
   $("pLabel").textContent = C.period.label;
-  $("baseSel").value = C.base; $("feeInp").value = fix2(C.fee);
+  $("baseSel").value = C.base; $("feeInp").value = fix2(C.fee); $("modeSel").value = C.mode;
+  $("modeHint").innerHTML = C.mode === "ventes"
+    ? "Chaque chatter est crédité des <b>ventes qu'il a déclarées et que vous avez validées</b> (page Ventes). Si la commission est calculée sur le CA net, la commission de la plateforme est déduite de ses ventes brutes. Vous pouvez corriger un montant dans le détail ci-dessous."
+    : "Les ventes de chaque créatrice sont réparties entre les chatters <b>selon leurs heures pointées</b> sur ce compte pendant la période. Vous pouvez corriger un montant dans le détail ci-dessous.";
   $("kpis").innerHTML = [
     ["CA brut", eur(t.brut)], ["CA net", eur(t.net)], ["Part des créatrices", eur(t.creators)],
     ["Commissions chatters", eur(t.chatters)], ["Marge de l'agence", eur(t.margin), true]
@@ -97,7 +102,9 @@ function render() {
   const al = [];
   if (C.unattributed.length) al.push(`Aucune heure pointée pour : <b>${C.unattributed.map(esc).join(", ")}</b>. Leurs ventes ne sont attribuées à aucun chatter : ajoutez des pointages (Planning › Pointages) ou un montant manuel.`);
   C.models.forEach(m => { if (m.commissionBase > 0 && m.attributed > 0 && Math.abs(m.attributed - m.commissionBase) > 1)
-    al.push(`<b>${esc(m.name)}</b> : ${eur(m.attributed)} attribués aux chatters pour ${eur(m.commissionBase)} de CA ${C.base}. Vérifiez les montants corrigés.`); });
+    al.push(C.mode === "ventes"
+      ? `<b>${esc(m.name)}</b> : ${eur(m.attributed)} de ventes validées (CA ${C.base}) pour ${eur(m.commissionBase)} saisis. Écart de ${eur(m.commissionBase - m.attributed)}.`
+      : `<b>${esc(m.name)}</b> : ${eur(m.attributed)} attribués aux chatters pour ${eur(m.commissionBase)} de CA ${C.base}. Vérifiez les montants corrigés.`); });
   $("alerts").innerHTML = al.map(a => `<div class="notice" style="margin:0 0 14px;border:1px solid #4d4020;background:#2a2414;color:#f3d999">⚠️ ${a}</div>`).join("");
 
   // créatrices
@@ -124,9 +131,9 @@ function render() {
   document.querySelectorAll("[data-upct]").forEach(inp => inp.onchange = () => save(`/api/admin/users/${inp.dataset.upct}/commission`, { commission_pct: parseNum(inp.value) }, inp));
 
   // détail
-  $("linesTable").innerHTML = !C.lines.length ? "<div style='color:var(--muted)'>Aucune heure pointée sur cette période. Les chatters pointent depuis la page Planning.</div>" :
-    `<table><tr><th>Chatter</th><th>Créatrice</th><th class="num">Heures</th><th class="num">Calcul auto</th><th class="num">Montant retenu</th><th class="num">Taux</th><th class="num">Commission</th></tr>` +
-    C.lines.map(l => `<tr><td><b>${esc(l.username)}</b></td><td>${esc(l.model_name)}</td><td class="num">${hrs(l.hours)}</td><td class="num">${eur(l.auto)}</td>
+  $("linesTable").innerHTML = !C.lines.length ? `<div style='color:var(--muted)'>${C.mode === "ventes" ? "Aucune vente validée sur cette période (page Ventes)." : "Aucune heure pointée sur cette période. Les chatters pointent depuis la page Planning."}</div>` :
+    `<table><tr><th>Chatter</th><th>Créatrice</th><th class="num">Heures</th>${C.mode === "ventes" ? '<th class="num">Ventes validées (brut)</th>' : ""}<th class="num">Calcul auto</th><th class="num">Montant retenu</th><th class="num">Taux</th><th class="num">Commission</th></tr>` +
+    C.lines.map(l => `<tr><td><b>${esc(l.username)}</b></td><td>${esc(l.model_name)}</td><td class="num">${hrs(l.hours)}</td>${C.mode === "ventes" ? `<td class="num">${eur(l.validatedBrut)}</td>` : ""}<td class="num">${eur(l.auto)}</td>
       <td class="num"><input class="money" inputmode="decimal" data-attr="${l.user_id}:${l.model_id}" value="${l.override == null ? "" : fix2(l.override)}" placeholder="${fix2(l.auto)}" aria-label="Montant retenu"></td>
       <td class="num">${fix2(l.pct)} %</td><td class="num">${eur(l.pay)}</td></tr>`).join("") + "</table>";
   document.querySelectorAll("[data-attr]").forEach(inp => inp.onchange = () => {
@@ -136,6 +143,7 @@ function render() {
 }
 
 $("feeInp").onchange = () => save("/api/admin/settings", { platform_fee: parseNum($("feeInp").value), period: PERIOD }, $("feeInp"));
+$("modeSel").onchange = () => save("/api/admin/settings", { attribution_mode: $("modeSel").value }, $("modeSel"));
 $("baseSel").onchange = () => save("/api/admin/settings", { commission_base: $("baseSel").value }, $("baseSel"));
 $("prevP").onclick = () => load(C.period.prev);
 $("nextP").onclick = () => load(C.period.next);
@@ -153,7 +161,7 @@ $("exportBtn").onclick = () => {
     ["Total", "", "", "", n(C.totals.chatters)], [],
     ["DÉTAIL"], ["Chatter", "Créatrice", "Heures", "Calcul auto", "Montant retenu", "Taux %", "Commission"],
     ...C.lines.map(l => [l.username, l.model_name, n(l.hours), n(l.auto), n(l.sales), n(l.pct), n(l.pay)]), [],
-    ["RÉSUMÉ"], ["Marge de l'agence", n(C.totals.margin)], [`Commission calculée sur le CA ${C.base}`]];
+    ["RÉSUMÉ"], ["Marge de l'agence", n(C.totals.margin)], [`Commission calculée sur le CA ${C.base}`], [C.mode === "ventes" ? "Ventes attribuées : ventes validées (captures)" : "Ventes attribuées : au prorata des heures"]];
   const csv = "﻿" + rows.map(r => r.map(q).join(";")).join("\r\n");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
