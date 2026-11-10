@@ -40,7 +40,7 @@ tr.total td{font-weight:700;border-top:1px solid #3a3a3a}
   <div class="card" style="margin-bottom:20px">
     <h2>Revenus par créatrice</h2>
     <div class="tablewrap" id="modelsTable"></div>
-    <p class="hint">Saisissez le CA brut et le CA net de la période (comme dans votre Excel). « % créatrice » est la part du CA net qui revient à la créatrice. Tout s'enregistre automatiquement.</p>
+    <p class="hint">Saisissez seulement le CA brut de la période : le CA net se calcule tout seul (CA brut moins la commission de la plateforme). « % créatrice » est la part du CA net qui revient à la créatrice. Tout s'enregistre automatiquement.</p>
   </div>
 
   <div class="grid" style="margin-bottom:20px">
@@ -51,7 +51,9 @@ tr.total td{font-weight:700;border-top:1px solid #3a3a3a}
     </div>
     <div class="card">
       <h2>Réglages</h2>
-      <label for="baseSel">Commission calculée sur</label>
+      <label for="feeInp">Commission de la plateforme (CA brut → CA net)</label>
+      <div class="row"><input id="feeInp" class="pct" inputmode="decimal" style="width:90px"> <span>%</span></div>
+      <label for="baseSel">Commission des chatters calculée sur</label>
       <select id="baseSel"><option value="net">le CA net</option><option value="brut">le CA brut</option></select>
       <p class="hint">Les ventes de chaque créatrice sont réparties entre les chatters <b>selon leurs heures pointées</b> sur ce compte pendant la période. Vous pouvez corriger un montant dans le détail ci-dessous.</p>
     </div>
@@ -85,7 +87,7 @@ async function save(path, body, el) {
 function render() {
   const t = C.totals;
   $("pLabel").textContent = C.period.label;
-  $("baseSel").value = C.base;
+  $("baseSel").value = C.base; $("feeInp").value = fix2(C.fee);
   $("kpis").innerHTML = [
     ["CA brut", eur(t.brut)], ["CA net", eur(t.net)], ["Part des créatrices", eur(t.creators)],
     ["Commissions chatters", eur(t.chatters)], ["Marge de l'agence", eur(t.margin), true]
@@ -99,17 +101,16 @@ function render() {
   $("alerts").innerHTML = al.map(a => `<div class="notice" style="margin:0 0 14px;border:1px solid #4d4020;background:#2a2414;color:#f3d999">⚠️ ${a}</div>`).join("");
 
   // créatrices
-  $("modelsTable").innerHTML = `<table><tr><th>Créatrice</th><th class="num">CA brut</th><th class="num">CA net</th><th class="num">% créatrice</th><th class="num">Part créatrice</th><th class="num">Part agence</th><th class="num">Heures pointées</th></tr>` +
+  $("modelsTable").innerHTML = `<table><tr><th>Créatrice</th><th class="num">CA brut</th><th class="num">CA net <span style="font-weight:400">(−${fix2(C.fee)} %)</span></th><th class="num">% créatrice</th><th class="num">Part créatrice</th><th class="num">Part agence</th><th class="num">Heures pointées</th></tr>` +
     C.models.map(m => `<tr><td><b>${esc(m.name)}</b></td>
       <td class="num"><input class="money" inputmode="decimal" data-rev="brut" data-m="${m.id}" value="${fix2(m.brut)}" placeholder="0" aria-label="CA brut ${esc(m.name)}"></td>
-      <td class="num"><input class="money" inputmode="decimal" data-rev="net" data-m="${m.id}" value="${fix2(m.net)}" placeholder="0" aria-label="CA net ${esc(m.name)}"></td>
+      <td class="num" title="CA brut − ${fix2(C.fee)} %">${m.net == null ? "—" : eur(m.net)}</td>
       <td class="num"><input class="pct" inputmode="decimal" data-cpct="${m.id}" value="${fix2(m.creator_pct)}" aria-label="% créatrice ${esc(m.name)}"> %</td>
       <td class="num">${eur(m.creatorPay)}</td><td class="num">${eur(m.agencyShare)}</td><td class="num">${hrs(m.totalHours)}</td></tr>`).join("") +
     `<tr class="total"><td>Total</td><td class="num">${eur(t.brut)}</td><td class="num">${eur(t.net)}</td><td></td><td class="num">${eur(t.creators)}</td><td class="num">${eur(t.agencyShare)}</td><td class="num">${hrs(C.models.reduce((a, m) => a + m.totalHours, 0))}</td></tr></table>`;
   document.querySelectorAll("[data-rev]").forEach(inp => inp.onchange = () => {
     const m = C.models.find(x => x.id == inp.dataset.m);
-    const brutEl = document.querySelector(`[data-rev=brut][data-m="${m.id}"]`), netEl = document.querySelector(`[data-rev=net][data-m="${m.id}"]`);
-    save("/api/admin/revenue", { period: PERIOD, model_id: m.id, brut: parseNum(brutEl.value), net: parseNum(netEl.value) }, inp);
+    save("/api/admin/revenue", { period: PERIOD, model_id: m.id, brut: parseNum(inp.value) }, inp);
   });
   document.querySelectorAll("[data-cpct]").forEach(inp => inp.onchange = () => save(`/api/admin/models/${inp.dataset.cpct}/pct`, { creator_pct: parseNum(inp.value) }, inp));
 
@@ -134,6 +135,7 @@ function render() {
   });
 }
 
+$("feeInp").onchange = () => save("/api/admin/settings", { platform_fee: parseNum($("feeInp").value), period: PERIOD }, $("feeInp"));
 $("baseSel").onchange = () => save("/api/admin/settings", { commission_base: $("baseSel").value }, $("baseSel"));
 $("prevP").onclick = () => load(C.period.prev);
 $("nextP").onclick = () => load(C.period.next);
