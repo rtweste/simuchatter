@@ -257,5 +257,49 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     res.json({ ok: true });
   });
 
+  /* ================= ACCUEIL : résumé selon le rôle ================= */
+  app.get("/api/home", auth, (req, res) => {
+    const p = periodInfo(currentPeriod()), now = Date.now(), today = parisDate(now);
+    const week = now - 7 * 864e5;
+    const inP = ms => periodOfDate(parisDate(ms)) === p.key;
+    const fee = Number(getSetting("platform_fee", "25")), base = getSetting("commission_base", "net");
+    const upcomingOf = uid => db.prepare(`SELECT s.date, s.start, s.end, m.name model_name FROM shifts s JOIN models m ON m.id = s.model_id
+      WHERE s.user_id = ? AND s.date >= ? ORDER BY s.date, s.start LIMIT 4`).all(uid, today);
+    const openOf = uid => db.prepare(`SELECT c.start_at, c.model_id, m.name model_name FROM clocks c JOIN models m ON m.id = c.model_id
+      WHERE c.user_id = ? AND c.end_at IS NULL`).get(uid) || null;
+    const sims = db.prepare("SELECT user_id, score, started_at FROM sims WHERE status = 'done' AND started_at >= ?").all(week);
+
+    if (req.user.role !== "admin") {
+      const u = db.prepare("SELECT commission_pct FROM users WHERE id = ?").get(req.user.id);
+      const mine = db.prepare("SELECT amount, status, sold_at FROM sales WHERE user_id = ?").all(req.user.id).filter(s => inP(s.sold_at));
+      const validated = mine.filter(s => s.status === "validated").reduce((t, s) => t + s.amount, 0);
+      const pending = mine.filter(s => s.status === "pending").reduce((t, s) => t + s.amount, 0);
+      const baseAmt = base === "brut" ? validated : validated * (1 - fee / 100);
+      const hours = db.prepare("SELECT start_at, end_at FROM clocks WHERE user_id = ?").all(req.user.id)
+        .filter(c => inP(c.start_at)).reduce((t, c) => t + ((c.end_at || now) - c.start_at) / 3.6e6, 0);
+      const last = db.prepare("SELECT score, persona_id, started_at FROM sims WHERE user_id = ? AND status = 'done' ORDER BY started_at DESC LIMIT 1").get(req.user.id);
+      const my7 = sims.filter(x => x.user_id === req.user.id);
+      return res.json({ role: "chatter", period: p, open: openOf(req.user.id), upcoming: upcomingOf(req.user.id),
+        models: db.prepare("SELECT id, name FROM models ORDER BY name").all(),
+        sales: { validated, pending, count: mine.length, refused: mine.filter(s => s.status === "refused").length,
+          commission: Math.round(baseAmt * (u?.commission_pct || 0)) / 100, pct: u?.commission_pct || 0 },
+        hours, simu: { last: last || null, week: my7.length, avg: my7.length ? Math.round(my7.reduce((t, x) => t + x.score, 0) / my7.length) : null } });
+    }
+    const c = computeCompta(p.key);
+    const live = db.prepare(`SELECT c.start_at, u.username, m.name model_name FROM clocks c JOIN users u ON u.id = c.user_id
+      JOIN models m ON m.id = c.model_id WHERE c.end_at IS NULL ORDER BY c.start_at`).all();
+    const todayShifts = db.prepare(`SELECT s.start, s.end, u.username, m.name model_name FROM shifts s JOIN users u ON u.id = s.user_id
+      JOIN models m ON m.id = s.model_id WHERE s.date = ? ORDER BY s.start`).all(today);
+    const pendingSales = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(amount),0) total FROM sales WHERE status = 'pending'").get();
+    const board = {};
+    db.prepare("SELECT s.user_id, u.username, s.amount, s.sold_at FROM sales s JOIN users u ON u.id = s.user_id WHERE s.status = 'validated'").all()
+      .filter(s => inP(s.sold_at)).forEach(s => { board[s.username] = (board[s.username] || 0) + s.amount; });
+    res.json({ role: "admin", period: p, totals: c.totals,
+      missingRevenue: c.models.filter(m => m.brut == null).map(m => m.name),
+      pendingSales, live, todayShifts,
+      leaderboard: Object.entries(board).map(([username, total]) => ({ username, total })).sort((a, b) => b.total - a.total).slice(0, 5),
+      simu: { week: sims.length, avg: sims.length ? Math.round(sims.reduce((t, x) => t + x.score, 0) / sims.length) : null } });
+  });
+
   return { periodInfo, periodOfDate, computeCompta };
 };
