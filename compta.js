@@ -20,6 +20,18 @@ function periodInfo(p) {
 }
 const currentPeriod = () => periodOfDate(parisDate(Date.now()));
 
+// Commission des chatters par paliers (sur le net de la période) : chaque taux ne s'applique qu'à sa tranche, primes cumulées
+const TIERS = [{ from: 0, rate: 10 }, { from: 500, rate: 12 }, { from: 1000, rate: 14 }, { from: 1400, rate: 15 },
+  { from: 2000, rate: 15, prime: 10 }, { from: 3000, rate: 15, prime: 20 }, { from: 4000, rate: 15, prime: 40 }];
+const BANDS = [[0, 500, 10], [500, 1000, 12], [1000, 1400, 14], [1400, Infinity, 15]];
+function tierPay(net) {
+  net = Math.max(0, net || 0);
+  const commission = BANDS.reduce((t, [a, b, r]) => t + Math.max(0, Math.min(net, b) - a) * r / 100, 0);
+  const prime = net >= 4000 ? 40 : net >= 3000 ? 20 : net >= 2000 ? 10 : 0;
+  const idx = TIERS.reduce((k, t, i) => net >= t.from ? i : k, 0);
+  return { net, commission: Math.round(commission * 100) / 100, prime, total: Math.round((commission + prime) * 100) / 100, rate: TIERS[idx].rate, tier: idx };
+}
+
 module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   /* ---------- Tables ---------- */
   const cols = (t) => db.prepare(`PRAGMA table_info(${t})`).all().map(c => c.name);
@@ -190,9 +202,11 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     }));
     modelRows.forEach(m => { m.attributed = lines.filter(l => l.model_id === m.id).reduce((t, l) => t + l.sales, 0); });
     const chatters = users.filter(u => u.role === "chatter" || lines.some(l => l.user_id === u.id)).map(u => {
-      const ls = lines.filter(l => l.user_id === u.id);
-      return { id: u.id, username: u.username, active: u.active, commission_pct: u.commission_pct,
-        hours: ls.reduce((t, l) => t + l.hours, 0), sales: ls.reduce((t, l) => t + l.sales, 0), pay: ls.reduce((t, l) => t + l.pay, 0) };
+      const ls = lines.filter(l => l.user_id === u.id), sales = ls.reduce((t, l) => t + l.sales, 0), tp = tierPay(sales);
+      // la commission par paliers est répartie sur chaque créatrice au prorata des ventes
+      ls.forEach(l => { l.pay = sales > 0 ? tp.total * l.sales / sales : 0; l.pct = tp.rate; });
+      return { id: u.id, username: u.username, active: u.active, commission_pct: tp.rate, rate: tp.rate, prime: tp.prime, commission: tp.commission,
+        hours: ls.reduce((t, l) => t + l.hours, 0), sales, pay: tp.total };
     });
     const sum = (arr, f) => arr.reduce((t, x) => t + (f(x) || 0), 0);
     const unattributed = mode === "ventes" ? [] : modelRows.filter(m => m.commissionBase > 0 && m.totalHours === 0 &&
@@ -297,6 +311,27 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       .filter(s => inP(s.sold_at)).forEach(s => { const k = s.user_id; board[k] = board[k] || { user_id: k, username: s.username, total: 0 }; board[k].total += s.amount; });
     return Object.values(board).sort((a, b) => b.total - a.total);
   };
+  function feedOf() {
+    const ev = [];
+    // fil d'activité : ventes déclarées / validées / refusées, pointages, simulations
+    db.prepare(`SELECT s.amount, s.status, s.created_at, s.reviewed_at, u.username, m.name model_name FROM sales s JOIN users u ON u.id = s.user_id
+      JOIN models m ON m.id = s.model_id ORDER BY s.created_at DESC LIMIT 30`).all().forEach(x => {
+      ev.push({ t: x.created_at, k: "e", who: x.username, text: `a déclaré une vente de ${x.amount.toLocaleString("fr-FR")} € · ${x.model_name}`, tag: x.status === "pending" ? "à valider" : "", cls: x.status === "pending" ? "o" : "",
+        short: "a déclaré une vente", sub: x.model_name, amt: x.amount });
+      if (x.reviewed_at && x.status !== "pending") ev.push({ t: x.reviewed_at, k: "e", who: x.username, text: `: vente de ${x.amount.toLocaleString("fr-FR")} € ${x.status === "validated" ? "validée" : "refusée"}`, tag: x.status === "validated" ? "validée" : "refusée", cls: x.status === "validated" ? "g" : "r",
+        short: x.status === "validated" ? "vente validée" : "vente refusée", sub: x.model_name, amt: x.amount });
+    });
+    db.prepare(`SELECT c.start_at, c.end_at, u.username, m.name model_name FROM clocks c JOIN users u ON u.id = c.user_id JOIN models m ON m.id = c.model_id
+      ORDER BY c.start_at DESC LIMIT 30`).all().forEach(k => {
+      ev.push({ t: k.start_at, k: "c", who: k.username, text: `a commencé son shift sur ${k.model_name}`, short: "a commencé son shift", sub: k.model_name });
+      if (k.end_at) { const h = (k.end_at - k.start_at) / 3.6e6; const dur = `${Math.floor(h)} h ${String(Math.round(h % 1 * 60)).padStart(2, "0")}`; ev.push({ t: k.end_at, k: "c", who: k.username, text: `a terminé son shift · ${dur}`, short: "a terminé son shift", sub: dur }); }
+    });
+    db.prepare(`SELECT x.score, x.ended_at, u.username FROM sims x JOIN users u ON u.id = x.user_id WHERE x.status = 'done' AND x.ended_at IS NOT NULL
+      ORDER BY x.ended_at DESC LIMIT 20`).all().forEach(x => ev.push({ t: x.ended_at, k: "s", who: x.username, text: `a fait ${x.score}/100 au simulateur`, short: `a fait ${x.score}/100`, sub: "simulateur" }));
+    return ev.filter(e => e.t).sort((a, b) => b.t - a.t).slice(0, 24);
+  }
+  const liveNow = () => db.prepare(`SELECT c.start_at, u.username, m.name model_name FROM clocks c JOIN users u ON u.id = c.user_id
+      JOIN models m ON m.id = c.model_id WHERE c.end_at IS NULL ORDER BY c.start_at`).all();
   app.get("/api/home", auth, (req, res) => {
     const p = periodInfo(currentPeriod()), now = Date.now(), today = parisDate(now);
     const days = lastDays(7, now), days14 = lastDays(14, now), elapsed = periodElapsed(p, today);
@@ -330,16 +365,35 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       // record : meilleure période passée (ventes validées)
       const byP = {}; allMine.filter(x => x.status === "validated").forEach(x => { const k = periodOfDate(parisDate(x.sold_at)); byP[k] = (byP[k] || 0) + x.amount; });
       const best = Math.max(0, ...Object.entries(byP).filter(([k]) => k !== p.key).map(([, v]) => v));
-      const commission = Math.round(baseAmt * (u?.commission_pct || 0)) / 100;
-      const goal = Number(getSetting("goal_chatter", "300"));
+      // paliers : commission actuelle, palier suivant, projection
+      const tp = tierPay(baseAmt), commission = tp.total, goal = Number(getSetting("goal_chatter", "300"));
+      const nxt = TIERS[tp.tier + 1] || null, projNet = baseAmt / elapsed, tpP = tierPay(projNet);
+      const netOf = x => base === "brut" ? x : x * (1 - fee / 100);
+      const nDays = +p.to.slice(8) - +p.from.slice(8) + 1, d1 = +p.from.slice(8), dToday = +today.slice(8) - d1 + 1;
+      let cum = 0; const netPts = [];
+      for (let dd = 1; dd <= Math.min(nDays, dToday); dd++) { const ds = p.from.slice(0, 8) + String(d1 + dd - 1).padStart(2, "0"); cum += netOf(salesDay(ds)); netPts.push({ day: dd, date: ds, brut: Math.round(cum * 100) / 100 }); }
+      // dernier shift sur la créatrice du prochain créneau (ventes et net réalisés pendant ce shift)
+      const up = upcomingOf(req.user.id), op = openOf(req.user.id), target = op ? op.model_name : up[0]?.model_name;
+      let lastShift = null;
+      if (target) { const lc = db.prepare(`SELECT c.start_at, c.end_at FROM clocks c JOIN models m ON m.id = c.model_id WHERE c.user_id = ? AND m.name = ? AND c.end_at IS NOT NULL ORDER BY c.start_at DESC LIMIT 1`).get(req.user.id, target);
+        if (lc) { const ss = db.prepare(`SELECT s.amount FROM sales s JOIN models m ON m.id = s.model_id WHERE s.user_id = ? AND m.name = ? AND s.status != 'refused' AND s.sold_at BETWEEN ? AND ?`).all(req.user.id, target, lc.start_at, lc.end_at);
+          lastShift = { count: ss.length, net: Math.round(netOf(ss.reduce((t, x) => t + x.amount, 0)) * 100) / 100, hours: (lc.end_at - lc.start_at) / 3.6e6 }; } }
+      // shifts de la semaine (lundi → dimanche) : rang du prochain créneau dans la semaine
+      const wd = (new Date(today + "T12:00Z").getUTCDay() + 6) % 7, mon = parisDate(now - wd * 864e5), sun = parisDate(now + (6 - wd) * 864e5);
+      const wk = db.prepare("SELECT date, start, end FROM shifts WHERE user_id = ? AND date BETWEEN ? AND ? ORDER BY date, start").all(req.user.id, mon, sun);
+      const nextIdx = up[0] ? wk.findIndex(x => x.date === up[0].date && x.start === up[0].start) : -1;
+      const weekShifts = { count: wk.length, nth: nextIdx >= 0 ? nextIdx + 1 : null };
       const board = boardOf(inP), myIdx = board.findIndex(b => b.user_id === req.user.id);
-      return res.json({ role: "chatter", period: p, open: openOf(req.user.id), upcoming: upcomingOf(req.user.id),
+      return res.json({ role: "chatter", period: p, open: op, upcoming: up, today, nDays, netPts, lastShift, weekShifts, days,
+        tiers: { list: TIERS, net: Math.round(baseAmt * 100) / 100, commission: tp.commission, prime: tp.prime, total: tp.total, rate: tp.rate, tier: tp.tier,
+          next: nxt ? { ...nxt, gap: Math.round((nxt.from - baseAmt) * 100) / 100 } : null, projNet: Math.round(projNet), projTotal: tpP.total, projPrime: tpP.prime },
+        feed: feedOf(), live: liveNow(),
         series, trend, best, goal, projection: Math.round(commission / elapsed * 100) / 100, elapsed,
         rank: myIdx === -1 ? null : myIdx + 1, gap: myIdx > 0 ? Math.round((board[myIdx - 1].total - board[myIdx].total) * 100) / 100 : null, above: myIdx > 0 ? board[myIdx - 1].username : null,
         leaderboard: board.slice(0, 3).map(b => ({ username: b.username, total: b.total, me: b.user_id === req.user.id })),
         models: db.prepare("SELECT id, name FROM models ORDER BY name").all(),
         sales: { validated, pending, count: mine.length, refused: mine.filter(s => s.status === "refused").length,
-          commission: Math.round(baseAmt * (u?.commission_pct || 0)) / 100, pct: u?.commission_pct || 0 },
+          commission, pct: tp.rate },
         hours, simu: { last: last || null, week: my7.length, avg: my7.length ? Math.round(my7.reduce((t, x) => t + x.score, 0) / my7.length) : null } });
     }
     const c = computeCompta(p.key);
@@ -358,23 +412,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       shifts: days.map(d => new Set(allClocks.filter(k => parisDate(k.start_at) === d).map(k => k.user_id)).size)
     };
     const prevMargin = computeCompta(p.prev).totals.margin;
-    // fil d'activité : ventes déclarées / validées / refusées, pointages, simulations
-    const ev = [];
-    db.prepare(`SELECT s.amount, s.status, s.created_at, s.reviewed_at, u.username, m.name model_name FROM sales s JOIN users u ON u.id = s.user_id
-      JOIN models m ON m.id = s.model_id ORDER BY s.created_at DESC LIMIT 30`).all().forEach(x => {
-      ev.push({ t: x.created_at, k: "e", who: x.username, text: `a déclaré une vente de ${x.amount.toLocaleString("fr-FR")} € · ${x.model_name}`, tag: x.status === "pending" ? "à valider" : "", cls: x.status === "pending" ? "o" : "",
-        short: "a déclaré une vente", sub: x.model_name, amt: x.amount });
-      if (x.reviewed_at && x.status !== "pending") ev.push({ t: x.reviewed_at, k: "e", who: x.username, text: `: vente de ${x.amount.toLocaleString("fr-FR")} € ${x.status === "validated" ? "validée" : "refusée"}`, tag: x.status === "validated" ? "validée" : "refusée", cls: x.status === "validated" ? "g" : "r",
-        short: x.status === "validated" ? "vente validée" : "vente refusée", sub: x.model_name, amt: x.amount });
-    });
-    db.prepare(`SELECT c.start_at, c.end_at, u.username, m.name model_name FROM clocks c JOIN users u ON u.id = c.user_id JOIN models m ON m.id = c.model_id
-      ORDER BY c.start_at DESC LIMIT 30`).all().forEach(k => {
-      ev.push({ t: k.start_at, k: "c", who: k.username, text: `a commencé son shift sur ${k.model_name}`, short: "a commencé son shift", sub: k.model_name });
-      if (k.end_at) { const h = (k.end_at - k.start_at) / 3.6e6; const dur = `${Math.floor(h)} h ${String(Math.round(h % 1 * 60)).padStart(2, "0")}`; ev.push({ t: k.end_at, k: "c", who: k.username, text: `a terminé son shift · ${dur}`, short: "a terminé son shift", sub: dur }); }
-    });
-    db.prepare(`SELECT x.score, x.ended_at, u.username FROM sims x JOIN users u ON u.id = x.user_id WHERE x.status = 'done' AND x.ended_at IS NOT NULL
-      ORDER BY x.ended_at DESC LIMIT 20`).all().forEach(x => ev.push({ t: x.ended_at, k: "s", who: x.username, text: `a fait ${x.score}/100 au simulateur`, short: `a fait ${x.score}/100`, sub: "simulateur" }));
-    const feed = ev.filter(e => e.t).sort((a, b) => b.t - a.t).slice(0, 24);
+    const feed = feedOf();
     const activeChatters = db.prepare("SELECT COUNT(*) n FROM users WHERE role = 'chatter' AND active = 1").get().n;
     const goal = Number(getSetting("goal_ca", "20000"));
     // courbe du CA : photos du CA saisi, jour par jour sur la période
@@ -397,5 +435,5 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       simu: { week: sims.length, avg: sims.length ? Math.round(sims.reduce((t, x) => t + x.score, 0) / sims.length) : null } });
   });
 
-  return { periodInfo, periodOfDate, computeCompta };
+  return { periodInfo, periodOfDate, computeCompta, tierPay, TIERS };
 };
