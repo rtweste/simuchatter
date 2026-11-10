@@ -141,18 +141,18 @@ function renderOverview() {
     return { ...u, trend };
   }).sort((x, y) => (y.avgScore || 0) - (x.avgScore || 0));
   $("board").innerHTML = !chatters.length ? "<div style='color:var(--muted)'>Aucun chatter. Ajoutez-en dans l'onglet « Chatters ».</div>" :
-    `<table><tr><th>#</th><th>Chatter</th><th>Sessions</th><th>Score moyen</th><th>Tendance</th><th>Revenu moyen</th><th>Dernière session</th></tr>` +
+    `<div class="tablewrap"><table><tr><th>#</th><th>Chatter</th><th>Sessions</th><th>Score moyen</th><th>Tendance</th><th>Revenu moyen</th><th>Dernière session</th></tr>` +
     chatters.map((u, i) => `<tr class="click" data-u="${u.id}"><td>${i + 1}</td><td><b>${esc(u.username)}</b>${u.active ? "" : " <span class='tag t3'>désactivé</span>"}</td><td>${u.sessions}</td>
       <td>${u.avgScore !== null ? `<b style="color:${scoreColor(u.avgScore)}">${u.avgScore}</b>/100` : "—"}</td>
       <td>${u.trend === null ? "—" : u.trend > 0 ? `<span style="color:var(--good)">▲ +${u.trend}</span>` : u.trend < 0 ? `<span style="color:var(--bad)">▼ ${u.trend}</span>` : "="}</td>
-      <td>${u.avgRevenue !== null ? u.avgRevenue + " €" : "—"}</td><td>${u.lastAt ? fmtDate(u.lastAt) : "—"}</td></tr>`).join("") + "</table>";
+      <td>${u.avgRevenue !== null ? u.avgRevenue + " €" : "—"}</td><td>${u.lastAt ? fmtDate(u.lastAt) : "—"}</td></tr>`).join("") + "</table></div>";
   document.querySelectorAll("#board tr.click").forEach(tr => tr.onclick = () => {
     $("fUser").value = tr.dataset.u; document.querySelector('[data-t="sessions"]').click(); loadSims();
   });
 
   const flagged = SIMS.filter(s => s.ethics).slice(0, 10);
   $("alerts").innerHTML = !flagged.length ? "<div style='color:var(--muted)'>Aucune alerte. 👍</div>" :
-    `<table>${flagged.map(s => `<tr class="click" data-id="${s.id}"><td style="white-space:nowrap">${fmtDate(s.started_at)}</td><td><b>${esc(s.username)}</b></td><td>${esc(s.persona)}</td><td style="color:#ffb3bd">${esc(s.ethics)}</td></tr>`).join("")}</table>`;
+    `<div class="tablewrap"><table>${flagged.map(s => `<tr class="click" data-id="${s.id}"><td style="white-space:nowrap">${fmtDate(s.started_at)}</td><td><b>${esc(s.username)}</b></td><td>${esc(s.persona)}</td><td style="color:#ffb3bd">${esc(s.ethics)}</td></tr>`).join("")}</table></div>`;
   document.querySelectorAll("#alerts tr.click").forEach(tr => tr.onclick = () => openDetail(tr.dataset.id));
 }
 
@@ -164,9 +164,9 @@ async function loadSims() {
   const list = await api("/api/admin/sims?" + q);
   if (!q.toString()) { SIMS = list; renderOverview(); }
   $("sessions").innerHTML = !list.length ? "<div style='color:var(--muted)'>Aucune session.</div>" :
-    `<table><tr><th>Date</th><th>Chatter</th><th>Fan</th><th>Créatrice</th><th>Diff.</th><th>Score</th><th>Revenu</th><th>Tps rép.</th><th>Synthèse</th></tr>` +
+    `<div class="tablewrap"><table><tr><th>Date</th><th>Chatter</th><th>Fan</th><th>Créatrice</th><th>Diff.</th><th>Score</th><th>Revenu</th><th>Tps rép.</th><th>Synthèse</th></tr>` +
     list.map(s => `<tr class="click" data-id="${s.id}"><td style="white-space:nowrap">${fmtDate(s.started_at)}</td><td><b>${esc(s.username)}</b></td><td>${esc(s.persona)}</td><td>${esc(s.creator_name)}</td><td>${esc(s.difficulty)}</td>
-      <td><b style="color:${scoreColor(s.score)}">${s.score}</b>${s.ethics ? " ⚠️" : ""}</td><td>${s.revenue} €</td><td>${s.avgRt !== null ? s.avgRt + " s" : "—"}</td><td style="color:var(--muted)">${esc(s.verdict)}</td></tr>`).join("") + "</table>";
+      <td><b style="color:${scoreColor(s.score)}">${s.score}</b>${s.ethics ? " ⚠️" : ""}</td><td>${s.revenue} €</td><td>${s.avgRt !== null ? s.avgRt + " s" : "—"}</td><td style="color:var(--muted)">${esc(s.verdict)}</td></tr>`).join("") + "</table></div>";
   document.querySelectorAll("#sessions tr.click").forEach(tr => tr.onclick = () => openDetail(tr.dataset.id));
 }
 $("fUser").onchange = loadSims; $("fPersona").onchange = loadSims;
@@ -182,10 +182,10 @@ async function openDetail(id) {
 async function loadUsers() {
   USERS = await api("/api/admin/users");
   $("fUser").innerHTML = `<option value="">Tous les chatters</option>` + USERS.map(u => `<option value="${u.id}">${esc(u.username)}</option>`).join("");
-  $("team").innerHTML = `<table><tr><th>Identifiant</th><th>Rôle</th><th>Sessions</th><th></th></tr>` +
+  $("team").innerHTML = `<div class="tablewrap"><table><tr><th>Identifiant</th><th>Rôle</th><th>Sessions</th><th></th></tr>` +
     USERS.map(u => `<tr><td><b>${esc(u.username)}</b>${u.active ? "" : " <span class='tag t3'>désactivé</span>"}</td><td>${u.role === "admin" ? "Manager" : "Chatter"}</td><td>${u.sessions}</td>
       <td style="text-align:right;white-space:nowrap"><button class="btn ghost small" data-pw="${u.id}" data-n="${esc(u.username)}">Mot de passe</button>
-      <button class="btn ${u.active ? "danger" : "ghost"} small" data-act="${u.id}" data-v="${u.active ? 0 : 1}">${u.active ? "Désactiver" : "Réactiver"}</button></td></tr>`).join("") + "</table>";
+      <button class="btn ${u.active ? "danger" : "ghost"} small" data-act="${u.id}" data-v="${u.active ? 0 : 1}">${u.active ? "Désactiver" : "Réactiver"}</button></td></tr>`).join("") + "</table></div>";
   document.querySelectorAll("[data-pw]").forEach(b => b.onclick = () => { pwTarget = b.dataset.pw; $("pwUser").textContent = b.dataset.n; $("pwVal").value = ""; $("pwErr").textContent = ""; $("pwModal").classList.remove("hidden"); });
   document.querySelectorAll("[data-act]").forEach(b => b.onclick = async () => {
     try { await api("/api/admin/users/" + b.dataset.act, { method: "PATCH", body: { active: b.dataset.v === "1" } }); loadUsers(); }

@@ -35,7 +35,18 @@
 .composer{border-top:1px solid var(--line);padding:12px 16px;background:var(--panel);display:flex;gap:8px;align-items:flex-end}
 .composer textarea{min-height:44px;max-height:140px;resize:none}
 .side{width:300px;border-left:1px solid var(--line);background:var(--panel);padding:16px;overflow-y:auto}
-@media(max-width:860px){.side{display:none}}
+#infoBtn{display:none}
+@media(max-width:860px){
+  .side{display:none}
+  .side.open{display:block;position:fixed;left:0;right:0;bottom:0;top:120px;width:auto;z-index:20;border-left:0;border-top:1px solid var(--line);box-shadow:0 -10px 40px rgba(0,0,0,.6)}
+  #infoBtn{display:inline-block}
+  #chatScreen{height:calc(100dvh - 55px)}
+  .topbar{padding:10px 12px;gap:10px}
+  .topbar .avatar{width:34px;height:34px}
+  .msg{max-width:85%}
+  .composer{padding:10px}
+  #ppvBtn{padding:10px}
+}
 .side h3{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:18px 0 8px}
 .side h3:first-child{margin-top:0}
 .hint{background:#2a2414;border:1px solid #4d4020;color:#f3d999;border-radius:10px;padding:10px;font-size:13px;line-height:1.45;margin-top:8px}
@@ -89,6 +100,7 @@
       <div class="stat"><small>Tps réponse moy.</small><b id="stRt">—</b></div>
       <div class="stat"><small>Messages</small><b id="stMsgs">0</b></div>
     </div>
+    <button class="btn ghost small" id="infoBtn" aria-expanded="false">Infos</button>
     <button class="btn ghost small" id="endBtn">Terminer & évaluer</button>
   </div>
   <div class="main">
@@ -169,9 +181,9 @@ $("model").onchange = showModel;
 async function loadHistory() {
   const h = await api("/api/my-sims");
   $("history").innerHTML = !h.length ? "<div style='color:var(--muted)'>Aucune session terminée pour l'instant.</div>" :
-    `<table><tr><th>Date</th><th>Fan</th><th>Créatrice</th><th>Difficulté</th><th>Score</th><th>Revenu</th><th>Tps rép.</th></tr>` +
+    `<div class="tablewrap"><table><tr><th>Date</th><th>Fan</th><th>Créatrice</th><th>Difficulté</th><th>Score</th><th>Revenu</th><th>Tps rép.</th></tr>` +
     h.map(r => `<tr class="click" data-id="${r.id}"><td>${fmtDate(r.started_at)}</td><td>${esc(r.persona)}</td><td>${esc(r.creator_name)}</td><td>${esc(r.difficulty)}</td>
-      <td><b style="color:${scoreColor(r.score)}">${r.score}</b>/100</td><td>${r.revenue} €</td><td>${r.avgRt !== null ? r.avgRt + " s" : "—"}</td></tr>`).join("") + "</table>";
+      <td><b style="color:${scoreColor(r.score)}">${r.score}</b>/100</td><td>${r.revenue} €</td><td>${r.avgRt !== null ? r.avgRt + " s" : "—"}</td></tr>`).join("") + "</table></div>";
   document.querySelectorAll("#history tr.click").forEach(tr => tr.onclick = async () => showReport(await api("/api/sims/" + tr.dataset.id)));
 }
 
@@ -234,6 +246,8 @@ function updateStats() {
   $("meterWrap").style.visibility = $("showMeter").checked ? "visible" : "hidden";
 }
 $("showMeter").onchange = () => SIM && updateStats();
+$("infoBtn").onclick = () => { const o = document.querySelector(".side").classList.toggle("open"); $("infoBtn").setAttribute("aria-expanded", o); $("infoBtn").textContent = o ? "Fermer" : "Infos"; };
+if (window.innerWidth < 700) { $("input").placeholder = "Écrire en tant que la créatrice…"; $("endBtn").textContent = "Évaluer"; }
 function setBusy(b) { busy = b; ["sendBtn", "ppvBtn", "hintBtn"].forEach(id => $(id).disabled = b || SIM?.left); }
 
 async function showTurn(turn) {
