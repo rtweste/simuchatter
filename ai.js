@@ -9,25 +9,55 @@ const MODEL_HINT = process.env.MODEL_HINT || "claude-haiku-5-5";
 
 const client = MOCK ? null : new Anthropic(); // lit ANTHROPIC_API_KEY
 
+// Répare les défauts courants d'un JSON écrit par l'IA : retours à la ligne dans les textes, virgules en trop
+function repairJSON(t) {
+  let out = "", inStr = false, esc = false;
+  for (const ch of t) {
+    if (inStr) {
+      if (esc) { out += ch; esc = false; continue; }
+      if (ch === "\\") { out += ch; esc = true; continue; }
+      if (ch === '"') { inStr = false; out += ch; continue; }
+      if (ch === "\n") { out += "\\n"; continue; }
+      if (ch === "\r") continue;
+      if (ch === "\t") { out += " "; continue; }
+      out += ch;
+    } else { if (ch === '"') inStr = true; out += ch; }
+  }
+  return out.replace(/,\s*([}\]])/g, "$1");
+}
 function extractJSON(text) {
-  const a = text.indexOf("{"), b = text.lastIndexOf("}");
-  if (a === -1 || b === -1) throw new Error("Réponse IA sans JSON");
-  return JSON.parse(text.slice(a, b + 1));
+  const clean = String(text || "").replace(/```(?:json)?/gi, "");
+  const a = clean.indexOf("{"), b = clean.lastIndexOf("}");
+  if (a === -1 || b === -1) throw new Error("Réponse IA sans JSON : " + clean.slice(0, 200));
+  const raw = clean.slice(a, b + 1);
+  try { return JSON.parse(raw); } catch (e) { return JSON.parse(repairJSON(raw)); }
 }
 
+// Appel à l'IA, avec nouvelles tentatives si elle est momentanément surchargée
 async function ask(prompt, model, maxTokens) {
-  const res = await client.messages.create({
-    model, max_tokens: maxTokens,
-    messages: [{ role: "user", content: prompt }]
-  });
-  return res.content.filter(c => c.type === "text").map(c => c.text).join("");
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const res = await client.messages.create({
+        model, max_tokens: maxTokens,
+        messages: [{ role: "user", content: prompt }]
+      });
+      if (res.stop_reason === "max_tokens") console.warn(`Réponse IA coupée (max_tokens=${maxTokens})`);
+      return res.content.filter(c => c.type === "text").map(c => c.text).join("");
+    } catch (e) {
+      const st = e.status || 0, retry = !st || st === 429 || st >= 500;
+      console.error(`Appel IA échoué (tentative ${attempt}) :`, st, e.message);
+      if (!retry || attempt >= 3) throw e;
+      await new Promise(r => setTimeout(r, attempt * 2500));
+    }
+  }
 }
 
 async function askJSON(prompt, model, maxTokens) {
   let text = await ask(prompt, model, maxTokens);
   try { return extractJSON(text); }
   catch (e) {
-    text = await ask(prompt + "\n\nIMPORTANT : réponds uniquement avec un objet JSON valide, sans texte autour.", model, maxTokens);
+    console.error("JSON illisible, nouvel essai :", e.message);
+    text = await ask(prompt + "\n\nIMPORTANT : réponds uniquement avec un objet JSON valide, sans texte autour, même si la conversation est très courte. Dans les textes, utilise « » au lieu des guillemets droits.", model, maxTokens);
     return extractJSON(text);
   }
 }
@@ -129,7 +159,7 @@ ${transcript(sim.log)}
 
 RÉPONDS UNIQUEMENT EN JSON :
 {"score": 0-100, "verdict": "une phrase de synthèse", "criteria": [{"name": "...", "score": 0-10, "comment": "1-2 phrases"}], "strengths": ["..."], "improvements": ["..."], "rewrites": [{"original": "message exact du chatter", "better": "version améliorée", "why": "courte raison"}], "best": {"message": "le message exact du chatter le plus réussi", "why": "pourquoi il fonctionne, en une phrase courte"}, "ethics_flag": null ou "description du problème"}
-Donne 2 à 3 réécritures des messages les plus perfectibles.`;
+Donne 2 à 3 réécritures des messages les plus perfectibles (moins si le chatter a écrit très peu). Même si la conversation est très courte, évalue-la quand même et réponds en JSON. Dans les textes, utilise « » plutôt que des guillemets droits.`;
   if (MOCK) {
     return {
       score: 68, verdict: "Bonne prise de contact, vente un peu précipitée.",
@@ -141,7 +171,7 @@ Donne 2 à 3 réécritures des messages les plus perfectibles.`;
       ethics_flag: null
     };
   }
-  return askJSON(prompt, MODEL_EVAL, 2000);
+  return askJSON(prompt, MODEL_EVAL, 3500);
 }
 
 module.exports = { fanTurn, hint, evaluate, transcript, MOCK };

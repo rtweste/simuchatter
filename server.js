@@ -102,7 +102,14 @@ async function withLock(id, res, fn) {
   try { await fn(); }
   catch (e) {
     console.error(e);
-    res.status(502).json({ error: "L'IA n'a pas pu répondre. Réessayez dans un instant." });
+    // message plus précis selon la cause
+    const st = e.status || 0, m = String(e.message || "").toLowerCase();
+    let msg = "L'IA n'a pas pu répondre. Réessayez dans un instant.";
+    if (m.includes("credit") || m.includes("billing") || m.includes("balance")) msg = "Crédit de l'API Anthropic épuisé : rechargez le compte sur console.anthropic.com.";
+    else if (st === 401 || st === 403) msg = "Clé d'API refusée : vérifiez ANTHROPIC_API_KEY dans Railway.";
+    else if (st === 429 || st === 529 || st >= 500) msg = "L'IA est surchargée en ce moment. Réessayez dans une minute.";
+    else if (m.includes("json")) msg = "Réponse de l'IA illisible. Cliquez à nouveau sur Évaluer.";
+    res.status(502).json({ error: msg });
   } finally { busy.delete(id); }
 }
 
