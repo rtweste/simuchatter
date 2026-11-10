@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Espace manager — Simulateur Chatter</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="nav"><span class="brand">Espace manager</span><div class="spacer"></div>
+  <a href="/app" class="btn ghost small" style="text-decoration:none">Tester le simulateur</a>
+  <span class="who" id="who"></span><button class="btn ghost small" onclick="logout()">Déconnexion</button></div>
+
+<div class="wrap">
+  <div class="tabs">
+    <button data-t="overview" class="on">Vue d'ensemble</button>
+    <button data-t="sessions">Sessions</button>
+    <button data-t="team">Chatters</button>
+    <button data-t="models">Créatrices</button>
+  </div>
+
+  <!-- Vue d'ensemble -->
+  <section id="t-overview">
+    <div class="grid3" id="kpis"></div>
+    <div class="card" style="margin-top:20px">
+      <h2>Classement des chatters</h2>
+      <div id="board"></div>
+    </div>
+    <div class="card" style="margin-top:20px">
+      <h2>Alertes éthiques récentes</h2>
+      <div id="alerts"></div>
+    </div>
+  </section>
+
+  <!-- Sessions -->
+  <section id="t-sessions" class="hidden">
+    <div class="card">
+      <div class="row" style="flex-wrap:wrap">
+        <select id="fUser" style="max-width:220px"></select>
+        <select id="fPersona" style="max-width:220px"></select>
+      </div>
+      <div id="sessions" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <!-- Chatters -->
+  <section id="t-team" class="hidden">
+    <div class="grid">
+      <div class="card"><h2>Équipe</h2><div id="team"></div></div>
+      <form class="card" id="newUser">
+        <h2>Ajouter un compte</h2>
+        <label>Identifiant</label><input id="nuName" placeholder="ex. karim" required>
+        <label>Mot de passe (8 caractères min.)</label><input id="nuPass" required minlength="8">
+        <label>Rôle</label>
+        <select id="nuRole"><option value="chatter">Chatter</option><option value="admin">Manager</option></select>
+        <button class="btn" style="width:100%;margin-top:16px">Créer le compte</button>
+        <div class="err" id="nuErr"></div>
+        <div class="notice">Transmettez l'adresse du site, l'identifiant et le mot de passe au chatter. Il pourra se connecter immédiatement.</div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Créatrices -->
+  <section id="t-models" class="hidden">
+    <div class="grid">
+      <div class="card"><h2>Profils de créatrices</h2><div id="models"></div></div>
+      <form class="card" id="modelForm">
+        <h2 id="mfTitle">Ajouter une créatrice</h2>
+        <input type="hidden" id="mfId">
+        <label>Nom affiché</label><input id="mfName" required>
+        <label>Personnalité & style d'écriture</label><textarea id="mfStyle" rows="4" required placeholder="Âge, centres d'intérêt, ton, emojis utilisés, tics d'écriture…"></textarea>
+        <label>Grille de prix</label><input id="mfPrices" required placeholder="Photos : 8–15 € · Vidéo : 20–40 €">
+        <div class="row" style="margin-top:16px"><button class="btn" style="flex:1">Enregistrer</button><button type="button" class="btn ghost" id="mfReset">Annuler</button></div>
+        <div class="err" id="mfErr"></div>
+        <div class="notice">Ces profils apparaissent dans la liste des chatters. Le fan simulé se base dessus et l'évaluation vérifie que le chatter respecte ce style.</div>
+      </form>
+    </div>
+  </section>
+</div>
+
+<!-- Détail session -->
+<div class="modal hidden" id="detail">
+  <div class="card wide">
+    <div class="row"><h2 style="margin:0" id="dTitle"></h2><div class="spacer"></div><button class="btn ghost small" onclick="$('detail').classList.add('hidden')">Fermer</button></div>
+    <div id="dBody" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- Mot de passe -->
+<div class="modal hidden" id="pwModal">
+  <form class="card" id="pwForm">
+    <h2>Nouveau mot de passe pour <span id="pwUser"></span></h2>
+    <input id="pwVal" minlength="8" required placeholder="8 caractères minimum">
+    <div class="row" style="margin-top:16px;justify-content:flex-end">
+      <button type="button" class="btn ghost small" onclick="$('pwModal').classList.add('hidden')">Annuler</button>
+      <button class="btn small">Enregistrer</button>
+    </div>
+    <div class="err" id="pwErr"></div>
+  </form>
+</div>
+
+<script src="/common.js"></script>
+<script>
+let USERS = [], SIMS = [], MODELS = [], PERSONAS = [];
+
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll("section").forEach(s => s.classList.toggle("hidden", s.id !== "t-" + b.dataset.t));
+});
+
+async function init() {
+  const me = await api("/api/me");
+  if (me.role !== "admin") { location.href = "/app"; return; }
+  $("who").textContent = me.username;
+  PERSONAS = await api("/api/personas");
+  await Promise.all([loadUsers(), loadSims(), loadModels()]);
+  $("fPersona").innerHTML = `<option value="">Tous les profils</option>` + PERSONAS.map(p => `<option value="${p.id}">${esc(p.name)} · ${esc(p.label)}</option>`).join("");
+}
+
+/* ---------- Vue d'ensemble ---------- */
+function renderOverview() {
+  const week = Date.now() - 7 * 864e5;
+  const w = SIMS.filter(s => s.started_at >= week);
+  const avgOf = (arr, k) => arr.length ? Math.round(arr.reduce((t, x) => t + (x[k] || 0), 0) / arr.length) : "—";
+  const rts = w.map(s => s.avgRt).filter(x => x !== null);
+  $("kpis").innerHTML = [
+    ["Sessions (7 j)", w.length],
+    ["Score moyen (7 j)", avgOf(w, "score")],
+    ["Revenu moyen / session (7 j)", w.length ? avgOf(w, "revenue") + " €" : "—"],
+    ["Tps de réponse moyen (7 j)", rts.length ? Math.round(rts.reduce((a, b) => a + b, 0) / rts.length) + " s" : "—"]
+  ].map(([l, v]) => `<div class="card kpi"><small>${l}</small><b>${v}</b></div>`).join("");
+
+  const chatters = USERS.filter(u => u.role === "chatter").map(u => {
+    const mine = SIMS.filter(s => s.user_id === u.id);
+    const last5 = mine.slice(0, 5), prev5 = mine.slice(5, 10);
+    const a = arr => arr.length ? arr.reduce((t, x) => t + x.score, 0) / arr.length : null;
+    const trend = a(last5) !== null && a(prev5) !== null ? Math.round(a(last5) - a(prev5)) : null;
+    return { ...u, trend };
+  }).sort((x, y) => (y.avgScore || 0) - (x.avgScore || 0));
+  $("board").innerHTML = !chatters.length ? "<div style='color:var(--muted)'>Aucun chatter. Ajoutez-en dans l'onglet « Chatters ».</div>" :
+    `<table><tr><th>#</th><th>Chatter</th><th>Sessions</th><th>Score moyen</th><th>Tendance</th><th>Revenu moyen</th><th>Dernière session</th></tr>` +
+    chatters.map((u, i) => `<tr class="click" data-u="${u.id}"><td>${i + 1}</td><td><b>${esc(u.username)}</b>${u.active ? "" : " <span class='tag t3'>désactivé</span>"}</td><td>${u.sessions}</td>
+      <td>${u.avgScore !== null ? `<b style="color:${scoreColor(u.avgScore)}">${u.avgScore}</b>/100` : "—"}</td>
+      <td>${u.trend === null ? "—" : u.trend > 0 ? `<span style="color:var(--good)">▲ +${u.trend}</span>` : u.trend < 0 ? `<span style="color:var(--bad)">▼ ${u.trend}</span>` : "="}</td>
+      <td>${u.avgRevenue !== null ? u.avgRevenue + " €" : "—"}</td><td>${u.lastAt ? fmtDate(u.lastAt) : "—"}</td></tr>`).join("") + "</table>";
+  document.querySelectorAll("#board tr.click").forEach(tr => tr.onclick = () => {
+    $("fUser").value = tr.dataset.u; document.querySelector('[data-t="sessions"]').click(); loadSims();
+  });
+
+  const flagged = SIMS.filter(s => s.ethics).slice(0, 10);
+  $("alerts").innerHTML = !flagged.length ? "<div style='color:var(--muted)'>Aucune alerte. 👍</div>" :
+    `<table>${flagged.map(s => `<tr class="click" data-id="${s.id}"><td style="white-space:nowrap">${fmtDate(s.started_at)}</td><td><b>${esc(s.username)}</b></td><td>${esc(s.persona)}</td><td style="color:#ffb3bd">${esc(s.ethics)}</td></tr>`).join("")}</table>`;
+  document.querySelectorAll("#alerts tr.click").forEach(tr => tr.onclick = () => openDetail(tr.dataset.id));
+}
+
+/* ---------- Sessions ---------- */
+async function loadSims() {
+  const q = new URLSearchParams();
+  if ($("fUser").value) q.set("user", $("fUser").value);
+  if ($("fPersona").value) q.set("persona", $("fPersona").value);
+  const list = await api("/api/admin/sims?" + q);
+  if (!q.toString()) { SIMS = list; renderOverview(); }
+  $("sessions").innerHTML = !list.length ? "<div style='color:var(--muted)'>Aucune session.</div>" :
+    `<table><tr><th>Date</th><th>Chatter</th><th>Fan</th><th>Créatrice</th><th>Diff.</th><th>Score</th><th>Revenu</th><th>Tps rép.</th><th>Synthèse</th></tr>` +
+    list.map(s => `<tr class="click" data-id="${s.id}"><td style="white-space:nowrap">${fmtDate(s.started_at)}</td><td><b>${esc(s.username)}</b></td><td>${esc(s.persona)}</td><td>${esc(s.creator_name)}</td><td>${esc(s.difficulty)}</td>
+      <td><b style="color:${scoreColor(s.score)}">${s.score}</b>${s.ethics ? " ⚠️" : ""}</td><td>${s.revenue} €</td><td>${s.avgRt !== null ? s.avgRt + " s" : "—"}</td><td style="color:var(--muted)">${esc(s.verdict)}</td></tr>`).join("") + "</table>";
+  document.querySelectorAll("#sessions tr.click").forEach(tr => tr.onclick = () => openDetail(tr.dataset.id));
+}
+$("fUser").onchange = loadSims; $("fPersona").onchange = loadSims;
+
+async function openDetail(id) {
+  const s = await api("/api/sims/" + id);
+  $("dTitle").textContent = `${s.username} · ${s.persona.name} (${s.persona.label}) · ${fmtDate(s.started_at)}`;
+  $("dBody").innerHTML = renderReport(s);
+  $("detail").classList.remove("hidden");
+}
+
+/* ---------- Équipe ---------- */
+async function loadUsers() {
+  USERS = await api("/api/admin/users");
+  $("fUser").innerHTML = `<option value="">Tous les chatters</option>` + USERS.map(u => `<option value="${u.id}">${esc(u.username)}</option>`).join("");
+  $("team").innerHTML = `<table><tr><th>Identifiant</th><th>Rôle</th><th>Sessions</th><th></th></tr>` +
+    USERS.map(u => `<tr><td><b>${esc(u.username)}</b>${u.active ? "" : " <span class='tag t3'>désactivé</span>"}</td><td>${u.role === "admin" ? "Manager" : "Chatter"}</td><td>${u.sessions}</td>
+      <td style="text-align:right;white-space:nowrap"><button class="btn ghost small" data-pw="${u.id}" data-n="${esc(u.username)}">Mot de passe</button>
+      <button class="btn ${u.active ? "danger" : "ghost"} small" data-act="${u.id}" data-v="${u.active ? 0 : 1}">${u.active ? "Désactiver" : "Réactiver"}</button></td></tr>`).join("") + "</table>";
+  document.querySelectorAll("[data-pw]").forEach(b => b.onclick = () => { pwTarget = b.dataset.pw; $("pwUser").textContent = b.dataset.n; $("pwVal").value = ""; $("pwErr").textContent = ""; $("pwModal").classList.remove("hidden"); });
+  document.querySelectorAll("[data-act]").forEach(b => b.onclick = async () => {
+    try { await api("/api/admin/users/" + b.dataset.act, { method: "PATCH", body: { active: b.dataset.v === "1" } }); loadUsers(); }
+    catch (e) { alertBox(e.message); }
+  });
+  if (SIMS.length || USERS.length) renderOverview();
+}
+function alertBox(m) { $("nuErr").textContent = m; }
+let pwTarget = null;
+$("pwForm").onsubmit = async e => {
+  e.preventDefault();
+  try { await api("/api/admin/users/" + pwTarget, { method: "PATCH", body: { password: $("pwVal").value } }); $("pwModal").classList.add("hidden"); }
+  catch (err) { $("pwErr").textContent = err.message; }
+};
+$("newUser").onsubmit = async e => {
+  e.preventDefault(); $("nuErr").textContent = "";
+  try {
+    await api("/api/admin/users", { body: { username: $("nuName").value, password: $("nuPass").value, role: $("nuRole").value } });
+    $("nuName").value = ""; $("nuPass").value = ""; loadUsers();
+  } catch (err) { $("nuErr").textContent = err.message; }
+};
+
+/* ---------- Créatrices ---------- */
+async function loadModels() {
+  MODELS = await api("/api/models");
+  $("models").innerHTML = MODELS.map(m => `<div style="border-bottom:1px solid var(--line);padding:12px 0">
+    <div class="row"><b>${esc(m.name)}</b><div class="spacer"></div><button class="btn ghost small" data-edit="${m.id}">Modifier</button><button class="btn danger small" data-del="${m.id}">Supprimer</button></div>
+    <div style="color:var(--muted);font-size:13px;margin-top:6px;line-height:1.5">${esc(m.style)}<br><b>Prix :</b> ${esc(m.prices)}</div></div>`).join("");
+  document.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => {
+    const m = MODELS.find(x => x.id == b.dataset.edit);
+    $("mfId").value = m.id; $("mfName").value = m.name; $("mfStyle").value = m.style; $("mfPrices").value = m.prices;
+    $("mfTitle").textContent = "Modifier " + m.name;
+  });
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
+    try { await api("/api/admin/models/" + b.dataset.del, { method: "DELETE" }); loadModels(); }
+    catch (e) { $("mfErr").textContent = e.message; }
+  });
+}
+function resetModelForm() { $("mfId").value = ""; $("mfName").value = ""; $("mfStyle").value = ""; $("mfPrices").value = ""; $("mfTitle").textContent = "Ajouter une créatrice"; $("mfErr").textContent = ""; }
+$("mfReset").onclick = resetModelForm;
+$("modelForm").onsubmit = async e => {
+  e.preventDefault();
+  try {
+    await api("/api/admin/models", { body: { id: $("mfId").value || undefined, name: $("mfName").value, style: $("mfStyle").value, prices: $("mfPrices").value } });
+    resetModelForm(); loadModels();
+  } catch (err) { $("mfErr").textContent = err.message; }
+};
+
+init().catch(e => console.error(e));
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connexion — Simulateur Chatter</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
+  <form class="card" id="f" style="width:100%;max-width:380px">
+    <h1>Simulateur Chatter</h1>
+    <p class="sub">Connectez-vous avec les identifiants fournis par votre manager.</p>
+    <label>Identifiant</label>
+    <input id="u" autocomplete="username" required autofocus>
+    <label>Mot de passe</label>
+    <input id="p" type="password" autocomplete="current-password" required>
+    <button class="btn" style="width:100%;margin-top:18px" id="b">Se connecter</button>
+    <div class="err" id="e"></div>
+  </form>
+</div>
+<script src="/common.js"></script>
+<script>
+api("/api/me", { noRedirect: true }).then(me => location.href = me.role === "admin" ? "/admin" : "/app").catch(() => {});
+$("f").onsubmit = async e => {
+  e.preventDefault(); $("b").disabled = true; $("e").textContent = "";
+  try {
+    const r = await api("/api/login", { body: { username: $("u").value, password: $("p").value } });
+    location.href = r.role === "admin" ? "/admin" : "/app";
+  } catch (err) { $("e").textContent = err.message; $("b").disabled = false; }
+};
+</script>
+</body>
+</html>

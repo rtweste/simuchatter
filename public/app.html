@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulateur Chatter</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+.personas{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.persona{background:var(--panel2);border:1.5px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;transition:.15s}
+.persona:hover{border-color:#3d4354}
+.persona.sel{border-color:var(--accent);background:#132430}
+.persona b{display:block;margin-bottom:4px}
+.persona span.d{font-size:12px;color:var(--muted);line-height:1.4;display:block;margin-bottom:8px}
+#chatScreen{height:100vh;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+.avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3a4256,#20242f);display:flex;align-items:center;justify-content:center;font-weight:700}
+.topbar .who b{display:block}.topbar .who span{font-size:12px;color:var(--muted)}
+.stats{display:flex;gap:18px}.stat{text-align:right}.stat small{display:block;color:var(--muted);font-size:11px}.stat b{font-size:15px}
+@media(max-width:700px){.stats{display:none}}
+.main{flex:1;display:flex;min-height:0}
+.chat{flex:1;display:flex;flex-direction:column;min-width:0}
+#msgs{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:6px}
+.msg{max-width:70%;padding:9px 13px;border-radius:16px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
+.msg.fan{background:var(--them);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.me{background:var(--me);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.sys{align-self:center;font-size:12px;color:var(--muted);padding:4px 10px;background:var(--panel2);border-radius:20px;margin:6px 0;text-align:center}
+.ppv{align-self:flex-end;width:250px;background:#10202a;border:1px solid #1f4a60;border-radius:14px;overflow:hidden}
+.ppv .lock{height:100px;background:repeating-linear-gradient(45deg,#18303d,#18303d 10px,#14283a 10px,#14283a 20px);display:flex;align-items:center;justify-content:center;font-size:28px}
+.ppv .info{padding:10px 12px}.ppv .info b{color:var(--accent)}.ppv .st{font-size:12px;margin-top:4px}
+.typing{align-self:flex-start;background:var(--them);padding:10px 14px;border-radius:16px;display:flex;gap:4px}
+.typing i{width:6px;height:6px;background:var(--muted);border-radius:50%;animation:b 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes b{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+.composer{border-top:1px solid var(--line);padding:12px 16px;background:var(--panel);display:flex;gap:8px;align-items:flex-end}
+.composer textarea{min-height:44px;max-height:140px;resize:none}
+.side{width:300px;border-left:1px solid var(--line);background:var(--panel);padding:16px;overflow-y:auto}
+@media(max-width:860px){.side{display:none}}
+.side h3{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:18px 0 8px}
+.side h3:first-child{margin-top:0}
+.hint{background:#2a2414;border:1px solid #4d4020;color:#f3d999;border-radius:10px;padding:10px;font-size:13px;line-height:1.45;margin-top:8px}
+</style>
+</head>
+<body>
+
+<!-- ============ ACCUEIL ============ -->
+<div id="homeScreen">
+  <div class="nav"><span class="brand">Simulateur Chatter</span><div class="spacer"></div><span class="who" id="who"></span><button class="btn ghost small" onclick="logout()">Déconnexion</button></div>
+  <div class="wrap">
+    <div class="grid">
+      <div class="card">
+        <h2>1. Profil du fan</h2>
+        <div class="personas" id="personas"></div>
+      </div>
+      <div class="card">
+        <h2>2. Session</h2>
+        <label>Créatrice incarnée</label>
+        <select id="model"></select>
+        <div class="notice" id="modelInfo" style="margin-top:8px"></div>
+        <label>Difficulté</label>
+        <select id="difficulty">
+          <option value="facile">Facile — fan patient et indulgent</option>
+          <option value="normal" selected>Normal — réaliste</option>
+          <option value="difficile">Difficile — exigeant, décroche vite</option>
+        </select>
+        <button class="btn" id="startBtn" style="width:100%;margin-top:18px">Lancer la simulation</button>
+        <div class="err" id="startErr"></div>
+        <div class="notice" id="quota"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:20px">
+      <h2>Mes sessions</h2>
+      <div id="history"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CHAT ============ -->
+<div id="chatScreen" class="hidden">
+  <div class="topbar">
+    <div class="avatar" id="fanAvatar">?</div>
+    <div class="who"><b id="fanName">Fan</b><span id="fanSub"></span></div>
+    <div class="spacer"></div>
+    <div class="stats">
+      <div class="stat"><small>Revenu</small><b id="stRev">0 €</b></div>
+      <div class="stat"><small>Tps réponse moy.</small><b id="stRt">—</b></div>
+      <div class="stat"><small>Messages</small><b id="stMsgs">0</b></div>
+    </div>
+    <button class="btn ghost small" id="endBtn">Terminer & évaluer</button>
+  </div>
+  <div class="main">
+    <div class="chat">
+      <div id="msgs"></div>
+      <div class="composer">
+        <button class="btn ghost" id="ppvBtn" title="Envoyer un contenu payant">🔒 PPV</button>
+        <textarea id="input" placeholder="Écrire en tant que la créatrice…  (Entrée pour envoyer, Maj+Entrée pour aller à la ligne)"></textarea>
+        <button class="btn" id="sendBtn">Envoyer</button>
+      </div>
+    </div>
+    <div class="side">
+      <h3>Objectif</h3><div id="goal" style="line-height:1.5;font-size:13px"></div>
+      <h3>Créatrice incarnée</h3><div id="creatorInfo" style="line-height:1.5;font-size:13px;color:var(--muted)"></div>
+      <h3>Prix indicatifs</h3><div id="priceInfo" style="line-height:1.5;font-size:13px;color:var(--muted)"></div>
+      <h3>Intérêt du fan</h3>
+      <div class="meter" id="meterWrap" style="visibility:hidden"><div id="meter" style="width:50%"></div></div>
+      <label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="showMeter" style="width:auto"> Afficher (mode débutant)</label>
+      <h3>Coach</h3>
+      <button class="btn ghost small" id="hintBtn" style="width:100%">💡 Demander un conseil (−3 pts)</button>
+      <div id="hints"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ RAPPORT ============ -->
+<div id="reportScreen" class="hidden">
+  <div class="nav"><span class="brand">Évaluation de la session</span><div class="spacer"></div><button class="btn small" id="newBtn">Nouvelle session</button></div>
+  <div class="wrap"><p class="sub" id="repSub"></p><div id="repBody"></div></div>
+</div>
+
+<!-- PPV -->
+<div class="modal hidden" id="ppvModal">
+  <div class="card">
+    <h2>Envoyer un PPV</h2>
+    <label>Description du contenu (ce que voit le fan dans l'aperçu)</label>
+    <textarea id="ppvDesc" rows="3" placeholder="ex. 3 photos en tenue de sport après ma séance, jamais postées"></textarea>
+    <label>Prix (€)</label>
+    <input id="ppvPrice" type="number" min="1" max="1000" value="15">
+    <label>Message d'accompagnement (optionnel)</label>
+    <input id="ppvMsg" placeholder="ex. je les ai prises rien que pour toi 🙈">
+    <div class="row" style="margin-top:16px;justify-content:flex-end">
+      <button class="btn ghost small" id="ppvCancel">Annuler</button>
+      <button class="btn small" id="ppvSend">Envoyer le PPV</button>
+    </div>
+  </div>
+</div>
+
+<script src="/common.js"></script>
+<script>
+let PERSONAS = [], MODELS = [], selPersona = null, SIM = null, busy = false, chatterCount = 0;
+
+/* ---------- Accueil ---------- */
+async function init() {
+  const me = await api("/api/me");
+  if (me.role === "admin") $("who").innerHTML = `${esc(me.username)} · <a href="/admin">Espace manager</a>`;
+  else $("who").textContent = me.username;
+  $("quota").textContent = me.role === "admin" ? "Compte manager : pas de limite quotidienne." :
+    `Simulations aujourd'hui : ${me.usedToday} / ${me.dailyLimit}`;
+  [PERSONAS, MODELS] = await Promise.all([api("/api/personas"), api("/api/models")]);
+  selPersona = selPersona || PERSONAS[0].id;
+  renderPersonas();
+  $("model").innerHTML = MODELS.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join("");
+  showModel();
+  loadHistory();
+}
+function renderPersonas() {
+  $("personas").innerHTML = PERSONAS.map(p => `<div class="persona ${p.id === selPersona ? "sel" : ""}" data-id="${p.id}">
+    <b>${esc(p.name)} · ${esc(p.label)}</b><span class="d">${esc(p.desc)}</span><span class="tag ${LEVEL[p.level][1]}">${LEVEL[p.level][0]}</span></div>`).join("");
+  document.querySelectorAll(".persona").forEach(el => el.onclick = () => { selPersona = el.dataset.id; renderPersonas(); });
+}
+function showModel() {
+  const m = MODELS.find(x => x.id == $("model").value);
+  $("modelInfo").innerHTML = m ? `${esc(m.style)}<br><br><b>Prix :</b> ${esc(m.prices)}` : "";
+}
+$("model").onchange = showModel;
+async function loadHistory() {
+  const h = await api("/api/my-sims");
+  $("history").innerHTML = !h.length ? "<div style='color:var(--muted)'>Aucune session terminée pour l'instant.</div>" :
+    `<table><tr><th>Date</th><th>Fan</th><th>Créatrice</th><th>Difficulté</th><th>Score</th><th>Revenu</th><th>Tps rép.</th></tr>` +
+    h.map(r => `<tr class="click" data-id="${r.id}"><td>${fmtDate(r.started_at)}</td><td>${esc(r.persona)}</td><td>${esc(r.creator_name)}</td><td>${esc(r.difficulty)}</td>
+      <td><b style="color:${scoreColor(r.score)}">${r.score}</b>/100</td><td>${r.revenue} €</td><td>${r.avgRt !== null ? r.avgRt + " s" : "—"}</td></tr>`).join("") + "</table>";
+  document.querySelectorAll("#history tr.click").forEach(tr => tr.onclick = async () => showReport(await api("/api/sims/" + tr.dataset.id)));
+}
+
+$("startBtn").onclick = async () => {
+  $("startBtn").disabled = true; $("startErr").textContent = "";
+  $("startBtn").textContent = "Démarrage…";
+  try {
+    const r = await api("/api/sims", { body: { personaId: selPersona, difficulty: $("difficulty").value, modelId: $("model").value } });
+    openChat(r.sim);
+    if (r.turn) await showTurn(r.turn);
+    else sys("Le fan est inactif depuis 3 semaines. À vous d'ouvrir la conversation.");
+    setBusy(false); $("input").focus();
+  } catch (e) { $("startErr").textContent = e.message; }
+  $("startBtn").disabled = false; $("startBtn").textContent = "Lancer la simulation";
+};
+
+/* ---------- Chat ---------- */
+function openChat(sim) {
+  SIM = sim; chatterCount = 0;
+  $("homeScreen").classList.add("hidden"); $("chatScreen").classList.remove("hidden");
+  $("msgs").innerHTML = ""; $("hints").innerHTML = "";
+  $("fanName").textContent = sim.persona.name; $("fanAvatar").textContent = sim.persona.name[0];
+  $("fanSub").textContent = sim.persona.label;
+  $("goal").textContent = sim.persona.goal;
+  $("creatorInfo").innerHTML = `<b style="color:var(--text)">${esc(sim.creator_name)}</b><br>${esc(sim.creator_style)}`;
+  $("priceInfo").textContent = sim.prices;
+  sys(`Session démarrée — vous écrivez en tant que ${sim.creator_name}`);
+  updateStats();
+}
+const scrollDown = () => { const m = $("msgs"); m.scrollTop = m.scrollHeight; };
+function sys(t) { const d = document.createElement("div"); d.className = "sys"; d.textContent = t; $("msgs").appendChild(d); scrollDown(); }
+function bubble(who, text) {
+  const d = document.createElement("div"); d.className = "msg " + (who === "fan" ? "fan" : "me");
+  d.textContent = text; $("msgs").appendChild(d); scrollDown();
+}
+function ppvCard(id, desc, price) {
+  const d = document.createElement("div"); d.className = "ppv";
+  d.innerHTML = `<div class="lock">🔒</div><div class="info"><div>${esc(desc)}</div><b>${price} €</b><div class="st" id="ppvst${id}" style="color:var(--muted)">En attente…</div></div>`;
+  $("msgs").appendChild(d); scrollDown();
+}
+const ppvAlias = {}; let pendingTmp = null;
+function setPPV(id, status) {
+  const key = ppvAlias[id] || id;
+  if ((status === "acheté" || status === "refusé") && key === lastPPV) lastPPV = null;
+  const el = $("ppvst" + key); if (!el) return;
+  const map = { "acheté": ["✅ Acheté", "var(--good)"], "refusé": ["❌ Refusé", "var(--bad)"], "en négociation": ["💬 Négociation", "var(--warn)"], "remplacé": ["Remplacé", "var(--muted)"] };
+  const [t, c] = map[status] || ["En attente…", "var(--muted)"]; el.textContent = t; el.style.color = c;
+}
+function typing(on) {
+  let t = $("typingEl");
+  if (on && !t) { t = document.createElement("div"); t.id = "typingEl"; t.className = "typing"; t.innerHTML = "<i></i><i></i><i></i>"; $("msgs").appendChild(t); scrollDown(); }
+  if (!on && t) t.remove();
+}
+function updateStats() {
+  $("stRev").textContent = SIM.revenue + " €";
+  $("stMsgs").textContent = chatterCount;
+  $("stRt").textContent = SIM.avgRt !== null && SIM.avgRt !== undefined ? SIM.avgRt + " s" : "—";
+  $("meter").style.width = SIM.interest + "%";
+  $("meter").style.background = scoreColor(SIM.interest >= 60 ? 70 : SIM.interest >= 30 ? 50 : 0);
+  $("meterWrap").style.visibility = $("showMeter").checked ? "visible" : "hidden";
+}
+$("showMeter").onchange = () => SIM && updateStats();
+function setBusy(b) { busy = b; ["sendBtn", "ppvBtn", "hintBtn"].forEach(id => $(id).disabled = b || SIM?.left); }
+
+async function showTurn(turn) {
+  for (let i = 0; i < turn.replies.length; i++) {
+    typing(true); await sleep(turn.replies[i].delay); typing(false);
+    bubble("fan", turn.replies[i].text);
+  }
+  if (turn.ppv) { setPPV(turn.ppv.id, turn.ppv.status); if (turn.ppv.status === "acheté") sys(`💰 PPV acheté : +${turn.ppv.price} €`); }
+  SIM.revenue = turn.revenue; SIM.interest = turn.interest;
+  if (turn.left) { SIM.left = true; sys("🚪 Le fan a quitté la conversation. Cliquez sur « Terminer & évaluer »."); }
+  updateStats();
+}
+// Tps de réponse : recalculé côté serveur, on l'affiche après chaque tour
+async function refreshRt() { try { const s = await api("/api/sims/" + SIM.id); SIM.avgRt = s.avgRt; updateStats(); } catch (e) {} }
+
+async function act(path, body, before) {
+  if (busy || SIM.left) return;
+  setBusy(true);
+  before && before();
+  await sleep(400); typing(true);
+  try {
+    const turn = await api(`/api/sims/${SIM.id}/${path}`, { body });
+    if (turn.ppvId && pendingTmp) { ppvAlias[turn.ppvId] = pendingTmp; pendingTmp = null; }
+    typing(false);
+    await showTurn(turn);
+    refreshRt();
+  } catch (e) { typing(false); sys("⚠️ " + e.message); }
+  setBusy(false);
+  if (!SIM.left) $("input").focus();
+}
+
+function send() {
+  const text = $("input").value.trim(); if (!text || busy) return;
+  act("message", { text }, () => { $("input").value = ""; bubble("me", text); chatterCount++; updateStats(); });
+}
+$("sendBtn").onclick = send;
+$("input").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
+
+$("ppvBtn").onclick = () => { if (!busy && !SIM.left) { $("ppvModal").classList.remove("hidden"); $("ppvDesc").focus(); } };
+$("ppvCancel").onclick = () => $("ppvModal").classList.add("hidden");
+let lastPPV = null;
+$("ppvSend").onclick = () => {
+  const desc = $("ppvDesc").value.trim(), price = Math.round(Number($("ppvPrice").value)), msg = $("ppvMsg").value.trim();
+  if (!desc || !price || price < 1) return;
+  $("ppvModal").classList.add("hidden");
+  const tmpId = "tmp" + Date.now();
+  act("ppv", { desc, price, msg }, () => {
+    $("ppvDesc").value = ""; $("ppvMsg").value = "";
+    if (lastPPV) setPPV(lastPPV, "remplacé");
+    if (msg) { bubble("me", msg); chatterCount++; }
+    ppvCard(tmpId, desc, price); lastPPV = tmpId; pendingTmp = tmpId; updateStats();
+  });
+};
+
+$("hintBtn").onclick = async () => {
+  if (busy) return; setBusy(true);
+  const box = document.createElement("div"); box.className = "hint"; box.textContent = "Le coach réfléchit…"; $("hints").prepend(box);
+  try { const r = await api(`/api/sims/${SIM.id}/hint`, { body: {} }); box.textContent = "💡 " + r.text; SIM.hints = r.hints; }
+  catch (e) { box.textContent = e.message; }
+  setBusy(false);
+};
+
+$("endBtn").onclick = async () => {
+  if (busy) return;
+  setBusy(true); $("endBtn").disabled = true; sys("Évaluation en cours… (environ 20 secondes)");
+  try { showReport(await api(`/api/sims/${SIM.id}/end`, { body: {} })); }
+  catch (e) { sys("⚠️ " + e.message); }
+  setBusy(false); $("endBtn").disabled = false;
+};
+
+/* ---------- Rapport ---------- */
+function showReport(sim) {
+  ["homeScreen", "chatScreen"].forEach(id => $(id).classList.add("hidden"));
+  $("reportScreen").classList.remove("hidden");
+  $("repSub").textContent = `${sim.persona.name} · ${sim.persona.label} · ${sim.creator_name} · difficulté ${sim.difficulty} · ${fmtDate(sim.started_at)}`;
+  $("repBody").innerHTML = renderReport(sim);
+  window.scrollTo(0, 0);
+}
+$("newBtn").onclick = () => { $("reportScreen").classList.add("hidden"); $("homeScreen").classList.remove("hidden"); lastPPV = null; init(); };
+
+init().catch(e => console.error(e));
+</script>
+</body>
+</html>
