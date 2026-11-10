@@ -107,7 +107,7 @@ tr.total td{font-weight:700;border-top:1px solid #3a3a3a}
     <div class="card">
       <h2>À payer aux chatters</h2>
       <div class="tablewrap" id="chattersTable"></div>
-      <p class="hint">« Taux » = pourcentage de commission du chatter sur les ventes qui lui sont attribuées.</p>
+      <p class="hint">Commission par paliers sur le net de la période, chaque taux ne s'appliquant qu'à sa tranche : 10 % jusqu'à 500 €, 12 % de 500 à 1 000 €, 14 % de 1 000 à 1 400 €, 15 % au-delà. Primes : 10 € dès 2 000 €, 20 € dès 3 000 €, 40 € dès 4 000 €. « Palier » = taux de la dernière tranche atteinte.</p>
     </div>
     <div class="card">
       <h2>Réglages</h2>
@@ -120,8 +120,7 @@ tr.total td{font-weight:700;border-top:1px solid #3a3a3a}
       <p class="hint" id="modeHint"></p>
       <label for="goalCa">Objectif de CA brut par période (accueil du manager)</label>
       <div class="row"><input id="goalCa" class="money" inputmode="decimal" style="width:130px"> <span>€</span></div>
-      <label for="goalCh">Objectif de commission par chatter et par période (accueil des chatters)</label>
-      <div class="row"><input id="goalCh" class="money" inputmode="decimal" style="width:130px"> <span>€</span></div>
+
     </div>
   </div>
 
@@ -204,7 +203,7 @@ function render() {
   const t = C.totals;
   $("pLabel").textContent = C.period.label;
   $("baseSel").value = C.base; $("feeInp").value = fix2(C.fee); $("modeSel").value = C.mode;
-  if (C.goals) { $("goalCa").value = fix2(C.goals.ca); $("goalCh").value = fix2(C.goals.chatter); }
+  if (C.goals) { $("goalCa").value = fix2(C.goals.ca); }
   $("modeHint").innerHTML = C.mode === "ventes"
     ? "Chaque chatter est crédité des <b>ventes qu'il a déclarées et que vous avez validées</b> (page Ventes). Si la commission est calculée sur le CA net, la commission de la plateforme est déduite de ses ventes brutes. Vous pouvez corriger un montant dans le détail ci-dessous."
     : "Les ventes de chaque créatrice sont réparties entre les chatters <b>selon leurs heures pointées</b> sur ce compte pendant la période. Vous pouvez corriger un montant dans le détail ci-dessous.";
@@ -239,11 +238,11 @@ function render() {
   // chatters
   const chs = C.chatters.filter(c => c.active || c.pay > 0);
   $("chattersTable").innerHTML = !chs.length ? "<div style='color:var(--muted)'>Aucun chatter.</div>" :
-    `<table><tr><th>Chatter</th><th class="num">Taux</th><th class="num">Heures</th><th class="num">Ventes attribuées</th><th class="num">À payer</th></tr>` +
-    chs.map(c => `<tr><td><b>${esc(c.username)}</b></td><td class="num"><input class="pct" inputmode="decimal" data-upct="${c.id}" value="${fix2(c.commission_pct)}" aria-label="Taux ${esc(c.username)}"> %</td>
+    `<table><tr><th>Chatter</th><th class="num">Palier</th><th class="num">Heures</th><th class="num">Ventes attribuées</th><th class="num">À payer</th></tr>` +
+    chs.map(c => `<tr><td><b>${esc(c.username)}</b></td><td class="num">${c.rate} %${c.prime ? ` + ${c.prime} €` : ""}</td>
       <td class="num">${hrs(c.hours)}</td><td class="num">${eur(c.sales)}</td><td class="num"><b>${eur(c.pay)}</b></td></tr>`).join("") +
     `<tr class="total"><td>Total</td><td></td><td class="num">${hrs(chs.reduce((a, c) => a + c.hours, 0))}</td><td class="num">${eur(chs.reduce((a, c) => a + c.sales, 0))}</td><td class="num">${eur(t.chatters)}</td></tr></table>`;
-  document.querySelectorAll("[data-upct]").forEach(inp => inp.onchange = () => save(`/api/admin/users/${inp.dataset.upct}/commission`, { commission_pct: parseNum(inp.value) }, inp));
+
 
   // détail
   $("linesTable").innerHTML = !C.lines.length ? `<div style='color:var(--muted)'>${C.mode === "ventes" ? "Aucune vente validée sur cette période (page Ventes)." : "Aucune heure pointée sur cette période. Les chatters pointent depuis la page Planning."}</div>` :
@@ -258,7 +257,6 @@ function render() {
 }
 
 $("goalCa").onchange = () => save("/api/admin/settings", { goal_ca: parseNum($("goalCa").value) }, $("goalCa"));
-$("goalCh").onchange = () => save("/api/admin/settings", { goal_chatter: parseNum($("goalCh").value) }, $("goalCh"));
 $("feeInp").onchange = () => save("/api/admin/settings", { platform_fee: parseNum($("feeInp").value), period: PERIOD }, $("feeInp"));
 $("modeSel").onchange = () => save("/api/admin/settings", { attribution_mode: $("modeSel").value }, $("modeSel"));
 $("baseSel").onchange = () => save("/api/admin/settings", { commission_base: $("baseSel").value }, $("baseSel"));

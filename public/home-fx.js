@@ -71,17 +71,20 @@ window.FeedFX = function (root, initial, live) {
     return c;
   }
   const visible = () => items.filter(x => flt === "A" || x.t === flt.toLowerCase()).slice(0, MAXV);
+  let gen = 0;
   function layout(stagger, dir) {
-    MAXV = Math.max(2, Math.floor((list.clientHeight + GAP) / STEP));
+    const g = ++gen;   // un nouveau filtre annule les déplacements prévus par le précédent
+    MAXV = Math.max(2, Math.floor((list.clientHeight + GAP + 24) / STEP));
     const vis = visible(), ids = new Set(vis.map(v => v.id));
     empty.style.display = vis.length ? "none" : "flex";
     vis.forEach((it, i) => {
       let c = cards.get(it.id);
-      if (!c || c.gone) { if (c) c.el.remove(); c = build(it, false); c.o.x = 0; c.xo.x = dir ? 26 * dir : 0; c.y.x = i * STEP; c.b.x = 4; }
+      if (c && c.gone) { c.el.remove(); cards.delete(it.id); c = null; }
+      if (!c) { c = build(it, false); c.o.x = 0; c.xo.x = dir ? 26 * dir : 0; c.y.x = i * STEP; c.b.x = 4; }
       const go = () => { c.y.t = i * STEP; c.o.t = i === MAXV - 1 && items.length > MAXV ? .55 : 1; c.sc.t = 1; c.b.t = 0; c.xo.t = 0; c.el.style.zIndex = 10 - i; };
-      stagger ? setTimeout(go, i * 55) : go();
+      stagger ? setTimeout(() => { if (g === gen && cards.get(it.id) === c) go(); }, i * 55) : go();
     });
-    cards.forEach((c, id) => { if (!ids.has(id) && !c.gone) { c.gone = true; c.o.t = 0; c.b.t = 8; c.sc.t = .9; c.xo.t = dir ? -26 * dir : 0; if (!dir) c.y.t += 30; setTimeout(() => { c.el.remove(); cards.delete(id); }, 900); } });
+    cards.forEach((c, id) => { if (!ids.has(id) && !c.gone) { c.gone = true; c.el.style.zIndex = 0; c.el.style.pointerEvents = "none"; c.o.t = 0; c.b.t = 8; c.sc.t = .9; c.xo.t = dir ? -26 * dir : 0; if (!dir) c.y.t += 30; setTimeout(() => { if (cards.get(id) === c) { c.el.remove(); cards.delete(id); } else c.el.remove(); }, 650); } });
   }
   const iL = S(0, 260, 24), iR = S(0, 260, 24);
   function tabsUpd(bumpK) {

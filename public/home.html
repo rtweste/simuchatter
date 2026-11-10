@@ -379,6 +379,67 @@
 .lgfx .src{position:absolute;width:0;height:0;overflow:hidden;opacity:0}
 .lgfx .tag{position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:10px;letter-spacing:.5em;color:rgba(255,255,255,.35);font-weight:600;z-index:3;opacity:0;animation:fa 1s ease 2.2s forwards}
 
+
+/* ===================== Accueil chatter ===================== */
+@media(min-width:1000px){.hm.adm.chat .a-shift{grid-column:2/4;grid-row:2}}
+/* paliers personnels */
+.gP{display:flex;flex-direction:column;align-items:stretch!important;text-align:left!important}
+.gP .ptop{display:flex;align-items:flex-start;justify-content:space-between;margin-top:12px;gap:10px}
+.gP .bigp{font-family:Inter,sans-serif;font-weight:900;letter-spacing:-.05em;font-size:40px;line-height:1;font-variant-numeric:tabular-nums;display:flex;align-items:baseline}
+.gP .bigp small{font-size:20px;letter-spacing:-.02em}
+.gP .sub{font-size:11.5px;color:#8f8f8f;margin-top:6px;line-height:1.4}.gP .sub b{color:#fff;font-weight:800}
+.gP .rate{white-space:nowrap;font-weight:900;letter-spacing:-.03em;font-size:15px;color:#0a0a0a;background:#ededed;border-radius:10px;padding:5px 9px;box-shadow:0 0 18px rgba(255,255,255,.18)}
+.ladder{position:relative;display:flex;gap:14px;flex:1;margin:16px 0 10px;min-height:230px}
+.ladder .col{position:relative;width:34px;border-radius:12px;background:#151515;border:1px solid #232323;overflow:visible;flex-shrink:0}
+.ladder .fill{position:absolute;left:0;right:0;bottom:0;height:0;border-radius:0 0 11px 11px;background:linear-gradient(#f2f2f2,#9a9a9a);transition:height 2s cubic-bezier(.2,.8,.2,1);overflow:hidden}
+.ladder .fill::before{content:"";position:absolute;left:-50%;right:-50%;top:-6px;height:12px;background:radial-gradient(ellipse at center,#fff 0,#f2f2f2 40%,transparent 70%);animation:hWave 2.4s ease-in-out infinite}
+.ladder .tk{position:absolute;left:-4px;right:-4px;height:1px;background:#2a2a2a}
+.ladder .tk.ok{background:rgba(10,10,10,.35)}
+.ladder .cur{position:absolute;left:50%;width:14px;height:14px;margin:0 0 -7px -7px;border-radius:50%;background:#fff;animation:pPls 2.2s ease-out infinite}
+.open .ladder .cur{opacity:0;animation:hOn .4s ease 3.4s forwards,pPls 2.2s ease-out 3.4s infinite}
+@keyframes pPls{0%{box-shadow:0 0 0 0 rgba(255,255,255,.5),0 0 18px rgba(255,255,255,.7)}100%{box-shadow:0 0 0 12px rgba(255,255,255,0),0 0 18px rgba(255,255,255,.7)}}
+.ladder .rows{position:relative;flex:1;min-width:0}
+.pl{position:absolute;left:0;right:0;transform:translateY(50%);display:flex;align-items:center;gap:6px;font-size:11.5px;color:#5a5a5a;white-space:nowrap}
+.pl .pv{font-weight:800;letter-spacing:-.02em;min-width:50px}
+.pl .pg{font-weight:700}.pl .pg b{color:inherit;font-weight:900}
+.pl em{font-style:normal;margin-left:auto;font-size:10.5px;font-weight:800;border-radius:20px;padding:2px 8px}
+.pl.ok{color:#8f8f8f}.pl.ok svg{margin-left:auto;color:#5fd3a2;width:13px;height:13px}
+.pl.here{color:#fff}.pl.here em{background:#ededed;color:#0a0a0a}
+.pl.nx{color:#e6e6e6}.pl.nx em{background:rgba(224,160,80,.12);color:#e0a050}
+.pl.lk .pg b{color:#bdbdbd}
+.pfoot{font-size:11.5px;color:#8f8f8f;line-height:1.5;border-top:1px solid #1c1c1c;padding-top:10px}.pfoot b{color:#fff;font-weight:800}.pfoot b.g{color:#5fd3a2}
+@media(max-width:999px){.gP .bigp{font-size:44px}.ladder{min-height:260px}}
+/* prochain shift : compte à rebours + créatrice */
+.shV{display:flex;flex-direction:column}
+.shV .shd{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.shV .mut{font-size:12px;color:#8f8f8f}.shV .mut b{color:#fff;font-weight:800}
+.shV .g3{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;flex:1;margin:12px 0 14px;min-height:0}
+@media(max-width:999px){.shV .g3{grid-template-columns:1fr;gap:10px}}
+.cdw{display:flex;flex-direction:column;justify-content:center}
+.cdw .k{font-size:10px;font-weight:800;letter-spacing:.14em;color:#6a6a6a}
+.roll{display:flex;font-family:Inter,sans-serif;font-weight:900;letter-spacing:-.04em;font-size:40px;line-height:1.1;margin-top:6px;font-variant-numeric:tabular-nums;min-height:1.1em}
+.roll .rd{position:relative;display:inline-block;width:.62em;height:1.1em;overflow:hidden}
+.roll .rd span{position:absolute;left:0;right:0;text-align:center}
+.roll .rd .in{animation:rIn .45s cubic-bezier(.3,1.3,.5,1) both}.roll .rd .out{animation:rOut .45s cubic-bezier(.5,0,.5,1) both}
+@keyframes rIn{from{transform:translateY(-100%);filter:blur(2px)}to{transform:none;filter:none}}
+@keyframes rOut{to{transform:translateY(100%);opacity:0;filter:blur(2px)}}
+.roll .rs{opacity:.5}
+.crea{border-radius:14px;background:linear-gradient(160deg,#181818,#121212);border:1px solid #232323;padding:12px;display:flex;flex-direction:column;gap:8px;justify-content:center}
+@media(max-width:999px){.crea{flex-direction:row;align-items:center}.crea .who{flex:1}.crea .st{flex:1.3}}
+.crea .who{display:flex;align-items:center;gap:10px}
+.crea .av{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,#2c2c2c,#161616);border:1px solid #333;display:flex;align-items:center;justify-content:center;font-weight:900;text-transform:uppercase;flex-shrink:0}
+.crea .who b{display:block;font-weight:900;letter-spacing:-.02em}.crea .who small{color:#7a7a7a;font-size:11px}
+.crea .st{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.crea .st div{background:#0f0f0f;border:1px solid #1d1d1d;border-radius:10px;padding:7px 8px}
+.crea .st b{display:block;font-weight:900;letter-spacing:-.03em;font-size:14px}.crea .st small{font-size:10px;color:#7a7a7a;font-weight:600}
+.crea .st1{font-size:12px;color:#9a9a9a;line-height:1.45}
+.shV .slrow{display:flex;gap:8px;align-items:center}
+.shV .slrow .slide{margin-top:0;flex:1}
+.shV .mdl{margin:0}.shV .mdl select{height:56px;border-radius:28px;min-width:0;width:auto;max-width:130px;padding:0 14px}
+.shV .liveb{display:flex;align-items:center;gap:12px}
+.shV .liveb .dot{width:10px;height:10px;border-radius:50%;background:#3ccf91;animation:hPl 2s ease-out infinite;flex-shrink:0}
+.shV .liveb .stop{margin-left:auto}
+
 @media (prefers-reduced-motion:reduce){.open .cl,.open .ca,.open .cp,.open .today,.open .tick.lit,.open .pace,.open .br,.open .avs .a{animation:none!important;opacity:1;transform:none;stroke-dashoffset:0}}
 @media (prefers-reduced-motion:reduce){.open .b,.quick .b,.open .spl,.open .pc .bar,.open .pc .pa{animation:none!important;opacity:1;transform:none;stroke-dashoffset:0}.fx{display:none}}
 </style>
@@ -482,60 +543,88 @@ function podB(rows, note) {
 
 /* ---------------- Chatter ---------------- */
 function renderChatter() {
-  const s = D.sales, today = D.upcoming.filter(x => x.date === todayIso), next = D.upcoming[0];
-  const pill = D.open ? `En shift sur ${esc(D.open.model_name)}` : next ? `Prochain shift ${next.date === todayIso ? "à " + next.start : dayLbl(next.date).toLowerCase() + " à " + next.start}` : "Aucun shift prévu";
-  const gapBest = D.best > 0 ? D.best - s.validated : 0;
-  const line = D.best > 0 && s.validated >= D.best ? `<b>Nouveau record</b> : tu as dépassé ta meilleure période (${eur(D.best)}) !`
-    : gapBest > 0 ? `Plus que <b>${eur(gapBest)}</b> de ventes pour battre ta meilleure période`
-    : s.pending > 0 ? `<b>${eur(s.pending)}</b> en attente de validation par le manager`
-    : `Déclare tes ventes avec la capture : elles comptent pour ta commission.`;
-  const proj = s.commission > 0 ? `À ce rythme, tu finis à<br><b>${eur(D.projection)}</b> de commission` : `Ta commission de la période<br>apparaîtra ici`;
+  const T = D.tiers, s = D.sales, nx = T.next;
+  const line = nx ? `<span>Plus que <b>${esc(eur0(Math.ceil(nx.gap)))}</b> pour ${nx.prime ? `débloquer <b>+${nx.prime - (T.prime || 0)} €</b> de prime` : `passer à <b>${nx.rate} %</b>`}</span>`
+    : `<span><b>Palier maximum atteint</b> : 15 % + 40 € de prime. Bravo !</span>`;
+  const h = new Date().getHours(), hello = h < 5 ? "Bonne nuit" : h < 18 ? "Bonjour" : "Bonsoir";
+  const date = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
+  const chips = `<a class="act hot" href="/ventes">${icon("receipt")}<span>Déclarer<span class="lx"> une vente</span></span></a><a class="act" href="/planning">${icon("calendar")}Planning</a><a class="act" href="/app">${icon("chat")}Simulateur</a>`;
+  const goal = nx ? nx.from : Math.max(T.net * 1.2, 1), ahead = T.projNet >= goal;
+  const hero = `<div class="b hero a-hero" style="${wv("hero")}"><div class="stars">${stars()}</div><span class="glow"></span>
+    <div class="hero2"><div class="hl"><div class="eyebrow" style="position:relative;margin:0">${esc(date)}<span class="hp"> · période du ${esc(D.period.label.replace(/ \d{4}$/, ""))}</span></div>
+      <div class="hi ${ME.username.length > 11 ? "long" : ""}" id="hello">${hello} <em>${esc(ME.username.charAt(0).toUpperCase() + ME.username.slice(1))}.</em></div>
+      <div class="hline">${line}</div><div class="acts">${chips}</div></div>
+    ${chartB(T.net, ahead, { pts: D.netPts, goal, proj: T.projNet, label: "Mes ventes <em>nettes</em>", cum: "net cumulé", goalLbl: nx ? `rythme pour ${eur0(nx.from)}` : "rythme", id: "c" })}</div></div>`;
+  const tr = trendTxt(D.trend.sales);
+  const k1 = `<a class="b kp a-k1" href="/ventes" style="text-decoration:none;color:inherit;${wv("k1")}"><small>Mes ventes <em>validées</em></small>
+    <div class="v"><b>${odo(eur(s.validated))}</b><span class="tr ${tr[1]}">${tr[0]}</span></div>${barsB(D.series.sales, D.series.sales.map((v, i) => `<b>${eur(v)}</b>`), D.days.map(d => new Date(d + "T12:00").toLocaleDateString("fr-FR", { weekday: "narrow" })), 1.9)}</a>`;
   const note = D.rank === 1 ? `Tu es <b>1ᵉʳ</b> de la période, bravo !` : D.rank ? `Tu es <b>${D.rank}ᵉ</b>, à <b>${eur(D.gap)}</b> de ${esc(D.above)}` : "";
-  $("hm").className = "hm " + MODE;
-  $("hm").innerHTML = heroB(ME.username, pill, !!D.open, line)
-    + goalB("Objectif commission", eur(s.commission), eur(D.goal).replace(/,00/, ""), D.goal ? s.commission / D.goal : 0, proj)
-    + kpiB("k1", "Ventes validées", eur(s.validated), trendTxt(D.trend.sales), D.series.sales, "/ventes")
-    + kpiB("k2", "Heures pointées", hrs(D.hours), trendTxt(D.trend.hours), D.series.hours, "/planning")
-    + kpiB("k3", "En attente", eur(s.pending), [`${D.series.pending.reduce((a, b) => a + b, 0) || "aucune"} vente${D.series.pending.reduce((a, b) => a + b, 0) > 1 ? "s" : ""}`, "nt"], D.series.pending, "/ventes")
-    + shiftB(today, next)
-    + podB(D.leaderboard, note);
-  bindShift();
+  $("hm").className = "hm adm chat " + MODE;
+  $("hm").innerHTML = hero + palB() + shiftV3() + k1
+    + `<div class="b a-feed" style="${wv("feed")}"><div class="fxroot" id="fxroot"></div></div>`
+    + (D.leaderboard.length ? podB(D.leaderboard, note).replace('<h3>Classement de la période</h3>', '<h3>Classement <em>de la période</em></h3>') : podAdm([]));
+  FX = FeedFX($("fxroot"), D.feed, D.live);
+  bindShiftV3();
 }
-function shiftB(today, next) {
-  const sel = D.models.map(m => `<option value="${m.id}" ${next && next.model_name === m.name ? "selected" : ""}>${esc(m.name)}</option>`).join("");
-  const wk = D.upcoming.slice(D.open ? 0 : 1, 4).map(x => `<div><span><b>${dayLbl(x.date)}</b> · ${esc(x.model_name)}</span><span>${x.start} – ${x.end}</span></div>`).join("");
-  return `<div class="b a-shift" style="${wv("shift")}"><h3>Mon shift</h3>${D.open
-    ? `<div class="nxt">En shift sur <b>${esc(D.open.model_name)}</b> depuis ${new Date(D.open.start_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</div>
-       <div class="live"><span class="dot"></span><span class="tm" id="timer">00:00:00</span><button class="btn ghost small stop" id="outBtn">Terminer</button></div>`
-    : `<div class="nxt">${next ? `Prochain créneau : <b>${dayLbl(next.date).toLowerCase()} ${next.start} – ${next.end}</b> · ${esc(next.model_name)}` : "Aucun créneau prévu : tu peux quand même pointer."}</div>
-       <button class="slide" id="slide" aria-label="Glisser pour commencer mon shift"><span class="fill" id="sFill"></span><span class="lbl">Glisser pour commencer mon shift</span><span class="knob" id="sKnob"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
-       <label class="mdl">Créatrice <select id="inModel">${sel}</select></label>`}
-    ${wk ? `<div class="wk">${wk}</div>` : ""}</div>`;
+// paliers personnels : colonne liquide + échelle des paliers
+function palB() {
+  const T = D.tiers, L = T.list, th = L.map(t => t.from), n = th.length - 1;
+  const frac = v => { for (let i = 0; i < n; i++) if (v < th[i + 1]) return (i + (v - th[i]) / (th[i + 1] - th[i])) / n; return 1; };
+  const f = frac(T.net), nxt = T.tier + 1;
+  const rows = L.map((t, i) => { const st = i < T.tier ? "ok" : i === T.tier ? "here" : i === nxt ? "nx" : "lk";
+    const tag = st === "ok" ? svgI(IC.check) : st === "here" ? "<em>tu es ici</em>" : st === "nx" ? `<em>+${esc(eur0(Math.ceil(t.from - T.net)))}</em>` : "";
+    return `<div class="pl ${st}" style="bottom:${(i / n * 100).toFixed(2)}%"><span class="pv">${esc(eur0(t.from))}</span><span class="pg">${t.prime ? `<b>+${t.prime} €</b>` : `${t.rate} %`}</span>${tag}</div>`; }).reverse().join("");
+  const marks = L.map((t, i) => i ? `<span class="tk ${T.net >= t.from ? "ok" : ""}" style="bottom:${(i / n * 100).toFixed(2)}%"></span>` : "").join("");
+  const tot = T.total, [ent, dec] = tot.toFixed(2).split(".");
+  return `<div class="b a-goal gP" style="${wv("goal")}"><h3>Mes paliers <em>de la période</em></h3>
+    <div class="ptop"><div><div class="bigp">${odo(Number(ent).toLocaleString("fr-FR"))}<small>,${dec} €</small></div><div class="sub">de commission${T.prime ? ` dont <b>${T.prime} €</b> de prime` : ""} · <b>${esc(eur0(Math.round(T.net)))} net</b></div></div><span class="rate">${T.rate} %</span></div>
+    <div class="ladder"><div class="col"><span class="fill" data-h="${(f * 100).toFixed(2)}"></span>${marks}<span class="cur" style="bottom:${(f * 100).toFixed(2)}%"></span></div><div class="rows">${rows}</div></div>
+    <div class="pfoot">À ce rythme : <b>${esc(eur0(T.projNet))} net</b> → <b class="g">${esc(eur(T.projTotal))}</b> de commission${T.projPrime ? ` dont ${T.projPrime} € de prime` : ""}</div></div>`;
 }
-function bindShift() {
+// prochain shift : compte à rebours + fiche de la créatrice
+function shiftV3() {
+  const nx = D.upcoming[0], op = D.open, ls = D.lastShift, model = op ? op.model_name : nx?.model_name;
+  const sel = D.models.map(m => `<option value="${m.id}" ${model === m.name ? "selected" : ""}>${esc(m.name)}</option>`).join("");
+  const when = nx ? `${nx.date === todayIso ? "aujourd'hui" : dayLbl(nx.date).toLowerCase()} · <b>${nx.start} – ${nx.end}</b>` : "aucun créneau prévu";
+  const wk = D.weekShifts?.nth ? `${D.weekShifts.nth === 1 ? "1ᵉʳ" : D.weekShifts.nth + "ᵉ"} shift de la semaine · ` : D.weekShifts?.count ? `${D.weekShifts.count} shift${D.weekShifts.count > 1 ? "s" : ""} cette semaine · ` : "";
+  const dur = nx ? (() => { const [a, b] = [nx.start, nx.end].map(x => { const [hh, mm] = x.split(":"); return +hh * 60 + +mm; }); return Math.round(((b - a + 1440) % 1440 || 1440) / 60 * 10) / 10; })() : 0;
+  const crea = model ? `<div class="crea"><div class="who"><span class="av">${esc(model[0])}</span><div><b>${esc(model)}</b><small>${ls ? "ton dernier shift sur elle" : "premier shift sur elle"}</small></div></div>
+      ${ls ? `<div class="st"><div><b>${ls.count}</b><small>vente${ls.count > 1 ? "s" : ""}</small></div><div><b>+${esc(eur0(Math.round(ls.net)))}</b><small>net</small></div></div>` : `<div class="st1">Lance-toi : chaque vente compte pour tes paliers.</div>`}</div>`
+    : `<div class="crea"><div class="st1">Aucun créneau prévu : tu peux quand même pointer sur une créatrice.</div></div>`;
+  return `<div class="b a-shift shV" style="${wv("shift")}"><div class="shd"><h3>${op ? "Mon <em>shift en cours</em>" : "Mon <em>prochain shift</em>"}</h3><span class="mut">${op ? `sur <b>${esc(op.model_name)}</b>` : when}</span></div>
+    <div class="g3"><div class="cdw"><span class="k">${op ? "EN SHIFT DEPUIS" : nx ? "COMMENCE DANS" : "PRÊT QUAND TU L'ES"}</span><div class="roll" id="roll"></div>
+      <div class="mut" style="margin-top:8px">${wk}${nx && !op ? `<b>${String(dur).replace(".", ",")} h</b>` : op ? `depuis ${new Date(op.start_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}` : ""}</div></div>${crea}</div>
+    ${op ? `<div class="liveb"><span class="dot"></span><span class="mut">Bon shift sur <b>${esc(op.model_name)}</b> !</span><button class="btn ghost small stop" id="outBtn">Terminer</button></div>`
+      : `<div class="slrow"><button class="slide" id="slide" aria-label="Glisser pour commencer mon shift"><span class="fill" id="sFill"></span><span class="lbl">Glisser pour commencer</span><span class="knob" id="sKnob"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+        <label class="mdl"><span class="sr">Créatrice</span><select id="inModel">${sel}</select></label></div>`}</div>`;
+}
+// chiffres qui roulent (compte à rebours / chrono)
+function rollSet(el, txt) {
+  const prev = el.dataset.v || ""; el.dataset.v = txt;
+  if (el.children.length !== txt.length) { el.innerHTML = [...txt].map(c => /\d/.test(c) ? `<span class="rd"><span>${c}</span></span>` : `<span class="rs">${c}</span>`).join(""); return; }
+  [...txt].forEach((c, i) => { const box = el.children[i]; if (!box.classList.contains("rd") || prev[i] === c || reduce) { if (reduce && box.firstElementChild) box.firstElementChild.textContent = c; return; }
+    const n = document.createElement("span"); n.textContent = c; n.className = "in"; const o = box.lastElementChild; o.className = "out"; box.appendChild(n); setTimeout(() => o.remove(), 450); });
+}
+function bindShiftV3() {
   clearInterval(tick);
-  if (D.open) {
-    const upd = () => { const t = Math.floor((Date.now() - D.open.start_at) / 1000); if ($("timer")) $("timer").textContent = `${pad(Math.floor(t / 3600))}:${pad(Math.floor(t % 3600 / 60))}:${pad(t % 60)}`; };
-    upd(); tick = setInterval(upd, 1000);
-    $("outBtn").onclick = async () => { $("outBtn").disabled = true; const dur = (Date.now() - D.open.start_at) / 3.6e6;
-      try { await api("/api/clock/out", { body: {} }); notify("Shift terminé", `${hrs(dur)} pointées sur ${D.open.model_name}`, "ok"); } catch (e) { notify("Impossible de terminer le shift", e.message, "err"); }
-      MODE = "static"; load(); };
-    return;
-  }
-  // glisser (ou toucher) pour commencer
+  const roll = $("roll"), nx = D.upcoming[0], op = D.open;
+  const startAt = nx ? new Date(`${nx.date}T${nx.start}:00`).getTime() : null;
+  const upd = () => { if (!roll || !roll.isConnected) return clearInterval(tick);
+    let t; if (op) t = Math.floor((Date.now() - op.start_at) / 1000); else if (startAt) t = Math.max(0, Math.floor((startAt - Date.now()) / 1000)); else { roll.innerHTML = '<span class="rs" style="opacity:1">—</span>'; return; }
+    rollSet(roll, `${pad(Math.floor(t / 3600))}:${pad(Math.floor(t % 3600 / 60))}:${pad(t % 60)}`); };
+  upd(); tick = setInterval(upd, 1000);
+  if (op) { $("outBtn").onclick = async () => { $("outBtn").disabled = true; const dur = (Date.now() - op.start_at) / 3.6e6;
+      try { await api("/api/clock/out", { body: {} }); notify("Shift terminé", `${hrs(dur)} pointées sur ${op.model_name}`, "ok"); } catch (e) { notify("Impossible de terminer le shift", e.message, "err"); }
+      MODE = "static"; load(); }; return; }
   const sl = $("slide"), kn = $("sKnob"), fl = $("sFill"); let x0 = null, max = 0, done = false;
   const setX = x => { kn.style.left = (4 + x) + "px"; fl.style.width = (56 + x) + "px"; };
-  const go = async () => {
-    if (done) return; done = true; sl.classList.add("anim"); setX(max); SND.shift();
+  const go = async () => { if (done) return; done = true; sl.classList.add("anim"); setX(max); SND.shift();
     const name = $("inModel").selectedOptions[0]?.textContent || "";
-    try { await api("/api/clock/in", { body: { model_id: $("inModel").value } }); notify("Shift commencé", `${name} · bon courage !`, "ok"); }
-    catch (e) { notify("Impossible de pointer", e.message, "err"); }
-    setTimeout(() => { MODE = "static"; load(); }, 450);
-  };
+    try { await api("/api/clock/in", { body: { model_id: $("inModel").value } }); notify("Shift commencé", `${name} · bon courage !`, "ok"); } catch (e) { notify("Impossible de pointer", e.message, "err"); }
+    setTimeout(() => { MODE = "static"; load(); }, 450); };
   sl.addEventListener("pointerdown", e => { if (done) return; x0 = e.clientX; max = sl.clientWidth - 56; sl.classList.add("drag"); sl.classList.remove("anim"); sl.setPointerCapture(e.pointerId); });
   sl.addEventListener("pointermove", e => { if (x0 == null || done) return; setX(Math.max(0, Math.min(max, e.clientX - x0))); });
-  const end = e => { if (x0 == null || done) return; const dx = e.clientX - x0; x0 = null; sl.classList.remove("drag");
-    if (dx > max * .7 || Math.abs(dx) < 6) go(); else { sl.classList.add("anim"); setX(0); } };
+  const end = e => { if (x0 == null || done) return; const dx = e.clientX - x0; x0 = null; sl.classList.remove("drag"); if (dx > max * .7 || Math.abs(dx) < 6) go(); else { sl.classList.add("anim"); setX(0); } };
   sl.addEventListener("pointerup", end); sl.addEventListener("pointercancel", () => { x0 = null; sl.classList.add("anim"); setX(0); });
   sl.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); max = sl.clientWidth - 56; go(); } });
 }
@@ -545,28 +634,29 @@ const eur0 = n => eur(n).replace(/,00(?=\s?€)/, "");
 const IC = { clock: '<path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>' };
 const svgI = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 // courbe du CA cumulé sur la période, avec le rythme de l'objectif et la projection
-function chartB(brut, ahead) {
-  const W = 400, H = 130, N = D.nDays, top = Math.max(D.goal, D.projection, brut, 1) * 1.08;
+function chartB(brut, ahead, o = {}) {
+  const PTS = o.pts || D.caPts, GOAL = o.goal ?? D.goal, PROJ = o.proj ?? D.projection;
+  const W = 400, H = 130, N = D.nDays, top = Math.max(GOAL, PROJ, brut, 1) * 1.08;
   const X = d => d / N * W, Y = v => H - v / top * H;
-  const pts = [{ day: 0, brut: 0 }, ...D.caPts.filter(p => p.day >= 1 && p.day <= N)];
+  const pts = [{ day: 0, brut: 0 }, ...PTS.filter(p => p.day >= 1 && p.day <= N)];
   const last = pts[pts.length - 1], line = "M" + pts.map(p => `${X(p.day).toFixed(1)} ${Y(p.brut).toFixed(1)}`).join(" L");
   const pc = brut <= 0 ? "#6a6a6a" : ahead ? "#5fd3a2" : "#e0a050";
   const sv = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
-    <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
-    ${[.5, 1].map(k => `<line x1="0" x2="${W}" y1="${Y(D.goal * k).toFixed(1)}" y2="${Y(D.goal * k).toFixed(1)}" stroke="#1a1a1a" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join("")}
-    <line class="cp" x1="0" y1="${H}" x2="${W}" y2="${Y(D.goal).toFixed(1)}" stroke="#5a5a5a" stroke-width="1.4" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/>
-    ${pts.length > 1 ? `<path class="ca" d="${line} L${X(last.day).toFixed(1)} ${H} Z" fill="url(#cg)"/>` : ""}
+    <defs><linearGradient id="cg${o.id || ""}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+    ${[.5, 1].map(k => `<line x1="0" x2="${W}" y1="${Y(GOAL * k).toFixed(1)}" y2="${Y(GOAL * k).toFixed(1)}" stroke="#1a1a1a" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join("")}
+    <line class="cp" x1="0" y1="${H}" x2="${W}" y2="${Y(GOAL).toFixed(1)}" stroke="#5a5a5a" stroke-width="1.4" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/>
+    ${pts.length > 1 ? `<path class="ca" d="${line} L${X(last.day).toFixed(1)} ${H} Z" fill="url(#cg${o.id || ""})"/>` : ""}
     <path class="cl" d="${line}" fill="none" stroke="#ededed" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-    ${brut > 0 && last.day < N ? `<line class="cp" x1="${X(last.day).toFixed(1)}" y1="${Y(last.brut).toFixed(1)}" x2="${W}" y2="${Y(D.projection).toFixed(1)}" stroke="${pc}" stroke-width="2" stroke-dasharray="2 5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>` : ""}</svg>`;
+    ${brut > 0 && last.day < N ? `<line class="cp" x1="${X(last.day).toFixed(1)}" y1="${Y(last.brut).toFixed(1)}" x2="${W}" y2="${Y(PROJ).toFixed(1)}" stroke="${pc}" stroke-width="2" stroke-dasharray="2 5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>` : ""}</svg>`;
   const dot = last.day > 0 ? `<span class="today" style="left:${(X(last.day) / W * 100).toFixed(2)}%;top:${(Y(last.brut) / H * 100).toFixed(2)}%"></span>` : "";
   const dlbl = d => new Date(d + "T12:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
   // zones de survol : une par photo du CA, puis la projection
   const zones = pts.slice(1).map((p, i) => { const a = pts[i].day, w = p.day - a;
     return `<span class="hz" style="left:${(a / N * 100).toFixed(2)}%;width:${(w / N * 100).toFixed(2)}%"><span class="gl" style="left:100%"></span><span class="tt" style="left:100%">${esc(dlbl(p.date))} · <b>${eur0(p.brut)}</b></span></span>`; }).join("")
-    + (brut > 0 && last.day < N ? `<span class="hz" style="left:${(last.day / N * 100).toFixed(2)}%;width:${((N - last.day) / N * 100).toFixed(2)}%"><span class="gl" style="left:100%"></span><span class="tt" style="left:auto;right:0;transform:none">Projection fin de période · <b style="color:${pc}">${eur0(D.projection)}</b></span></span>` : "");
+    + (brut > 0 && last.day < N ? `<span class="hz" style="left:${(last.day / N * 100).toFixed(2)}%;width:${((N - last.day) / N * 100).toFixed(2)}%"><span class="gl" style="left:100%"></span><span class="tt" style="left:auto;right:0;transform:none">Projection fin de période · <b style="color:${pc}">${eur0(PROJ)}</b></span></span>` : "");
   const d1 = +D.period.from.slice(8), d2 = +D.period.to.slice(8), mo = new Date(D.period.from + "T12:00").toLocaleDateString("fr-FR", { month: "short" });
-  return `<div class="chart"><div class="hd"><small>CA <em>de la période</em></small><b>${odo(eur0(brut))}</b></div>
-    <div class="lg2"><span><i></i>CA cumulé</span><span><i class="d"></i>rythme objectif</span>${brut > 0 ? `<span><i class="p ${ahead ? "" : "o"}"></i>projection</span>` : ""}</div>
+  return `<div class="chart"><div class="hd"><small>${o.label || "CA <em>de la période</em>"}</small><b>${odo(eur0(brut))}</b></div>
+    <div class="lg2"><span><i></i>${o.cum || "CA cumulé"}</span><span><i class="d"></i>${o.goalLbl || "rythme objectif"}</span>${brut > 0 ? `<span><i class="p ${ahead ? "" : "o"}"></i>projection</span>` : ""}</div>
     <div class="plot">${sv}${dot}${zones}</div>
     <div class="xax"><span>${d1} ${esc(mo)}</span><span>${Math.round((d1 + d2) / 2)}</span><span>${d2} ${esc(mo)}</span></div></div>`;
 }
@@ -677,7 +767,7 @@ function afterRender() {
   const fg = document.querySelector(".ringw .fg");
   if (fg) { const go = () => fg.style.strokeDashoffset = fg.dataset.off; if (MODE === "open" && !reduce) setTimeout(go, 1800); else if (MODE === "quick") setTimeout(go, 80); else { fg.style.transition = "none"; go(); } }
   // colonne de l'objectif : le liquide monte
-  const fl = document.querySelector(".gC .fill");
+  const fl = document.querySelector(".gC .fill, .gP .fill");
   if (fl) { const go = () => fl.style.height = fl.dataset.h + "%"; if (MODE === "open" && !reduce) setTimeout(go, 1600); else if (MODE === "quick") setTimeout(go, 120); else { fl.style.transition = "none"; go(); } }
   rollOdos(1250);
   if (MODE === "open" && !reduce) opening();
@@ -711,7 +801,7 @@ async function load() {
   if (pre) { try { D = await pre; D.role === "admin" ? renderAdmin() : renderChatter(); afterRender(); MODE = "static"; } catch (e) { await load(); } }
   else await load();
   // le manager voit le fil d'activité se mettre à jour tout seul
-  if (ME.role === "admin") setInterval(async () => { if (document.hidden) return; try { const d = await api("/api/home"); if (FX) { FX.push(d.feed); FX.setLive(d.live); } if (d.pendingSales.n !== D.pendingSales.n) { updateBadge(d.pendingSales.n); const n = d.pendingSales.n, c = document.querySelector(".a-hero .act .n"), l = document.querySelector(".a-hero .hline");
+  setInterval(async () => { if (document.hidden) return; try { const d = await api("/api/home"); if (FX) { FX.push(d.feed); FX.setLive(d.live); } if (d.role !== "admin") { D.feed = d.feed; D.live = d.live; return; } if (d.pendingSales.n !== D.pendingSales.n) { updateBadge(d.pendingSales.n); const n = d.pendingSales.n, c = document.querySelector(".a-hero .act .n"), l = document.querySelector(".a-hero .hline");
       if (c) { c.textContent = n; c.closest(".act").className = "act " + (n ? "hot" : "dim"); }
       if (l && n) l.innerHTML = `<span><b>${n} vente${n > 1 ? "s" : ""}</b> attend${n > 1 ? "ent" : ""} ta validation</span>`; } D = d; } catch (e) {} }, 15000);
   // redessine si on passe de téléphone à ordinateur (taille du podium, textes)
