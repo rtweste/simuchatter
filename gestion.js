@@ -15,6 +15,7 @@ const DEFAULT_RULES = [
   { key: "fake", label: "Fausse vente ou capture truquée", detail: "faute grave", kind: "prime", amount: 0, points: 3 },
   { key: "rules", label: "Non-respect des consignes", detail: "manuel", kind: "warn", amount: 0, points: 1 }];
 const DEFAULT_TH = { warnAt: 3, suspendAt: 5, suspendDays: 7, windowDays: 30 };
+const TR_DEF = { sessions: { on: true, v: 8 }, avg: { on: true, v: 70 }, hard: { on: true, v: 2, score: 70 }, fans: { on: true, v: 3 }, ethics: { on: true, v: 5 }, rt: { on: true, v: 60 }, notify: true };
 const KIND_LBL = { warn: "Avertissement", fine: "Retenue", prime: "Perte de prime", suspend: "Suspension" };
 
 module.exports = function mount(app, db, auth, admin, ctx) {
@@ -39,11 +40,12 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   const rules = () => { const a = AG(), r = Array.isArray(a.rules) ? a.rules : [], tol = a.tolerance ?? 5;
     return DEFAULT_RULES.map(d => ({ ...d, ...(r.find(x => x.key === d.key) || {}), ...(d.key === "late" ? { label: `Retard de plus de ${tol} min` } : {}) })); };
   const th = () => ({ ...DEFAULT_TH, ...(AG().thresholds || {}) });
+  const trCfg = () => { const t = AG().training || {}, o = {}; for (const k in TR_DEF) o[k] = typeof TR_DEF[k] === "object" ? { ...TR_DEF[k], ...(t[k] || {}) } : (t[k] ?? TR_DEF[k]); return o; };
   const agency = () => { const a = AG(); return {
     tiers: compta.getTiers(), tolerance: a.tolerance ?? 5, missedAlert: a.missedAlert ?? 10, reminder: a.reminder ?? 30, creatorPct: a.creatorPct ?? 50,
     slots: a.slots || [["6–9", "06:00", "09:00"], ["6–12", "06:00", "12:00"], ["12–18", "12:00", "18:00"], ["18–2", "18:00", "02:00"], ["18–3", "18:00", "03:00"]],
     fee: Number(getSet("platform_fee", "25")), goalCa: Number(getSet("goal_ca", "20000")), goalChatter: Number(getSet("goal_chatter", "300")),
-    rules: rules(), thresholds: th() }; };
+    rules: rules(), thresholds: th(), training: trCfg() }; };
   const user = id => db.prepare("SELECT id, username, role, active, created_at FROM users WHERE id = ?").get(id);
   const model = id => db.prepare("SELECT id, name FROM models WHERE id = ?").get(id);
 
@@ -73,10 +75,11 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     ["POST", /^\/api\/help$/, req => ["pl", `**${req.user.username}** a demandé un renfort`, "J'ai un souci"]],
     ["POST", /^\/api\/admin\/shifts$/, req => { const u = user(+req.body?.user_id), mo = model(+req.body?.model_id); return u && mo && ["pl", `a ajouté un shift à **${u.username}**`, `${req.body.date} · ${req.body.start}–${req.body.end} · ${mo.name}`]; }],
     ["DELETE", /^\/api\/admin\/shifts\/(\d+)$/, (req, m, b) => b && ["pl", `a supprimé un shift de **${b.username}**`, `${b.date} · ${b.start}–${b.end}`], (req, m) => db.prepare("SELECT s.*, u.username FROM shifts s JOIN users u ON u.id = s.user_id WHERE s.id = ?").get(+m[1])],
-    ["POST", /^\/api\/admin\/users$/, req => ["a", `a créé le compte de **${req.body?.username}**`, req.body?.role === "admin" ? "Manager" : "Chatter"]],
+    ["POST", /^\/api\/admin\/users$/, req => ["a", `a créé le compte de **${req.body?.username}**`, req.body?.role === "admin" ? "Manager" : req.body?.role === "chatter" ? "Chatter" : "En formation"]],
+    ["POST", /^\/api\/admin\/users\/(\d+)\/promote$/, (req, m) => { const u = user(+m[1]); return u && ["a", `a validé la formation de **${u.username}**`, "Il passe chatter : planning, ventes et paie ouverts"]; }],
     ["PATCH", /^\/api\/admin\/users\/(\d+)$/, (req, m) => { const u = user(+m[1]); if (!u) return; if (req.body?.password !== undefined) return ["a", `a changé le mot de passe de **${u.username}**`, "Comptes"];
       if (req.body?.active !== undefined) return ["a", `a ${req.body.active ? "réactivé" : "désactivé"} le compte de **${u.username}**`, "Comptes"];
-      if (req.body?.role !== undefined) return ["a", `a passé **${u.username}** ${req.body.role === "admin" ? "manager" : "chatter"}`, "Comptes"]; }],
+      if (req.body?.role !== undefined) return ["a", `a passé **${u.username}** ${req.body.role === "admin" ? "manager" : req.body.role === "trainee" ? "en formation" : "chatter"}`, "Comptes"]; }],
     ["POST", /^\/api\/admin\/models$/, req => ["a", req.body?.id ? `a modifié la fiche de **${req.body.name}**` : `a ajouté la créatrice **${req.body?.name}**`, "Créatrices"]],
     ["PUT", /^\/api\/admin\/models\/(\d+)\/pct$/, (req, m) => { const mo = model(+m[1]); return mo && ["c", `a mis la part de **${mo.name}** à **${req.body.creator_pct} %**`, "Créatrices"]; }],
     ["PUT", /^\/api\/admin\/settings$/, req => ["s", "a modifié les réglages de la compta", Object.keys(req.body || {}).filter(k => k !== "period").join(", ")]],
@@ -108,6 +111,11 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     }
     if (b.rules !== undefined) { if (!Array.isArray(b.rules)) return res.status(400).json({ error: "Barème invalide" });
       a.rules = b.rules.filter(r => DEFAULT_RULES.some(d => d.key === r.key)).map(r => ({ key: r.key, kind: KIND_LBL[r.kind] ? r.kind : "warn", amount: Math.max(0, num(r.amount || 0, 0, 1e4) || 0), points: Math.max(0, Math.round(num(r.points || 0, 0, 20) || 0)) })); }
+    if (b.training !== undefined) { const t = {}, src = b.training || {};
+      for (const k of ["sessions", "avg", "hard", "fans", "ethics", "rt"]) { const x = src[k] || {}, d = TR_DEF[k]; const v = num(x.v ?? d.v, 1, 1000);
+        if (v === null) return res.status(400).json({ error: "Critère invalide" }); t[k] = { on: x.on !== false, v: Math.round(v) };
+        if (k === "hard") { const sc = num(x.score ?? d.score, 1, 100); t[k].score = sc === null ? d.score : Math.round(sc); } }
+      t.notify = src.notify !== false; a.training = t; }
     if (b.thresholds !== undefined) { const t = {}; for (const k of ["warnAt", "suspendAt", "suspendDays", "windowDays"]) { const v = num(b.thresholds[k], 1, 365); if (v === null) return res.status(400).json({ error: "Seuil invalide" }); t[k] = Math.round(v); } a.thresholds = t; }
     setSet("agency", JSON.stringify(a));
     if (b.fee !== undefined) { const f = num(b.fee, 0, 90); if (f === null) return res.status(400).json({ error: "Commission de la plateforme invalide" }); setSet("platform_fee", f); }
@@ -134,7 +142,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       live: open.length ? open.map(o => o.name + (o.reinforce ? " (renfort)" : "")).join(" + ") : null,
       next: nextShifts.map(s => ({ date: s.date, start: s.start, end: s.end, model: s.model_name, start_ms: s.start_ms, state: s.state })),
       simu: sims.length ? Math.round(sims.reduce((t, x) => t + x.score, 0) / sims.length) : null, simuN: sims.length,
-      creators: habitual(u.id), points: pointsOf(u.id), suspendedUntil: su, notes: db.prepare("SELECT COUNT(*) n FROM user_notes WHERE user_id = ?").get(u.id).n };
+      creators: habitual(u.id), points: pointsOf(u.id), suspendedUntil: su, training: u.role === "trainee" ? training(u.id) : null, notes: db.prepare("SELECT COUNT(*) n FROM user_notes WHERE user_id = ?").get(u.id).n };
   }
   app.get("/api/admin/team", auth, admin, (req, res) => {
     const C = compta.computeCompta(periodOfDate(parisDate(Date.now())));
@@ -142,7 +150,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const rows = users.filter(u => u.role !== "admin" || u.id !== req.user.id).map(u => teamRow(u, C));
     const act = rows.filter(r => r.active && r.role === "chatter"), pqs = act.filter(r => r.punctuality != null);
     res.json({ me: req.user.id, team: rows, models: db.prepare("SELECT id, name FROM models ORDER BY name").all(), warnAt: th().warnAt, windowDays: th().windowDays,
-      kpis: { active: act.length, live: act.filter(r => r.live).length, punctuality: pqs.length ? Math.round(pqs.reduce((t, r) => t + r.punctuality, 0) / pqs.length) : null, pay: act.reduce((t, r) => t + r.pay, 0) } });
+      kpis: { trainees: rows.filter(r => r.active && r.role === "trainee").length, ready: rows.filter(r => r.active && r.training && r.training.ready).length, active: act.length, live: act.filter(r => r.live).length, punctuality: pqs.length ? Math.round(pqs.reduce((t, r) => t + r.punctuality, 0) / pqs.length) : null, pay: act.reduce((t, r) => t + r.pay, 0) } });
   });
   app.get("/api/admin/team/:id", auth, admin, (req, res) => {
     const u = user(parseInt(req.params.id, 10)); if (!u) return res.status(404).json({ error: "Introuvable" });
@@ -179,6 +187,56 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const wk = Date.now() - 7 * 864e5, w = rows.filter(r => r.at > wk);
     res.json({ items: rows, week: { validated: w.filter(r => r.kind === "v" && r.text.includes("validé")).length, refused: w.filter(r => r.kind === "v" && r.text.includes("refusé")).length,
       payments: w.filter(r => r.kind === "p" && r.text.includes(" a payé ")).length, compta: w.filter(r => r.kind === "c").length, swaps: w.filter(r => r.kind === "pl" && r.text.includes("échange")).length, sanctions: w.filter(r => r.kind === "x").length } });
+  });
+
+
+  /* =================== FORMATION (rôle « En formation ») =================== */
+  db.exec("CREATE TABLE IF NOT EXISTS training_ready (user_id INTEGER PRIMARY KEY, at INTEGER NOT NULL)");
+  const PERS = ctx.PERSONAS || [];
+  const mean = a => a.reduce((t, x) => t + x, 0) / a.length;
+  const J = s => { try { return JSON.parse(s || "null"); } catch (e) { return null; } };
+  function training(uid) {
+    const c = trCfg();
+    const sims = db.prepare("SELECT persona_id, difficulty, score, rts, report, started_at FROM sims WHERE user_id = ? AND status = 'done' AND score IS NOT NULL ORDER BY started_at DESC").all(uid);
+    const last5 = sims.slice(0, 5), avg5 = last5.length ? Math.round(mean(last5.map(s => s.score))) : null;
+    const hardOk = sims.filter(s => s.difficulty === "difficile" && s.score >= c.hard.score).length;
+    const fansOk = new Set(sims.filter(s => s.score >= 70).map(s => s.persona_id));
+    const eth = sims.slice(0, c.ethics.v).filter(s => (J(s.report) || {}).ethics_flag).length;
+    const rts = last5.flatMap(s => (J(s.rts) || []).filter(x => typeof x === "number")), rt = rts.length ? Math.round(mean(rts)) : null;
+    const n = sims.length, pl = (x, w) => `${x} ${w}${x > 1 ? "s" : ""}`;
+    const all = [
+      { key: "sessions", label: `${pl(c.sessions.v, "session")} terminée${c.sessions.v > 1 ? "s" : ""}`, value: `${Math.min(n, 99)} / ${c.sessions.v}`, ok: n >= c.sessions.v, pct: n / c.sessions.v },
+      { key: "avg", label: `Moyenne ≥ ${c.avg.v} sur les 5 dernières`, value: avg5 == null ? "—" : String(avg5), ok: avg5 != null && avg5 >= c.avg.v, pct: (avg5 || 0) / c.avg.v },
+      { key: "hard", label: `${pl(c.hard.v, "session")} difficile${c.hard.v > 1 ? "s" : ""} réussie${c.hard.v > 1 ? "s" : ""}`, sub: `score de ${c.hard.score} ou plus`, value: `${hardOk} / ${c.hard.v}`, ok: hardOk >= c.hard.v, pct: hardOk / c.hard.v },
+      { key: "fans", label: `${pl(c.fans.v, "profil")} de fans réussi${c.fans.v > 1 ? "s" : ""}`, sub: "score de 70 ou plus", value: `${fansOk.size} / ${c.fans.v}`, ok: fansOk.size >= c.fans.v, pct: fansOk.size / c.fans.v },
+      { key: "ethics", label: "Aucune alerte éthique", sub: `sur les ${c.ethics.v} dernières sessions`, value: !n ? "—" : eth ? pl(eth, "alerte") : "✓", ok: n > 0 && eth === 0, pct: n && !eth ? 1 : 0 },
+      { key: "rt", label: `Réponse moyenne < ${c.rt.v} s`, sub: "sur les 5 dernières sessions", value: rt == null ? "—" : `${rt} s`, ok: rt != null && rt < c.rt.v, pct: rt ? Math.min(1, c.rt.v / rt) : 0 }];
+    const criteria = all.filter(x => c[x.key].on).map(x => ({ ...x, pct: Math.max(0, Math.min(1, x.pct)) }));
+    const done = criteria.filter(x => x.ok).length, total = criteria.length, ready = total > 0 && done === total;
+    const fans = PERS.map(p => ({ id: p.id, name: p.name, label: p.label, ok: fansOk.has(p.id) }));
+    const miss = criteria.find(x => !x.ok), notFan = fans.find(f => !f.ok);
+    const tip = !miss ? "Tous tes critères sont verts : ton manager peut valider ta formation." :
+      miss.key === "sessions" ? `Encore ${c.sessions.v - n} session${c.sessions.v - n > 1 ? "s" : ""} à terminer pour valider le premier critère.` :
+      miss.key === "avg" ? `Ta moyenne est à ${avg5} : vise ${c.avg.v} ou plus sur tes prochaines sessions.` :
+      miss.key === "hard" ? `Tente une session <b>difficile</b>${notFan ? ` contre <b>${notFan.label}</b>` : ""} : il t'en manque ${c.hard.v - hardOk}.` :
+      miss.key === "fans" ? `Essaie un nouveau profil${notFan ? ` : <b>${notFan.label}</b>` : ""}. Il te faut ${c.fans.v} profils réussis.` :
+      miss.key === "ethics" ? "Reste dans les règles sur tes prochaines sessions : une alerte éthique bloque la validation." :
+      `Réponds plus vite : ta moyenne est de ${rt} s, l'objectif est sous ${c.rt.v} s.`;
+    const u = db.prepare("SELECT username, role, created_at FROM users WHERE id = ?").get(uid);
+    if (u && u.role === "trainee" && ready && c.notify && !db.prepare("SELECT 1 FROM training_ready WHERE user_id = ?").get(uid)) {
+      db.prepare("INSERT OR IGNORE INTO training_ready (user_id, at) VALUES (?, ?)").run(uid, Date.now());
+      log(uid, "a", `**${u.username}** a rempli tous les critères de formation`, "Prêt : sa formation peut être validée");
+    }
+    return { criteria, done, total, ready, tip, fans,
+      day: u ? Math.floor((Date.now() - u.created_at) / 864e5) + 1 : 1,
+      stats: { avg5, best: n ? Math.max(...sims.map(s => s.score)) : null, sessions: n, rt, hard: hardOk, trend: sims.slice(0, 8).map(s => s.score).reverse() } };
+  }
+  app.get("/api/training", auth, (req, res) => res.json(training(req.user.id)));
+  app.post("/api/admin/users/:id/promote", auth, admin, (req, res) => {
+    const u = db.prepare("SELECT id, role FROM users WHERE id = ?").get(parseInt(req.params.id, 10));
+    if (!u || u.role !== "trainee") return res.status(400).json({ error: "Ce compte n'est pas en formation" });
+    db.prepare("UPDATE users SET role = 'chatter', intro_seen = 0 WHERE id = ?").run(u.id); db.prepare("DELETE FROM training_ready WHERE user_id = ?").run(u.id);
+    res.json({ ok: true });
   });
 
   /* =================== SANCTIONS =================== */

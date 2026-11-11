@@ -198,7 +198,7 @@ module.exports = function mount(app, db, auth, admin) {
     const from = isDate(req.query.from) ? mondayOf(req.query.from) : mondayOf(today), to = addDays(from, 6);
     const shifts = decorate(db.prepare(`${SHIFT_SQL} WHERE s.date BETWEEN ? AND ? ORDER BY s.date, s.start`).all(from, to));
     const around = decorate(db.prepare(`${SHIFT_SQL} WHERE s.date BETWEEN ? AND ?`).all(addDays(today, -1), today));
-    const people = db.prepare("SELECT id, username, role FROM users WHERE active = 1 ORDER BY role DESC, username").all();
+    const people = db.prepare("SELECT id, username, role FROM users WHERE active = 1 AND role != 'trainee' ORDER BY role DESC, username").all();
     const pkey = periodOfDate(today);
     res.json({ now, today, from, to, shifts, people, models: models(), slots: SLOTS(),
       missing: around.filter(s => s.state === "missing" && s.late >= (+AG().missedAlert || 10)), swaps: activeSwaps(), renforts: renforts(), helps: helps(),

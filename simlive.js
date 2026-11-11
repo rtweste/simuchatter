@@ -66,7 +66,7 @@ module.exports = function mount(app, db, auth, admin, h) {
   // vue d'ensemble de l'onglet Gestion
   app.get("/api/admin/sim/overview", auth, admin, (req, res) => {
     const now = Date.now(), d7 = now - 7 * 864e5, d14 = now - 14 * 864e5;
-    const chatters = db.prepare("SELECT id, username FROM users WHERE role = 'chatter' AND active = 1 ORDER BY username").all();
+    const chatters = db.prepare("SELECT id, username, role FROM users WHERE role IN ('chatter','trainee') AND active = 1 ORDER BY username").all();
     const done = db.prepare("SELECT s.id, s.user_id, s.persona_id, s.difficulty, s.score, s.revenue, s.started_at, u.username FROM sims s JOIN users u ON u.id = s.user_id WHERE s.status = 'done' AND u.role = 'chatter' AND s.started_at > ? ORDER BY s.started_at DESC").all(now - 60 * 864e5);
     const avg = a => a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : null;
     const team = chatters.map(c => { const mine = done.filter(s => s.user_id === c.id), w = mine.filter(s => s.started_at > d7), pw = mine.filter(s => s.started_at > d14 && s.started_at <= d7);
@@ -119,7 +119,7 @@ module.exports = function mount(app, db, auth, admin, h) {
   // entraînements assignés
   app.post("/api/admin/assignments", auth, admin, (req, res) => {
     const b = req.body || {}, uid = parseInt(b.userId, 10);
-    if (!db.prepare("SELECT id FROM users WHERE id = ? AND role = 'chatter'").get(uid)) return res.status(400).json({ error: "Chatter invalide" });
+    if (!db.prepare("SELECT id FROM users WHERE id = ? AND role IN ('chatter','trainee')").get(uid)) return res.status(400).json({ error: "Chatter invalide" });
     if (!PERSONAS.some(p => p.id === b.personaId)) return res.status(400).json({ error: "Fan invalide" });
     const diff = ["facile", "normal", "difficile"].includes(b.difficulty) ? b.difficulty : "normal";
     const goal = Math.max(10, Math.min(100, parseInt(b.goal, 10) || 70)), due = b.dueAt ? Number(b.dueAt) : null;

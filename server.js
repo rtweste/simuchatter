@@ -30,7 +30,7 @@ db.exec("PRAGMA journal_mode = WAL");
 db.exec(`
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL, pass_hash TEXT NOT NULL,
-  role TEXT NOT NULL CHECK(role IN ('admin','chatter')), active INTEGER NOT NULL DEFAULT 1,
+  role TEXT NOT NULL CHECK(role IN ('admin','chatter','trainee')), active INTEGER NOT NULL DEFAULT 1,
   created_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS tokens (
@@ -51,6 +51,16 @@ CREATE TABLE IF NOT EXISTS sims (
 CREATE INDEX IF NOT EXISTS sims_user ON sims(user_id, started_at);
 `);
 
+// rôle « En formation » (trainee) : on reconstruit la table si l'ancienne contrainte de rôle est encore là
+{
+  const r = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'").get();
+  if (r && r.sql.includes("CHECK(role IN ('admin','chatter'))")) {
+    const sql = r.sql.replace(/CREATE TABLE\s+("?users"?)/i, "CREATE TABLE users_new").replace("CHECK(role IN ('admin','chatter'))", "CHECK(role IN ('admin','chatter','trainee'))");
+    db.exec("PRAGMA foreign_keys = OFF"); db.exec("BEGIN");
+    try { db.exec(sql); db.exec("INSERT INTO users_new SELECT * FROM users; DROP TABLE users; ALTER TABLE users_new RENAME TO users;"); db.exec("COMMIT"); }
+    catch (e) { db.exec("ROLLBACK"); console.error("Migration des rôles impossible :", e.message); }
+  }
+}
 // Compte manager initial
 if (process.env.ADMIN_USER && process.env.ADMIN_PASSWORD) {
   const exists = db.prepare("SELECT id FROM users WHERE username = ?").get(process.env.ADMIN_USER);
@@ -176,8 +186,11 @@ function auth(req, res, next) {
   const row = db.prepare(`SELECT u.id, u.username, u.role, u.active, t.expires_at FROM tokens t
     JOIN users u ON u.id = t.user_id WHERE t.token = ?`).get(tok);
   if (!row || row.expires_at < Date.now() || !row.active) return res.status(401).json({ error: "Session expirée" });
-  req.user = row; next();
+  req.user = row;
+  if (row.role === "trainee" && TRAINEE_BLOCK.test(req.path)) return res.status(403).json({ error: "Réservé aux chatters : termine ta formation d'abord" });
+  next();
 }
+const TRAINEE_BLOCK = /^\/api\/(sales|shifts|swaps|reinforce|help|planning|clock|my-pay|my-sanctions|home)(\/|$)/;
 const admin = (req, res, next) => req.user.role === "admin" ? next() : res.status(403).json({ error: "Réservé au manager" });
 // journal d'activité (branché plus bas, une fois la gestion montée)
 let GEST = null;
@@ -206,11 +219,15 @@ app.post("/api/logout", (req, res) => {
   if (req.cookies.tok) db.prepare("DELETE FROM tokens WHERE token = ?").run(req.cookies.tok);
   res.clearCookie("tok"); res.json({ ok: true });
 });
+// vidéo de présentation : vue une fois par chaque chatter (les comptes existants la voient aussi une fois)
+if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "intro_seen")) db.exec("ALTER TABLE users ADD COLUMN intro_seen INTEGER NOT NULL DEFAULT 0");
 app.get("/api/me", auth, (req, res) => {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const used = db.prepare("SELECT COUNT(*) n FROM sims WHERE user_id = ? AND started_at >= ?").get(req.user.id, today.getTime()).n;
-  res.json({ id: req.user.id, username: req.user.username, role: req.user.role, dailyLimit: dailyLimit(), usedToday: used });
+  const intro = db.prepare("SELECT intro_seen FROM users WHERE id = ?").get(req.user.id)?.intro_seen ? 1 : 0;
+  res.json({ id: req.user.id, username: req.user.username, role: req.user.role, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro });
 });
+app.post("/api/me/intro-seen", auth, (req, res) => { db.prepare("UPDATE users SET intro_seen = 1 WHERE id = ?").run(req.user.id); res.json({ ok: true }); });
 
 /* ----- Données de configuration ----- */
 app.get("/api/personas", auth, (req, res) => res.json(PERSONAS.map(publicPersona)));
@@ -341,7 +358,7 @@ app.get("/api/admin/users", auth, admin, (req, res) => {
 app.post("/api/admin/users", auth, admin, (req, res) => {
   const username = String(req.body?.username || "").trim();
   const password = String(req.body?.password || "");
-  const role = req.body?.role === "admin" ? "admin" : "chatter";
+  const role = ["admin", "chatter", "trainee"].includes(req.body?.role) ? req.body.role : "trainee";
   if (!/^[\w.\-]{3,30}$/.test(username)) return res.status(400).json({ error: "Identifiant : 3 à 30 caractères (lettres, chiffres, . _ -)" });
   if (password.length < 8) return res.status(400).json({ error: "Mot de passe : 8 caractères minimum" });
   try {
@@ -365,7 +382,7 @@ app.patch("/api/admin/users/:id", auth, admin, (req, res) => {
   }
   if (req.body?.role !== undefined) {
     if (id === req.user.id) return res.status(400).json({ error: "Tu ne peux pas changer ton propre rôle" });
-    if (!["admin", "chatter"].includes(req.body.role)) return res.status(400).json({ error: "Rôle invalide" });
+    if (!["admin", "chatter", "trainee"].includes(req.body.role)) return res.status(400).json({ error: "Rôle invalide" });
     db.prepare("UPDATE users SET role = ? WHERE id = ?").run(req.body.role, id);
     db.prepare("DELETE FROM tokens WHERE user_id = ?").run(id);
   }
@@ -405,7 +422,7 @@ const validatedByPeriod = require("./sales")(app, db, auth, admin, path.dirname(
 const COMPTA = require("./compta")(app, db, auth, admin, validatedByPeriod);
 const PLAN = require("./planning")(app, db, auth, admin);
 /* ----- Gestion : équipe, créatrices, réglages, journal, sanctions ----- */
-GEST = require("./gestion")(app, db, auth, admin, { compta: COMPTA, planning: PLAN });
+GEST = require("./gestion")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, PERSONAS });
 /* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */
 LIVE = require("./simlive")(app, db, auth, admin, { loadSim, publicSim, PERSONAS, busy });
 

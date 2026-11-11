@@ -97,7 +97,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       shifts: db.prepare(`SELECT s.*, u.username, m.name model_name FROM shifts s
         JOIN users u ON u.id = s.user_id JOIN models m ON m.id = s.model_id
         WHERE s.date BETWEEN ? AND ? ORDER BY s.date, s.start`).all(from, to),
-      people: db.prepare("SELECT id, username, role FROM users WHERE active = 1 ORDER BY role DESC, username").all(),
+      people: db.prepare("SELECT id, username, role FROM users WHERE active = 1 AND role != 'trainee' ORDER BY role DESC, username").all(),
       models: db.prepare("SELECT id, name FROM models ORDER BY name").all(),
       me: req.user.id
     });
@@ -169,7 +169,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       period: p,
       clocks: rows.filter(c => periodOfDate(parisDate(c.start_at)) === p.key),
       live: rows.filter(c => !c.end_at),
-      people: db.prepare("SELECT id, username FROM users WHERE active = 1 ORDER BY username").all(),
+      people: db.prepare("SELECT id, username FROM users WHERE active = 1 AND role != 'trainee' ORDER BY username").all(),
       models: db.prepare("SELECT id, name FROM models ORDER BY name").all()
     });
   });
