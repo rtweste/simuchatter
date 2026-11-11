@@ -321,7 +321,7 @@ const PLANREM = (() => {
    Vidéo de présentation : obligatoire une fois, à la première connexion d'un chatter
    ===================================================================== */
 // vidéo d'accueil : activée quand on la mettra en ligne (fichier /video/presentation-chatters.mp4)
-const INTRO_ON = false;
+const INTRO_ON = true;
 const INTRO = window.INTRO = (() => {
   const SRC = "/video/presentation-chatters.mp4";
   let box = null;
@@ -385,5 +385,5 @@ const INTRO = window.INTRO = (() => {
   function key(e) { if (!box) return; const v = box.querySelector("video"); if (e.key === " " && !box.querySelector("[data-start]").classList.contains("off")) return;
     if (e.key === " ") { e.preventDefault(); v.paused ? v.play() : v.pause(); } }
   function close() { if (!box) return; const b = box; b.querySelector("video").pause(); b.classList.remove("on"); setTimeout(() => b.remove(), 500); box = null; document.body.style.overflow = ""; document.removeEventListener("keydown", key); }
-  return { show, check: me => { if (INTRO_ON && me && me.role !== "admin" && !me.introSeen && !EMBED) show(me); } };
+  return { show, check: me => { if (INTRO_ON && me && me.role === "trainee" && !me.introSeen && !EMBED) show(me); } };
 })();

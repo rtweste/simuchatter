@@ -19,6 +19,58 @@ const TRAINEE = window.TRAINEE = (() => {
       ${pts.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="${vals[i] >= goal ? "#5fd3a2" : "#e6e6e6"}" vector-effect="non-scaling-stroke"/>`).join("")}</svg>
       <div class="tr-gl">objectif ${goal}</div>`;
   }
+  const LOCK = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10V8a5 5 0 0 1 10 0v2h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V8a3 3 0 0 0-6 0z"/></svg>';
+  const fmt = s => { s = Math.max(0, Math.round(s || 0)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+  function courseCard(C, simDone, simTotal) {
+    if (!C || !C.total) return "";
+    if (!C.unlocked) return `<section class="tr-card co-card co-lock" style="--d:.08s"><div class="co-lk">${LOCK}</div><div><div class="tr-eb">ÉTAPE SUIVANTE</div><h3>Formation <em>Twizz</em></h3>
+      <div class="tr-mut" style="margin-top:4px">${C.total} vidéos pour maîtriser la plateforme. Elles se débloquent quand tes critères du simulateur sont verts (${simDone} / ${simTotal}).</div></div></section>`;
+    const pct = Math.round(C.done / C.total * 100);
+    const list = C.videos.map(v => `<button class="co-v${v.done ? " ok" : ""}${v.locked ? " lk" : ""}${C.next && C.next.id === v.id ? " nx" : ""}" data-v="${v.id}" ${v.locked ? "disabled" : ""}>
+      <span class="co-n">${v.done ? CHECK : v.locked ? LOCK : v.n}</span><span class="co-t"><b>${esc(v.title)}</b><small>${v.done ? "Vue jusqu'au bout · revoir" : v.locked ? "Termine la vidéo précédente" : v.pos > 3 ? `Reprendre à ${fmt(v.pos)}` : "À regarder"}</small></span>
+      <span class="co-pl">${v.locked ? "" : PLAY}</span></button>`).join("");
+    return `<section class="tr-card co-card" style="--d:.08s"><div class="tr-ch"><h3>Formation <em>Twizz</em></h3><span class="tr-tag${C.complete ? " g" : ""}">${C.complete ? "Terminée ✓" : `${C.done} / ${C.total} vidéos`}</span></div>
+      <div class="co-bar"><i style="width:${pct}%"></i></div>
+      <div class="tr-mut" style="margin:8px 0 4px">${C.complete ? "Bravo : toutes les vidéos sont vues. Ton manager peut valider ta formation." : "Regarde chaque vidéo jusqu'au bout pour débloquer la suivante. Pas d'avance rapide."}</div>
+      <div class="co-list">${list}</div></section>`;
+  }
+  /* lecteur : pas d'avance rapide, progression enregistrée côté serveur */
+  function player(C, id, onClose) {
+    const idx = C.videos.findIndex(v => v.id === id), v0 = C.videos[idx]; if (!v0 || v0.locked) return;
+    const replay = v0.done, ov = document.createElement("div"); ov.className = "co-ov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-label", v0.title);
+    ov.innerHTML = `<div class="co-w"><div class="co-hd"><div><div class="tr-eb">FORMATION TWIZZ · VIDÉO ${v0.n} / ${C.total}</div><div class="co-ti">${esc(v0.title)}</div></div><button class="co-x" aria-label="Fermer">✕</button></div>
+      <div class="co-vd"><video playsinline preload="auto" src="${v0.src}"></video>
+        <div class="co-ps"><svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></div>
+        <div class="co-cv" data-start><button class="co-play" aria-label="Lancer la vidéo">${PLAY}</button><b>${v0.pos > 3 ? `Reprendre à ${fmt(v0.pos)}` : "Lancer la vidéo"}</b><small>Monte le son 🔊</small></div>
+        <div class="co-cv off" data-end><div class="co-ok">${CHECK}</div><b style="font-size:22px">${idx + 1 < C.total ? "Vidéo terminée" : "Formation Twizz terminée"}</b><small>${idx + 1 < C.total ? `La vidéo ${idx + 2} est débloquée.` : "Ton manager va être prévenu."}</small>
+          <div style="display:flex;gap:10px;margin-top:6px"><button class="co-gh" data-close>Fermer</button>${idx + 1 < C.total ? `<button class="co-go" data-next>Vidéo suivante →</button>` : ""}</div></div>
+        <div class="co-cv off" data-err><b>La vidéo ne se charge pas</b><small>Vérifie ta connexion et réessaie.</small><button class="co-gh" data-close>Fermer</button></div></div>
+      <div class="co-ft"><span class="co-tb"><i></i></span><span class="co-tm">—</span></div>${replay ? "" : `<div class="co-note">${LOCK}Pas d'avance rapide : regarde jusqu'au bout pour débloquer la suite.</div>`}</div>`;
+    document.body.appendChild(ov); document.body.style.overflow = "hidden"; requestAnimationFrame(() => ov.classList.add("on"));
+    const v = ov.querySelector("video"), bar = ov.querySelector(".co-tb i"), tm = ov.querySelector(".co-tm"), ps = ov.querySelector(".co-ps");
+    let maxT = replay ? 1e9 : v0.pos, started = false, lastSent = 0, finished = false, nextVid = null;
+    const send = (force) => { if (replay || !v.duration) return; const now = Date.now(); if (!force && now - lastSent < 5000) return; lastSent = now;
+      return api(`/api/course/${v0.id}/progress`, { body: { pos: Math.min(maxT, v.duration), dur: v.duration } }).catch(() => null); };
+    v.addEventListener("loadedmetadata", () => { if (!replay && v0.pos > 3 && v0.pos < v.duration - 2) v.currentTime = v0.pos; });
+    const start = () => { ov.querySelector("[data-start]").classList.add("off"); started = true; v.play().catch(() => {}); };
+    ov.querySelector("[data-start]").onclick = start;
+    v.addEventListener("timeupdate", () => { if (!v.seeking) maxT = Math.max(replay ? 0 : maxT, v.currentTime); bar.style.width = (v.currentTime / (v.duration || 1) * 100) + "%"; tm.textContent = v.duration ? `${fmt(v.duration - v.currentTime)} restantes` : "—"; send(false); });
+    v.addEventListener("seeking", () => { if (!replay && v.currentTime > maxT + .5) v.currentTime = maxT; });
+    v.addEventListener("click", () => { if (!started) return; v.paused ? v.play() : v.pause(); });
+    v.addEventListener("pause", () => { if (!v.ended) { ps.classList.add("on"); send(true); } }); v.addEventListener("play", () => ps.classList.remove("on"));
+    v.addEventListener("ended", async () => { if (finished) return; finished = true; maxT = v.duration;
+      const r = replay ? null : await send(true); const T = r && r.training; if (T && T.course) nextVid = T.course.videos[idx + 1] || null; else nextVid = C.videos[idx + 1] || null;
+      ov.querySelector("[data-end]").classList.remove("off"); burst(ov.querySelector(".co-ok")); });
+    v.addEventListener("error", () => ov.querySelector("[data-err]").classList.remove("off"));
+    const close = (then) => { v.pause(); if (!finished) send(true); ov.classList.remove("on"); setTimeout(() => ov.remove(), 400); document.body.style.overflow = ""; document.removeEventListener("keydown", key); onClose(then); };
+    ov.querySelectorAll(".co-x,[data-close]").forEach(b => b.onclick = () => close());
+    const nb = ov.querySelector("[data-next]"); if (nb) nb.onclick = () => close(nextVid && !nextVid.locked ? nextVid.id : C.videos[idx + 1].id);
+    const key = e => { if (e.key === "Escape") close(); else if (e.key === " " && started) { e.preventDefault(); v.paused ? v.play() : v.pause(); } };
+    document.addEventListener("keydown", key);
+  }
+  function burst(el) { if (!el || reduce) return; const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    for (let i = 0; i < 18; i++) { const p = document.createElement("i"), a = i / 18 * 6.283, d = 70 + Math.random() * 60; p.className = "co-pt"; p.style.left = cx + "px"; p.style.top = cy + "px"; document.body.appendChild(p);
+      p.animate([{ transform: "translate(-50%,-50%) scale(1)", opacity: 1 }, { transform: `translate(calc(-50% + ${Math.cos(a) * d}px),calc(-50% + ${Math.sin(a) * d}px)) scale(0)`, opacity: 0 }], { duration: 800, easing: "cubic-bezier(.2,.8,.2,1)" }).onfinish = () => p.remove(); } }
   async function render(root, me) {
     root.innerHTML = `<div class="tr"><div class="tr-ld">Chargement…</div></div>`;
     let T, A = [];
@@ -35,7 +87,8 @@ const TRAINEE = window.TRAINEE = (() => {
       <div class="tr-g2"><div class="tr-col">
         <section class="tr-card"><div class="tr-hero">${ring(T.done, T.total)}<div><h2>${T.ready ? "Tous tes critères sont <em>verts</em>" : `Encore <em>${miss} critère${miss > 1 ? "s" : ""}</em> avant de devenir chatter`}</h2>
           <p>${T.ready ? "Ton manager a été prévenu : il valide ta formation, et tu auras accès au planning, aux ventes et à ta paie." : "Quand tout est vert, ton manager valide ta formation : tu auras alors accès au planning, aux ventes et à ta paie."}</p></div></div>
-          <div class="tr-cks">${crit}</div></section></div>
+          <div class="tr-cks">${crit}</div></section>
+        ${courseCard(T.course, T.criteria.filter(c => c.key !== "course" && c.ok).length, T.criteria.filter(c => c.key !== "course").length)}</div>
       <div class="tr-col">
         <section class="tr-card" style="--d:.06s"><div class="tr-cta"><div><h3>Prochaine <em>simulation</em></h3><div class="tr-mut">${left} simulation${left > 1 ? "s" : ""} restante${left > 1 ? "s" : ""} aujourd'hui</div></div><a class="tr-wbtn${left ? "" : " off"}" href="/app">${PLAY}Lancer une simulation</a></div>
           <div class="tr-tip"><span>💡</span><span>${T.tip}</span></div></section>
@@ -44,8 +97,11 @@ const TRAINEE = window.TRAINEE = (() => {
           <div class="tr-lab">PROFILS DE FANS RÉUSSIS</div><div class="tr-fans">${T.fans.map(f => `<span class="${f.ok ? "ok" : ""}" title="${esc(f.name)}">${f.ok ? "✓ " : ""}${esc(f.label)}</span>`).join("")}</div></section>
         <section class="tr-card" style="--d:.14s"><div class="tr-ch"><h3>Entraînements <em>assignés</em></h3>${A.length ? `<span class="tr-tag">${A.length} à faire</span>` : ""}</div>${asg}</section>
       </div></div></div>`;
+    const after = nextId => render(root, me).then(T2 => { if (nextId && T2 && T2.course) player(T2.course, nextId, after); });
+    root.querySelectorAll(".co-v[data-v]").forEach(b => b.onclick = () => player(T.course, b.dataset.v, after));
     const go = () => { root.querySelectorAll(".tr-ring .arc").forEach(a => a.style.strokeDashoffset = a.dataset.off); root.querySelectorAll(".tr-spk .sp").forEach(p => p.style.strokeDashoffset = 0); };
     if (reduce) { root.querySelectorAll(".tr-ring .arc,.tr-spk .sp").forEach(a => a.style.transition = "none"); go(); } else setTimeout(go, 250);
+    return T;
   }
   return { render };
 })();
