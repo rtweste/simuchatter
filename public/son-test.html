@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Test du son — StellADS</title>
+<style>
+body{margin:0;background:#0a0a0a;color:#f5f5f5;font-family:Inter,system-ui,sans-serif;padding:28px 18px}
+.w{max-width:560px;margin:0 auto}h1{font-weight:900;letter-spacing:-.04em;font-size:30px;margin:0 0 6px}p{color:#9a9a9a;font-size:14px;line-height:1.5}
+button{display:block;width:100%;height:50px;margin:10px 0;border-radius:14px;border:1px solid #2a2a2a;background:#151515;color:#fff;font:inherit;font-weight:800;font-size:15px;cursor:pointer}
+button.w{background:#ededed;color:#0a0a0a;border-color:#ededed}
+pre{background:#111;border:1px solid #1f1f1f;border-radius:14px;padding:14px;font-size:12.5px;line-height:1.6;white-space:pre-wrap;color:#cfcfcf}
+.ok{color:#5fd3a2}.ko{color:#e07a7a}
+</style></head><body><div class="w">
+<h1>Test du son</h1><p>Clique sur les boutons dans l'ordre, puis fais une capture d'écran de cette page et envoie-la.</p>
+<button class="w" id="b1">1. Son simple (test du navigateur)</button>
+<button id="b2">2. Son du site (moteur de l'accueil)</button>
+<button id="b3">3. Son du simulateur</button>
+<button id="b4">Remettre le son du site sur « activé »</button>
+<pre id="out">…</pre></div>
+<script src="/common.js"></script><script src="/simu-fx.js"></script>
+<script>
+const out = document.getElementById("out"), log = [];
+const add = (t, ok) => { log.push((ok === true ? "✅ " : ok === false ? "❌ " : "• ") + t); show(); };
+function show() {
+  let pref; try { pref = localStorage.getItem("stSound"); } catch (e) { pref = "illisible"; }
+  const as = navigator.audioSession ? "oui (type : " + navigator.audioSession.type + ")" : "non";
+  const st = (window.stAudio && SND.unlock && (() => { try { return SND.unlock()?.state; } catch (e) { return "erreur"; } })()) || "—";
+  out.textContent = [
+    "Navigateur : " + navigator.userAgent,
+    "Animations réduites : " + (matchMedia("(prefers-reduced-motion: reduce)").matches ? "OUI" : "non"),
+    "Réglage son du site (stSound) : " + (pref === "0" ? "COUPÉ" : "activé (" + pref + ")"),
+    "AudioSession : " + as,
+    "Moteur de l'accueil : " + st,
+    "", ...log].join("\n");
+}
+document.getElementById("b1").onclick = async () => {
+  try { const C = new (window.AudioContext || window.webkitAudioContext)(); await C.resume();
+    const o = C.createOscillator(), g = C.createGain(); o.frequency.value = 880; g.gain.setValueAtTime(.0001, C.currentTime); g.gain.exponentialRampToValueAtTime(.2, C.currentTime + .02); g.gain.exponentialRampToValueAtTime(.0001, C.currentTime + .6);
+    o.connect(g); g.connect(C.destination); o.start(); o.stop(C.currentTime + .7);
+    add("Son simple : état " + C.state + ", fréquence " + C.sampleRate + " Hz", C.state === "running");
+  } catch (e) { add("Son simple : erreur " + e.message, false); }
+};
+document.getElementById("b2").onclick = async () => { try { SND.unlock(); const c = await SND.ready(); SND.welcome(); add("Son de l'accueil : " + (c ? c.state : "bloqué ou coupé"), !!c); } catch (e) { add("Son de l'accueil : erreur " + e.message, false); } show(); };
+document.getElementById("b3").onclick = () => { try { FX.unlock(); FX.sound.sale(); add("Son du simulateur : joué (son activé : " + FX.soundOn() + ")", FX.soundOn()); } catch (e) { add("Son du simulateur : erreur " + e.message, false); } };
+document.getElementById("b4").onclick = () => { try { localStorage.setItem("stSound", "1"); add("Son du site remis sur activé", true); } catch (e) { add("Impossible : " + e.message, false); } };
+show();
+</script></body></html>

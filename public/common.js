@@ -219,7 +219,7 @@ const stAudio = window.stAudio = (() => {
     if (c.state !== "running") c.resume().catch(() => {});
     const b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0);   // WebKit : un son joué pendant le geste
   } catch (e) {} });
-  ["pointerdown", "keydown", "touchend", "click"].forEach(ev => addEventListener(ev, wake, { capture: true, passive: true }));
+  ["pointerdown", "mousedown", "keydown", "touchend", "click"].forEach(ev => addEventListener(ev, wake, { capture: true, passive: true }));
   document.addEventListener("visibilitychange", () => { if (!document.hidden) list.forEach(c => { try { if (c.state !== "running") c.resume().catch(() => {}); } catch (e) {} }); });
   return { add: c => { if (c && !list.includes(c)) list.push(c); }, wake };
 })();

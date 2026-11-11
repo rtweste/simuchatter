@@ -751,15 +751,20 @@ function opening() {
   fx.innerHTML = `<span class="comet" style="offset-path:path('${path}')"><span class="tail"></span>${STAR4}</span>
     <span class="burst" style="left:${ex}px;top:${ey}px"></span><span class="burst b2" style="left:${ex}px;top:${ey}px"></span><span class="sweep"></span>`;
   document.body.appendChild(fx); setTimeout(() => fx.remove(), 4200);
+  openSound();
+}
+// son d'ouverture (joué aussi quand les animations sont réduites sur l'appareil)
+function openSound() {
   const t0 = performance.now(), n = document.querySelectorAll("#hm .b").length;
   // affiché juste après l'intro : c'est la page de connexion (qui a reçu le clic) qui joue les sons
   if (EMBED) { try { window.top.postMessage({ type: "stSound", n }, location.origin); } catch (e) {} return; }
   SND.opening(n, t0).then(ok => {
     if (ok) return;
     // son bloqué par le navigateur : au premier geste, on joue la suite de l'ouverture (ou un petit son de bienvenue si elle est finie)
-    const once = () => { removeEventListener("pointerdown", once, true); removeEventListener("keydown", once, true);
+    const EV = ["pointerdown", "mousedown", "click", "keydown", "touchend"];
+    const once = () => { EV.forEach(ev => removeEventListener(ev, once, true));
       SND.unlock(); if (performance.now() - t0 < 3200) SND.opening(n, t0); else if (performance.now() - t0 < 8000) SND.welcome(); };
-    addEventListener("pointerdown", once, true); addEventListener("keydown", once, true);
+    EV.forEach(ev => addEventListener(ev, once, true));
   });
 }
 function afterRender() {
@@ -770,7 +775,7 @@ function afterRender() {
   const fl = document.querySelector(".gC .fill, .gP .fill");
   if (fl) { const go = () => fl.style.height = fl.dataset.h + "%"; if (MODE === "open" && !reduce) setTimeout(go, 1600); else if (MODE === "quick") setTimeout(go, 120); else { fl.style.transition = "none"; go(); } }
   rollOdos(1250);
-  if (MODE === "open" && !reduce) opening();
+  if (MODE === "open") { if (!reduce) opening(); else openSound(); }
 }
 
 /* ---------------- Chargement ---------------- */
