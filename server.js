@@ -204,6 +204,14 @@ const admin = (req, res, next) => req.user.role === "admin" ? next() : res.statu
 // journal d'activité (branché plus bas, une fois la gestion montée)
 let GEST = null;
 app.use((req, res, next) => GEST ? GEST.middleware(req, res, next) : next());
+// passation de shift : à la fin d'un shift, on vérifie que les fans prioritaires reçus ont été suivis
+let HAND = null;
+app.use((req, res, next) => {
+  if (!HAND || req.method !== "POST" || req.path !== "/api/clock/out" || !req.cookies.tok) return next();
+  try { const t = db.prepare("SELECT user_id FROM tokens WHERE token = ?").get(req.cookies.tok), c = t && HAND.openClock(t.user_id);
+    if (c) res.on("finish", () => { if (res.statusCode < 300) HAND.checkMissed(t.user_id, c); }); } catch (e) {}
+  next();
+});
 
 const attempts = new Map();
 app.post("/api/login", (req, res) => {
@@ -443,6 +451,7 @@ const PLAN = require("./planning")(app, db, auth, admin);
 /* ----- Gestion : équipe, créatrices, réglages, journal, sanctions ----- */
 GEST = require("./gestion")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, PERSONAS });
 require("./candidatures")(app, db, auth, admin, { bcrypt, gest: GEST });   // page publique /postuler
+HAND = require("./handover")(app, db, auth, admin, { planning: PLAN, gest: GEST });   // passation de shift
 /* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */
 LIVE = require("./simlive")(app, db, auth, admin, { loadSim, publicSim, PERSONAS, busy });
 

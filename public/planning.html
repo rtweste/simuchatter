@@ -13,6 +13,7 @@
 <meta name="apple-mobile-web-app-title" content="StellADS">
 
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/handover.css">
 <style>
 /* ======================= Planning (préfixe p-) ======================= */
 .pv{font-family:Inter,system-ui,sans-serif;color:#f5f5f5}
@@ -327,6 +328,7 @@
 </div>
 
 <script src="/common.js"></script>
+<script src="/handover-ui.js"></script>
 <script>
 const pad = n => String(n).padStart(2, "0");
 const DAYN = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
@@ -441,6 +443,7 @@ function renderHero() {
   const ob = $("outBtn"); if (ob) ob.onclick = async () => {
     if (!ob.dataset.sure) { ob.dataset.sure = 1; ob.textContent = "Confirmer la fin du shift"; setTimeout(() => { if (ob.isConnected) { delete ob.dataset.sure; ob.textContent = "Terminer mon shift"; } }, 3500); return; }
     const dur = (Date.now() - D.open.start_at) / 3.6e6;
+    if (window.HANDOVER && !(await HANDOVER.beforeOut())) { delete ob.dataset.sure; ob.textContent = "Terminer mon shift"; return; }
     try { await api("/api/clock/out", { body: {} }); VS.ok(); notify("Shift terminé", `${hrsTxt(dur)} pointées sur ${D.open.model_name}`, "ok"); } catch (e) { notify("Impossible de terminer le shift", e.message, "err"); }
     await loadMe();
   };

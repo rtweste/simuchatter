@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="StellADS">
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/handover.css">
 <link rel="stylesheet" href="/formation.css">
 <style>
 /* ===================== Accueil « bento » ===================== */
@@ -561,6 +562,7 @@
 <script src="/common.js"></script>
 <script src="/formation-ui.js"></script>
 <script src="/home-fx.js"></script>
+<script src="/handover-ui.js"></script>
 <script>
 const pad = n => String(n).padStart(2, "0");
 const todayIso = (() => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; })();
@@ -719,6 +721,8 @@ function bindShiftV3() {
     rollSet(roll, `${pad(Math.floor(t / 3600))}:${pad(Math.floor(t % 3600 / 60))}:${pad(t % 60)}`); };
   upd(); tick = setInterval(upd, 1000);
   if (op) { $("outBtn").onclick = async () => { $("outBtn").disabled = true; const dur = (Date.now() - op.start_at) / 3.6e6;
+      // passation : le chatter note les fans à suivre avant de terminer (annuler = le shift continue)
+      if (window.HANDOVER && !(await HANDOVER.beforeOut())) { $("outBtn").disabled = false; return; }
       try { await api("/api/clock/out", { body: {} }); notify("Shift terminé", `${hrs(dur)} pointées sur ${op.model_name}`, "ok"); } catch (e) { notify("Impossible de terminer le shift", e.message, "err"); }
       MODE = "static"; load(); }; return; }
   const sl = $("slide"), kn = $("sKnob"), fl = $("sFill"); let x0 = null, max = 0, done = false;
@@ -873,6 +877,7 @@ function openSound() {
   });
 }
 function afterRender() {
+  if (D && D.role !== "admin" && window.HANDOVER) HANDOVER.inbox(document.getElementById("hm"));
   // cercle de l'objectif
   const fg = document.querySelector(".ringw .fg");
   if (fg) { const go = () => fg.style.strokeDashoffset = fg.dataset.off; if (MODE === "open" && !reduce) setTimeout(go, 1800); else if (MODE === "quick") setTimeout(go, 80); else { fg.style.transition = "none"; go(); } }
