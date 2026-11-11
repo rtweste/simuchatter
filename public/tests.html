@@ -63,6 +63,13 @@
 .sp-start:hover{transform:scale(1.06)}
 .sp-start.out{transform:scale(0);opacity:0;pointer-events:none}
 @keyframes spBr{0%{box-shadow:0 0 0 0 rgba(125,211,252,.45),0 20px 60px rgba(59,130,246,.45)}70%{box-shadow:0 0 0 26px rgba(125,211,252,0),0 20px 60px rgba(59,130,246,.45)}100%{box-shadow:0 0 0 0 rgba(125,211,252,0),0 20px 60px rgba(59,130,246,.45)}}
+.sp-rays{position:absolute;left:50%;top:55.3%;width:150%;aspect-ratio:1;transform:translate(-50%,-50%) scale(.4);border-radius:50%;pointer-events:none;opacity:0;
+  background:repeating-conic-gradient(from 0deg,rgba(125,255,210,.22) 0deg 1.4deg,transparent 1.4deg 15deg);-webkit-mask:radial-gradient(circle,transparent 18%,#000 30%,transparent 68%);mask:radial-gradient(circle,transparent 18%,#000 30%,transparent 68%);mix-blend-mode:screen}
+.sp-ok{position:absolute;left:50%;top:55.3%;width:118px;height:118px;transform:translate(-50%,-50%);pointer-events:none;opacity:0}
+.sp-ok svg{width:100%;height:100%;overflow:visible}
+.sp-ok .c{fill:rgba(95,211,162,.12);stroke:#5fd3a2;stroke-width:5;stroke-dasharray:314.2;stroke-dashoffset:314.2;transform:rotate(-90deg);transform-origin:60px 60px;filter:drop-shadow(0 0 14px rgba(95,211,162,.9))}
+.sp-ok .k{fill:none;stroke:#fff;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:70;stroke-dashoffset:70;filter:drop-shadow(0 0 10px rgba(255,255,255,.8))}
+.sp-c .ph.okp{color:#5fd3a2!important;background:rgba(95,211,162,.14);box-shadow:0 0 0 1px rgba(95,211,162,.4),0 0 24px rgba(95,211,162,.25)}
 .sp-m{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(560px,100%);margin-top:6px}
 .sp-m div{position:relative;border-radius:18px;padding:13px 14px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);overflow:hidden;transition:border-color .4s,background .4s}
 .sp-m div.on{border-color:var(--mc);background:color-mix(in srgb,var(--mc) 9%,transparent)}
@@ -175,9 +182,9 @@ function speed() {
   $("view").innerHTML = `<div class="tt-stage" id="stg"><canvas class="bg" id="bg"></canvas><div class="tt-top"><button id="back">‹ Retour</button><b>Débit de connexion</b><small>mesuré avec le serveur StellADS</small></div>
     <div class="sp-w"><div class="sp-g"><svg viewBox="0 0 440 380"><path class="tr" d="${arcD(A0, A1, 180)}"/><path class="fl" id="arc" d="${arcD(A0, A1, 180)}" stroke="url(#spDn)" stroke-dasharray="${L}" stroke-dashoffset="${L}" style="filter:drop-shadow(0 0 10px rgba(125,211,252,.6))"/>
       <g class="tk">${MARKS.map((m, i) => { const a = A0 + i / (MARKS.length - 1) * 270, [x, y] = pt(a, 140), [x1, y1] = pt(a, 158), [x2, y2] = pt(a, 166); return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><text x="${x}" y="${y}" data-m="${m}">${m}</text>`; }).join("")}</g>
-      <g id="nd"><path d="M216 210 L220 70 L224 210 Z" fill="#fff" opacity=".95"/><circle cx="220" cy="210" r="12" fill="#fff"/><circle cx="220" cy="210" r="5" fill="#0b0b0d"/></g></svg>
+      <g id="fxg" pointer-events="none"></g><g id="nd"><path d="M216 210 L220 70 L224 210 Z" fill="#fff" opacity=".95"/><circle cx="220" cy="210" r="12" fill="#fff"/><circle cx="220" cy="210" r="5" fill="#0b0b0d"/></g></svg>
       <div class="sp-c" id="cen" style="opacity:0"><div class="v" id="val">0</div><div class="u" id="unit">Mb/s</div><div class="ph" id="ph" style="color:#7dd3fc"><i></i><span>Réception</span></div></div>
-      <button class="sp-start" id="go">GO</button></div>
+      <button class="sp-start" id="go">GO</button><div class="sp-rays" id="rays"></div><div class="sp-ok" id="okb"><svg viewBox="0 0 120 120"><circle class="c" cx="60" cy="60" r="50"/><path class="k" d="M38 62 L54 77 L84 45"/></svg></div></div>
       <div class="sp-m"><div id="mP" style="--mc:#ffd23f"><small><i></i>Ping</small><b id="vP">—</b></div><div id="mD" style="--mc:#7dd3fc"><small><i></i>Réception</small><b id="vD">—</b></div><div id="mU" style="--mc:#ff7ab6"><small><i></i>Envoi</small><b id="vU">—</b></div></div>
       <canvas class="sp-gr" id="gr"></canvas><div id="out" style="display:contents"></div></div></div>`;
   $("back").onclick = () => { stopAll(); hub(); };
@@ -228,12 +235,47 @@ function speed() {
       const up = await measure("up", v => { target = v; setVal(v, "Mb/s"); G.max = Math.max(G.max, v * 1.15); }, G);
       $("vU").innerHTML = `${mb(up)}<span>Mb/s</span>`; $("mU").classList.replace("on", "done"); phase = "done"; target = down; setVal(down, "Mb/s"); setPh("Terminé", "#5fd3a2"); $("ph").querySelector("i").style.animation = "none";
       const r = await api("/api/tests/speed", { body: { down, up, ping, jitter } }), min = R ? R.speed.min : 10, ok = down >= min;
+      if (ok) await successFx(down);
       $("out").innerHTML = `<div class="tt-vd ${ok ? "ok" : "no"}"><span class="ic">${ok ? "✓" : "!"}</span><div><b>${ok ? "Connexion validée" : `Moins de ${min} Mb/s en réception`}</b><small>${ok ? `${mb(down)} Mb/s en réception, c'est suffisant pour chatter sans latence.${r.record ? " Nouveau record 🎉" : ""}` : "Rapproche-toi de ta box, passe en wifi 5 GHz ou en câble, ferme les vidéos et téléchargements en cours, puis refais le test."}${ping > 150 ? ` Ton ping est élevé (${Math.round(ping)} ms) : les messages peuvent partir avec du retard.` : ""}</small></div></div>
         <div class="tt-ac"><button class="s" id="again">↺ Refaire le test</button><a class="p" href="/tests">Terminer</a></div>`;
       $("again").onclick = speed; $("out").querySelector(".tt-ac a").onclick = e => { e.preventDefault(); stopAll(); hub(); };
-      if (ok) confetti(); notify(ok ? "Test de connexion validé" : "Connexion trop faible", `${mb(down)} Mb/s · ping ${Math.round(ping)} ms`, ok ? "ok" : "err");
+      notify(ok ? "Test de connexion validé" : "Connexion trop faible", `${mb(down)} Mb/s · ping ${Math.round(ping)} ms`, ok ? "ok" : "err");
     } catch (e) { if (live) { notify("Test interrompu", e.message || "Vérifie ta connexion", "err"); $("go").classList.remove("out"); } }
   };
+}
+// séquence de validation : balayage lumineux de l'arc, ondes de choc, rayons, coche dessinée, graduations qui s'allument
+async function successFx(v) {
+  const g = $("fxg"), arcEl = $("arc"), cen = $("cen"), rays = $("rays"), ok = $("okb"), svgNS = "http://www.w3.org/2000/svg";
+  if (!g || reduce) { $("ph").classList.add("okp"); $("ph").querySelector("span").textContent = "Validé"; return; }
+  const E = "cubic-bezier(.16,1,.3,1)", L = 2 * Math.PI * 180 * 270 / 360, mk = (t, a) => { const e = document.createElementNS(svgNS, t); for (const k in a) e.setAttribute(k, a[k]); g.appendChild(e); return e; };
+  // 1. une comète blanche parcourt l'arc, l'arc passe au vert
+  const comet = mk("path", { d: arcEl.getAttribute("d"), fill: "none", stroke: "#fff", "stroke-width": 24, "stroke-linecap": "round", "stroke-dasharray": `40 ${L}`, style: "filter:drop-shadow(0 0 14px #fff) drop-shadow(0 0 30px rgba(95,211,162,.9))" });
+  comet.animate([{ strokeDashoffset: 40 }, { strokeDashoffset: -L }], { duration: 900, easing: "cubic-bezier(.6,0,.2,1)", fill: "forwards" });
+  const tks = [...document.querySelectorAll(".tk text")]; tks.forEach((t, i) => setTimeout(() => { t.style.transition = "fill .3s"; t.style.fill = "#5fd3a2"; t.animate([{ transform: "scale(1)" }, { transform: "scale(1.35)" }, { transform: "scale(1)" }], { duration: 400, easing: E }); t.style.transformBox = "fill-box"; t.style.transformOrigin = "center"; }, 80 + i * 70));
+  await sleep(500); arcEl.setAttribute("stroke", "#5fd3a2"); arcEl.style.filter = "drop-shadow(0 0 16px rgba(95,211,162,.85))";
+  await sleep(420); comet.remove();
+  // 2. le chiffre se rétracte, ondes de choc depuis le pivot
+  cen.animate([{ opacity: 1, transform: "scale(1)", filter: "blur(0)" }, { opacity: 0, transform: "scale(.6)", filter: "blur(10px)" }], { duration: 380, easing: "ease-in", fill: "forwards" });
+  $("nd").animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: "forwards" });
+  [0, 1, 2].forEach(i => { const c = mk("circle", { cx: 220, cy: 210, r: 20, fill: "none", stroke: i === 1 ? "#7dd3fc" : "#5fd3a2", "stroke-width": 3 - i * .6 });
+    c.animate([{ r: 20, opacity: .95, strokeWidth: 6 }, { r: 230, opacity: 0, strokeWidth: .5 }], { duration: 1300, delay: 120 + i * 160, easing: E, fill: "forwards" }).onfinish = () => c.remove(); });
+  // éclats : de fines lignes de lumière partent du centre
+  for (let i = 0; i < 28; i++) { const a = i / 28 * Math.PI * 2 + Math.random() * .1, r1 = 34, d = 90 + Math.random() * 100, ca = Math.cos(a), sa = Math.sin(a),
+      ln = mk("line", { x1: 220 + ca * r1, y1: 210 + sa * r1, x2: 220 + ca * (r1 + 22), y2: 210 + sa * (r1 + 22), stroke: i % 3 ? "#5fd3a2" : "#fff", "stroke-width": 2.2, "stroke-linecap": "round" });
+    ln.animate([{ transform: "translate(0,0)", opacity: 1 }, { transform: `translate(${ca * d}px,${sa * d}px)`, opacity: 0 }], { duration: 900, delay: 160, easing: E, fill: "forwards" }).onfinish = () => ln.remove(); }
+  // 3. rayons qui tournent + la coche se dessine
+  rays.animate([{ opacity: 0, transform: "translate(-50%,-50%) scale(.4) rotate(0deg)" }, { opacity: 1, transform: "translate(-50%,-50%) scale(1) rotate(25deg)", offset: .35 }, { opacity: 0, transform: "translate(-50%,-50%) scale(1.15) rotate(70deg)" }], { duration: 2600, delay: 200, easing: "ease-out", fill: "forwards" });
+  ok.animate([{ opacity: 0, transform: "translate(-50%,-50%) scale(.3) rotate(-30deg)" }, { opacity: 1, transform: "translate(-50%,-50%) scale(1.08) rotate(4deg)", offset: .7 }, { opacity: 1, transform: "translate(-50%,-50%) scale(1) rotate(0)" }], { duration: 750, delay: 220, easing: E, fill: "forwards" });
+  ok.querySelector(".c").animate([{ strokeDashoffset: 314.2 }, { strokeDashoffset: 0 }], { duration: 700, delay: 260, easing: E, fill: "forwards" });
+  ok.querySelector(".k").animate([{ strokeDashoffset: 70 }, { strokeDashoffset: 0 }], { duration: 450, delay: 640, easing: "cubic-bezier(.65,0,.35,1)", fill: "forwards" });
+  try { SND.shift?.(); } catch (e) {}
+  await sleep(1900);
+  // 4. retour au chiffre, pastille « Validé »
+  ok.animate([{ opacity: 1, transform: "translate(-50%,-50%) scale(1)" }, { opacity: 0, transform: "translate(-50%,-50%) scale(1.4)", filter: "blur(8px)" }], { duration: 420, easing: "ease-in", fill: "forwards" });
+  $("ph").classList.add("okp"); $("ph").querySelector("span").textContent = "Validé"; $("ph").querySelector("i").style.animation = "none";
+  cen.getAnimations().forEach(a => a.cancel()); cen.animate([{ opacity: 0, transform: "translateY(14px) scale(.9)", filter: "blur(8px)" }, { opacity: 1, transform: "none", filter: "blur(0)" }], { duration: 700, delay: 250, easing: E, fill: "backwards" });
+  $("nd").getAnimations().forEach(a => a.cancel()); $("nd").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500, delay: 300, fill: "backwards" });
+  await sleep(450);
 }
 // débit : plusieurs flux en parallèle pendant ~7 s, on ignore la 1re seconde (montée en charge)
 async function measure(kind, onV, G) {
