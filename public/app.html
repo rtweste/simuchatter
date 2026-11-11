@@ -442,6 +442,7 @@ details.dcard[open] summary{margin-bottom:12px}
 </style>
 <link rel="stylesheet" href="/eval-fx.css">
 <link rel="stylesheet" href="/chat-fx.css">
+<link rel="stylesheet" href="/simlive.css">
 </head>
 <body>
 <div class="shell">
@@ -451,7 +452,11 @@ details.dcard[open] summary{margin-bottom:12px}
 <!-- ============ ACCUEIL ============ -->
 <div id="homeScreen">
   <div class="wrap s-wrap">
-    <div class="s-hdr"><div><div class="eyebrow">Formation</div><h1 class="s-ttl">Simu <em>Chatter.</em></h1></div><div class="s-stats" id="sStats"></div></div>
+    <div class="s-hdr"><div><div class="eyebrow">Formation</div><h1 class="s-ttl">Simu <em>Chatter.</em></h1></div>
+      <div class="gx-tabs hidden" id="simTabs" role="tablist"><span class="ind"></span><button role="tab" class="on" data-pane="train">Entraînement</button><button role="tab" data-pane="gest">Gestion <span class="lv hidden" id="liveCount"><span class="dot"></span><b>0</b> en direct</span></button></div>
+      <div class="s-stats" id="sStats"></div></div>
+    <div id="myAssign"></div>
+    <div id="paneTrain">
     <div class="s-grid">
       <section class="s-card" style="--d:.05s"><h2 class="s-h"><span class="n">1</span>Choisis ton <em>fan</em></h2><div class="s-fans" id="personas"></div></section>
       <section class="s-card" style="--d:.12s"><h2 class="s-h"><span class="n">2</span>Prépare ta <em>session</em></h2>
@@ -469,6 +474,8 @@ details.dcard[open] summary{margin-bottom:12px}
     </div>
     <section class="s-card" style="--d:.2s;margin-top:16px"><div class="s-hrow"><h2 class="s-h">Mes <em>sessions</em></h2><span class="s-hint2">Touche une session pour revoir le rapport</span></div>
       <div id="history"></div></section>
+    </div>
+    <div id="paneGest" class="hidden gx"></div>
   </div>
 </div>
 
@@ -479,10 +486,12 @@ details.dcard[open] summary{margin-bottom:12px}
       <div class="cq-av" id="fanAvatar">?</div>
       <div class="cq-who"><b id="fanName">Fan</b><span id="fanSub"></span></div>
       <div class="cq-sp"></div>
+      <span class="cq-watch hidden" id="watchBadge"></span>
       <button class="cq-icb" id="hintBtnM" aria-label="Conseil du coach (−3 pts)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button>
       <button class="cq-icb" id="infoBtn" aria-label="Infos de la session" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16v-4M12 8h.01M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18"/></svg></button>
       <button class="cq-end" id="endBtn">Terminer & évaluer</button>
     </div>
+    <div class="cq-wban hidden" id="watchBan"></div>
     <div class="cq-mst"><span data-revtarget>Revenu <b data-rev>0 €</b></span><span data-meter>Intérêt <b data-inum>—</b><i class="cq-ib" data-ib><i></i></i></span><span>Réponse <b data-rt>—</b></span><span>Msgs <b data-cnt>0</b></span></div>
     <div class="cq-hintsM" id="hintsM"></div>
     <div id="msgs"></div>
@@ -504,6 +513,26 @@ details.dcard[open] summary{margin-bottom:12px}
     <div class="cq-tile"><div class="cq-lab">TA MISSION</div><p class="cq-goal" id="goal"></p><div class="cq-steps"><div class="cq-stp" data-step><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i>Créer le lien</div><div class="cq-stp" data-step><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i>Créer l'envie</div><div class="cq-stp" data-step><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i>Proposer un contenu</div><div class="cq-stp" data-step><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i>Conclure la vente</div></div></div>
     <div class="cq-tile"><div class="cq-lab">CRÉATRICE INCARNÉE</div><div class="cq-crea" id="creatorInfo"></div><div class="cq-tags" id="priceInfo"></div></div>
     <div class="cq-tile"><div class="cq-lab">COACH <span>−3 pts / conseil</span></div><div class="cq-coach"><button id="hintBtn">💡 Conseil</button><button id="ppvBtn2">🔒 Envoyer un PPV</button></div><div id="hints"></div></div>
+  </aside>
+</div>
+
+<!-- ============ REGARDER UNE SESSION (manager) ============ -->
+<div id="watchScreen" class="hidden gx">
+  <div class="wv-main">
+    <div class="wv-hd"><button class="wv-back" id="wvBack" aria-label="Retour à la gestion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button><div class="wv-ti"><b id="wvTitle">—</b><small id="wvSub"></small></div><span class="wv-live" id="wvLive"><span class="dot"></span>EN DIRECT</span><span class="wv-seen" id="wvSeen"></span></div>
+    <div class="wv-mst"><span data-revtarget>Revenu <b data-wrev>0 €</b></span><span>Intérêt <b data-wint>—</b></span><span>Il attend <b data-wclk>—</b></span></div>
+    <div id="wvMsgs" class="wv-msgs"></div>
+    <div class="wv-end hidden" id="wvEnd"><span>La session est terminée.</span><button id="wvReport">Voir l'évaluation →</button></div>
+    <div class="wv-wh" id="wvWh"><div class="wv-lab"><span id="wvWhLab">SOUFFLER UN CONSEIL</span><span>sans pénalité</span></div>
+      <div class="wv-chips"><button>Ne baisse pas ton prix, valorise le contenu</button><button>Pose-lui une question sur lui</button><button>C'est le moment de proposer un PPV</button><button>Prends ton temps, il est réceptif</button></div>
+      <div class="wv-wr"><input id="wvInput" maxlength="400" placeholder="Écris un conseil…"><button id="wvSend">Envoyer</button></div></div>
+  </div>
+  <aside class="wv-dash">
+    <div class="wv-tile"><div class="wv-lab">CHATTER</div><div class="wv-who"><span class="wv-av" id="wvAv">?</span><div><b id="wvName">—</b><small id="wvStats"></small></div></div></div>
+    <div class="wv-tile"><div class="wv-lab">IL ATTEND SA RÉPONSE</div><div class="wv-clk"><b data-wclk>—</b><span class="s" id="wvClkS">—</span></div></div>
+    <div class="wv-tile"><div class="wv-lab">INTÉRÊT DU FAN <span id="wvILab"></span></div><div class="wv-big"><span data-wint>—</span><small>/100</small></div><svg class="wv-spark" id="wvSpark" viewBox="0 0 290 46" preserveAspectRatio="none" aria-hidden="true"><path fill="none" stroke-width="2" stroke-linejoin="round"/></svg></div>
+    <div class="wv-g2"><div class="wv-tile" data-revtarget><div class="wv-lab">REVENU</div><div class="wv-big" data-wrev>0 €</div></div><div class="wv-tile"><div class="wv-lab">CONSEILS IA</div><div class="wv-big" id="wvHints">0</div></div></div>
+    <div class="wv-tile"><div class="wv-lab">TES CONSEILS ENVOYÉS</div><div class="wv-sent" id="wvSent"><p class="wv-none">Aucun pour l'instant.</p></div></div>
   </aside>
 </div>
 
@@ -529,6 +558,19 @@ details.dcard[open] summary{margin-bottom:12px}
   </div>
 </div>
 
+<!-- Assigner un entraînement -->
+<div class="modal hidden cq-sheet" id="asgModal">
+  <div class="card">
+    <div class="cq-shd"><b>Assigner un <em>entraînement</em></b><button class="cq-x" id="asgClose" aria-label="Fermer">✕</button></div>
+    <div class="cq-lab">CHATTER</div><select id="asgUser"></select>
+    <div class="cq-lab">FAN</div><select id="asgFan"></select>
+    <div class="cq-lab">DIFFICULTÉ</div><div class="cq-chips" id="asgDiff"><button type="button" data-d="facile">Facile</button><button type="button" data-d="normal" class="on">Normal</button><button type="button" data-d="difficile">Difficile</button></div>
+    <div class="gx-2c"><div><div class="cq-lab">OBJECTIF (SCORE)</div><input id="asgGoal" type="number" min="10" max="100" value="70"></div><div><div class="cq-lab">À FAIRE AVANT</div><input id="asgDue" type="date"></div></div>
+    <div class="cq-lab">MOT POUR LE CHATTER (FACULTATIF)</div><input id="asgNote" maxlength="200" placeholder="ex. travaille la gestion des objections">
+    <div class="err" id="asgErr"></div>
+    <button class="cq-go" id="asgSave">Assigner</button>
+  </div>
+</div>
 </main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -536,12 +578,14 @@ details.dcard[open] summary{margin-bottom:12px}
 <script src="/simu-fx.js"></script>
 <script src="/eval-fx.js"></script>
 <script src="/chat-fx.js"></script>
+<script src="/simlive-ui.js"></script>
 <script>
 let PERSONAS = [], MODELS = [], selPersona = null, SIM = null, busy = false, chatterCount = 0;
 
 /* ---------- Accueil ---------- */
 async function init() {
-  const me = await api("/api/me"); window.IS_ADMIN = me.role === "admin";
+  const me = await api("/api/me"); window.IS_ADMIN = me.role === "admin"; window.ME_NAME = me.username;
+  window.SIMLIVE && SIMLIVE.onInit(me);
   renderShell("simu", me);
   $("quota").textContent = me.role === "admin" ? "Compte manager : pas de limite quotidienne" :
     `Simulations aujourd'hui : ${me.usedToday} / ${me.dailyLimit}`;
@@ -886,9 +930,10 @@ function evalOpts() {
   } };
 }
 async function showReport(sim) {
-  const opts = evalOpts();
-  try { opts.prev = await api("/api/my-sims"); } catch (e) {}
-  ["homeScreen", "chatScreen"].forEach(id => $(id).classList.add("hidden"));
+  const opts = evalOpts(), own = !sim.username || sim.username === window.ME_NAME;
+  if (own) { try { opts.prev = await api("/api/my-sims"); } catch (e) {} }
+  else { opts.onReplay = null; opts.onBack = () => { $("reportScreen").classList.add("hidden"); $("homeScreen").classList.remove("hidden"); window.SIMLIVE && SIMLIVE.showGest(); window.scrollTo(0, 0); }; }
+  ["homeScreen", "chatScreen", "watchScreen"].forEach(id => $(id).classList.add("hidden"));
   $("reportScreen").classList.remove("hidden");
   window.scrollTo(0, 0);
   EVAL.page($("repBody"), sim, opts);
