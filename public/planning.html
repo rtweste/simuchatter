@@ -14,405 +14,748 @@
 
 <link rel="stylesheet" href="/style.css">
 <style>
-.clock{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.clock .dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0}
-.clock .dot.on{background:var(--good);box-shadow:0 0 0 4px rgba(60,207,145,.15)}
-.clock .timer{font-family:Outfit,Inter,sans-serif;font-size:30px;font-weight:300;letter-spacing:.02em}
-.clock select{width:auto;min-width:180px}
-.weeknav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-.weeknav b{min-width:210px;text-align:center}
-.grid7{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;min-width:860px}
-.grid7 th{font-size:12px;color:var(--muted);font-weight:500;padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
-.grid7 th.today{color:var(--text)}
-.grid7 td{border-bottom:1px solid var(--line);padding:6px;vertical-align:top;height:58px}
-.grid7 td.who{width:120px;font-weight:600;font-size:13px;padding-top:12px}
-.grid7 tr.mine td{background:rgba(255,255,255,.025)}
-.cell{min-height:46px;border-radius:8px;display:flex;flex-direction:column;gap:4px}
-.cell.add{cursor:pointer}
-.cell.add:hover{background:var(--panel2)}
-.cell.add:hover::after{content:"+";color:var(--muted);font-size:18px;text-align:center;margin:auto}
-.cell.add:has(.chip):hover::after{content:none}
-.chip{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px 7px;font-size:12px;line-height:1.3;cursor:default}
-.chip b{display:block;font-weight:600}
-.chip span{color:var(--muted)}
-.chip.edit{cursor:pointer}.chip.edit:hover{border-color:#444}
-.badge{font-size:11px;padding:2px 7px;border-radius:20px;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
-.live{display:flex;gap:8px;flex-wrap:wrap}
-.live .chip{display:flex;align-items:center;gap:8px}
-.list-sm{font-size:13px;line-height:1.7;margin:0;padding:0;list-style:none}
-.list-sm li{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0}
-/* ===== Ma journée ===== */
-.dayhero{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;margin-bottom:20px}
-@media(min-width:900px){.dayhero{grid-template-columns:minmax(0,1fr) 290px;align-items:center}}
-.dh-big{font-family:Outfit,Inter,sans-serif;font-size:24px;font-weight:300;line-height:1.3;margin-top:6px}
-.dh-big b{font-weight:500;color:#fff}
-@media(max-width:600px){.dh-big{font-size:21px}}
-.tl{position:relative;margin-top:30px}
-.tl .track{position:relative;height:8px;border-radius:8px;background:#1b1b1b;overflow:hidden}
-.tl .past{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#242424,#3a3a3a);transition:width 1s linear}
-.tl .lanes{position:absolute;left:0;right:0;top:-6px}
-.tl .blk{position:absolute;height:20px;border-radius:7px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.35);box-sizing:border-box;animation:fadeUp .6s cubic-bezier(.2,.75,.2,1) both}
-.tl .blk.mine{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.6)}
-.tl .blk span{position:absolute;bottom:calc(100% + 3px);left:0;font-size:10.5px;color:#cfcfcf;white-space:nowrap;font-weight:600}
-.tl .blk.r span{left:auto;right:0}
-.tl .now{position:absolute;top:-12px;width:2px;height:32px;margin-left:-1px;background:#fff;border-radius:2px;box-shadow:0 0 10px rgba(255,255,255,.7);transition:left 1s linear;z-index:3}
-.tl .now::before{content:"";position:absolute;left:-4px;top:-6px;width:10px;height:10px;border-radius:50%;background:#fff;animation:nowP 2s ease-out infinite}
-@keyframes nowP{0%{box-shadow:0 0 0 0 rgba(255,255,255,.45)}100%{box-shadow:0 0 0 10px rgba(255,255,255,0)}}
-.tl .ticks{display:flex;justify-content:space-between;font-size:10px;color:#666;margin-top:12px}
-.cdn{display:flex;gap:8px}
-.cdn div{flex:1;background:#151515;border:1px solid #222;border-radius:12px;padding:10px 0;text-align:center}
-.cdn b{display:block;font-family:Outfit,Inter,sans-serif;font-size:26px;font-weight:400;font-variant-numeric:tabular-nums}
-.cdn small{font-size:10.5px;color:#8f8f8f}
-.cdn-l{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8f8f8f;margin-bottom:8px}
-.tlist{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
-.tlist span{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#bdbdbd;background:#151515;border:1px solid #232323;border-radius:20px;padding:5px 10px}
-.tlist i{width:7px;height:7px;border-radius:50%;background:#444}
-.tlist span.on i{background:#3ccf91;box-shadow:0 0 0 3px rgba(60,207,145,.15)}
-.tlist span.on{color:#fff}
-.grid7 th.today{background:rgba(255,255,255,.04);border-radius:8px 8px 0 0}
+/* ======================= Planning (préfixe p-) ======================= */
+.pv{font-family:Inter,system-ui,sans-serif;color:#f5f5f5}
+.pv *,.p-sheet *{box-sizing:border-box}.pv button,.p-sheet button{font-family:inherit;cursor:pointer}
+.p-hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.p-ttl{font-weight:900;letter-spacing:-.045em;font-size:40px;line-height:1.02;margin:6px 0 0}
+.p-ttl em{font-style:italic;background:linear-gradient(100deg,#fff,#8a8a8a 55%,#e6e6e6);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.08em}
+.p-card{background:#111;border:1px solid #1f1f1f;border-radius:20px;padding:18px;position:relative;animation:pUp .6s cubic-bezier(.2,.8,.2,1) var(--d,0s) both;min-width:0}
+@keyframes pUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.p-card h3{margin:0;font-size:15px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}.p-card h3 em{font-style:italic}
+.p-ch{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.p-lab{font-size:10.5px;font-weight:800;letter-spacing:.12em;color:#6a6a6a;text-transform:uppercase}
+.p-mut{font-size:12px;color:#7a7a7a}
+.p-wbtn{height:46px;border-radius:14px;border:0;background:#ededed;color:#0a0a0a;font-weight:900;font-size:14px;padding:0 18px;display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 10px 30px -10px rgba(255,255,255,.35);transition:transform .2s,opacity .2s}
+.p-wbtn:active{transform:scale(.97)}.p-wbtn:disabled{opacity:.5}
+.p-gbtn{height:46px;border-radius:14px;border:1px solid #2a2a2a;background:#161616;color:#e6e6e6;font-weight:800;font-size:13.5px;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.p-sb{height:30px;border-radius:10px;border:1px solid #2a2a2a;background:#181818;color:#e6e6e6;font-weight:800;font-size:12px;padding:0 11px;white-space:nowrap}
+.p-sb.w{background:#ededed;color:#0a0a0a;border-color:#ededed}
+.p-sb.g{background:rgba(95,211,162,.12);color:#5fd3a2;border-color:rgba(95,211,162,.35)}
+.p-sb.r{background:transparent;color:#e07a7a;border-color:rgba(224,122,122,.4)}
+.p-sb.link{border:0;background:transparent;color:#8a8a8a;text-decoration:underline}
+.p-sb:disabled{opacity:.5}
+.p-tag{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:900;border-radius:20px;padding:3px 9px;white-space:nowrap}
+.p-tag i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.p-tag.v{background:rgba(95,211,162,.12);color:#5fd3a2}.p-tag.r{background:rgba(224,122,122,.12);color:#e07a7a}.p-tag.w{background:rgba(255,255,255,.08);color:#e6e6e6}
+.p-tag.live i{animation:pBl 1.2s infinite}
+@keyframes pBl{50%{opacity:.25}}
+.p-slot{display:inline-flex;align-items:center;gap:4px;font-weight:900;font-size:12px;border-radius:8px;padding:3px 7px;background:#1c1c1c;border:1px solid #2a2a2a;color:#e6e6e6;font-variant-numeric:tabular-nums;white-space:nowrap}
+.p-slot sup{font-size:8.5px;color:#9a9a9a;font-weight:800}
+.p-tg{width:40px;height:24px;border-radius:12px;background:#2a2a2a;position:relative;border:0;flex-shrink:0;transition:background .3s;padding:0}
+.p-tg::after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#8a8a8a;transition:transform .35s cubic-bezier(.3,1.5,.5,1),background .3s}
+.p-tg.on{background:#5fd3a2}.p-tg.on::after{transform:translateX(16px);background:#06130d}
+.p-empty{color:#7a7a7a;font-size:13px;padding:14px 4px;text-align:center}
+.p-wnav{display:flex;align-items:center;gap:6px}
+.p-wnav button{width:34px;height:34px;border-radius:11px;border:1px solid #262626;background:#151515;color:#cfcfcf;font-weight:900;font-size:15px}
+.p-wnav b{font-weight:900;font-size:13.5px;padding:0 4px;min-width:96px;text-align:center}
+
+/* ----- chatter ----- */
+.p-g{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;align-items:start}
+.p-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.p-hero{padding:22px;overflow:clip}
+.p-hero::before{content:"";position:absolute;inset:-40% -20% auto auto;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.06),transparent 65%);pointer-events:none}
+.p-hero>div{animation:pUp .5s both}
+.p-who{display:flex;align-items:center;gap:12px;margin-top:12px}
+.p-av{width:48px;height:48px;border-radius:16px;background:linear-gradient(135deg,#2e2e2e,#141414);border:1px solid #333;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:19px;flex-shrink:0;text-transform:uppercase}
+.p-who b{display:block;font-weight:900;font-size:22px;letter-spacing:-.03em}.p-who small{font-size:12.5px;color:#8a8a8a;font-weight:700}
+.p-cd{font-weight:900;letter-spacing:-.05em;font-size:66px;line-height:1;margin-top:18px;font-variant-numeric:tabular-nums}
+.p-cd small{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#6a6a6a;display:block;margin-bottom:6px;font-weight:800}
+.p-cd .s{color:#5a5a5a}.p-cd .dd{font-size:.55em;letter-spacing:-.03em;margin-right:.25em}
+.p-acts{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}.p-acts>*{flex:1}
+.p-rem{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:12.5px;color:#9a9a9a;font-weight:700}
+.p-late{margin-top:14px;border-radius:16px;border:1px solid rgba(224,122,122,.45);background:linear-gradient(135deg,rgba(224,122,122,.14),rgba(224,122,122,.03));padding:14px;display:flex;gap:12px;align-items:center;animation:pShake .6s cubic-bezier(.3,1.6,.5,1) both}
+.p-late .i{width:38px;height:38px;border-radius:12px;background:rgba(224,122,122,.18);color:#e07a7a;display:flex;align-items:center;justify-content:center;font-weight:900;flex-shrink:0;animation:pPulse 1.4s infinite}
+.p-late b{display:block;font-weight:900;font-size:14px;color:#fff}.p-late small{font-size:12px;color:#e0a3a3}
+@keyframes pShake{0%{transform:translateX(-10px);opacity:0}40%{transform:translateX(6px)}70%{transform:translateX(-3px)}100%{transform:none;opacity:1}}
+@keyframes pPulse{0%{box-shadow:0 0 0 0 rgba(224,122,122,.45)}60%{box-shadow:0 0 0 7px rgba(224,122,122,0)}}
+.p-bar{position:relative;height:10px;border-radius:6px;background:#1c1c1c;margin-top:16px}
+.p-bar .f{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:linear-gradient(90deg,#3a3a3a,#ededed);transition:width 1s linear}
+.p-bar .now{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 0 4px rgba(255,255,255,.15),0 0 16px rgba(255,255,255,.7);transition:left 1s linear}
+.p-ticks{display:flex;justify-content:space-between;font-size:10.5px;color:#6a6a6a;font-weight:800;margin-top:8px;font-variant-numeric:tabular-nums}
+.p-mods{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.p-mod{display:flex;align-items:center;gap:10px;border-radius:15px;border:1px solid #262626;background:#151515;padding:9px 10px 9px 9px;flex:1;min-width:180px;position:relative}
+.p-mod .p-av{width:36px;height:36px;border-radius:12px;font-size:15px}
+.p-mod>div{min-width:0;flex:1}.p-mod b{display:block;font-weight:900;font-size:14px}.p-mod small{display:block;font-size:11px;color:#8a8a8a;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-mod .p-sb{flex-shrink:0}
+.p-mod.rf{border-color:rgba(255,255,255,.35);background:linear-gradient(135deg,#1c1c1c,#121212);animation:pIn .7s cubic-bezier(.3,1.4,.5,1) both}
+.p-mod.rf::after{content:"RENFORT";position:absolute;top:-8px;right:10px;font-size:9px;font-weight:900;letter-spacing:.14em;background:#ededed;color:#0a0a0a;border-radius:6px;padding:2px 6px}
+@keyframes pIn{from{opacity:0;transform:translateY(-12px) scale(.95)}to{opacity:1;transform:none}}
+.p-rfnote{margin-top:10px;font-size:12px;color:#9a9a9a;line-height:1.5}
+.p-pick{width:100%;height:44px;border-radius:13px;border:1px solid #262626;background:#151515;color:#f5f5f5;font:inherit;font-size:13.5px;font-weight:700;padding:0 12px;margin:14px 0 0}
+.p-wk{display:flex;flex-direction:column;gap:6px}
+.p-dy{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;padding:10px 12px;border-radius:14px;background:#141414;border:1px solid #1f1f1f;animation:pUp .5s both;transition:border-color .3s,opacity .3s;position:relative}
+.p-dy .d{font-weight:900;font-size:12px;color:#7a7a7a;line-height:1.15;text-transform:uppercase;letter-spacing:.04em}.p-dy .d b{display:block;font-size:20px;color:#fff;letter-spacing:-.03em}
+.p-dy.today{border-color:rgba(255,255,255,.3);background:linear-gradient(135deg,#1a1a1a,#131313)}
+.p-dy.past{opacity:.72}.p-dy.off{background:transparent;border-style:dashed}
+.p-dy.swap{border-style:dashed;border-color:#3a3a3a}
+.p-dy .m{font-size:13px;font-weight:800;min-width:0}.p-dy .m small{display:block;font-size:11.5px;color:#7a7a7a;font-weight:700;margin-top:2px}
+.p-dy .r{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.p-dy:has(.p-pop.on){z-index:6}
+.p-menu{position:relative}
+.p-pop{position:absolute;right:0;top:36px;z-index:20;background:#161616;border:1px solid #2c2c2c;border-radius:14px;padding:6px;width:240px;box-shadow:0 20px 50px rgba(0,0,0,.6);display:none;animation:pUp .3s both}
+.p-pop.on{display:block}
+.p-pop button{width:100%;text-align:left;min-height:38px;border-radius:10px;border:0;background:transparent;color:#e6e6e6;font-weight:700;font-size:12.5px;padding:6px 10px}
+.p-pop button:hover{background:#1f1f1f}
+.p-bx{display:flex;flex-direction:column;gap:8px}
+.p-of{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:12px;border-radius:15px;background:#141414;border:1px solid #1f1f1f;animation:pUp .5s both}
+.p-of.urg{border-color:rgba(255,255,255,.28);background:linear-gradient(135deg,#1b1b1b,#121212)}
+.p-of.taken{border-color:rgba(95,211,162,.4)}
+.p-of b{font-weight:900;font-size:14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}.p-of small{display:block;font-size:12px;color:#8a8a8a;margin-top:3px}
+.p-of .r{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.p-pq{display:flex;align-items:center;gap:16px}
+.p-ring{width:92px;height:92px;flex-shrink:0;position:relative}
+.p-ring svg{transform:rotate(-90deg)}.p-ring circle{fill:none;stroke-width:9}
+.p-ring .bgc{stroke:#1f1f1f}.p-ring .fg{stroke:#5fd3a2;stroke-linecap:round;stroke-dasharray:251.3;stroke-dashoffset:251.3;transition:stroke-dashoffset 1.6s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 0 6px rgba(95,211,162,.5))}
+.p-ring .fg.mid{stroke:#e6e6e6;filter:none}.p-ring .fg.low{stroke:#e07a7a;filter:none}
+.p-ring b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;letter-spacing:-.04em}
+.p-pq ul{list-style:none;margin:0;padding:0;font-size:12.5px;color:#bdbdbd;font-weight:700;display:flex;flex-direction:column;gap:6px}
+.p-pq li{display:flex;align-items:center;gap:8px}
+.p-dots{display:flex;gap:4px;margin-top:14px}.p-dots i{flex:1;height:22px;border-radius:6px;background:#1f1f1f;max-width:40px;animation:pUp .4s both}
+.p-dots i.v{background:rgba(95,211,162,.55)}.p-dots i.r{background:rgba(224,122,122,.7)}.p-dots i.a{background:transparent;border:1.5px dashed rgba(224,122,122,.7)}
+.p-rm{display:flex;flex-direction:column;gap:12px}
+.p-rm>div{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;font-weight:700;color:#d6d6d6}
+.p-rm small{display:block;font-size:11.5px;color:#7a7a7a;font-weight:600;margin-top:1px}
+
+/* ----- feuilles ----- */
+.p-scrim{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:90;opacity:0;pointer-events:none;transition:opacity .35s;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.p-scrim.on{opacity:1;pointer-events:auto}
+.p-sheet{position:fixed;z-index:91;left:50%;top:50%;width:520px;max-width:calc(100vw - 24px);max-height:92vh;max-height:92dvh;overflow:auto;transform:translate(-50%,-46%) scale(.96);opacity:0;pointer-events:none;transition:transform .45s cubic-bezier(.3,1.3,.4,1),opacity .3s;background:#111;border:1px solid #262626;border-radius:24px;padding:20px;box-shadow:0 30px 80px rgba(0,0,0,.7);font-family:Inter,system-ui,sans-serif;color:#f5f5f5;overscroll-behavior:contain}
+.p-sheet.on{transform:translate(-50%,-50%);opacity:1;pointer-events:auto}
+.p-shd{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.p-shd b{font-weight:900;font-size:19px;letter-spacing:-.03em}.p-shd b em{font-style:italic}
+.p-x{width:32px;height:32px;border-radius:10px;border:1px solid #262626;background:#161616;color:#bdbdbd}
+.p-opt{display:flex;align-items:center;gap:12px;padding:12px;border-radius:15px;border:1px solid #232323;background:#151515;margin-top:8px;cursor:pointer;transition:border-color .25s,background .25s;width:100%;text-align:left;color:inherit}
+.p-opt .p-av{width:40px;height:40px;border-radius:13px;font-size:16px}
+.p-opt>div{flex:1;min-width:0}.p-opt b{display:flex;gap:7px;align-items:center;font-weight:900;font-size:14px;flex-wrap:wrap}.p-opt small{display:block;font-size:12px;color:#8a8a8a;margin-top:2px}
+.p-opt .rd{width:20px;height:20px;border-radius:50%;border:2px solid #3a3a3a;flex-shrink:0;transition:all .25s}
+.p-opt.on{border-color:#ededed;background:#1a1a1a}.p-opt.on .rd{border-color:#ededed;box-shadow:inset 0 0 0 4px #1a1a1a;background:#ededed}
+.p-chips{display:flex;gap:6px;flex-wrap:wrap}
+.p-chips button{height:36px;border-radius:11px;border:1px solid #262626;background:#151515;color:#cfcfcf;font-weight:800;font-size:13px;padding:0 13px;transition:background .2s,color .2s,border-color .2s,transform .2s;display:inline-flex;align-items:center;gap:5px}
+.p-chips button:active{transform:scale(.95)}
+.p-chips button sup{font-size:9px;color:#8a8a8a}
+.p-chips button.on{background:#ededed;color:#0a0a0a;border-color:#ededed}.p-chips button.on sup{color:#555}
+.p-fl{margin-top:16px}.p-fl .p-lab{display:block;margin-bottom:8px}
+.p-fi{width:100%;height:42px;border-radius:12px;border:1px solid #262626;background:#151515;color:#f5f5f5;font:inherit;font-size:13.5px;padding:0 12px;margin:0;color-scheme:dark}
+.p-times{display:flex;gap:8px;margin-top:8px}.p-times>*{flex:1}
+.p-info{margin-top:14px;font-size:12px;color:#9a9a9a;line-height:1.5;background:#141414;border:1px solid #1f1f1f;border-radius:13px;padding:10px 12px}
+.p-info b{color:#fff}
+.p-send{width:100%;height:52px;border-radius:15px;border:0;background:#ededed;color:#0a0a0a;font-weight:900;font-size:15px;margin-top:16px}
+.p-send:disabled{opacity:.5}
+.p-srow{display:flex;gap:8px;margin-top:10px}.p-srow .p-send{margin-top:0}
+.p-del{height:52px;border-radius:15px;border:1.5px solid rgba(224,122,122,.5);background:transparent;color:#e07a7a;font-weight:900;font-size:14px;padding:0 16px}
+.p-err{color:#e07a7a;font-size:12.5px;font-weight:700;margin-top:10px;text-align:center;min-height:1px}
+
+/* ----- manager ----- */
+.p-tabs{display:flex;gap:6px}
+.p-tabs button{height:36px;border-radius:11px;border:1px solid #222;background:#141414;color:#8f8f8f;font-weight:800;font-size:12.5px;padding:0 13px}
+.p-tabs button.on{background:#ededed;color:#0a0a0a;border-color:#ededed}
+.p-bar2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;justify-content:space-between}
+.p-alerts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:14px}
+.p-alerts:empty{display:none}
+.p-al{border-radius:16px;border:1px solid #1f1f1f;background:#111;padding:12px 14px;display:flex;gap:11px;align-items:flex-start;animation:pUp .5s both}
+.p-al .i{width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-weight:900;flex-shrink:0;font-size:14px}
+.p-al>div{min-width:0}.p-al b{display:block;font-weight:900;font-size:13px}.p-al small{display:block;font-size:11.5px;color:#8a8a8a;margin-top:2px;line-height:1.4}
+.p-al.r{border-color:rgba(224,122,122,.4);background:linear-gradient(135deg,rgba(224,122,122,.1),#111 70%)}.p-al.r .i{background:rgba(224,122,122,.16);color:#e07a7a;animation:pPulse 1.4s infinite}
+.p-al.w .i{background:rgba(255,255,255,.07);color:#e6e6e6}.p-al.g .i{background:rgba(95,211,162,.12);color:#5fd3a2}
+.p-al .p-sb,.p-al .p-tag{margin-top:8px}
+.p-gw{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px;align-items:start}
+.p-grid{display:grid;grid-template-columns:70px repeat(7,minmax(0,1fr));gap:5px}
+.p-grid .hd{font-size:11px;font-weight:900;color:#7a7a7a;text-align:center;padding:4px 0 6px;letter-spacing:.04em;text-transform:uppercase}.p-grid .hd b{display:block;font-size:17px;color:#e6e6e6;letter-spacing:-.03em;margin:2px auto 0;width:32px;line-height:28px}
+.p-grid .hd.today{color:#fff}.p-grid .hd.today b{color:#0a0a0a;background:#ededed;border-radius:9px}
+.p-sl{display:flex;flex-direction:column;justify-content:center;font-weight:900;font-size:13px;color:#cfcfcf;font-variant-numeric:tabular-nums}.p-sl small{font-size:9.5px;color:#6a6a6a;font-weight:800}
+.p-cell{min-height:62px;border-radius:12px;background:#121212;border:1px solid #1c1c1c;padding:4px;display:flex;flex-direction:column;gap:3px;transition:border-color .25s,background .25s;cursor:pointer;position:relative;min-width:0}
+.p-cell:hover{border-color:#333;background:#151515}
+.p-cell.past{opacity:.75}
+.p-cell .add{margin:auto;color:#3a3a3a;font-weight:900;font-size:16px;opacity:0;transition:opacity .2s}.p-cell:hover .add{opacity:1}
+.p-cell.hole{border-color:rgba(224,122,122,.35);background:rgba(224,122,122,.04)}
+.p-sh{border-radius:8px;padding:4px 6px;font-size:11px;font-weight:800;line-height:1.25;background:#1d1d1d;border:1px solid #2a2a2a;color:#e6e6e6;position:relative;overflow:hidden;text-overflow:ellipsis;cursor:pointer;min-width:0}
+.p-sh small{display:block;font-size:9.5px;color:#8a8a8a;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-sh.v{border-color:rgba(95,211,162,.35)}.p-sh.v::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#5fd3a2}
+.p-sh.r{border-color:rgba(224,122,122,.45)}.p-sh.r::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#e07a7a}
+.p-sh.now{border-color:#ededed;box-shadow:0 0 0 2px rgba(255,255,255,.08),0 0 18px -4px rgba(255,255,255,.4)}
+.p-sh.now::after{content:"";position:absolute;right:5px;top:6px;width:6px;height:6px;border-radius:50%;background:#fff;animation:pBl 1.2s infinite}
+.p-sh.xc{border-style:dashed;border-color:#555;background:transparent}
+.p-sh.hole{border-style:dashed;border-color:rgba(224,122,122,.6);background:transparent;color:#e0a3a3}
+.p-sh.new{animation:pIn .7s cubic-bezier(.3,1.4,.5,1) both;border-color:#ededed}
+.p-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:11.5px;color:#8a8a8a;font-weight:700}
+.p-legend span{display:flex;align-items:center;gap:6px}.p-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.p-side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.p-rq{padding:12px;border-radius:15px;background:#141414;border:1px solid #1f1f1f;margin-top:8px;animation:pUp .5s both;transition:opacity .35s,transform .35s}
+.p-rq b{font-weight:900;font-size:13.5px}.p-rq small{display:block;font-size:12px;color:#8a8a8a;margin-top:3px;line-height:1.45}
+.p-rq .ab{display:flex;gap:6px;margin-top:10px}.p-rq .ab .p-sb{flex:1;height:34px}
+.p-rq.gone{opacity:0;transform:translateX(30px)}
+.p-pr{display:grid;grid-template-columns:90px 1fr 44px;gap:10px;align-items:center;font-size:12.5px;font-weight:800;margin-top:9px}
+.p-pr span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-pr .t{height:8px;border-radius:5px;background:#1f1f1f;overflow:hidden}.p-pr .t i{display:block;height:100%;border-radius:5px;width:0;transition:width 1.4s cubic-bezier(.2,.8,.2,1)}
+.p-pr span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.p-daytabs{display:none;gap:4px;margin-bottom:10px}
+.p-daytabs button{flex:1;min-width:0;height:54px;border-radius:13px;border:1px solid #222;background:#141414;color:#8a8a8a;font-weight:800;font-size:10.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-transform:uppercase;padding:0}
+.p-daytabs button b{font-size:16px;color:#e6e6e6;letter-spacing:-.03em}
+.p-daytabs button.on{background:#ededed;color:#555;border-color:#ededed}.p-daytabs button.on b{color:#0a0a0a}
+.p-daytabs button.h::after{content:"";width:5px;height:5px;border-radius:50%;background:#e07a7a;margin-top:2px}
+.p-mlist{display:none;flex-direction:column;gap:6px}
+.p-mrow{display:grid;grid-template-columns:58px 1fr;gap:10px;align-items:stretch}
+.p-mrow .p-cell{flex-direction:row;flex-wrap:wrap;min-height:48px;align-items:center}
+.p-mrow .p-cell .add{opacity:1}
+.p-mrow .p-sh{flex:1 1 120px}
+/* pointages (manager) */
+.p-ctab table{width:100%;border-collapse:collapse;font-size:13px}
+.p-ctab th{text-align:left;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#6a6a6a;font-weight:800;padding:8px 6px;border-bottom:1px solid #1f1f1f}
+.p-ctab td{padding:9px 6px;border-bottom:1px solid #1a1a1a;vertical-align:middle}
+.p-live{display:flex;gap:8px;flex-wrap:wrap}
+.p-chip{display:inline-flex;align-items:center;gap:8px;background:#151515;border:1px solid #232323;border-radius:12px;padding:7px 10px;font-size:12.5px;font-weight:700}
+.p-chip i{width:7px;height:7px;border-radius:50%;background:#5fd3a2}
+
+@media(max-width:1100px){.p-gw{grid-template-columns:1fr}}
+@media(max-width:860px){
+  .p-ttl{font-size:32px}
+  .p-hdr{flex-direction:column;align-items:stretch;gap:12px}
+  .p-g{grid-template-columns:1fr}
+  .p-cd{font-size:52px}
+  .p-sheet{left:0;right:0;top:auto;bottom:0;width:auto;max-width:none;transform:translateY(100%);border-radius:24px 24px 0 0;max-height:90vh;max-height:90dvh;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+  .p-sheet.on{transform:none}
+  .p-grid,.p-legend{display:none}
+  .p-daytabs,.p-mlist{display:flex}
+  .main-area{padding-bottom:96px}
+  .p-ctab .hide-m{display:none}
+}
+@media (prefers-reduced-motion:reduce){.pv *,.p-sheet{animation-duration:.01s!important;transition-duration:.01s!important}}
 </style>
 </head>
 <body>
 <div class="shell">
 <aside class="sidebar" id="sidebar"></aside>
 <main class="main-area">
-<div class="wrap">
-  <div class="pagehead"><div><div class="eyebrow">Organisation</div><h1>Planning</h1></div></div>
+<div class="wrap pv">
 
-  <!-- Ma journée -->
-  <div class="card dayhero fade-in" id="dayHero">
-    <div><div class="sk" style="width:180px;height:10px"></div><div class="sk" style="width:80%;height:24px;margin-top:12px"></div><div class="sk" style="height:8px;margin-top:34px"></div></div>
-    <div><div class="sk" style="height:66px"></div></div>
-  </div>
-
-  <!-- Pointage -->
-  <div class="card" style="margin-bottom:20px">
-    <div class="clock" id="clockBox"></div>
-  </div>
-
-  <div class="tabs" id="tabs">
-    <button data-t="week" class="on">Semaine</button>
-    <button data-t="mine" id="tabMine">Mes heures</button>
-    <button data-t="clocks" id="tabClocks" class="hidden">Pointages</button>
-  </div>
-
-  <!-- Semaine -->
-  <section id="t-week">
-    <div class="card">
-      <div class="weeknav">
-        <button class="btn ghost small" id="prevW" aria-label="Semaine précédente">←</button>
-        <b id="weekLabel"></b>
-        <button class="btn ghost small" id="nextW" aria-label="Semaine suivante">→</button>
-        <button class="btn ghost small" id="todayW">Aujourd'hui</button>
-        <div class="spacer"></div>
-        <button class="btn small hidden" id="addShift">+ Ajouter un créneau</button>
+  <!-- ============ CHATTER ============ -->
+  <div id="chatterView" class="hidden">
+    <div class="p-hdr"><div><div class="eyebrow">Organisation</div><h1 class="p-ttl">Mon <em>planning.</em></h1></div></div>
+    <div class="p-g">
+      <div class="p-col">
+        <div class="p-card p-hero" id="hero"></div>
+        <div class="p-card" style="--d:.08s">
+          <div class="p-ch"><h3>Ma <em>semaine</em></h3><div class="p-wnav"><button id="wPrev" aria-label="Semaine précédente">‹</button><b id="wLab"></b><button id="wNext" aria-label="Semaine suivante">›</button></div></div>
+          <div class="p-wk" id="week"></div>
+          <div class="p-mut" id="wSum" style="margin-top:10px"></div>
+        </div>
       </div>
-      <div class="tablewrap" id="weekGrid"></div>
-      <div class="notice" id="weekHint"></div>
-    </div>
-  </section>
-
-  <!-- Mes heures -->
-  <section id="t-mine" class="hidden">
-    <div class="grid">
-      <div class="card"><h2>Prochains créneaux</h2><ul class="list-sm" id="upcoming"></ul></div>
-      <div class="card"><h2 id="mineTitle">Mes pointages</h2><div class="kpi" style="margin-bottom:12px"><small>Total de la période</small><b id="mineTotal">—</b></div><ul class="list-sm" id="mineList"></ul></div>
-    </div>
-  </section>
-
-  <!-- Pointages (manager) -->
-  <section id="t-clocks" class="hidden">
-    <div class="card" style="margin-bottom:20px">
-      <h2>En shift en ce moment</h2>
-      <div class="live" id="liveList"></div>
-    </div>
-    <div class="card">
-      <div class="weeknav">
-        <button class="btn ghost small" id="prevP" aria-label="Période précédente">←</button>
-        <b id="periodLabel"></b>
-        <button class="btn ghost small" id="nextP" aria-label="Période suivante">→</button>
-        <div class="spacer"></div>
-        <button class="btn small" id="addClock">+ Ajouter un pointage</button>
+      <div class="p-col">
+        <div class="p-card" style="--d:.04s"><div class="p-ch"><h3>Shifts à <em>reprendre</em></h3><span class="p-tag w" id="bxN">0</span></div><div class="p-bx" id="bourse"></div>
+          <div class="p-mut" style="margin-top:10px">Le manager valide chaque échange avant qu'il compte.</div></div>
+        <div class="p-card" style="--d:.12s"><div class="p-ch"><h3>Ma <em>ponctualité</em></h3><span class="p-mut" id="pqLab"></span></div><div id="pq"></div></div>
+        <div class="p-card" style="--d:.16s"><div class="p-ch"><h3>Mes <em>rappels</em></h3></div>
+          <div class="p-rm">
+            <div><span>30 min avant mon shift<small>Notification sur cet appareil</small></span><button class="p-tg" data-pref="before" aria-label="30 min avant mon shift"></button></div>
+            <div><span>Si je n'ai pas pointé<small>5 min après le début du shift</small></span><button class="p-tg" data-pref="missed" aria-label="Si je n'ai pas pointé"></button></div>
+            <div><span>Quand un shift est à reprendre<small>Utile pour les changements de dernière minute</small></span><button class="p-tg" data-pref="swaps" aria-label="Quand un shift est à reprendre"></button></div>
+          </div>
+          <div class="p-mut" id="notifHint" style="margin-top:12px"></div>
+        </div>
       </div>
-      <div id="clockSummary" style="margin-bottom:14px"></div>
-      <div class="tablewrap" id="clockTable"></div>
     </div>
-  </section>
+  </div>
+
+  <!-- ============ MANAGER ============ -->
+  <div id="adminView" class="hidden">
+    <div class="p-hdr"><div><div class="eyebrow">Organisation</div><h1 class="p-ttl">Planning <em>équipe.</em></h1></div>
+      <div class="p-tabs"><button class="on" data-t="plan">Planning</button><button data-t="clocks">Pointages</button></div></div>
+    <section id="t-plan">
+      <div class="p-bar2"><div class="p-wnav"><button id="mPrev" aria-label="Semaine précédente">‹</button><b id="mLab"></b><button id="mNext" aria-label="Semaine suivante">›</button><button id="mToday" style="width:auto;padding:0 10px;font-size:12px">Aujourd'hui</button></div>
+        <button class="p-wbtn" id="addShift"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Ajouter un shift</button></div>
+      <div class="p-alerts" id="alerts"></div>
+      <div class="p-gw">
+        <div class="p-card" style="--d:.06s;padding:14px">
+          <div class="p-daytabs" id="dayTabs"></div><div class="p-mlist" id="mList"></div><div class="p-grid" id="grid"></div>
+          <div class="p-legend"><span><i style="background:#5fd3a2"></i>Pointé à l'heure</span><span><i style="background:#e07a7a"></i>Retard ou absent</span><span><i style="background:#fff"></i>En cours</span><span><i style="border:1px dashed #777"></i>Repris, à valider</span><span><i style="border:1px dashed #e07a7a"></i>À pourvoir</span></div>
+        </div>
+        <div class="p-side">
+          <div class="p-card" style="--d:.1s"><div class="p-ch" style="margin-bottom:4px"><h3>Échanges <em>à valider</em></h3></div><div id="swapList"></div></div>
+          <div class="p-card" style="--d:.14s"><div class="p-ch" style="margin-bottom:4px"><h3>Renforts <em>en cours</em></h3></div><div id="rfList"></div></div>
+          <div class="p-card" style="--d:.18s"><div class="p-ch" style="margin-bottom:2px"><h3>Ponctualité <em>équipe</em></h3><span class="p-mut" id="tpLab"></span></div><div id="teamPq"></div></div>
+        </div>
+      </div>
+    </section>
+    <section id="t-clocks" class="hidden p-ctab">
+      <div class="p-card" style="margin-bottom:14px"><h3 style="margin-bottom:12px">En shift <em>en ce moment</em></h3><div class="p-live" id="liveList"></div></div>
+      <div class="p-card">
+        <div class="p-bar2"><div class="p-wnav"><button id="prevP" aria-label="Période précédente">‹</button><b id="periodLabel" style="min-width:140px"></b><button id="nextP" aria-label="Période suivante">›</button></div>
+          <button class="p-sb w" id="addClock" style="height:36px">+ Ajouter un pointage</button></div>
+        <div id="clockSummary" class="p-live" style="margin-bottom:12px"></div>
+        <div class="tablewrap" id="clockTable"></div>
+      </div>
+    </section>
+  </div>
 </div>
 </main>
 </div>
 
-<!-- Créneau -->
-<div class="modal hidden" id="shiftModal">
-  <form class="card" id="shiftForm">
-    <h2 id="shiftTitle">Nouveau créneau</h2>
-    <label>Chatter</label><select id="sUser" required></select>
-    <label>Créatrice</label><select id="sModel" required></select>
-    <label>Date</label><input id="sDate" type="date" required>
-    <div class="row"><div style="flex:1"><label>Début</label><input id="sStart" type="time" required></div><div style="flex:1"><label>Fin</label><input id="sEnd" type="time" required></div></div>
-    <div id="sRepeatBox"><label>Répéter chaque semaine</label>
-      <select id="sRepeat"><option value="0">Non</option><option value="1">+1 semaine</option><option value="3">+3 semaines (1 mois)</option><option value="7">+7 semaines (2 mois)</option></select></div>
-    <label>Note (optionnel)</label><input id="sNote" maxlength="200" placeholder="ex. couvrir les messages du soir">
-    <div class="row" style="margin-top:16px">
-      <button type="button" class="btn danger small hidden" id="sDelete">Supprimer</button><div class="spacer"></div>
-      <button type="button" class="btn ghost small" data-close>Annuler</button><button class="btn small">Enregistrer</button>
-    </div>
-    <div class="err" id="sErr"></div>
-  </form>
+<div class="p-scrim" id="scrim"></div>
+<!-- renfort -->
+<div class="p-sheet" id="rfSheet" role="dialog" aria-modal="true" aria-labelledby="rfT">
+  <div class="p-shd"><b id="rfT">Prendre en <em>renfort</em></b><button class="p-x" data-close aria-label="Fermer">✕</button></div>
+  <div class="p-mut" id="rfSub"></div>
+  <div id="rfOpts"></div>
+  <div class="p-fl"><span class="p-lab">Jusqu'à</span><div class="p-chips" id="rfDur"><button data-m="0" class="on">Fin de mon shift</button><button data-m="60">1 h</button><button data-m="120">2 h</button><button data-m="180">3 h</button></div></div>
+  <div class="p-info" id="rfInfo"></div>
+  <button class="p-send" id="rfGo">Prendre en renfort</button>
+  <div class="p-err" id="rfErr"></div>
 </div>
-
-<!-- Pointage manuel -->
-<div class="modal hidden" id="clockModal">
-  <form class="card" id="clockForm">
-    <h2 id="clockTitle">Pointage</h2>
-    <label>Chatter</label><select id="cUser" required></select>
-    <label>Créatrice</label><select id="cModel" required></select>
-    <label>Début</label><input id="cStart" type="datetime-local" required>
-    <label>Fin</label><input id="cEnd" type="datetime-local">
-    <div class="row" style="margin-top:16px">
-      <button type="button" class="btn danger small hidden" id="cDelete">Supprimer</button><div class="spacer"></div>
-      <button type="button" class="btn ghost small" data-close>Annuler</button><button class="btn small">Enregistrer</button>
-    </div>
-    <div class="err" id="cErr"></div>
-  </form>
+<!-- shift (manager) -->
+<div class="p-sheet" id="shSheet" role="dialog" aria-modal="true" aria-labelledby="shT">
+  <div class="p-shd"><b id="shT">Ajouter un <em>shift</em></b><button class="p-x" data-close aria-label="Fermer">✕</button></div>
+  <div class="p-fl"><span class="p-lab">Créneau</span><div class="p-chips" id="fSlot"></div>
+    <div class="p-times hidden" id="fTimes"><input class="p-fi" type="time" id="fStart" aria-label="Début"><input class="p-fi" type="time" id="fEnd" aria-label="Fin"></div></div>
+  <div class="p-fl"><span class="p-lab">Jour</span><div class="p-chips" id="fDay"></div><input class="p-fi hidden" type="date" id="fDate" style="margin-top:8px" aria-label="Date"></div>
+  <div class="p-fl"><span class="p-lab">Chatter</span><div class="p-chips" id="fUser"></div></div>
+  <div class="p-fl"><span class="p-lab">Créatrice</span><div class="p-chips" id="fModel"></div></div>
+  <div class="p-fl" id="fRepBox"><span class="p-lab">Répéter</span><div class="p-chips" id="fRep"><button data-r="0" class="on">Une fois</button><button data-r="3">4 semaines</button><button data-r="7">8 semaines</button></div></div>
+  <div class="p-fl"><span class="p-lab">Note (facultatif)</span><input class="p-fi" id="fNote" maxlength="200" placeholder="ex. couvrir les messages du soir"></div>
+  <div class="p-info" id="fInfo">Les shifts <b>18–2</b> et <b>18–3</b> finissent le lendemain : ils restent rattachés au jour où ils commencent (heures, ventes et compta).</div>
+  <div class="p-srow"><button class="p-del hidden" id="fDel">Supprimer</button><button class="p-send" id="fGo">Ajouter le shift</button></div>
+  <div class="p-err" id="fErr"></div>
+</div>
+<!-- pointage manuel (manager) -->
+<div class="p-sheet" id="ckSheet" role="dialog" aria-modal="true" aria-labelledby="ckT">
+  <div class="p-shd"><b id="ckT">Pointage</b><button class="p-x" data-close aria-label="Fermer">✕</button></div>
+  <div class="p-fl"><span class="p-lab">Chatter</span><select class="p-fi" id="cUser"></select></div>
+  <div class="p-fl"><span class="p-lab">Créatrice</span><select class="p-fi" id="cModel"></select></div>
+  <div class="p-fl"><span class="p-lab">Début</span><input class="p-fi" type="datetime-local" id="cStart"></div>
+  <div class="p-fl"><span class="p-lab">Fin</span><input class="p-fi" type="datetime-local" id="cEnd"></div>
+  <div class="p-srow" style="margin-top:16px"><button class="p-del hidden" id="cDel">Supprimer</button><button class="p-send" id="cGo">Enregistrer</button></div>
+  <div class="p-err" id="cErr"></div>
 </div>
 
 <script src="/common.js"></script>
 <script>
-let ME, IS_ADMIN, weekStart, DATA = null, CLOCK = null, PERIOD = null, editShift = null, editClock = null;
-const DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 const pad = n => String(n).padStart(2, "0");
-const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
-const monday = d => { const x = new Date(d); x.setHours(12, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
-const fmtDay = d => d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
-const fmtDT = ms => new Date(ms).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-const toLocalInput = ms => { const d = new Date(ms); return `${iso(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
-const close = () => document.querySelectorAll(".modal").forEach(m => m.classList.add("hidden"));
-document.querySelectorAll("[data-close]").forEach(b => b.onclick = close);
+const DAYN = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+const SLOTS = [["6–9", "06:00", "09:00"], ["6–12", "06:00", "12:00"], ["12–18", "12:00", "18:00"], ["18–2", "18:00", "02:00"], ["18–3", "18:00", "03:00"]];
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const hm = ms => new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+const dOf = s => new Date(s + "T12:00:00");
+const isoD = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const addD = (s, n) => { const d = dOf(s); d.setDate(d.getDate() + n); return isoD(d); };
+const todayIso = () => isoD(new Date());
+const slotKey = s => { const h = t => +t.slice(0, 2) + (t.slice(3) !== "00" ? ":" + t.slice(3) : ""); return `${h(s.start)}–${h(s.end)}`; };
+const nextDay = s => s.end <= s.start;
+const slotHtml = s => `<span class="p-slot">${slotKey(s)}${nextDay(s) ? "<sup>+1 j</sup>" : ""}</span>`;
+const ago = ms => { const m = Math.max(0, Math.round((Date.now() - ms) / 60000)); return m < 1 ? "à l'instant" : m < 60 ? `il y a ${m} min` : `il y a ${Math.floor(m / 60)} h ${pad(m % 60)}`; };
+const dayLong = s => { const t = todayIso(); if (s === t) return "Aujourd'hui"; if (s === addD(t, 1)) return "Demain"; if (s === addD(t, -1)) return "Hier";
+  const x = dOf(s).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" }); return x.charAt(0).toUpperCase() + x.slice(1); };
+const hms = s => { s = Math.max(0, Math.floor(s)); const d = Math.floor(s / 86400); s %= 86400;
+  return `${d ? `<span class="dd">${d} j</span>` : ""}${pad(Math.floor(s / 3600))}<span class="s">:</span>${pad(Math.floor(s / 60) % 60)}<span class="s">:</span>${pad(s % 60)}`; };
+const hrsTxt = h => { const m = Math.round(h * 60); return `${Math.floor(m / 60)} h ${pad(m % 60)}`; };
+const weekLab = from => { const a = dOf(from), b = dOf(addD(from, 6)); return a.getMonth() === b.getMonth() ? `${a.getDate()} – ${b.getDate()} ${b.toLocaleDateString("fr-FR", { month: "short" })}` : `${a.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} – ${b.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}`; };
 
-document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {
-  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
-  ["week", "mine", "clocks"].forEach(t => $("t-" + t).classList.toggle("hidden", t !== b.dataset.t));
-  if (b.dataset.t === "clocks") loadClocks();
-  if (b.dataset.t === "mine") loadMine();
+/* ---------- feuilles ---------- */
+let SHEET = null;
+function openSheet(id) { SHEET = $(id); $("scrim").classList.add("on"); SHEET.classList.add("on"); document.body.style.overflow = "hidden"; VS.open(); }
+function closeSheet() { $("scrim").classList.remove("on"); document.querySelectorAll(".p-sheet").forEach(s => s.classList.remove("on")); document.body.style.overflow = ""; SHEET = null; }
+$("scrim").onclick = closeSheet; document.querySelectorAll("[data-close]").forEach(b => b.onclick = closeSheet);
+addEventListener("keydown", e => { if (e.key === "Escape" && SHEET) closeSheet(); });
+const chips = (box, onPick) => box.querySelectorAll("button").forEach(b => b.onclick = () => { box.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); VS.tick(); onPick && onPick(b); });
+
+/* ---------- sons discrets ---------- */
+const VS = (() => {
+  let c = null, o = null;
+  const on = () => { try { return localStorage.getItem("stSound") !== "0"; } catch (e) { return true; } };
+  function ac() { if (!on()) return null; try { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
+    if (!c) { c = new C(); o = c.createGain(); o.gain.value = .16; o.connect(c.destination); if (window.stAudio) stAudio.add(c); }
+    if (c.state !== "running") c.resume().catch(() => {}); return c; } catch (e) { return null; } }
+  const tone = (f, at, len, peak, type, glide) => { const os = c.createOscillator(), g = c.createGain(); os.type = type || "sine"; os.frequency.setValueAtTime(f, at);
+    if (glide) os.frequency.exponentialRampToValueAtTime(glide, at + len * .9);
+    g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(peak, at + Math.min(.02, len / 4)); g.gain.exponentialRampToValueAtTime(.0001, at + len);
+    os.connect(g); g.connect(o); os.start(at); os.stop(at + len + .05); };
+  const air = (at, len, f0, f1, peak) => { const n = Math.floor(c.sampleRate * len), b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / n);
+    const s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain(); s.buffer = b; bp.type = "bandpass"; bp.Q.value = 1.4;
+    bp.frequency.setValueAtTime(f0, at); bp.frequency.exponentialRampToValueAtTime(f1, at + len); g.gain.value = peak; s.connect(bp); bp.connect(g); g.connect(o); s.start(at); };
+  const run = f => { const x = ac(); if (x) try { f(x.currentTime + .02); } catch (e) {} };
+  return {
+    open: () => run(t => { air(t, .35, 900, 2600, .18); tone(1975.5, t + .12, .25, .035); }),
+    tick: () => run(t => tone(2637, t, .06, .03, "triangle")),
+    start: () => run(t => { air(t, .6, 500, 3000, .3); tone(987.8, t + .45, .5, .1); tone(1318.5, t + .52, .6, .09); }),
+    ok: () => run(t => { [1318.5, 1975.5, 2637].forEach((f, i) => tone(f, t + i * .06, .8 - i * .15, .1 - i * .025)); air(t + .05, .6, 2000, 7000, .12); }),
+    rf: () => run(t => { air(t, .5, 600, 4200, .26); [1174.7, 1568, 2349].forEach((f, i) => tone(f, t + .15 + i * .08, .55, .07)); }),
+    ko: () => run(t => { tone(392, t, .32, .08, "triangle", 330); })
+  };
+})();
+
+/* ======================================================================
+   CHATTER
+   ====================================================================== */
+let D = null, WEEK = null, RFSEL = null;
+async function loadMe() {
+  D = await api("/api/planning/me" + (WEEK ? `?from=${WEEK}` : ""));
+  WEEK = D.from; renderHero(); renderWeek(); renderBourse(); renderPq(); renderPrefs();
+}
+function heroState() {
+  const n = D.next;
+  if (D.open) return "shift";
+  if (n && n.state === "missing") return "late";
+  return n ? "before" : "none";
+}
+let HS = null;
+function renderHero() {
+  const st = heroState(), n = D.next, h = $("hero");
+  const who = (name, sub, s) => `<div class="p-who"><span class="p-av">${esc(name[0] || "?")}</span><div><b>${esc(name)}</b><small>${sub}</small></div>${s ? `<span style="margin-left:auto">${slotHtml(s)}</span>` : ""}</div>`;
+  const span = s => `${s.start} → ${s.end}${nextDay(s) ? " · finit le lendemain" : ""}`;
+  const same = HS === st + (n ? n.id : "") + (D.open ? D.open.id : "") + D.renforts.map(r => r.id).join(",") + (D.myHelp ? "h" : "");
+  HS = st + (n ? n.id : "") + (D.open ? D.open.id : "") + D.renforts.map(r => r.id).join(",") + (D.myHelp ? "h" : "");
+  if (same) return tick();
+  if (st === "before") {
+    h.innerHTML = `<div><div class="p-lab">Prochain shift · ${esc(dayLong(n.date))}</div>${who(n.model_name, span(n), n)}
+      <div class="p-cd"><small>Commence dans</small><span data-cd></span></div>
+      <div class="p-acts"><button class="p-wbtn" id="inBtn">Commencer mon shift</button></div>
+      <div class="p-rem"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></svg><span id="remTxt"></span></div></div>`;
+  } else if (st === "late") {
+    h.innerHTML = `<div><div class="p-lab" style="color:#e07a7a">Shift commencé · non pointé</div>${who(n.model_name, span(n), n)}
+      <div class="p-cd" style="color:#e07a7a"><small style="color:#b06060">En retard de</small><span data-late></span></div>
+      <div class="p-late"><span class="i">!</span><div><b>Ton shift a commencé à ${n.start}</b><small>Pointe maintenant : ton retard est noté au moment où tu pointes</small></div></div>
+      <div class="p-acts"><button class="p-wbtn" id="inBtn">Commencer mon shift</button></div></div>`;
+  } else if (st === "shift") {
+    const o = D.open, live = n && n.state === "live" ? n : null;
+    const pt = live ? (live.late ? `<span class="p-tag r"><i></i>Pointé à ${hm(live.clock_in)} · +${live.late} min</span>` : `<span class="p-tag v"><i></i>Pointé à ${hm(live.clock_in)} · à l'heure</span>`) : `<span class="p-tag w"><i></i>Pointé à ${hm(o.start_at)}</span>`;
+    const ticks = live ? (() => { const a = live.start_ms, b = live.end_ms, k = 4; return Array.from({ length: k + 1 }, (_, i) => `<span>${hm(a + (b - a) * i / k)}</span>`).join(""); })() : "";
+    h.innerHTML = `<div><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><div class="p-lab">En shift</div>${pt}</div>
+      <div class="p-cd"><small>Depuis</small><span data-chr></span></div>
+      ${live ? `<div class="p-bar"><span class="f"></span><span class="now"></span></div><div class="p-ticks">${ticks}</div>` : ""}
+      <div class="p-mods"><div class="p-mod"><span class="p-av">${esc(o.model_name[0])}</span><div><b>${esc(o.model_name)}</b><small>principale · depuis ${hm(o.start_at)}</small></div></div>
+        ${D.renforts.map(r => `<div class="p-mod rf"><span class="p-av">${esc(r.model_name[0])}</span><div><b>${esc(r.model_name)}</b><small data-rfc="${r.id}"></small></div><button class="p-sb" data-give="${r.id}">Rendre</button></div>`).join("")}</div>
+      ${D.renforts.length ? `<div class="p-rfnote">Tu tiens ${D.renforts.map(r => esc(r.model_name)).join(" et ")} en renfort. Les ventes que tu déclares sur ${D.renforts.length > 1 ? "elles" : esc(D.renforts[0].model_name)} sont comptées pour toi, et ces heures sont notées à part dans la compta.</div>` : ""}
+      <div class="p-acts"><button class="p-gbtn" id="outBtn">Terminer mon shift</button><button class="p-wbtn" id="rfBtn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Prendre en renfort</button></div>
+      <div style="text-align:center;margin-top:12px">${D.myHelp ? `<span class="p-tag w live"><i></i>Renfort demandé ${ago(D.myHelp.created_at)}</span> <button class="p-sb link" id="helpCancel">Annuler</button>` : `<button class="p-sb link" id="helpBtn">J'ai un souci : demander un renfort</button>`}</div></div>`;
+  } else {
+    h.innerHTML = `<div><div class="p-lab">Aucun shift prévu</div><div class="p-who"><span class="p-av">—</span><div><b>Pas de shift à venir</b><small>Le manager n'a rien planifié pour toi pour l'instant</small></div></div>
+      <select class="p-pick" id="inModel" aria-label="Créatrice">${D.models.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join("")}</select>
+      <div class="p-acts"><button class="p-wbtn" id="inBtn">Commencer un shift quand même</button></div></div>`;
+  }
+  const ib = $("inBtn"); if (ib) ib.onclick = async () => {
+    ib.disabled = true; const late = st === "late";
+    try { await api("/api/clock/in", { body: { model_id: n ? n.model_id : $("inModel").value } }); VS.start();
+      notify("Shift commencé", late ? `Retard de ${Math.round((Date.now() - n.start_ms) / 60000)} min noté` : `${n ? n.model_name : ""} · bon courage !`, late ? "info" : "ok"); }
+    catch (e) { notify("Impossible de pointer", e.message, "err"); }
+    await loadMe();
+  };
+  const ob = $("outBtn"); if (ob) ob.onclick = async () => {
+    if (!ob.dataset.sure) { ob.dataset.sure = 1; ob.textContent = "Confirmer la fin du shift"; setTimeout(() => { if (ob.isConnected) { delete ob.dataset.sure; ob.textContent = "Terminer mon shift"; } }, 3500); return; }
+    const dur = (Date.now() - D.open.start_at) / 3.6e6;
+    try { await api("/api/clock/out", { body: {} }); VS.ok(); notify("Shift terminé", `${hrsTxt(dur)} pointées sur ${D.open.model_name}`, "ok"); } catch (e) { notify("Impossible de terminer le shift", e.message, "err"); }
+    await loadMe();
+  };
+  const rb = $("rfBtn"); if (rb) rb.onclick = openRenfort;
+  document.querySelectorAll("[data-give]").forEach(b => b.onclick = async () => {
+    const r = D.renforts.find(x => x.id === +b.dataset.give); b.disabled = true;
+    try { await api(`/api/reinforce/${r.id}/stop`, { body: {} }); VS.tick(); notify("Renfort terminé", `${r.model_name} est rendue`, "info"); } catch (e) { notify("Erreur", e.message, "err"); }
+    await loadMe();
+  });
+  const hb = $("helpBtn"); if (hb) hb.onclick = async () => { hb.disabled = true; try { await api("/api/help", { body: {} }); VS.rf(); notify("Demande de renfort envoyée", "Les chatters en shift et le manager sont prévenus", "ok"); } catch (e) { notify("Erreur", e.message, "err"); } await loadMe(); };
+  const hc = $("helpCancel"); if (hc) hc.onclick = async () => { await api(`/api/help/${D.myHelp.id}`, { method: "DELETE" }); await loadMe(); };
+  tick();
+}
+function tick() {
+  if (!D) return; const now = Date.now(), n = D.next;
+  const cd = document.querySelector("[data-cd]"); if (cd && n) { cd.innerHTML = hms((n.start_ms - now) / 1000); if (n.start_ms - now <= 0) { HS = null; loadMe(); } }
+  const lt = document.querySelector("[data-late]"); if (lt && n) lt.innerHTML = hms((now - n.start_ms) / 1000);
+  const ch = document.querySelector("[data-chr]"); if (ch && D.open) ch.innerHTML = hms((now - D.open.start_at) / 1000);
+  const f = document.querySelector(".p-bar .f"); if (f && n) { const p = Math.max(0, Math.min(100, (now - n.start_ms) / (n.end_ms - n.start_ms) * 100)); f.style.width = p + "%"; document.querySelector(".p-bar .now").style.left = p + "%"; }
+  document.querySelectorAll("[data-rfc]").forEach(el => { const r = D.renforts.find(x => x.id === +el.dataset.rfc); if (!r) return;
+    const m = Math.floor((now - r.start_at) / 60000); el.textContent = `depuis ${hm(r.start_at)} · ${m < 60 ? m + " min" : hrsTxt(m / 60)}${r.until_at ? " · jusqu'à " + hm(r.until_at) : ""}${r.sales ? ` · ${r.sales} vente${r.sales > 1 ? "s" : ""}` : ""}`; });
+  const rt = $("remTxt"); if (rt && n) rt.textContent = D.prefs.before ? `Rappel 30 min avant, à ${hm(n.start_ms - 30 * 60000)}` : "Rappel désactivé · active-le dans « Mes rappels »";
+}
+setInterval(tick, 1000);
+
+function openRenfort() {
+  const c = D.candidates; RFSEL = c[0]?.id || null;
+  $("rfSub").textContent = `Tu gardes ${D.open.model_name} et tu prends une deuxième créatrice pendant ton shift.`;
+  $("rfOpts").innerHTML = c.length ? c.map(m => `<button class="p-opt${m.id === RFSEL ? " on" : ""}" data-id="${m.id}"><span class="p-av">${esc(m.name[0])}</span><div><b>${esc(m.name)} ${m.help ? '<span class="p-tag r"><i></i>Renfort demandé</span>' : ""}</b><small>${esc(m.note)}${m.help ? " · " + ago(m.help.at) : ""}</small></div><span class="rd"></span></button>`).join("")
+    : `<div class="p-empty">Aucune autre créatrice disponible.</div>`;
+  document.querySelectorAll("#rfOpts .p-opt").forEach(o => o.onclick = () => { RFSEL = +o.dataset.id; document.querySelectorAll("#rfOpts .p-opt").forEach(x => x.classList.toggle("on", x === o)); VS.tick(); rfTexts(); });
+  document.querySelectorAll("#rfDur button").forEach((b, i) => b.classList.toggle("on", i === 0));
+  $("rfErr").textContent = ""; rfTexts(); openSheet("rfSheet");
+}
+function rfTexts() {
+  const m = D.candidates.find(x => x.id === RFSEL), name = m ? m.name : "…";
+  $("rfInfo").innerHTML = `Pendant le renfort, le formulaire de vente te propose <b>${esc(D.open.model_name)}</b> et <b>${esc(name)}</b>. Les ventes de ${esc(name)} sont comptées <b>pour toi</b>, sans erreur dans la compta. Le manager voit le renfort en direct.`;
+  $("rfGo").textContent = `Prendre ${name} en renfort`; $("rfGo").disabled = !m;
+}
+chips($("rfDur"));
+$("rfGo").onclick = async () => {
+  const min = +document.querySelector("#rfDur button.on").dataset.m, m = D.candidates.find(x => x.id === RFSEL); $("rfGo").disabled = true;
+  try { await api("/api/reinforce", { body: { model_id: RFSEL, minutes: min } }); closeSheet(); VS.rf();
+    notify(`${m.name} en renfort`, `Tes ventes sur ${m.name} sont comptées pour toi`, "ok"); await loadMe(); }
+  catch (e) { $("rfErr").textContent = e.message; }
+  $("rfGo").disabled = false;
+};
+
+function renderWeek() {
+  $("wLab").textContent = weekLab(D.from);
+  const t = todayIso(); let html = "", i = 0, hours = 0;
+  for (let k = 0; k < 7; k++) {
+    const day = addD(D.from, k), list = D.week.filter(s => s.date === day), d = dOf(day);
+    const lab = `<div class="d">${DAYN[k]}<b>${d.getDate()}</b></div>`;
+    if (!list.length) { html += `<div class="p-dy off" style="animation-delay:${.05 + i++ * .03}s">${lab}<div class="m" style="color:#5a5a5a">Pas de shift</div><div class="r"><span class="p-mut">Repos</span></div></div>`; continue; }
+    list.forEach((s, j) => {
+      hours += (s.end_ms - s.start_ms) / 3.6e6;
+      let r = "", cls = day === t ? "today" : s.end_ms < Date.now() ? "past" : "";
+      if (s.state === "done") r = s.late ? `<span class="p-tag r"><i></i>+${s.late} min</span>` : `<span class="p-tag v"><i></i>À l'heure</span>`;
+      else if (s.state === "absent") r = `<span class="p-tag r"><i></i>Absent</span>`;
+      else if (s.state === "live") r = `<span class="p-tag w live"><i></i>En cours</span>`;
+      else if (s.state === "missing") r = `<span class="p-tag r live"><i></i>Pas pointé</span>`;
+      else if (s.swap && s.swap.status === "open") { cls += " swap"; r = `<span class="p-tag w live"><i></i>En échange</span><button class="p-sb" data-unswap="${s.swap.id}">Annuler</button>`; }
+      else if (s.swap && s.swap.status === "requested") { cls += " swap"; r = `<span class="p-tag w"><i></i>Repris par ${esc(s.swap.to_name)} · à valider</span>`; }
+      else r = `${day === t ? '<span class="p-tag w"><i></i>Aujourd\'hui</span>' : ""}<div class="p-menu"><button class="p-sb" aria-label="Options du shift">•••</button><div class="p-pop"><button data-release="${s.id}">Je ne peux pas venir : mettre en échange</button></div></div>`;
+      html += `<div class="p-dy ${cls}" style="animation-delay:${.05 + i++ * .03}s">${j ? '<div class="d"></div>' : lab}<div class="m">${slotHtml(s)} <span style="margin-left:4px">${esc(s.model_name)}</span><small>${s.start} → ${s.end}${s.note ? " · " + esc(s.note) : ""}</small></div><div class="r">${r}</div></div>`;
+    });
+  }
+  $("week").innerHTML = html;
+  $("wSum").textContent = D.week.length ? `${D.week.length} shift${D.week.length > 1 ? "s" : ""} · ${hrsTxt(hours)} prévues` : "";
+  document.querySelectorAll("#week .p-menu").forEach(m => { const b = m.querySelector(".p-sb"), p = m.querySelector(".p-pop");
+    b.onclick = e => { e.stopPropagation(); document.querySelectorAll(".p-pop").forEach(x => x !== p && x.classList.remove("on")); p.classList.toggle("on"); }; });
+  document.querySelectorAll("[data-release]").forEach(b => b.onclick = async () => {
+    try { await api(`/api/shifts/${b.dataset.release}/release`, { body: {} }); VS.tick(); notify("Shift mis en échange", "L'équipe est prévenue · le manager valide la reprise", "info"); } catch (e) { notify("Erreur", e.message, "err"); }
+    loadMe(); });
+  document.querySelectorAll("[data-unswap]").forEach(b => b.onclick = async () => { await api(`/api/swaps/${b.dataset.unswap}`, { method: "DELETE" }); notify("Échange annulé", "Tu gardes ton shift", "info"); loadMe(); });
+}
+document.addEventListener("click", () => document.querySelectorAll(".p-pop.on").forEach(p => p.classList.remove("on")));
+$("wPrev").onclick = () => { WEEK = addD(WEEK, -7); loadMe(); };
+$("wNext").onclick = () => { WEEK = addD(WEEK, 7); loadMe(); };
+
+function renderBourse() {
+  const L = D.swaps; $("bxN").textContent = L.length;
+  $("bourse").innerHTML = !L.length ? `<div class="p-empty">Aucun shift à reprendre pour l'instant.</div>` : L.map((w, i) => {
+    const urg = w.start_ms - Date.now() < 24 * 3.6e6, mine = w.status === "requested";
+    return `<div class="p-of${urg ? " urg" : ""}${mine ? " taken" : ""}" style="animation-delay:${i * .05}s"><div><b>${esc(dayLong(w.date))} ${slotHtml(w)} ${esc(w.model_name)} ${urg ? '<span class="p-tag r"><i></i>Urgent</span>' : ""}</b>
+      <small>${esc(w.from_name)}${w.reason ? " · " + esc(w.reason) : " ne peut pas venir"} · ${ago(w.created_at)}</small></div>
+      <div class="r">${w.status === "requested" ? `<span class="p-tag v"><i></i>Demandé · attente du manager</span><button class="p-sb" data-drop="${w.id}">Annuler</button>` : `<button class="p-sb ${urg ? "w" : ""}" data-take="${w.id}">Prendre</button>`}</div></div>`; }).join("");
+  document.querySelectorAll("[data-take]").forEach(b => b.onclick = async () => { b.disabled = true;
+    try { await api(`/api/swaps/${b.dataset.take}/take`, { body: {} }); VS.ok(); notify("Demande envoyée", "Le manager doit valider la reprise du shift", "ok"); } catch (e) { notify("Erreur", e.message, "err"); } loadMe(); });
+  document.querySelectorAll("[data-drop]").forEach(b => b.onclick = async () => { await api(`/api/swaps/${b.dataset.drop}`, { method: "DELETE" }); notify("Demande retirée", "", "info"); loadMe(); });
+}
+function renderPq() {
+  const p = D.punctuality, el = $("pq");
+  const per = (() => { const d = new Date(), m = d.toLocaleDateString("fr-FR", { month: "short" }); return d.getDate() <= 15 ? `1 – 15 ${m}` : `16 – ${new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()} ${m}`; })();
+  $("pqLab").textContent = per;
+  if (!p.total) { el.innerHTML = `<div class="p-empty">Pas encore de shift terminé sur cette période.</div>`; return; }
+  const cls = p.pct >= 90 ? "" : p.pct >= 75 ? "mid" : "low";
+  el.innerHTML = `<div class="p-pq"><div class="p-ring"><svg width="92" height="92" viewBox="0 0 92 92"><circle class="bgc" cx="46" cy="46" r="40"/><circle class="fg ${cls}" cx="46" cy="46" r="40"/></svg><b>${p.pct} %</b></div>
+    <ul><li><span class="p-tag v"><i></i>${p.onTime}</span>shift${p.onTime > 1 ? "s" : ""} à l'heure</li>
+    <li><span class="p-tag r"><i></i>${p.late}</span>retard${p.late > 1 ? "s" : ""}${p.lateMin ? ` · ${p.lateMin} min au total` : ""}</li>
+    ${p.absent ? `<li><span class="p-tag r"><i></i>${p.absent}</span>absence${p.absent > 1 ? "s" : ""}</li>` : ""}
+    ${p.advance != null ? `<li><span class="p-tag w"><i></i>${p.advance} min</span>d'avance en moyenne</li>` : ""}</ul></div>
+    <div class="p-dots">${p.last.map((c, i) => `<i class="${c}" style="animation-delay:${.2 + i * .04}s" title="${c === "v" ? "À l'heure" : c === "r" ? "En retard" : "Absent"}"></i>`).join("")}</div>
+    <div class="p-mut" style="margin-top:6px">Tes ${p.last.length} derniers shifts</div>`;
+  requestAnimationFrame(() => requestAnimationFrame(() => { const f = el.querySelector(".fg"); if (f) f.style.strokeDashoffset = 251.3 * (1 - p.pct / 100); }));
+}
+function renderPrefs() {
+  document.querySelectorAll("[data-pref]").forEach(b => b.classList.toggle("on", !!D.prefs[b.dataset.pref]));
+  const N = window.Notification;
+  $("notifHint").innerHTML = !N ? "Les rappels s'affichent dans l'application quand elle est ouverte."
+    : N.permission === "granted" ? "Notifications activées sur cet appareil."
+    : N.permission === "denied" ? "Les notifications sont bloquées sur cet appareil : autorise-les dans les réglages du navigateur."
+    : `<button class="p-sb" id="askNotif">Autoriser les notifications sur cet appareil</button>`;
+  const a = $("askNotif"); if (a) a.onclick = async () => { try { await Notification.requestPermission(); } catch (e) {} renderPrefs(); };
+}
+document.querySelectorAll("[data-pref]").forEach(b => b.onclick = async () => {
+  const k = b.dataset.pref, v = !b.classList.contains("on"); b.classList.toggle("on", v); VS.tick();
+  try { const r = await api("/api/planning/prefs", { method: "PUT", body: { [k]: v } }); D.prefs = r.prefs; tick(); } catch (e) { b.classList.toggle("on", !v); }
+  if (v && window.Notification && Notification.permission === "default") { try { await Notification.requestPermission(); } catch (e) {} renderPrefs(); }
 });
 
-/* ---------- Pointage ---------- */
-let tick = null;
-async function loadMine() {
-  CLOCK = await api("/api/clock/me");
-  renderClock(); renderMine(); renderDay(true);
+/* ======================================================================
+   MANAGER
+   ====================================================================== */
+let A = null, MW = null, MDAY = null, EDIT = null, NEWID = null;
+async function loadAdmin() {
+  A = await api("/api/admin/planning" + (MW ? `?from=${MW}` : ""));
+  MW = A.from; if (MDAY == null) { const k = Math.round((dOf(A.today) - dOf(A.from)) / 864e5); MDAY = k >= 0 && k < 7 ? k : 0; }
+  $("mLab").textContent = weekLab(A.from);
+  renderAlerts(); renderGrid(); renderDay(); renderSwaps(); renderRf(); renderTeamPq();
 }
-function renderClock() {
-  const c = CLOCK; clearInterval(tick);
-  if (c.open) {
-    $("clockBox").innerHTML = `<span class="dot on"></span><div><div class="eyebrow" style="margin:0">En shift sur ${esc(c.open.model_name)}</div><div class="timer" id="timer"></div></div>
-      <div class="spacer"></div><button class="btn" id="outBtn">Terminer mon shift</button>`;
-    const upd = () => { const s = Math.floor((Date.now() - c.open.start_at) / 1000); $("timer").textContent = `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s % 3600 / 60))}:${pad(s % 60)}`; };
-    upd(); tick = setInterval(upd, 1000);
-    $("outBtn").onclick = async () => { $("outBtn").disabled = true; const dur = (Date.now() - c.open.start_at) / 3.6e6;
-      try { await api("/api/clock/out", { body: {} }); notify("Shift terminé", `${hrs(dur)} pointées sur ${c.open.model_name}`, "ok"); } catch (e) { notify("Impossible de terminer le shift", e.message, "err"); } await loadMine(); };
-  } else {
-    // créatrice pré-sélectionnée : celle du prochain créneau du jour, s'il y en a un
-    const today = iso(new Date());
-    const next = c.upcoming.find(s => s.date === today);
-    $("clockBox").innerHTML = `<span class="dot"></span><div><div class="eyebrow" style="margin:0">Pointage</div><div style="font-weight:600">Pas de shift en cours</div></div>
-      <div class="spacer"></div><label for="inModel" class="hidden">Créatrice</label>
-      <select id="inModel">${c.models.map(m => `<option value="${m.id}" ${next && next.model_id === m.id ? "selected" : ""}>${esc(m.name)}</option>`).join("")}</select>
-      <button class="btn" id="inBtn">Commencer mon shift</button>`;
-    $("inBtn").onclick = async () => { $("inBtn").disabled = true; const name = $("inModel").selectedOptions[0]?.textContent || "";
-      try { await api("/api/clock/in", { body: { model_id: $("inModel").value } }); notify("Shift commencé", `${name} · bon courage !`, "ok"); } catch (e) { notify("Impossible de pointer", e.message, "err"); } await loadMine(); };
-  }
+const isSlot = (s, sl) => s.start === sl[1] && s.end === sl[2];
+const otherShifts = () => A.shifts.filter(s => !SLOTS.some(sl => isSlot(s, sl)));
+function shHtml(s) {
+  let cls = "", note = esc(s.model_name);
+  if (s.swap && s.swap.status === "open" && s.state === "future") { cls = "hole"; note += " · à pourvoir"; }
+  else if (s.swap && s.swap.status === "requested") { cls = "xc"; note += ` · → ${esc(s.swap.to_name)} ?`; }
+  else if (s.state === "done") { cls = s.late ? "r" : "v"; if (s.late) note += ` · +${s.late} min`; }
+  else if (s.state === "absent") { cls = "r"; note += " · absent"; }
+  else if (s.state === "live") { cls = "now" + (s.late ? " r" : ""); if (s.late) note += ` · +${s.late} min`; }
+  else if (s.state === "missing") { cls = "r now"; note += " · pas pointé"; }
+  return `<div class="p-sh ${cls}${s.id === NEWID ? " new" : ""}" data-sid="${s.id}" title="${esc(s.username)} · ${esc(s.model_name)} · ${s.start}–${s.end}">${esc(s.username)}<small>${note}</small></div>`;
 }
-function alertMsg(m) { $("clockBox").insertAdjacentHTML("beforeend", `<div class="err" style="width:100%">${esc(m)}</div>`); }
-function renderMine() {
-  const c = CLOCK;
-  $("upcoming").innerHTML = c.upcoming.length ? c.upcoming.map(s => `<li><span>${new Date(s.date + "T12:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" })} · <b>${esc(s.model_name)}</b></span><span>${s.start} – ${s.end}</span></li>`).join("")
-    : "<li style='color:var(--muted)'>Aucun créneau prévu.</li>";
-  $("mineTitle").textContent = `Mes pointages · ${c.period.label}`;
-  $("mineTotal").textContent = hrs(c.hours);
-  $("mineList").innerHTML = c.clocks.length ? c.clocks.map(k => `<li><span>${fmtDT(k.start_at)} · ${esc(k.model_name)}</span><span>${k.end_at ? hrs((k.end_at - k.start_at) / 3.6e6) : "<span class='badge'>en cours</span>"}</span></li>`).join("")
-    : "<li style='color:var(--muted)'>Aucun pointage sur cette période.</li>";
+function rows() { const r = SLOTS.map(sl => ({ key: sl[0], sub: sl[2] < sl[1] ? `→ ${sl[2]} +1 j` : `${sl[1]} → ${sl[2]}`, test: s => isSlot(s, sl), slot: sl }));
+  if (otherShifts().length) r.push({ key: "Autres", sub: "horaires libres", test: s => !SLOTS.some(sl => isSlot(s, sl)) }); return r; }
+function bindCells(root) {
+  root.querySelectorAll("[data-sid]").forEach(e => e.onclick = ev => { ev.stopPropagation(); openShiftSheet(A.shifts.find(s => s.id === +e.dataset.sid)); });
+  root.querySelectorAll(".p-cell").forEach(c => c.onclick = () => openShiftSheet(null, { date: c.dataset.d, slot: c.dataset.slot }));
 }
+function renderGrid() {
+  const t = A.today; let h = "<div></div>";
+  for (let k = 0; k < 7; k++) { const d = addD(A.from, k); h += `<div class="hd${d === t ? " today" : ""}">${DAYN[k]}<b>${dOf(d).getDate()}</b></div>`; }
+  rows().forEach(r => { h += `<div class="p-sl">${r.key}<small>${r.sub}</small></div>`;
+    for (let k = 0; k < 7; k++) { const d = addD(A.from, k), ss = A.shifts.filter(s => s.date === d && r.test(s));
+      h += `<div class="p-cell${d < t ? " past" : ""}${ss.some(s => s.swap && s.swap.status === "open") ? " hole" : ""}" data-d="${d}" data-slot="${r.slot ? r.slot[0] : ""}">${ss.map(shHtml).join("")}${ss.length ? "" : '<span class="add">+</span>'}</div>`; } });
+  $("grid").innerHTML = h; bindCells($("grid"));
+}
+function renderDay() {
+  let t = "";
+  for (let k = 0; k < 7; k++) { const d = addD(A.from, k), hole = A.shifts.some(s => s.date === d && ((s.swap && s.swap.status === "open") || s.state === "missing"));
+    t += `<button class="${k === MDAY ? "on" : ""}${hole ? " h" : ""}" data-k="${k}">${DAYN[k]}<b>${dOf(d).getDate()}</b></button>`; }
+  $("dayTabs").innerHTML = t;
+  $("dayTabs").querySelectorAll("button").forEach(b => b.onclick = () => { MDAY = +b.dataset.k; VS.tick(); renderDay(); });
+  const d = addD(A.from, MDAY);
+  $("mList").innerHTML = rows().map(r => { const ss = A.shifts.filter(s => s.date === d && r.test(s));
+    return `<div class="p-mrow"><div class="p-sl">${r.key}<small>${r.sub}</small></div><div class="p-cell${ss.some(s => s.swap && s.swap.status === "open") ? " hole" : ""}" data-d="${d}" data-slot="${r.slot ? r.slot[0] : ""}">${ss.map(shHtml).join("")}${ss.length ? "" : '<span class="add">+</span>'}</div></div>`; }).join("");
+  bindCells($("mList"));
+}
+function renderAlerts() {
+  const out = [];
+  A.missing.forEach(s => { const asked = A.helps.some(h => h.model_id === s.model_id);
+    out.push(`<div class="p-al r"><span class="i">!</span><div><b>${esc(s.username)} n'a pas pointé</b><small>${esc(s.model_name)} · ${slotKey(s)} · a commencé il y a ${s.late} min</small>${asked ? '<span class="p-tag w live"><i></i>Renfort demandé</span>' : `<button class="p-sb" data-ask="${s.id}">Demander un renfort</button>`}</div></div>`); });
+  A.helps.filter(h => h.for_user && h.created_by === h.for_user).forEach(h => out.push(`<div class="p-al r"><span class="i">!</span><div><b>${esc(h.for_name)} a un souci</b><small>Renfort demandé sur ${esc(h.model_name)} · ${ago(h.created_at)}</small></div></div>`));
+  const req = A.swaps.filter(w => w.status === "requested").length;
+  if (req) out.push(`<div class="p-al w"><span class="i">⇄</span><div><b>${req} échange${req > 1 ? "s" : ""} à valider</b><small>Changements de dernière minute proposés par l'équipe</small></div></div>`);
+  A.renforts.slice(0, 2).forEach(r => out.push(`<div class="p-al g"><span class="i">+</span><div><b>Renfort en cours</b><small>${esc(r.username)} tient ${esc(r.model_name)}${r.main_model_name ? " en plus de " + esc(r.main_model_name) : ""} depuis ${hm(r.start_at)}${r.sales ? ` · ${r.sales} vente${r.sales > 1 ? "s" : ""} de ${eur(r.amount)}` : ""}</small></div></div>`));
+  $("alerts").innerHTML = out.join("");
+  document.querySelectorAll("[data-ask]").forEach(b => b.onclick = async () => { b.disabled = true; await api("/api/admin/help", { body: { shift_id: +b.dataset.ask } }); VS.rf(); notify("Renfort demandé", "Les chatters en shift le voient tout de suite", "ok"); loadAdmin(); });
+}
+function renderSwaps() {
+  const L = A.swaps;
+  $("swapList").innerHTML = !L.length ? `<div class="p-empty">Aucun échange en cours.</div>` : L.map((w, i) => `<div class="p-rq" data-w="${w.id}" style="animation-delay:${i * .05}s">
+    <b>${esc(w.from_name)} → ${w.to_name ? esc(w.to_name) : "<span style='color:#8a8a8a'>personne pour l'instant</span>"}</b>
+    <small>${esc(dayLong(w.date))} · ${slotKey(w)} · ${esc(w.model_name)}${w.reason ? "<br>" + esc(w.reason) : ""}</small>
+    <div class="ab">${w.status === "requested" ? `<button class="p-sb r" data-dec="refuse">Refuser</button><button class="p-sb g" data-dec="approve">✓ Valider</button>` : `<button class="p-sb r" data-dec="refuse">Annuler l'échange</button>`}</div></div>`).join("");
+  document.querySelectorAll("#swapList [data-dec]").forEach(b => b.onclick = async () => {
+    const rq = b.closest(".p-rq"), ok = b.dataset.dec === "approve", w = A.swaps.find(x => x.id === +rq.dataset.w);
+    try { await api(`/api/admin/swaps/${w.id}`, { body: { decision: b.dataset.dec } }); rq.classList.add("gone"); ok ? VS.ok() : VS.ko();
+      notify(ok ? "Échange validé" : "Échange refusé", ok ? `${w.to_name} reprend le shift de ${w.from_name}` : `${w.from_name} garde son shift`, ok ? "ok" : "info");
+      if (ok) NEWID = w.shift_id; await sleep(350); loadAdmin(); } catch (e) { notify("Erreur", e.message, "err"); }
+  });
+}
+function renderRf() {
+  const R = A.renforts, H = A.helps;
+  $("rfList").innerHTML = (!R.length && !H.length) ? `<div class="p-empty">Aucun renfort en cours.</div>` :
+    R.map(r => `<div class="p-rq"><b>${esc(r.username)} · ${r.main_model_name ? esc(r.main_model_name) + " + " : ""}${esc(r.model_name)}</b>
+      <small>Depuis ${hm(r.start_at)}${r.until_at ? " · jusqu'à " + hm(r.until_at) : " · jusqu'à la fin de son shift"}<br>Ventes sur ${esc(r.model_name)} pendant le renfort : ${eur(r.amount)} (comptées pour ${esc(r.username)})</small>
+      <div class="ab"><button class="p-sb" data-stop="${r.id}">Arrêter le renfort</button></div></div>`).join("") +
+    H.map(h => `<div class="p-rq" style="border-style:dashed"><b>${esc(h.model_name)} · renfort demandé</b><small>${h.for_name ? esc(h.for_name) + (h.created_by === h.for_user ? " a un souci" : " n'a pas pointé") : "Demandé par " + esc(h.by_name)} · ${ago(h.created_at)}<br>Personne ne l'a encore pris</small>
+      <div class="ab"><button class="p-sb" data-hclose="${h.id}">Clore la demande</button></div></div>`).join("");
+  document.querySelectorAll("[data-stop]").forEach(b => b.onclick = async () => { b.disabled = true; await api(`/api/reinforce/${b.dataset.stop}/stop`, { body: {} }); notify("Renfort arrêté", "", "info"); loadAdmin(); });
+  document.querySelectorAll("[data-hclose]").forEach(b => b.onclick = async () => { await api(`/api/help/${b.dataset.hclose}`, { method: "DELETE" }); loadAdmin(); });
+}
+function renderTeamPq() {
+  const d = new Date(), m = d.toLocaleDateString("fr-FR", { month: "short" }); $("tpLab").textContent = d.getDate() <= 15 ? `1 – 15 ${m}` : `16 – ${new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()} ${m}`;
+  const L = [...A.punctuality].sort((a, b) => b.pct - a.pct);
+  $("teamPq").innerHTML = !L.length ? `<div class="p-empty">Pas encore de shift terminé sur la période.</div>` :
+    L.map(p => `<div class="p-pr" title="${p.onTime} à l'heure · ${p.late} retard(s) · ${p.absent} absence(s)"><span>${esc(p.username)}</span><span class="t"><i data-w="${p.pct}" style="background:${p.pct >= 90 ? "#5fd3a2" : p.pct >= 75 ? "#e6e6e6" : "#e07a7a"}"></i></span><span>${p.pct} %</span></div>`).join("");
+  requestAnimationFrame(() => requestAnimationFrame(() => document.querySelectorAll("#teamPq [data-w]").forEach(i => i.style.width = i.dataset.w + "%")));
+}
+$("mPrev").onclick = () => { MW = addD(MW, -7); loadAdmin(); };
+$("mNext").onclick = () => { MW = addD(MW, 7); loadAdmin(); };
+$("mToday").onclick = () => { MW = null; MDAY = null; loadAdmin(); };
 
-/* ---------- Ma journée : frise des 24 h + compte à rebours ---------- */
-let TODAY = [], dayTick = null;
-const toDT = (date, hm) => new Date(`${date}T${hm}:00`);
-const span = s => { const a = toDT(s.date, s.start); let b = toDT(s.date, s.end); if (b <= a) b = new Date(b.getTime() + 864e5); return [a, b]; };
-async function loadToday() {
-  const t = iso(new Date());
-  try { const d = await api(`/api/shifts?from=${iso(addDays(new Date(), -1))}&to=${t}`); TODAY = d.shifts; } catch (e) { TODAY = []; }
-  renderDay(true);
+/* ----- feuille shift ----- */
+function openShiftSheet(s, preset = {}) {
+  EDIT = s;
+  const slotOf = x => (SLOTS.find(sl => isSlot(x, sl)) || [null])[0];
+  const curSlot = s ? (slotOf(s) || "autre") : (preset.slot || "18–2");
+  $("fSlot").innerHTML = SLOTS.map(sl => `<button data-s="${sl[0]}" class="${sl[0] === curSlot ? "on" : ""}">${sl[0]}${sl[2] < sl[1] ? " <sup>+1 j</sup>" : ""}</button>`).join("") + `<button data-s="autre" class="${curSlot === "autre" ? "on" : ""}">Autre</button>`;
+  $("fStart").value = s ? s.start : "18:00"; $("fEnd").value = s ? s.end : "02:00"; $("fTimes").classList.toggle("hidden", curSlot !== "autre");
+  chips($("fSlot"), b => $("fTimes").classList.toggle("hidden", b.dataset.s !== "autre"));
+  const date = s ? s.date : (preset.date || (A.today >= A.from && A.today <= A.to ? A.today : A.from));
+  const inWeek = date >= A.from && date <= A.to;
+  $("fDay").innerHTML = Array.from({ length: 7 }, (_, k) => { const d = addD(A.from, k); return `<button data-d="${d}" class="${d === date ? "on" : ""}">${DAYN[k]} ${dOf(d).getDate()}</button>`; }).join("") + `<button data-d="autre" class="${inWeek ? "" : "on"}">Autre date</button>`;
+  $("fDate").value = date; $("fDate").classList.toggle("hidden", inWeek);
+  chips($("fDay"), b => $("fDate").classList.toggle("hidden", b.dataset.d !== "autre"));
+  const ppl = A.people.filter(p => p.role !== "admin"), uid = s ? s.user_id : (ppl[0]?.id);
+  $("fUser").innerHTML = (ppl.length ? ppl : A.people).map(p => `<button data-u="${p.id}" class="${p.id === uid ? "on" : ""}">${esc(p.username)}</button>`).join("");
+  chips($("fUser"));
+  const mid = s ? s.model_id : A.models[0]?.id;
+  $("fModel").innerHTML = A.models.map(m => `<button data-m="${m.id}" class="${m.id === mid ? "on" : ""}">${esc(m.name)}</button>`).join("");
+  chips($("fModel"));
+  document.querySelectorAll("#fRep button").forEach((b, i) => b.classList.toggle("on", i === 0)); $("fRepBox").classList.toggle("hidden", !!s);
+  $("fNote").value = s ? (s.note || "") : "";
+  $("shT").innerHTML = s ? "Modifier le <em>shift</em>" : "Ajouter un <em>shift</em>"; $("fGo").textContent = s ? "Enregistrer" : "Ajouter le shift";
+  $("fDel").classList.toggle("hidden", !s); $("fDel").textContent = "Supprimer"; delete $("fDel").dataset.sure; $("fErr").textContent = "";
+  openSheet("shSheet");
 }
-function renderDay(first) {
-  if (!CLOCK) return;
-  const now = new Date(), today = iso(now), pad2 = n => String(n).padStart(2, "0");
-  const mine = s => s.user_id === ME.id;
-  // shifts qui touchent aujourd'hui (y compris ceux d'hier soir qui débordent après minuit)
-  const dayStart = new Date(today + "T00:00:00"), dayEnd = new Date(dayStart.getTime() + 864e5);
-  const pool = (IS_ADMIN ? TODAY : TODAY.filter(mine)).map(s => ({ s, r: span(s) })).filter(x => x.r[1] > dayStart && x.r[0] < dayEnd);
-  const ongoing = pool.filter(x => x.r[0] <= now && now < x.r[1]);
-  // prochain shift (aujourd'hui, ou plus tard pour le chatter grâce à « upcoming »)
-  const futurePool = IS_ADMIN ? pool : [...pool, ...CLOCK.upcoming.map(s => ({ s: { ...s, user_id: ME.id }, r: span(s) }))];
-  const next = futurePool.filter(x => x.r[0] > now).sort((a, b) => a.r[0] - b.r[0])[0];
-  const clock = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
-  const left = ms => { const m = Math.round(ms / 6e4); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? " " + pad2(m % 60) : ""}`; };
-  const dayName = d => d.toLocaleDateString("fr-FR", { weekday: "long" });
-  let txt, target = null, tlabel = "Prochain shift dans";
-  if (ongoing.length && !IS_ADMIN) {
-    const o = ongoing[0]; target = o.r[1]; tlabel = "Fin du shift dans";
-    txt = `Ton shift sur <b>${esc(o.s.model_name)}</b> est en cours, il se termine dans <b>${left(o.r[1] - now)}</b>${CLOCK.open ? "" : ". Pense à pointer !"}`;
-  } else if (IS_ADMIN && ongoing.length) {
-    txt = `Il est <b>${clock}</b> · <b>${ongoing.length}</b> shift${ongoing.length > 1 ? "s" : ""} en cours (${ongoing.map(o => esc(o.s.username)).join(", ")})` + (next ? `, prochain : ${esc(next.s.username)} à <b>${next.s.start}</b>` : "");
-    if (next) target = next.r[0];
-  } else if (next && iso(next.r[0]) === today) {
-    target = next.r[0];
-    txt = IS_ADMIN ? `Il est <b>${clock}</b>, le prochain shift (${esc(next.s.username)} sur ${esc(next.s.model_name)}) commence dans <b>${left(next.r[0] - now)}</b>`
-                   : `Il est <b>${clock}</b>, ton shift sur ${esc(next.s.model_name)} commence dans <b>${left(next.r[0] - now)}</b>`;
-  } else if (next) {
-    target = next.r[0];
-    txt = `Pas de shift ${IS_ADMIN ? "prévu" : "pour toi"} aujourd'hui. Prochain : <b>${dayName(next.r[0])} à ${next.s.start}</b> · ${esc(next.s.model_name)}`;
-  } else txt = IS_ADMIN ? `Il est <b>${clock}</b> · aucun shift prévu aujourd'hui` : `Il est <b>${clock}</b> · aucun shift prévu pour le moment`;
-  const pct = d => Math.max(0, Math.min(100, (d - dayStart) / 864e5 * 100));
-  // couloirs pour que les shifts qui se chevauchent ne se recouvrent pas
-  const lanes = []; pool.sort((a, b) => a.r[0] - b.r[0]).forEach(x => { let l = lanes.findIndex(end => end <= x.r[0]); if (l === -1) { l = lanes.length; lanes.push(0); } lanes[l] = x.r[1]; x.lane = l; });
-  const nL = Math.max(1, lanes.length);
-  const rem = target ? Math.max(0, Math.floor((target - now) / 1000)) : null;
-  const H = rem == null ? null : [Math.floor(rem / 3600), Math.floor(rem % 3600 / 60), rem % 60].map(pad2);
-  if (first || !$("tlNow")) {
-    $("dayHero").innerHTML = `<div>
-      <div class="eyebrow" style="margin:0">Aujourd'hui · ${now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</div>
-      <div class="dh-big" id="dhTxt">${txt}</div>
-      <div class="tl" style="padding-top:${(nL - 1) * (IS_ADMIN ? 26 : 30)}px">
-        <div class="track"><div class="past" id="tlPast" style="width:${pct(now)}%"></div></div>
-        <div class="lanes">${pool.map((x, i) => { const l = pct(x.r[0]), w = pct(x.r[1]) - l; return `<div class="blk ${mine(x.s) ? "mine" : ""} ${l > 60 ? "r" : ""}" style="left:${l}%;width:${w}%;top:${-x.lane * 30}px;animation-delay:${0.1 + i * 0.06}s">${IS_ADMIN ? "" : `<span>${esc(x.s.model_name)} ${x.s.start}–${x.s.end}</span>`}</div>`; }).join("")}</div>
-        <div class="now" id="tlNow" style="left:${pct(now)}%"></div>
-        <div class="ticks"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div>
-      </div>${IS_ADMIN && pool.length ? `<div class="tlist">${pool.map(x => { const on = x.r[0] <= now && now < x.r[1]; return `<span class="${on ? "on" : ""}"><i></i><b>${esc(x.s.username)}</b> · ${esc(x.s.model_name)} · ${x.s.start}–${x.s.end}</span>`; }).join("")}</div>` : ""}</div>
-      <div id="cdnBox">${H ? `<div class="cdn-l">${tlabel}</div><div class="cdn"><div><b id="cdH">${H[0]}</b><small>heures</small></div><div><b id="cdM">${H[1]}</b><small>minutes</small></div><div><b id="cdS">${H[2]}</b><small>secondes</small></div></div>` : `<div class="cdn-l">Planning</div><div style="color:var(--muted);font-size:13px;line-height:1.5">Aucun shift à venir dans les prochains jours.</div>`}</div>`;
-  } else {
-    $("dhTxt").innerHTML = txt; $("tlPast").style.width = pct(now) + "%"; $("tlNow").style.left = pct(now) + "%";
-    if (H && $("cdH")) { $("cdH").textContent = H[0]; $("cdM").textContent = H[1]; $("cdS").textContent = H[2]; }
-    if (rem === 0) renderDay(true);
-  }
-  clearInterval(dayTick); dayTick = setInterval(() => renderDay(false), 1000);
-}
-
-/* ---------- Semaine ---------- */
-async function loadWeek() {
-  if (!DATA) $("weekGrid").innerHTML = SK.table(4).replace('class="card sk-card"', 'class="sk-card"');
-  const from = iso(weekStart), to = iso(addDays(weekStart, 6));
-  DATA = await api(`/api/shifts?from=${from}&to=${to}`);
-  $("weekLabel").textContent = `Semaine du ${fmtDay(weekStart)} au ${fmtDay(addDays(weekStart, 6))}`;
-  const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
-  const today = iso(new Date());
-  // lignes : chatters actifs + toute personne ayant un créneau cette semaine
-  const ids = new Set(DATA.people.filter(p => p.role === "chatter").map(p => p.id));
-  DATA.shifts.forEach(s => ids.add(s.user_id));
-  const people = DATA.people.filter(p => ids.has(p.id)).sort((a, b) => (b.id === ME.id) - (a.id === ME.id) || a.username.localeCompare(b.username));
-  if (!people.length) { $("weekGrid").innerHTML = "<div style='color:var(--muted)'>Aucun chatter. Ajoutez des comptes dans « Gestion ».</div>"; return; }
-  if (window.innerWidth < 700) {   // téléphone : liste jour par jour
-    $("weekGrid").innerHTML = days.map((d, i) => {
-      const ds = iso(d), list = DATA.shifts.filter(s => s.date === ds).sort((a, b) => (b.user_id === ME.id) - (a.user_id === ME.id) || a.start.localeCompare(b.start));
-      return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div style="font-weight:600;margin-bottom:6px;${ds === today ? "" : "color:var(--muted)"}">${d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" })}</div>
-        ${list.length ? list.map(s => `<div class="chip ${IS_ADMIN ? "edit" : ""}" data-id="${s.id}" style="margin-bottom:6px;${s.user_id === ME.id ? "border-color:#555" : ""}"><b style="display:inline">${esc(s.username)}</b> · ${esc(s.model_name)} <span style="float:right">${s.start} – ${s.end}</span></div>`).join("")
-          : `<div style="color:var(--muted);font-size:13px">—</div>`}</div>`;
-    }).join("");
-    $("weekHint").textContent = IS_ADMIN ? "Touchez un créneau pour le modifier, ou « + Ajouter un créneau »." : "Vos créneaux sont encadrés. Seul le manager peut modifier le planning.";
-    if (IS_ADMIN) document.querySelectorAll(".chip.edit").forEach(c => c.onclick = () => openShift(DATA.shifts.find(s => s.id == c.dataset.id)));
-    return;
-  }
-  let h = `<table class="grid7"><tr><th style="width:120px"></th>${days.map((d, i) => `<th class="${iso(d) === today ? "today" : ""}">${DAYS[i]} ${d.getDate()}</th>`).join("")}</tr>`;
-  for (const p of people) {
-    h += `<tr class="${p.id === ME.id ? "mine" : ""}"><td class="who">${esc(p.username)}${p.id === ME.id ? " <span class='badge'>vous</span>" : ""}</td>`;
-    for (const d of days) {
-      const ds = iso(d), list = DATA.shifts.filter(s => s.user_id === p.id && s.date === ds);
-      h += `<td><div class="cell ${IS_ADMIN ? "add" : ""}" data-u="${p.id}" data-d="${ds}">${list.map(s =>
-        `<div class="chip ${IS_ADMIN ? "edit" : ""}" data-id="${s.id}" title="${esc(s.note || "")}"><b>${esc(s.model_name)}</b><span>${s.start} – ${s.end}</span></div>`).join("")}</div></td>`;
-    }
-    h += "</tr>";
-  }
-  $("weekGrid").innerHTML = h + "</table>";
-  $("weekHint").textContent = IS_ADMIN ? "Cliquez dans une case pour ajouter un créneau, ou sur un créneau pour le modifier." : "Votre ligne est mise en avant. Seul le manager peut modifier le planning.";
-  if (IS_ADMIN) {
-    document.querySelectorAll(".cell.add").forEach(c => c.onclick = e => { if (e.target.closest(".chip")) return; openShift(null, { user_id: +c.dataset.u, date: c.dataset.d }); });
-    document.querySelectorAll(".chip.edit").forEach(c => c.onclick = () => openShift(DATA.shifts.find(s => s.id == c.dataset.id)));
-  }
-}
-$("prevW").onclick = () => { weekStart = addDays(weekStart, -7); loadWeek(); };
-$("nextW").onclick = () => { weekStart = addDays(weekStart, 7); loadWeek(); };
-$("todayW").onclick = () => { weekStart = monday(new Date()); loadWeek(); };
-$("addShift").onclick = () => openShift(null, { date: iso(new Date()) });
-
-function openShift(s, preset = {}) {
-  editShift = s;
-  $("sUser").innerHTML = DATA.people.map(p => `<option value="${p.id}">${esc(p.username)}</option>`).join("");
-  $("sModel").innerHTML = DATA.models.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join("");
-  $("shiftTitle").textContent = s ? "Modifier le créneau" : "Nouveau créneau";
-  $("sUser").value = s ? s.user_id : (preset.user_id || DATA.people.find(p => p.role === "chatter")?.id || "");
-  $("sModel").value = s ? s.model_id : (DATA.models[0]?.id || "");
-  $("sDate").value = s ? s.date : preset.date; $("sStart").value = s ? s.start : "18:00"; $("sEnd").value = s ? s.end : "00:00";
-  $("sNote").value = s ? (s.note || "") : ""; $("sRepeat").value = "0";
-  $("sRepeatBox").classList.toggle("hidden", !!s); $("sDelete").classList.toggle("hidden", !s); $("sErr").textContent = "";
-  $("shiftModal").classList.remove("hidden");
-}
-$("shiftForm").onsubmit = async e => {
-  e.preventDefault();
-  const body = { user_id: $("sUser").value, model_id: $("sModel").value, date: $("sDate").value, start: $("sStart").value, end: $("sEnd").value, note: $("sNote").value, repeatWeeks: $("sRepeat").value };
-  try { await api(editShift ? `/api/admin/shifts/${editShift.id}` : "/api/admin/shifts", { method: editShift ? "PUT" : "POST", body }); close(); loadWeek(); loadToday();
-    notify(editShift ? "Créneau modifié" : "Créneau ajouté", `${$("sStart").value} – ${$("sEnd").value}`, "ok"); }
-  catch (err) { $("sErr").textContent = err.message; }
+chips($("fRep"));
+$("addShift").onclick = () => openShiftSheet(null);
+$("fGo").onclick = async () => {
+  const sb = document.querySelector("#fSlot button.on").dataset.s, sl = SLOTS.find(x => x[0] === sb);
+  const db = document.querySelector("#fDay button.on").dataset.d;
+  const body = { user_id: +document.querySelector("#fUser button.on")?.dataset.u, model_id: +document.querySelector("#fModel button.on")?.dataset.m,
+    date: db === "autre" ? $("fDate").value : db, start: sl ? sl[1] : $("fStart").value, end: sl ? sl[2] : $("fEnd").value, note: $("fNote").value,
+    repeatWeeks: +document.querySelector("#fRep button.on").dataset.r };
+  $("fGo").disabled = true; $("fErr").textContent = "";
+  try { await api(EDIT ? `/api/admin/shifts/${EDIT.id}` : "/api/admin/shifts", { method: EDIT ? "PUT" : "POST", body });
+    closeSheet(); VS.ok();
+    const u = A.people.find(p => p.id === body.user_id), m = A.models.find(x => x.id === body.model_id);
+    notify(EDIT ? "Shift modifié" : "Shift ajouté", `${u ? u.username : ""} · ${m ? m.name : ""} · ${slotKey(body)}`, "ok");
+    if (body.date < A.from || body.date > A.to) MW = body.date; MDAY = Math.round((dOf(body.date) - dOf(addD(body.date, -((dOf(body.date).getDay() + 6) % 7)))) / 864e5);
+    const before = new Set(A.shifts.map(s => s.id)); await loadAdmin();
+    const fresh = A.shifts.find(s => !before.has(s.id)) || (EDIT && A.shifts.find(s => s.id === EDIT.id)); if (fresh) { NEWID = fresh.id; renderGrid(); renderDay(); NEWID = null; }
+  } catch (e) { $("fErr").textContent = e.message; }
+  $("fGo").disabled = false;
 };
-$("sDelete").onclick = async () => { await api(`/api/admin/shifts/${editShift.id}`, { method: "DELETE" }); close(); loadWeek(); loadToday(); notify("Créneau supprimé", "", "info"); };
+$("fDel").onclick = async () => {
+  const b = $("fDel"); if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = "Confirmer ?"; return; }
+  await api(`/api/admin/shifts/${EDIT.id}`, { method: "DELETE" }); closeSheet(); notify("Shift supprimé", "", "info"); loadAdmin();
+};
 
-/* ---------- Pointages (manager) ---------- */
-let CL = null;
+/* ----- onglet pointages ----- */
+let CL = null, PERIOD = null, EDC = null;
+const toLocalInput = ms => { const d = new Date(ms); return `${isoD(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const fmtDT = ms => new Date(ms).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 async function loadClocks(p) {
-  CL = await api("/api/admin/clocks" + (p || PERIOD ? `?period=${p || PERIOD}` : ""));
-  PERIOD = CL.period.key;
+  CL = await api("/api/admin/clocks" + (p || PERIOD ? `?period=${p || PERIOD}` : "")); PERIOD = CL.period.key;
   $("periodLabel").textContent = CL.period.label;
-  $("liveList").innerHTML = CL.live.length ? CL.live.map(c => `<div class="chip"><span class="dot on" style="width:8px;height:8px;border-radius:50%;background:var(--good)"></span><b style="display:inline">${esc(c.username)}</b> sur ${esc(c.model_name)} · depuis ${hrs((Date.now() - c.start_at) / 3.6e6)}</div>`).join("")
-    : "<div style='color:var(--muted)'>Personne n'est en shift.</div>";
-  const tot = {}; CL.clocks.filter(c => c.end_at).forEach(c => tot[c.username] = (tot[c.username] || 0) + (c.end_at - c.start_at) / 3.6e6);
-  $("clockSummary").innerHTML = Object.keys(tot).length ? `<div class="live">${Object.entries(tot).sort((a, b) => b[1] - a[1]).map(([u, h]) => `<span class="chip"><b style="display:inline">${esc(u)}</b> ${hrs(h)}</span>`).join("")}</div>` : "";
-  $("clockTable").innerHTML = !CL.clocks.length ? "<div style='color:var(--muted)'>Aucun pointage sur cette période.</div>" :
-    `<table><tr><th>Début</th><th>Chatter</th><th>Créatrice</th><th>Fin</th><th>Durée</th><th></th></tr>` +
-    CL.clocks.map(c => `<tr><td style="white-space:nowrap">${fmtDT(c.start_at)}</td><td><b>${esc(c.username)}</b></td><td>${esc(c.model_name)}</td>
-      <td style="white-space:nowrap">${c.end_at ? fmtDT(c.end_at) : "<span class='badge'>en cours</span>"}</td>
-      <td>${c.end_at ? hrs((c.end_at - c.start_at) / 3.6e6) : "—"} ${c.edited ? "<span class='badge' title='Modifié par le manager'>corrigé</span>" : ""}</td>
-      <td style="text-align:right"><button class="btn ghost small" data-c="${c.id}">Modifier</button></td></tr>`).join("") + "</table>";
+  $("liveList").innerHTML = CL.live.length ? CL.live.map(c => `<span class="p-chip"><i></i><b>${esc(c.username)}</b> sur ${esc(c.model_name)}${c.reinforce ? " (renfort)" : ""} · depuis ${hrsTxt((Date.now() - c.start_at) / 3.6e6)}</span>`).join("") : `<span class="p-mut">Personne n'est en shift.</span>`;
+  const tot = {}; CL.clocks.filter(c => c.end_at && !c.reinforce).forEach(c => tot[c.username] = (tot[c.username] || 0) + (c.end_at - c.start_at) / 3.6e6);
+  $("clockSummary").innerHTML = Object.entries(tot).sort((a, b) => b[1] - a[1]).map(([u, h]) => `<span class="p-chip"><b>${esc(u)}</b> ${hrsTxt(h)}</span>`).join("");
+  $("clockTable").innerHTML = !CL.clocks.length ? `<div class="p-empty">Aucun pointage sur cette période.</div>` :
+    `<table><tr><th>Début</th><th>Chatter</th><th>Créatrice</th><th class="hide-m">Fin</th><th>Durée</th><th></th></tr>` +
+    CL.clocks.map(c => `<tr><td style="white-space:nowrap">${fmtDT(c.start_at)}</td><td><b>${esc(c.username)}</b></td><td>${esc(c.model_name)}${c.reinforce ? ' <span class="p-tag w">renfort</span>' : ""}</td>
+      <td class="hide-m" style="white-space:nowrap">${c.end_at ? fmtDT(c.end_at) : '<span class="p-tag v live"><i></i>en cours</span>'}</td>
+      <td style="white-space:nowrap">${c.end_at ? hrsTxt((c.end_at - c.start_at) / 3.6e6) : "—"} ${c.edited ? '<span class="p-tag w" title="Modifié par le manager">corrigé</span>' : ""}</td>
+      <td style="text-align:right"><button class="p-sb" data-c="${c.id}">Modifier</button></td></tr>`).join("") + "</table>";
   document.querySelectorAll("[data-c]").forEach(b => b.onclick = () => openClock(CL.clocks.find(c => c.id == b.dataset.c)));
 }
-$("prevP").onclick = () => loadClocks(CL.period.prev);
-$("nextP").onclick = () => loadClocks(CL.period.next);
+$("prevP").onclick = () => loadClocks(CL.period.prev); $("nextP").onclick = () => loadClocks(CL.period.next);
 $("addClock").onclick = () => openClock(null);
 function openClock(c) {
-  editClock = c;
+  EDC = c;
   $("cUser").innerHTML = CL.people.map(p => `<option value="${p.id}">${esc(p.username)}</option>`).join("");
   $("cModel").innerHTML = CL.models.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join("");
-  $("clockTitle").textContent = c ? "Corriger le pointage" : "Ajouter un pointage";
+  $("ckT").textContent = c ? "Corriger le pointage" : "Ajouter un pointage";
   if (c) { $("cUser").value = c.user_id; $("cModel").value = c.model_id; $("cStart").value = toLocalInput(c.start_at); $("cEnd").value = c.end_at ? toLocalInput(c.end_at) : ""; }
   else { const n = Date.now(); $("cStart").value = toLocalInput(n - 4 * 3.6e6); $("cEnd").value = toLocalInput(n); }
-  $("cDelete").classList.toggle("hidden", !c); $("cErr").textContent = "";
-  $("clockModal").classList.remove("hidden");
+  $("cDel").classList.toggle("hidden", !c); $("cErr").textContent = ""; openSheet("ckSheet");
 }
-$("clockForm").onsubmit = async e => {
-  e.preventDefault();
+$("cGo").onclick = async () => {
   const body = { user_id: $("cUser").value, model_id: $("cModel").value, start_at: new Date($("cStart").value).getTime(), end_at: $("cEnd").value ? new Date($("cEnd").value).getTime() : null };
-  try { await api(editClock ? `/api/admin/clocks/${editClock.id}` : "/api/admin/clocks", { method: editClock ? "PUT" : "POST", body }); close(); loadClocks(); loadMine(); }
-  catch (err) { $("cErr").textContent = err.message; }
+  try { await api(EDC ? `/api/admin/clocks/${EDC.id}` : "/api/admin/clocks", { method: EDC ? "PUT" : "POST", body }); closeSheet(); loadClocks(); } catch (e) { $("cErr").textContent = e.message; }
 };
-$("cDelete").onclick = async () => { await api(`/api/admin/clocks/${editClock.id}`, { method: "DELETE" }); close(); loadClocks(); loadMine(); };
+$("cDel").onclick = async () => { await api(`/api/admin/clocks/${EDC.id}`, { method: "DELETE" }); closeSheet(); loadClocks(); };
+document.querySelectorAll(".p-tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".p-tabs button").forEach(x => x.classList.toggle("on", x === b));
+  $("t-plan").classList.toggle("hidden", b.dataset.t !== "plan"); $("t-clocks").classList.toggle("hidden", b.dataset.t !== "clocks");
+  b.dataset.t === "clocks" ? loadClocks() : loadAdmin();
+});
 
 /* ---------- Démarrage ---------- */
 (async () => {
-  ME = await api("/api/me");
-  IS_ADMIN = ME.role === "admin";
-  renderShell("planning", ME);
-  if (IS_ADMIN) { $("tabClocks").classList.remove("hidden"); $("addShift").classList.remove("hidden"); }
-  weekStart = monday(new Date());
-  await Promise.all([loadWeek(), loadToday().then(() => loadMine())]);
+  const me = await api("/api/me");
+  renderShell("planning", me);
+  if (me.role === "admin") {
+    $("adminView").classList.remove("hidden"); await loadAdmin();
+    setInterval(() => { if (!document.hidden && !SHEET && !$("t-plan").classList.contains("hidden")) loadAdmin().catch(() => {}); }, 30000);
+  } else {
+    $("chatterView").classList.remove("hidden"); await loadMe();
+    setInterval(() => { if (!document.hidden && !SHEET) loadMe().catch(() => {}); }, 30000);
+  }
 })();
 </script>
 </body>

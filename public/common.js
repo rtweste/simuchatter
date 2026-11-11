@@ -55,6 +55,7 @@ const LOGO_SVG = `<svg aria-hidden="true" focusable="false" viewBox="-4 -4 703.5
 // Logo animé (reflet qui traverse le mot)
 const logoHTML = () => `<span class="lg-sh"><span class="base">${LOGO_SVG}</span><span class="shine">${LOGO_SVG}</span></span>`;
 function renderShell(active, me) {
+  if (me && me.role !== "admin") PLANREM.start();
   const el = document.getElementById("sidebar"); if (!el) return;
   const mods = MODULES.filter(m => m.roles.includes(me.role));
   const badge = m => m.id === "ventes" && me.role === "admin";
@@ -281,3 +282,30 @@ const SND = window.SND = (() => {
   };
 })();
 
+
+/* ---------------- Rappels de planning (chatters) ----------------
+   Vérifie chaque minute : shift dans 30 min, shift commencé sans pointage, shift à reprendre.
+   Affiche une notification dans l'appli et, si autorisé, une notification de l'appareil. */
+const PLANREM = (() => {
+  let on = false;
+  const seen = k => { try { const m = JSON.parse(localStorage.getItem("stRem") || "{}"); if (m[k]) return true; m[k] = Date.now();
+    Object.keys(m).forEach(x => { if (Date.now() - m[x] > 3 * 864e5) delete m[x]; }); localStorage.setItem("stRem", JSON.stringify(m)); return false; } catch (e) { return false; } };
+  const hm = ms => new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  function push(title, body, url) {
+    notify(title, body, "info");
+    try { if (window.Notification && Notification.permission === "granted" && navigator.serviceWorker)
+      navigator.serviceWorker.ready.then(r => r.showNotification(title, { body, icon: "/icon-192.png", badge: "/icon-192.png", tag: title, data: { url: url || "/planning" } })).catch(() => {}); } catch (e) {}
+  }
+  async function check() {
+    let d; try { d = await api("/api/planning/ping"); } catch (e) { return; }
+    if (!d || !d.prefs) return;
+    const now = Date.now(), n = d.next;
+    if (n && d.prefs.before && n.state === "future" && n.start_ms - now <= 30 * 60000 && n.start_ms - now > 0 && !seen("b" + n.id + n.start_ms))
+      push("Ton shift commence bientôt", `${n.model_name} · ${n.start} → ${n.end} · dans ${Math.max(1, Math.round((n.start_ms - now) / 60000))} min`);
+    if (n && d.prefs.missed && n.state === "missing" && now - n.start_ms >= 5 * 60000 && !seen("m" + n.id + n.start_ms))
+      push("Tu n'as pas encore pointé", `Ton shift sur ${n.model_name} a commencé à ${hm(n.start_ms)}`);
+    if (d.prefs.swaps) (d.swaps || []).filter(w => now - w.created_at < 6 * 3.6e6).forEach(w => { if (!seen("s" + w.id))
+      push("Un shift est à reprendre", `${w.from_name} · ${w.model_name} · ${w.start} → ${w.end}`); });
+  }
+  return { start() { if (on) return; on = true; setTimeout(check, 2500); setInterval(() => { if (!document.hidden) check(); }, 60000); document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); }); } };
+})();

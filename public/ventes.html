@@ -405,7 +405,7 @@ async function compress(file) {
 /* ======================================================================
    CHATTER : tableau de bord + feuille « déclarer une vente »
    ====================================================================== */
-let MINE = [], MODELS = [], FILTER = "", SHOWN = 40, FILE = null, WHEN = "now", FRESH = null;
+let ACTIVE = [], MINE = [], MODELS = [], FILTER = "", SHOWN = 40, FILE = null, WHEN = "now", FRESH = null;
 const thumb = s => `<button class="vt-th" data-z="${s.id}" aria-label="Voir la capture"><img src="${img(s.id)}" alt="" loading="lazy" onload="this.classList.add('ld')"></button>`;
 const amtHtml = s => `${s.amount !== s.declared_amount ? `<s>${E(s.declared_amount)}</s>` : ""}${E(s.amount)}`;
 
@@ -466,11 +466,11 @@ async function loadMine(opts = {}) {
     const changed = d.sales.filter(s => before.get(s.id) === "pending" && s.status !== "pending");
     changed.forEach(s => s.status === "validated" ? notify("Vente validée", `${E(s.amount)} · ${s.model_name}`, "ok") : notify("Vente refusée", s.reason || `${E(s.amount)} · ${s.model_name}`, "err"));
     if (changed.some(s => s.status === "validated")) VS.ok(); else if (changed.length) VS.ko();
-    MINE = d.sales; MODELS = d.models; if (h) renderHero(h);
+    MINE = d.sales; MODELS = d.models; ACTIVE = d.active || []; if (h) renderHero(h);
     if (changed.length) { renderMine(); changed.forEach(s => { const r = document.querySelector(`#myList [data-id="${s.id}"]`); if (r) { r.classList.add(s.status === "validated" ? "flip-v" : "flip-r"); setTimeout(() => r.classList.remove("flip-v", "flip-r"), 2600); } }); }
     return;
   }
-  MINE = d.sales; MODELS = d.models; renderMine(); if (h) renderHero(h);
+  MINE = d.sales; MODELS = d.models; ACTIVE = d.active || []; renderMine(); if (h) renderHero(h);
 }
 
 /* ----- feuille ----- */
@@ -496,9 +496,11 @@ document.querySelectorAll("#whenChips button").forEach(b => b.onclick = () => {
   $("fDate").classList.toggle("hidden", WHEN !== "pick"); if (WHEN === "pick") { $("fDate").value = $("fDate").value || toLocalInput(Date.now()); $("fDate").max = toLocalInput(Date.now() + 60e3); }
 });
 function renderCrea(sel) {
-  let last = sel; try { last = last || +localStorage.getItem("stLastModel"); } catch (e) {}
+  // pendant un shift : la créatrice principale et les renforts passent en premier
+  let last = sel || (ACTIVE[0] && ACTIVE[0].model_id); try { last = last || +localStorage.getItem("stLastModel"); } catch (e) {}
   if (!MODELS.some(m => m.id === last)) last = MODELS[0]?.id;
-  $("creaChips").innerHTML = MODELS.map(m => `<button type="button" data-m="${m.id}" class="${m.id === last ? "on" : ""}">${esc(m.name)}</button>`).join("") || `<span class="vt-mut">Aucune créatrice : demande au manager d'en ajouter.</span>`;
+  const act = id => ACTIVE.find(a => a.model_id === id), list = [...MODELS].sort((a, b) => (act(b.id) ? 1 : 0) - (act(a.id) ? 1 : 0));
+  $("creaChips").innerHTML = list.map(m => `<button type="button" data-m="${m.id}" class="${m.id === last ? "on" : ""}">${esc(m.name)}${act(m.id) ? `<sup style="font-size:9px;opacity:.6;margin-left:4px">${act(m.id).reinforce ? "renfort" : "en shift"}</sup>` : ""}</button>`).join("") || `<span class="vt-mut">Aucune créatrice : demande au manager d'en ajouter.</span>`;
   document.querySelectorAll("#creaChips button").forEach(b => b.onclick = () => { document.querySelectorAll("#creaChips button").forEach(x => x.classList.toggle("on", x === b)); VS.tick(); });
 }
 function openSheet(again) {
