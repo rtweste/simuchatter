@@ -125,6 +125,14 @@
 .ty-ch .gl{position:absolute;left:0;right:0;border-top:1.5px dashed rgba(95,211,162,.7);pointer-events:none}.ty-ch .gl span{position:absolute;right:0;top:-18px;font:800 10.5px Inter;color:var(--ok)}
 .ty-st{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
 .ty-st div{border-radius:14px;padding:10px 12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)}.ty-st small{display:block;font:800 9.5px Inter;letter-spacing:.12em;color:#888;text-transform:uppercase}.ty-st b{display:block;font:900 20px Inter;margin-top:2px}
+.ty-big{position:relative}
+.ty-big b{position:relative}
+.ty-sw{position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.95) 48%,rgba(95,211,162,.9) 52%,transparent 70%);background-size:250% 100%;background-position:120% 0;-webkit-background-clip:text;background-clip:text;color:transparent;font:inherit;letter-spacing:inherit}
+.ty-rg{position:absolute;left:50%;top:38%;width:60px;height:60px;margin:-30px 0 0 -30px;border-radius:50%;border:2.5px solid #5fd3a2;pointer-events:none;opacity:0}
+.ty-stamp{position:absolute;right:-6px;top:-14px;width:54px;height:54px;pointer-events:none;opacity:0}
+.ty-stamp svg{width:100%;height:100%;overflow:visible}.ty-stamp .c{fill:#5fd3a2;filter:drop-shadow(0 0 14px rgba(95,211,162,.9))}.ty-stamp .k{fill:none;stroke:#06261a;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:60;stroke-dashoffset:60}
+.ty-ch i.lit{background:linear-gradient(#7ef0c0,rgba(95,211,162,.35));box-shadow:0 0 18px rgba(95,211,162,.55)}
+.ty-big .gd.okp{background:linear-gradient(120deg,#5fd3a2,#7dd3fc);box-shadow:0 0 24px rgba(95,211,162,.45)}
 .tt-fx{position:fixed;inset:0;pointer-events:none;z-index:300}
 @media(max-width:560px){.tt-ill{display:none}.tt-top{padding:12px}.tt-top small{display:none}.tt-top button{white-space:nowrap;height:34px}
   .ty-w{padding:4px 12px 20px}.ty-hud{gap:8px}.ty-tm{width:60px;height:60px}.ty-tm span{font-size:18px}.ty-k{gap:6px}.ty-k div{padding:8px 9px}.ty-k small{font-size:8.5px;letter-spacing:.08em}.ty-k b{font-size:20px;white-space:nowrap}
@@ -358,7 +366,7 @@ function typing() {
       <div class="tt-ac"><button class="s" id="again">↺ Refaire le test</button><a class="p" href="/tests">Terminer</a></div></div>`;
     const b = $("rW"), s = performance.now(); (function f(t) { const p = Math.min(1, (t - s) / 1300); b.textContent = Math.round(wpm * (1 - Math.pow(1 - p, 3))); if (p < 1 && !reduce) requestAnimationFrame(f); else b.textContent = Math.round(wpm); })(s);
     $("again").onclick = typing; $("tyw").querySelector(".tt-ac a").onclick = e => { e.preventDefault(); hub(); };
-    if (ok) confetti(); notify(ok ? "Test de frappe validé" : "Test de frappe à refaire", `${Math.round(wpm)} mots/min · ${Math.round(acc)} %`, ok ? "ok" : "err");
+    if (ok) typingFx(); notify(ok ? "Test de frappe validé" : "Test de frappe à refaire", `${Math.round(wpm)} mots/min · ${Math.round(acc)} %`, ok ? "ok" : "err");
   }
   TY = { stop: () => { ended = true; clearInterval(timer); } };
   // fond doux
@@ -366,13 +374,32 @@ function typing() {
   (function f(t) { if (!bg.isConnected) return; bx.clearRect(0, 0, rr.width, rr.height); [[.2, .2, "179,136,255"], [.85, .7, "125,211,252"]].forEach(([x, y, c], i) => { const X = rr.width * (x + .05 * Math.sin(t * .0004 + i)), Y = rr.height * (y + .05 * Math.cos(t * .0005 + i)), g = bx.createRadialGradient(X, Y, 0, X, Y, rr.width * .5); g.addColorStop(0, `rgba(${c},.13)`); g.addColorStop(1, "rgba(0,0,0,0)"); bx.fillStyle = g; bx.fillRect(0, 0, rr.width, rr.height); }); requestAnimationFrame(f); })(0);
   requestAnimationFrame(place);
 }
+// séquence de validation du test de frappe : reflet sur le score, barres qui s'allument, ondes, sceau « validé »
+async function typingFx() {
+  const big = document.querySelector(".ty-big"), num = $("rW"); if (!big || !num || reduce) return;
+  const E = "cubic-bezier(.16,1,.3,1)"; await sleep(1350);
+  // 1. reflet lumineux qui traverse le score
+  const sw = document.createElement("span"); sw.className = "ty-sw"; sw.textContent = num.textContent; num.appendChild(sw);
+  sw.animate([{ backgroundPosition: "120% 0" }, { backgroundPosition: "-30% 0" }], { duration: 900, easing: "cubic-bezier(.6,0,.2,1)", fill: "forwards" }).onfinish = () => sw.remove();
+  num.animate([{ transform: "scale(1)" }, { transform: "scale(1.07)", filter: "drop-shadow(0 0 24px rgba(95,211,162,.7))" }, { transform: "scale(1)" }], { duration: 700, delay: 350, easing: E });
+  // 2. les barres s'allument de gauche à droite
+  [...document.querySelectorAll(".ty-ch i")].forEach((b, i) => setTimeout(() => { b.classList.add("lit"); b.animate([{ transform: "scaleY(1)" }, { transform: "scaleY(1.12)" }, { transform: "scaleY(1)" }], { duration: 420, easing: E }); }, 150 + i * 55));
+  // 3. ondes de choc + éclats depuis le score
+  await sleep(380);
+  [0, 1, 2].forEach(i => { const rg = document.createElement("span"); rg.className = "ty-rg"; if (i === 1) rg.style.borderColor = "#7dd3fc"; big.appendChild(rg);
+    rg.animate([{ opacity: .9, transform: "scale(.6)", borderWidth: "5px" }, { opacity: 0, transform: "scale(6)", borderWidth: ".5px" }], { duration: 1200, delay: i * 150, easing: E, fill: "forwards" }).onfinish = () => rg.remove(); });
+  const cv = $("fx"), x = cv.getContext("2d"), d = devicePixelRatio || 1; cv.width = innerWidth * d; cv.height = innerHeight * d; x.setTransform(d, 0, 0, d, 0, 0);
+  const r = num.getBoundingClientRect(), X = r.left + r.width / 2, Y = r.top + r.height / 2, P = Array.from({ length: 34 }, (_, i) => { const a = i / 34 * Math.PI * 2 + Math.random() * .15, v = 5 + Math.random() * 7; return { x: X + Math.cos(a) * 30, y: Y + Math.sin(a) * 30, vx: Math.cos(a) * v, vy: Math.sin(a) * v, l: 1, c: i % 3 ? "95,211,162" : "255,255,255" }; });
+  (function f() { x.clearRect(0, 0, innerWidth, innerHeight); let n = 0; P.forEach(p => { p.vx *= .9; p.vy *= .9; p.x += p.vx; p.y += p.vy; p.l -= .03; if (p.l <= 0) return; n++;
+    x.strokeStyle = `rgba(${p.c},${p.l})`; x.lineWidth = 2.2; x.lineCap = "round"; x.beginPath(); x.moveTo(p.x, p.y); x.lineTo(p.x - p.vx * 3, p.y - p.vy * 3); x.stroke(); }); if (n) requestAnimationFrame(f); else x.clearRect(0, 0, innerWidth, innerHeight); })();
+  // 4. sceau « validé » qui se pose sur le score, la pastille de niveau passe au vert
+  const st = document.createElement("span"); st.className = "ty-stamp"; st.innerHTML = `<svg viewBox="0 0 54 54"><circle class="c" cx="27" cy="27" r="25"/><path class="k" d="M16 28 L24 36 L39 19"/></svg>`; big.appendChild(st);
+  st.animate([{ opacity: 0, transform: "scale(2.6) rotate(-35deg)", filter: "blur(6px)" }, { opacity: 1, transform: "scale(.9) rotate(6deg)", filter: "blur(0)", offset: .65 }, { opacity: 1, transform: "scale(1) rotate(0)" }], { duration: 620, delay: 200, easing: E, fill: "forwards" });
+  st.querySelector(".k").animate([{ strokeDashoffset: 60 }, { strokeDashoffset: 0 }], { duration: 380, delay: 600, easing: "cubic-bezier(.65,0,.35,1)", fill: "forwards" });
+  setTimeout(() => { big.animate([{ transform: "translateY(0)" }, { transform: "translateY(3px)" }, { transform: "translateY(0)" }], { duration: 220 }); try { SND.shift?.(); } catch (e) {} }, 600);
+  const gd = big.querySelector(".gd"); setTimeout(() => { gd.classList.add("okp"); gd.textContent = "✓ Validé · " + gd.textContent; gd.animate([{ transform: "scale(.8)", opacity: .4 }, { transform: "scale(1.08)" }, { transform: "scale(1)", opacity: 1 }], { duration: 500, easing: E }); }, 900);
+}
 function stopAll() { if (RUN) { RUN.stop(); RUN = null; } if (TY) { TY.stop(); TY = null; } }
-
-/* ================= confettis ================= */
-function confetti() { if (reduce) return; const cv = $("fx"), x = cv.getContext("2d"), d = devicePixelRatio || 1; cv.width = innerWidth * d; cv.height = innerHeight * d; x.setTransform(d, 0, 0, d, 0, 0);
-  const C = ["#7dd3fc", "#b388ff", "#ff7ab6", "#5fd3a2", "#ffd23f", "#fff"], P = Array.from({ length: 160 }, (_, i) => { const L = i % 2, a = -Math.PI / 2 + (L ? -.5 : .5) + (Math.random() - .5) * .9, v = 9 + Math.random() * 10; return { x: L ? innerWidth * .05 : innerWidth * .95, y: innerHeight, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 1.2, r: Math.random() * 6, f: Math.random() * 6, s: 6 + Math.random() * 6, c: C[i % 6], l: 1 }; });
-  (function f() { x.clearRect(0, 0, innerWidth, innerHeight); let n = 0; P.forEach(p => { p.vy += .25; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += .15; p.f += .2; p.l -= .006; if (p.l <= 0 || p.y > innerHeight + 30) return; n++;
-    x.save(); x.globalAlpha = p.l; x.translate(p.x, p.y); x.rotate(p.r); x.scale(1, Math.cos(p.f)); x.fillStyle = p.c; x.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); x.restore(); }); if (n) requestAnimationFrame(f); else x.clearRect(0, 0, innerWidth, innerHeight); })(); }
 
 (async () => {
   const me = await api("/api/me"); renderShell("tests", me);
