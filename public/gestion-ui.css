@@ -285,3 +285,6 @@
 .ge .crit .unit input{width:52px}
 .ge .ttest{display:inline-block;margin-right:8px;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;border-radius:6px;padding:2px 6px;background:#262626;color:#9a9a9a;vertical-align:middle}
 .ge .acts button:disabled{opacity:.4;cursor:default}
+
+.dlbox{padding:12px 14px;border:1px solid var(--line,#222);border-radius:12px;background:rgba(255,255,255,.02)}.dlbox b{display:block;font-size:15px}.dlbox b.dlv{font-size:22px;font-variant-numeric:tabular-nums}.dlbox b.dlv.r{color:#e07a7a}.dlbox small{display:block;color:var(--muted);font-size:12px;line-height:1.5;margin-top:3px}
+.tag.dlt{font-variant-numeric:tabular-nums}

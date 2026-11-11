@@ -57,7 +57,7 @@ const sinceTxt = ms => { const d = Math.floor((Date.now() - ms) / 864e5); return
 // carte d'un stagiaire
 function tcard(c, i) {
   const tr = c.training || { done: 0, total: 6, ready: false, stats: {} }, s = tr.stats || {};
-  return `<div class="pc${tr.ready ? " ready" : ""}${c.active ? "" : " off"}${c.isNew ? " new" : ""}" data-id="${c.id}" tabindex="0" role="button" style="animation-delay:${.04 + i * .04}s"><div class="r1">${avatar(c.username, false)}<div><b>${esc(c.username)}</b><small>En formation depuis ${sinceTxt(c.created_at)}</small></div>${!c.active ? '<span class="tag w">Désactivé</span>' : tr.ready ? '<span class="tag v"><i></i>Prêt</span>' : '<span class="tag f">En formation</span>'}</div>
+  return `<div class="pc${tr.ready ? " ready" : ""}${c.active ? "" : " off"}${c.isNew ? " new" : ""}" data-id="${c.id}" tabindex="0" role="button" style="animation-delay:${.04 + i * .04}s"><div class="r1">${avatar(c.username, false)}<div><b>${esc(c.username)}</b><small>En formation depuis ${sinceTxt(c.created_at)}</small></div>${tr.deadline && tr.deadline.state === "rejected" ? '<span class="tag w">Candidature refusée</span>' : !c.active ? '<span class="tag w">Désactivé</span>' : tr.ready ? '<span class="tag v"><i></i>Prêt</span>' : tr.deadline && tr.deadline.state === "running" ? dlTag(tr.deadline) : '<span class="tag f">En formation</span>'}</div>
     <div class="st"><div><small>SCORE MOYEN</small><b style="color:${s.avg5 >= 70 ? "#5fd3a2" : "#fff"}">${s.avg5 ?? "—"}</b></div><div><small>SESSIONS</small><b>${s.sessions ?? 0}</b></div><div><small>CRITÈRES</small><b>${tr.done} / ${tr.total}</b></div></div>
     <div class="pg"><span class="t"><i style="width:${tr.total ? Math.round(tr.done / tr.total * 100) : 0}%"></i></span><b>${tr.ready ? "Prêt · " : ""}${tr.done} / ${tr.total}</b></div></div>`;
 }
@@ -119,6 +119,8 @@ async function fiche(id) {
   dr.querySelectorAll("[data-a]").forEach(b => b.onclick = async () => {
     const a = b.dataset.a;
     try {
+      if (a === "dlx") { await api(`/api/admin/users/${c.id}/deadline`, { body: { hours: 24 } });
+        toast(tr.deadline.state === "rejected" ? `${esc(c.username)} a 24 h de plus · son compte est réactivé` : `${esc(c.username)} a 24 h de plus pour terminer sa formation`, true); S.ok(); close(); loadTeam(true); }
       if (a === "pw" || a === "pwre") { pw.classList.add("on"); pw.querySelector("code").textContent = genPw(); S.tick(); }
       if (a === "pwcopy") { await copy(pw.querySelector("code").textContent); toast("Mot de passe copié", true); }
       if (a === "pwset") { const p = pw.querySelector("code").textContent; await api("/api/admin/users/" + c.id, { method: "PATCH", body: { password: p } }); await copy(`Site : stellads.fr\nIdentifiant : ${c.username}\nMot de passe : ${p}`);
@@ -139,12 +141,28 @@ async function fiche(id) {
 
 
 /* ----- fiche d'un stagiaire ----- */
+const dlLeft = ms => { const m = Math.max(0, Math.round(ms / 6e4)); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}` : `${m} min`; };
+function dlTag(d) {
+  if (!d) return "";
+  if (d.state === "rejected") return '<span class="tag w">Candidature refusée</span>';
+  if (d.state === "running") return `<span class="tag ${d.left < 6 * 3600e3 ? "r" : "f"} dlt" data-dlend="${d.end}">⏳ ${dlLeft(d.left)}</span>`;
+  return "";
+}
+function dlSec(c) {
+  const d = c.training.deadline; if (!d) return "";
+  const st = d.state === "notstarted" ? `<b>Pas encore commencé</b><small>Le compte à rebours de ${d.hours} h démarre à sa première connexion.</small>`
+    : d.state === "running" ? `<b class="dlv${d.left < 6 * 3600e3 ? " r" : ""}" data-dlend="${d.end}">${dlLeft(d.left)}</b><small>restantes · fin le ${new Date(d.end).toLocaleString("fr-FR", { weekday: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}. Sans tous les critères à temps, son compte est désactivé et sa candidature refusée.</small>`
+    : d.state === "met" ? `<b style="color:#5fd3a2">Terminé dans les temps ✓</b><small>Critères remplis en ${dlLeft(d.metAt - d.start)}.</small>`
+    : `<b style="color:#e07a7a">Délai dépassé · candidature refusée</b><small>Compte désactivé automatiquement le ${new Date(d.rejectedAt).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}. Tu peux lui redonner 24 h : son compte sera réactivé.</small>`;
+  return `<div class="sec"><span class="lab">DÉLAI DE ${d.hours} H</span><div class="dlbox">${st}</div>${d.state === "met" ? "" : `<div class="acts" style="margin-top:8px"><button data-a="dlx" style="grid-column:span 2">${d.state === "rejected" ? "Redonner 24 h et réactiver le compte" : "Donner 24 h de plus"}</button></div>`}</div>`;
+}
 function tfiche(c) {
   const tr = c.training, s = tr.stats, notes = n => `<div class="note"><button class="del" data-del="${n.id}" aria-label="Supprimer la note">✕</button><small>${esc(n.kind || "Remarque")} · ${dShort(n.created_at)}${n.by_name ? " · " + esc(n.by_name) : ""}</small>${esc(n.text)}</div>`;
-  openDr(`<div class="dh">${avatar(c.username)}<div><b>${esc(c.username)} ${tr.ready ? '<span class="tag v">Prêt</span>' : '<span class="tag f">En formation</span>'}</b><small>En formation depuis ${sinceTxt(c.created_at)}</small></div><button class="x" aria-label="Fermer">✕</button></div>
+  openDr(`<div class="dh">${avatar(c.username)}<div><b>${esc(c.username)} ${tr.deadline && tr.deadline.state === "rejected" ? '<span class="tag w">Candidature refusée</span>' : tr.ready ? '<span class="tag v">Prêt</span>' : '<span class="tag f">En formation</span>'}</b><small>En formation depuis ${sinceTxt(c.created_at)}</small></div><button class="x" aria-label="Fermer">✕</button></div>
     <div class="dk"><div><small>Score moyen (5 dern.)</small><b class="${s.avg5 >= 70 ? "g" : ""}" style="${s.avg5 >= 70 ? "color:#5fd3a2" : ""}">${s.avg5 ?? "—"}</b><em>meilleur : ${s.best ?? "—"}</em></div><div><small>Sessions terminées</small><b>${s.sessions}</b><em>dont ${s.hard} difficile${s.hard > 1 ? "s" : ""} réussie${s.hard > 1 ? "s" : ""}</em></div></div>
     <div class="rdy${tr.ready ? "" : " no"}"><span class="ic">${tr.ready ? "✓" : tr.done}</span><span>${tr.ready ? `Les ${tr.total} critères sont remplis. ${esc(c.username)} peut passer chatter.` : `${tr.done} critère${tr.done > 1 ? "s" : ""} sur ${tr.total} rempli${tr.done > 1 ? "s" : ""}.`}</span></div>
     <div class="sec"><span class="lab">CRITÈRES</span>${tr.criteria.map(k => `<div class="tck${k.ok ? " ok" : ""}"><span class="bx">${k.ok ? CK : ""}</span><div>${esc(k.label)}${k.sub ? `<small>${esc(k.sub)}</small>` : ""}</div><span class="v${k.ok ? "" : " no"}">${k.test ? '<span class="ttest">test</span>' : ""}${esc(k.value)}</span></div>`).join("")}</div>
+    ${dlSec(c)}
     <button class="valid${tr.ready ? "" : " soft"}" data-a="promote">${tr.ready ? "Valider la formation" : "Valider la formation quand même"}</button>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><a class="gbtn" href="/app#gestion" style="text-decoration:none">Assigner un entraînement</a><a class="gbtn" href="/app#gestion" style="text-decoration:none">Voir ses sessions →</a></div>
     <div class="mut" style="margin-top:10px;line-height:1.5">Une fois validée, ${esc(c.username)} voit le planning, les ventes et sa paie. Tu pourras lui ajouter des shifts.</div>
@@ -441,3 +459,5 @@ return { tab, loadSanc };
   // compteur « à traiter » visible dès l'ouverture
   if (h !== "sanc") api("/api/admin/sanctions").then(s => { $("nTodo").textContent = s.kpis.todo || ""; }).catch(() => {});
 })();
+
+setInterval(() => document.querySelectorAll("[data-dlend]").forEach(e => { const l = +e.dataset.dlend - Date.now(); e.textContent = (e.classList.contains("dlt") ? "⏳ " : "") + dlLeft(l); }), 30e3);

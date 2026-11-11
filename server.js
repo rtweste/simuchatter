@@ -212,12 +212,16 @@ app.post("/api/login", (req, res) => {
   if (Date.now() - a.t > 15 * 60e3) { a.n = 0; a.t = Date.now(); }
   if (a.n >= 10) return res.status(429).json({ error: "Trop de tentatives. Réessayez dans 15 minutes." });
   const { username, password } = req.body || {};
-  const u = db.prepare("SELECT * FROM users WHERE username = ?").get(String(username || "").trim());
+  let u = db.prepare("SELECT * FROM users WHERE username = ?").get(String(username || "").trim());
+  if (u && u.role === "trainee" && GEST) { GEST.deadline(u.id); u = db.prepare("SELECT * FROM users WHERE id = ?").get(u.id); }
+  if (u && !u.active && u.role === "trainee" && GEST && GEST.deadline(u.id).state === "rejected" && bcrypt.compareSync(String(password || ""), u.pass_hash))
+    return res.status(403).json({ error: "Le délai de 24 h pour terminer ta formation est dépassé : ta candidature n'a pas été retenue." });
   if (!u || !u.active || !bcrypt.compareSync(String(password || ""), u.pass_hash)) {
     a.n++; attempts.set(ip, a);
     return res.status(401).json({ error: "Identifiant ou mot de passe incorrect" });
   }
   attempts.delete(ip);
+  if (u.role === "trainee" && GEST) GEST.startDeadline(u.id);   // le compte à rebours de 24 h démarre à la première connexion
   const token = crypto.randomBytes(32).toString("hex");
   const ttl = 30 * 24 * 3600e3;
   db.prepare("INSERT INTO tokens VALUES (?,?,?)").run(token, u.id, Date.now() + ttl);
@@ -234,7 +238,10 @@ app.get("/api/me", auth, (req, res) => {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const used = db.prepare("SELECT COUNT(*) n FROM sims WHERE user_id = ? AND started_at >= ?").get(req.user.id, today.getTime()).n;
   const intro = db.prepare("SELECT intro_seen FROM users WHERE id = ?").get(req.user.id)?.intro_seen ? 1 : 0;
-  res.json({ id: req.user.id, username: req.user.username, role: req.user.role, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro });
+  let deadline = null;
+  if (req.user.role === "trainee" && GEST) { GEST.startDeadline(req.user.id); deadline = GEST.deadline(req.user.id);
+    if (deadline.state === "rejected") return res.status(401).json({ error: "Session expirée" }); }
+  res.json({ id: req.user.id, username: req.user.username, role: req.user.role, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro, deadline });
 });
 app.post("/api/me/intro-seen", auth, (req, res) => { db.prepare("UPDATE users SET intro_seen = 1 WHERE id = ?").run(req.user.id); res.json({ ok: true }); });
 
@@ -388,6 +395,7 @@ app.patch("/api/admin/users/:id", auth, admin, (req, res) => {
     if (id === req.user.id) return res.status(400).json({ error: "Vous ne pouvez pas désactiver votre propre compte" });
     db.prepare("UPDATE users SET active = ? WHERE id = ?").run(req.body.active ? 1 : 0, id);
     if (!req.body.active) db.prepare("DELETE FROM tokens WHERE user_id = ?").run(id);
+    else try { db.prepare("UPDATE trainee_deadline SET rejected_at = NULL, met_at = NULL, deadline_at = ? WHERE user_id = ? AND rejected_at IS NOT NULL").run(Date.now() + 24 * 3600e3, id); } catch (e) {}
   }
   if (req.body?.role !== undefined) {
     if (id === req.user.id) return res.status(400).json({ error: "Tu ne peux pas changer ton propre rôle" });

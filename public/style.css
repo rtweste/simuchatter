@@ -250,3 +250,21 @@ body:has(#chatScreen:not(.hidden)) .main-area{padding-bottom:0}
   .sidebar.mini nav a:hover::after{opacity:1;transform:translate(0,-50%)}
 }
 @media(max-width:860px){.sb-col{display:none}.sb-top{display:contents}}
+
+/* compte à rebours de formation (élèves) */
+.dlb{position:relative;display:flex;align-items:center;gap:14px;margin:18px 24px 0;padding:14px 18px 16px;border:1px solid rgba(95,211,162,.28);border-radius:16px;background:linear-gradient(135deg,rgba(95,211,162,.09),rgba(255,255,255,.02));overflow:hidden;animation:dlbIn .5s cubic-bezier(.2,.9,.3,1) both;transition:opacity .4s,transform .4s}
+.dlb.gone{opacity:0;transform:translateY(-6px)}
+@keyframes dlbIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.dlb-ic{width:36px;height:36px;flex-shrink:0;border-radius:11px;display:flex;align-items:center;justify-content:center;background:rgba(95,211,162,.14);color:#5fd3a2}
+.dlb-ic svg{width:18px;height:18px}
+.dlb-tx{min-width:0;flex:1}.dlb-tx b{display:block;font-size:13.5px}.dlb-tx small{display:block;color:var(--muted);font-size:12px;line-height:1.45;margin-top:2px}
+.dlb-clk{font:700 26px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.02em;color:#5fd3a2;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dlb-clk i{font-style:normal;opacity:.45;margin:0 1px}
+.dlb-bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.06)}
+.dlb-fill{display:block;height:100%;background:#5fd3a2;transition:width 1s linear}
+.dlb.warn{border-color:rgba(232,182,92,.35);background:linear-gradient(135deg,rgba(232,182,92,.1),rgba(255,255,255,.02))}
+.dlb.warn .dlb-ic{background:rgba(232,182,92,.15);color:#e8b65c}.dlb.warn .dlb-clk{color:#e8b65c}.dlb.warn .dlb-fill{background:#e8b65c}
+.dlb.crit{border-color:rgba(224,122,122,.45);background:linear-gradient(135deg,rgba(224,122,122,.13),rgba(255,255,255,.02))}
+.dlb.crit .dlb-ic{background:rgba(224,122,122,.16);color:#e07a7a}.dlb.crit .dlb-clk{color:#e07a7a;animation:dlbP 1s ease-in-out infinite}.dlb.crit .dlb-fill{background:#e07a7a}
+@keyframes dlbP{50%{opacity:.55}}
+@media(max-width:860px){.dlb{margin:12px 14px 0;padding:12px 14px 14px;gap:11px;flex-wrap:wrap}.dlb-ic{width:32px;height:32px}.dlb-tx{flex-basis:calc(100% - 50px)}.dlb-tx small{font-size:11.5px}.dlb-clk{font-size:24px;margin-left:43px}}

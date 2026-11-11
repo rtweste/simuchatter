@@ -212,10 +212,35 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const done = videos.filter(v => v.done).length;
     return { unlocked, videos, done, total: videos.length, complete: videos.length > 0 && done === videos.length, next: videos.find(v => !v.done && !v.locked) || null };
   }
+  /* Délai de formation : 24 h à partir de la première connexion de l'élève pour remplir tous les critères */
+  const DEADLINE_H = 24;
+  db.exec("CREATE TABLE IF NOT EXISTS trainee_deadline (user_id INTEGER PRIMARY KEY, started_at INTEGER NOT NULL, deadline_at INTEGER NOT NULL, met_at INTEGER, rejected_at INTEGER)");
+  const dlRow = uid => db.prepare("SELECT * FROM trainee_deadline WHERE user_id = ?").get(uid);
+  // démarre le compte à rebours à la première connexion (sans effet s'il tourne déjà)
+  function startDeadline(uid) {
+    const u = db.prepare("SELECT role FROM users WHERE id = ?").get(uid); if (!u || u.role !== "trainee" || dlRow(uid)) return;
+    const now = Date.now(); db.prepare("INSERT OR IGNORE INTO trainee_deadline (user_id, started_at, deadline_at) VALUES (?,?,?)").run(uid, now, now + DEADLINE_H * 3600e3);
+  }
+  const dlView = r => !r ? { state: "notstarted", hours: DEADLINE_H } : {
+    state: r.rejected_at ? "rejected" : r.met_at ? "met" : "running", hours: DEADLINE_H,
+    start: r.started_at, end: r.deadline_at, left: Math.max(0, r.deadline_at - Date.now()), metAt: r.met_at, rejectedAt: r.rejected_at };
+  // délai dépassé sans avoir rempli les critères : compte désactivé et candidature refusée
+  function rejectExpired() {
+    const now = Date.now();
+    db.prepare(`SELECT d.user_id, u.username FROM trainee_deadline d JOIN users u ON u.id = d.user_id
+      WHERE d.met_at IS NULL AND d.rejected_at IS NULL AND d.deadline_at <= ? AND u.role = 'trainee' AND u.active = 1`).all(now).forEach(r => {
+      if (training(r.user_id, true).ready) return void db.prepare("UPDATE trainee_deadline SET met_at = ? WHERE user_id = ?").run(now, r.user_id);   // rempli à la dernière seconde
+      db.prepare("UPDATE trainee_deadline SET rejected_at = ? WHERE user_id = ?").run(now, r.user_id);
+      db.prepare("UPDATE users SET active = 0 WHERE id = ?").run(r.user_id); db.prepare("DELETE FROM tokens WHERE user_id = ?").run(r.user_id);
+      log(r.user_id, "a", `**${r.username}** n'a pas terminé sa formation dans les ${DEADLINE_H} h`, "Compte désactivé · candidature refusée automatiquement");
+    });
+  }
+  setInterval(() => { try { rejectExpired(); } catch (e) { console.error("délai de formation", e.message); } }, 60e3).unref();
+  setTimeout(() => { try { rejectExpired(); } catch (e) {} }, 5e3).unref();
   const PERS = ctx.PERSONAS || [];
   const mean = a => a.reduce((t, x) => t + x, 0) / a.length;
   const J = s => { try { return JSON.parse(s || "null"); } catch (e) { return null; } };
-  function training(uid) {
+  function training(uid, noDl) {
     const c = trCfg();
     const sims = db.prepare("SELECT persona_id, difficulty, score, rts, report, started_at FROM sims WHERE user_id = ? AND status = 'done' AND score IS NOT NULL ORDER BY started_at DESC").all(uid);
     const last5 = sims.slice(0, 5), avg5 = last5.length ? Math.round(mean(last5.map(s => s.score))) : null;
@@ -251,7 +276,13 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       db.prepare("INSERT OR IGNORE INTO training_ready (user_id, at) VALUES (?, ?)").run(uid, Date.now());
       log(uid, "a", `**${u.username}** a rempli tous les critères de formation`, "Prêt : sa formation peut être validée");
     }
-    return { criteria, done, total, ready, tip, fans, simReady, course: co, test: byp ? byp.level : null,
+    let dl = null;
+    if (u && u.role === "trainee" && !noDl) {
+      const r = dlRow(uid);
+      if (r && ready && !r.met_at && !r.rejected_at) { db.prepare("UPDATE trainee_deadline SET met_at = ? WHERE user_id = ?").run(Date.now(), uid); r.met_at = Date.now(); }
+      dl = dlView(r);
+    }
+    return { criteria, done, total, ready, tip, fans, simReady, course: co, test: byp ? byp.level : null, deadline: dl,
       day: u ? Math.floor((Date.now() - u.created_at) / 864e5) + 1 : 1,
       stats: { avg5, best: n ? Math.max(...sims.map(s => s.score)) : null, sessions: n, rt, hard: hardOk, trend: sims.slice(0, 8).map(s => s.score).reverse() } };
   }
@@ -265,13 +296,26 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     if (mode === "reset") {
       db.prepare("DELETE FROM training_bypass WHERE user_id = ?").run(u.id); db.prepare("DELETE FROM course_progress WHERE user_id = ?").run(u.id);
       db.prepare("DELETE FROM training_ready WHERE user_id = ?").run(u.id); db.prepare("UPDATE users SET intro_seen = 0 WHERE id = ?").run(u.id);
-      log(req.user.id, "a", `Test : formation de **${u.username}** remise à zéro`, "Critères forcés, vidéos et présentation réinitialisés");
+      db.prepare("DELETE FROM trainee_deadline WHERE user_id = ?").run(u.id);
+      log(req.user.id, "a", `Test : formation de **${u.username}** remise à zéro`, "Critères forcés, vidéos, présentation et délai de 24 h réinitialisés");
     } else {
       db.prepare("INSERT INTO training_bypass (user_id, level, at) VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET level = excluded.level, at = excluded.at").run(u.id, mode, now);
       if (mode === "all") { const ins = db.prepare("INSERT INTO course_progress (user_id, video_id, max_pos, dur, upd, done_at) VALUES (?,?,?,?,?,?) ON CONFLICT(user_id, video_id) DO UPDATE SET done_at = COALESCE(course_progress.done_at, excluded.done_at)");
         courseList().forEach(v => ins.run(u.id, v.id, 0, null, now, now)); }
       log(req.user.id, "a", `Test : ${mode === "all" ? "toute la formation validée" : "critères du simulateur validés"} pour **${u.username}**`, "Outil de test du manager");
     }
+    res.json({ ok: true, training: training(u.id) });
+  });
+  // Manager : donner du temps en plus à un élève (+24 h), ce qui réactive aussi une candidature refusée pour délai
+  app.post("/api/admin/users/:id/deadline", auth, admin, (req, res) => {
+    const u = db.prepare("SELECT id, username, role FROM users WHERE id = ?").get(parseInt(req.params.id, 10));
+    if (!u || u.role !== "trainee") return res.status(400).json({ error: "Ce compte n'est pas en formation" });
+    const h = Math.max(1, Math.min(168, parseInt(req.body?.hours, 10) || DEADLINE_H)), now = Date.now(), r = dlRow(u.id);
+    if (!r) startDeadline(u.id);
+    const base = r && !r.rejected_at ? Math.max(now, r.deadline_at) : now;
+    db.prepare("UPDATE trainee_deadline SET deadline_at = ?, rejected_at = NULL, met_at = NULL WHERE user_id = ?").run(base + h * 3600e3, u.id);
+    const wasRejected = r && r.rejected_at; if (wasRejected) db.prepare("UPDATE users SET active = 1 WHERE id = ?").run(u.id);
+    log(req.user.id, "a", `a donné **${h} h** de plus à **${u.username}** pour terminer sa formation`, wasRejected ? "Compte réactivé · candidature rouverte" : "Délai de formation prolongé");
     res.json({ ok: true, training: training(u.id) });
   });
   // Avancement d'une vidéo : on ne peut pas sauter de passage (la position ne peut avancer que du temps réellement écoulé)
@@ -426,5 +470,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       rules: R.filter(r => r.points || r.amount || r.kind !== "warn").map(r => ({ label: r.label, sanction: ruleTxt(r) })) };
   };
 
-  return { middleware, log, agency };
+  // lecture du délai : si l'heure est passée, le refus est appliqué tout de suite (sans attendre le balayage de la minute)
+  const deadline = uid => { let r = dlRow(uid); if (r && !r.met_at && !r.rejected_at && r.deadline_at <= Date.now()) { rejectExpired(); r = dlRow(uid); } return dlView(r); };
+  return { middleware, log, agency, startDeadline, deadline };
 };

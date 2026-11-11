@@ -63,6 +63,7 @@ function renderShell(active, me) {
     addEventListener("unhandledrejection", e => { if (e.reason && e.reason.redirect) e.preventDefault(); });
     go("/home"); throw Object.assign(new Error("Redirection vers l'accueil"), { redirect: true }); }
   window.ME_SHELL = me; setTimeout(() => { try { INTRO.check(me); } catch (e) {} }, 0);
+  if (me && me.role === "trainee") setTimeout(() => { try { DEADLINE.mount(me.deadline); } catch (e) {} }, 0);
   const el = document.getElementById("sidebar"); if (!el) return;
   const mods = MODULES.filter(m => m.roles.includes(me.role));
   const badge = m => m.id === "ventes" && me.role === "admin";
@@ -388,4 +389,34 @@ const INTRO = window.INTRO = (() => {
     if (e.key === " ") { e.preventDefault(); v.paused ? v.play() : v.pause(); } }
   function close() { if (!box) return; const b = box; b.querySelector("video").pause(); b.classList.remove("on"); setTimeout(() => b.remove(), 500); box = null; document.body.style.overflow = ""; document.removeEventListener("keydown", key); }
   return { show, check: me => { if (INTRO_ON && me && me.role === "trainee" && !me.introSeen) show(me); } };
+})();
+
+// Compte à rebours de l'élève : 24 h après sa première connexion pour remplir tous ses critères
+const DEADLINE = window.DEADLINE = (() => {
+  let el, end = 0, t, poll;
+  const p2 = n => String(n).padStart(2, "0");
+  function paint() {
+    if (!el) return; const left = Math.max(0, end - Date.now()), h = Math.floor(left / 3600e3), m = Math.floor(left / 6e4) % 60, sec = Math.floor(left / 1e3) % 60;
+    el.querySelector("[data-clk]").innerHTML = `${p2(h)}<i>:</i>${p2(m)}<i>:</i>${p2(sec)}`;
+    el.classList.toggle("warn", left < 6 * 3600e3); el.classList.toggle("crit", left < 2 * 3600e3);
+    el.querySelector(".dlb-fill").style.width = Math.max(0, Math.min(100, left / (24 * 3600e3) * 100)) + "%";
+    if (left <= 0) { clearInterval(t); setTimeout(() => location.reload(), 2500); }
+  }
+  function set(d) {
+    if (d && d.state === "rejected") return location.reload();
+    if (!d || d.state !== "running") { if (el) { el.classList.add("gone"); setTimeout(() => el && el.remove(), 400); el = null; } clearInterval(t); clearInterval(poll); return; }
+    end = d.end;
+    if (!el) {
+      const main = document.querySelector(".main-area"); if (!main) return;
+      el = document.createElement("div"); el.className = "dlb"; el.setAttribute("role", "timer");
+      el.innerHTML = `<span class="dlb-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12M6 22h12M7 2c0 5 10 6 10 10S7 17 7 22M17 2c0 5-10 6-10 10s10 5 10 10"/></svg></span>
+        <div class="dlb-tx"><b>Temps restant pour terminer ta formation</b><small>Si tous tes critères ne sont pas verts à la fin du compte à rebours, ton compte sera désactivé et ta candidature refusée.</small></div>
+        <span class="dlb-clk" data-clk></span><span class="dlb-bar"><span class="dlb-fill"></span></span>`;
+      main.prepend(el);
+      t = setInterval(paint, 1000);
+      poll = setInterval(() => api("/api/me").then(m => set(m.deadline)).catch(() => {}), 60e3);
+    }
+    paint();
+  }
+  return { mount: set, set };
 })();
