@@ -64,11 +64,11 @@ Comptez environ 20 minutes, sans rien installer sur votre ordinateur.
 |---|---|---|
 | `DAILY_SIM_LIMIT` | `10` | Nombre max de simulations par chatter et par jour (contrôle des coûts) |
 | `MAX_MESSAGES_PER_SIM` | `40` | Nombre max de messages du chatter par simulation |
-| `MODEL_FAN` | `claude-sonnet-5-5` | Modèle qui joue le fan |
+| `MODEL_FAN` | `claude-haiku-5-5` | Modèle qui joue le fan |
 | `MODEL_EVAL` | `claude-sonnet-5-5` | Modèle qui note la session |
 | `MODEL_HINT` | `claude-haiku-5-5` | Modèle du coach (conseils) |
 
-Pour réduire les coûts, mettez `MODEL_FAN` sur `claude-haiku-5-5`. C'est moins cher, mais le fan est un peu moins réaliste. Les tarifs sont sur [docs.claude.com](https://docs.claude.com).
+Le fan tourne sur `claude-haiku-5-5` (économique). Pour un fan un peu plus réaliste mais plus cher, mettez `MODEL_FAN` sur `claude-sonnet-5-5`. Les tarifs sont sur [docs.claude.com](https://docs.claude.com).
 
 ## Modifier les profils de fans
 

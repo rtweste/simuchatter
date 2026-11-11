@@ -3,7 +3,7 @@ const AnthropicMod = require("@anthropic-ai/sdk");
 const Anthropic = AnthropicMod.default || AnthropicMod;
 
 const MOCK = !!process.env.MOCK_AI;
-const MODEL_FAN = process.env.MODEL_FAN || "claude-sonnet-5-5";
+const MODEL_FAN = process.env.MODEL_FAN || "claude-haiku-5-5";
 const MODEL_EVAL = process.env.MODEL_EVAL || "claude-sonnet-5-5";
 const MODEL_HINT = process.env.MODEL_HINT || "claude-haiku-5-5";
 
