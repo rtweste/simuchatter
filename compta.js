@@ -385,7 +385,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       const weekShifts = { count: wk.length, nth: nextIdx >= 0 ? nextIdx + 1 : null };
       const board = boardOf(inP), myIdx = board.findIndex(b => b.user_id === req.user.id);
       return res.json({ role: "chatter", period: p, open: op, upcoming: up, today, nDays, netPts, lastShift, weekShifts, days,
-        tiers: { list: TIERS, net: Math.round(baseAmt * 100) / 100, commission: tp.commission, prime: tp.prime, total: tp.total, rate: tp.rate, tier: tp.tier,
+        tiers: { list: TIERS, k: base === "brut" ? 1 : 1 - fee / 100, net: Math.round(baseAmt * 100) / 100, commission: tp.commission, prime: tp.prime, total: tp.total, rate: tp.rate, tier: tp.tier,
           next: nxt ? { ...nxt, gap: Math.round((nxt.from - baseAmt) * 100) / 100 } : null, projNet: Math.round(projNet), projTotal: tpP.total, projPrime: tpP.prime },
         feed: feedOf(), live: liveNow(),
         series, trend, best, goal, projection: Math.round(commission / elapsed * 100) / 100, elapsed,
