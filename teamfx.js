@@ -29,7 +29,9 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const feed = db.prepare(`SELECT s.id, s.amount, s.status, s.created_at, s.reviewed_at, u.username, m.name model_name FROM sales s JOIN users u ON u.id = s.user_id JOIN models m ON m.id = s.model_id
       WHERE s.sold_at >= ? AND s.status <> 'refused' ORDER BY s.created_at DESC LIMIT 14`).all(d0);
     const best = db.prepare("SELECT MAX(t) m FROM (SELECT SUM(amount) t FROM sales WHERE status = 'validated' GROUP BY date(sold_at / 1000 + 3600, 'unixepoch'))").get().m || 0;
-    res.json({ now, ca: sum(today), validated: sum(val), pending: sum(pend), count: today.length, avg: today.length ? Math.round(sum(today) / today.length) : 0, yesterday: Math.round(yest),
+    const ser = db.prepare("SELECT sold_at t, amount a, user_id u FROM sales WHERE status <> 'refused' AND sold_at >= ? AND sold_at <= ? ORDER BY sold_at").all(d0 - 864e5, now);
+    const series = ser.filter(r => r.t >= d0).map(r => [r.t - d0, r.a, r.u]), seriesY = ser.filter(r => r.t < d0).map(r => [r.t - (d0 - 864e5), r.a]);
+    res.json({ now, day0: d0, series, seriesY, ca: sum(today), validated: sum(val), pending: sum(pend), count: today.length, avg: today.length ? Math.round(sum(today) / today.length) : 0, yesterday: Math.round(yest),
       record: Math.round(best), board: Object.values(board).sort((a, b) => b.ca - a.ca).slice(0, 8), models: Object.values(models).sort((a, b) => b.ca - a.ca), live, events, feed });
   });
 

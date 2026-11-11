@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Salle de contrôle · Scène — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="/style.css">
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#030305}
+body{font-family:Inter,system-ui,sans-serif;color:#fff;--g:#5fd3a2;--p:#a46bff;--gold:#f2c94c}
+/* aurore */
+.aur{position:fixed;inset:-20%;filter:blur(90px);opacity:.55;pointer-events:none}
+.aur i{position:absolute;border-radius:50%;mix-blend-mode:screen}
+.aur i:nth-child(1){width:55vw;height:40vw;left:5%;top:0;background:#3b1d7a;animation:a1 22s ease-in-out infinite alternate}
+.aur i:nth-child(2){width:50vw;height:38vw;right:0;top:10%;background:#0e5c47;animation:a2 26s ease-in-out infinite alternate}
+.aur i:nth-child(3){width:40vw;height:30vw;left:30%;top:35%;background:#6b1d5c;animation:a3 30s ease-in-out infinite alternate}
+@keyframes a1{to{transform:translate(20vw,10vh) scale(1.2)}}@keyframes a2{to{transform:translate(-18vw,14vh) scale(.9)}}@keyframes a3{to{transform:translate(10vw,-12vh) scale(1.3)}}
+/* sol en perspective */
+.floor{position:fixed;left:-50%;right:-50%;bottom:-10%;height:62%;transform:perspective(700px) rotateX(68deg);transform-origin:50% 0;
+  background-image:linear-gradient(rgba(164,107,255,.28) 1px,transparent 1px),linear-gradient(90deg,rgba(164,107,255,.28) 1px,transparent 1px);background-size:70px 70px;
+  mask-image:linear-gradient(transparent,#000 30%,#000 60%,transparent);-webkit-mask-image:linear-gradient(transparent,#000 30%,#000 60%,transparent);animation:fm 6s linear infinite}
+@keyframes fm{to{background-position:0 70px}}
+/* projecteurs */
+.spot{position:fixed;top:-10%;width:40vw;height:120vh;pointer-events:none;background:conic-gradient(from 180deg at 50% 0%,transparent 165deg,rgba(255,255,255,.07) 175deg,rgba(255,255,255,.12) 180deg,rgba(255,255,255,.07) 185deg,transparent 195deg);transform-origin:50% 0;mix-blend-mode:screen}
+.spot.l{left:0;animation:sw 9s ease-in-out infinite alternate}.spot.r{right:0;animation:sw 11s ease-in-out infinite alternate-reverse}
+@keyframes sw{from{transform:rotate(-18deg)}to{transform:rotate(22deg)}}
+/* en-tête */
+.top{position:fixed;left:0;right:0;top:0;display:flex;align-items:flex-start;justify-content:space-between;padding:26px 34px;z-index:5}
+.top .lg-sh{width:150px}.top .on{font:700 11px Inter;letter-spacing:.32em;color:rgba(255,255,255,.6);margin-top:10px;display:flex;align-items:center;gap:8px}
+.top .on i{width:8px;height:8px;border-radius:50%;background:#ff4d6d;box-shadow:0 0 12px #ff4d6d;animation:bk 1.3s infinite}@keyframes bk{50%{opacity:.3}}
+.top .clk{font:200 54px/1 Inter;letter-spacing:-.03em;font-variant-numeric:tabular-nums;text-align:right}.top .clk small{display:block;font:600 11px Inter;letter-spacing:.3em;color:rgba(255,255,255,.5);margin-top:8px}
+.hero{position:fixed;left:0;right:0;top:9vh;text-align:center;z-index:4;pointer-events:none}
+.hero .k{font:700 12px Inter;letter-spacing:.5em;color:rgba(255,255,255,.55)}
+.hero .ca{font:900 clamp(80px,13vw,190px)/.9 Inter;letter-spacing:-.06em;margin-top:10px;background:linear-gradient(180deg,#fff 30%,#b9a4ff 75%,#6b4bd8);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 10px 40px rgba(164,107,255,.35));font-variant-numeric:tabular-nums}
+.hero .ca em{font-style:normal;font-size:.35em;vertical-align:.9em;margin-left:.08em}
+.hero .sub{margin-top:12px;font-size:15px;color:rgba(255,255,255,.7)}.hero .sub b{color:#fff}.hero .sub .up{color:var(--g)}
+/* plateau 3D */
+.stage{position:fixed;left:50%;bottom:14vh;width:min(1100px,92vw);height:48vh;transform:translateX(-50%);perspective:1400px;z-index:3}
+.cols{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;gap:3.2%;transform:rotateX(14deg) rotateY(-10deg);transform-style:preserve-3d;transition:transform 1.2s cubic-bezier(.2,.9,.25,1)}
+.stage.zoom .cols{transform:rotateX(8deg) rotateY(-4deg) scale(1.06)}
+.col{position:relative;width:14%;transform-style:preserve-3d;transition:height 1.6s cubic-bezier(.2,.9,.25,1)}
+.col .f,.col .s,.col .t{position:absolute;left:0}
+.col .f{inset:0;background:linear-gradient(180deg,rgba(164,107,255,.95),rgba(80,40,170,.55) 60%,rgba(40,20,90,.2));border:1px solid rgba(255,255,255,.25);border-bottom:0;box-shadow:0 0 50px rgba(164,107,255,.35),inset 0 1px 0 rgba(255,255,255,.5)}
+.col .s{top:0;bottom:0;right:-26px;left:auto;width:26px;background:linear-gradient(180deg,rgba(80,40,170,.9),rgba(30,15,70,.3));transform-origin:left;transform:rotateY(90deg)}
+.col .t{left:0;right:0;top:-26px;height:26px;background:linear-gradient(90deg,rgba(220,200,255,.9),rgba(164,107,255,.8));transform-origin:bottom;transform:rotateX(90deg)}
+.col.lead .f{background:linear-gradient(180deg,#ffe27a,#c8932a 55%,rgba(90,60,10,.25));box-shadow:0 0 80px rgba(242,201,76,.45),inset 0 1px 0 rgba(255,255,255,.7)}
+.col.lead .s{background:linear-gradient(180deg,#a8781e,rgba(60,40,5,.3))}.col.lead .t{background:linear-gradient(90deg,#fff3c4,#f2c94c)}
+.col .lab{position:absolute;left:50%;bottom:calc(100% + 40px);transform:translateX(-50%);text-align:center;white-space:nowrap}
+.col .lab b{display:block;font:800 22px Inter;letter-spacing:-.02em;font-variant-numeric:tabular-nums}.col .lab span{font:600 13px Inter;color:rgba(255,255,255,.75)}
+.col .crown{position:absolute;left:50%;bottom:calc(100% + 98px);transform:translateX(-50%);font-size:34px;animation:cw 2.6s ease-in-out infinite;filter:drop-shadow(0 0 16px rgba(242,201,76,.8))}
+@keyframes cw{50%{transform:translateX(-50%) translateY(-8px) rotate(-6deg)}}
+.col .rk{position:absolute;left:0;right:0;bottom:10px;text-align:center;font:900 46px Inter;color:rgba(255,255,255,.22)}
+.col.hit .f{animation:ch 1.4s ease-out}@keyframes ch{0%{filter:brightness(2.2) saturate(1.4)}100%{filter:none}}
+.refl{position:absolute;left:0;right:0;bottom:-46%;height:46%;transform:scaleY(-1);opacity:.18;filter:blur(3px);pointer-events:none;mask-image:linear-gradient(transparent,#000);-webkit-mask-image:linear-gradient(transparent,#000)}
+/* bas : créatrices et en shift */
+.bot{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:flex-end;padding:0 34px 24px;z-index:5;gap:20px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}.chips span{padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);font:600 13px Inter;backdrop-filter:blur(8px)}.chips span b{margin-left:8px;color:var(--g)}
+.chips span.lv::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--g);margin-right:8px;box-shadow:0 0 8px var(--g)}
+.bot small{display:block;font:700 10.5px Inter;letter-spacing:.3em;color:rgba(255,255,255,.45);margin-bottom:8px}
+/* la grande annonce */
+.tk{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;perspective:900px}
+.tk .dim{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(3,3,5,.55),rgba(3,3,5,.92));animation:dm 3.6s ease forwards}@keyframes dm{0%{opacity:0}12%,82%{opacity:1}100%{opacity:0}}
+.tk .streak{position:absolute;top:50%;left:-60%;width:60%;height:3px;background:linear-gradient(90deg,transparent,#fff,transparent);box-shadow:0 0 40px #fff,0 0 90px var(--p);animation:st .7s .05s cubic-bezier(.6,0,.2,1) forwards}@keyframes st{to{left:110%}}
+.tk .lbl{position:relative;font:800 13px Inter;letter-spacing:.6em;color:var(--g);opacity:0;animation:lb 3.4s .2s ease forwards}@keyframes lb{0%{opacity:0;letter-spacing:1.4em}15%{opacity:1;letter-spacing:.6em}80%{opacity:1}100%{opacity:0}}
+.tk .amt{position:relative;display:flex;font:900 clamp(110px,17vw,260px)/1 Inter;letter-spacing:-.06em;margin:14px 0 10px}
+.tk .amt span{display:inline-block;background:linear-gradient(180deg,#fff 35%,#9be8c6);-webkit-background-clip:text;background-clip:text;color:transparent;opacity:0;filter:drop-shadow(0 0 30px rgba(95,211,162,.6));animation:lt 3.3s cubic-bezier(.2,.9,.25,1) forwards;animation-delay:calc(.25s + var(--i) * 60ms)}
+@keyframes lt{0%{opacity:0;transform:translateZ(600px) rotateX(70deg) translateY(60px);filter:blur(20px)}22%{opacity:1;transform:none;filter:drop-shadow(0 0 30px rgba(95,211,162,.6))}80%{opacity:1;transform:none}100%{opacity:0;transform:translateZ(-200px) translateY(-40px);filter:blur(12px)}}
+.tk .who{position:relative;font:700 28px Inter;opacity:0;animation:wh 3.1s .55s ease forwards}.tk .who em{font-style:normal;color:rgba(255,255,255,.55);font-weight:500}
+@keyframes wh{0%{opacity:0;transform:translateY(20px)}15%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
+canvas#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:21}
+.shake{animation:sk .5s}@keyframes sk{20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-3px,2px)}80%{transform:translate(2px,-1px)}}
+@media(max-width:900px){.stage{height:36vh;bottom:20vh}.col .lab b{font-size:16px}.col .lab span{font-size:11px}.col .rk{font-size:28px}.top .clk{font-size:34px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="aur"><i></i><i></i><i></i></div><div class="floor"></div><div class="spot l"></div><div class="spot r"></div>
+<div id="world">
+  <div class="top"><div><span id="logo"></span><div class="on"><i></i>EN DIRECT · SALLE DE CONTRÔLE</div></div><div class="clk" id="clk"></div></div>
+  <div class="hero"><div class="k">CHIFFRE D'AFFAIRES DU JOUR</div><div class="ca" id="ca">0<em>€</em></div><div class="sub" id="sub"></div></div>
+  <div class="stage" id="stage"><div class="cols" id="cols"></div></div>
+  <div class="bot"><div><small>CRÉATRICES</small><div class="chips" id="mods"></div></div><div style="text-align:right"><small>EN SHIFT</small><div class="chips" id="live" style="justify-content:flex-end"></div></div></div>
+</div>
+<canvas id="fx"></canvas>
+<script src="/common.js"></script>
+<script src="/salle-core.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id), { SND, eur, reduce } = SALLE;
+  try { $("logo").innerHTML = logoHTML(); } catch (e) {}
+  setInterval(() => { const d = new Date(); $("clk").innerHTML = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + `<small>${d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }).toUpperCase()}</small>`; }, 500);
+  let shown = 0, target = 0;
+  const roll = () => { shown += (target - shown) * .07; if (Math.abs(target - shown) < .5) shown = target; $("ca").innerHTML = Math.round(shown).toLocaleString("fr-FR") + "<em>€</em>"; requestAnimationFrame(roll); }; roll();
+  /* ---------- particules (fontaine au-dessus d'une colonne) ---------- */
+  const cv = $("fx"), x = cv.getContext("2d"); let W, H, P = [];
+  const size = () => { const d = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * d; cv.height = H * d; x.setTransform(d, 0, 0, d, 0, 0); }; size(); addEventListener("resize", size);
+  function fountain(px, py, n, cols) { for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (Math.random() - .5) * 1.6, v = 5 + Math.random() * 11; P.push({ x: px, y: py, vx: Math.cos(a) * v, vy: Math.sin(a) * v, l: 1, s: 2 + Math.random() * 4, c: cols[Math.random() * cols.length | 0], r: Math.random() * 6 }); } }
+  (function f() { x.clearRect(0, 0, W, H); P = P.filter(p => { p.vy += .25; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.l -= .011; p.r += .1; x.globalAlpha = Math.max(0, p.l); x.fillStyle = p.c; x.save(); x.translate(p.x, p.y); x.rotate(p.r); x.fillRect(-p.s / 2, -p.s, p.s, p.s * 2); x.restore(); return p.l > 0; }); x.globalAlpha = 1; requestAnimationFrame(f); })();
+  /* ---------- plateau ---------- */
+  function cols(d, hit) {
+    const box = $("cols"), list = d.board.slice(0, 6), mx = Math.max(1, ...list.map(b => b.ca));
+    // ordre visuel : 1er au centre, puis alternance gauche / droite
+    const order = []; list.forEach((b, i) => i % 2 ? order.unshift(b) : order.push(b)); if (list.length % 2 === 0) order.reverse();
+    const center = list[0];
+    order.forEach((b, i) => { let c = box.querySelector(`[data-u="${CSS.escape(b.username)}"]`);
+      if (!c) { c = document.createElement("div"); c.className = "col"; c.dataset.u = b.username; c.style.height = "0%"; c.innerHTML = `<div class="s"></div><div class="f"></div><div class="t"></div><div class="lab"><b></b><span></span></div><div class="rk"></div>`; box.appendChild(c); }
+      box.appendChild(c); const rank = list.indexOf(b) + 1;
+      requestAnimationFrame(() => c.style.height = (10 + b.ca / mx * 56) + "%");
+      c.classList.toggle("lead", b === center); c.querySelector(".lab b").textContent = eur(b.ca); c.querySelector(".lab span").textContent = b.username; c.querySelector(".rk").textContent = rank;
+      const cr = c.querySelector(".crown"); if (b === center && !cr) { const k = document.createElement("div"); k.className = "crown"; k.textContent = "👑"; c.appendChild(k); } else if (b !== center && cr) cr.remove();
+      if (hit === b.username) { c.classList.remove("hit"); void c.offsetWidth; c.classList.add("hit"); setTimeout(() => { const r = c.querySelector(".t").getBoundingClientRect(); fountain(r.left + r.width / 2, r.top, 140, b === center ? ["#fff3c4", "#f2c94c", "#ffffff"] : ["#d9c8ff", "#a46bff", "#5fd3a2", "#ffffff"]); }, 900); } });
+    [...box.children].forEach(c => { if (!list.find(b => b.username === c.dataset.u)) c.remove(); });
+  }
+  function state(d, first) {
+    state.d = d; target = d.ca;
+    const y = d.yesterday; $("sub").innerHTML = `<b>${d.count}</b> ventes · <b>${eur(d.validated)}</b> validés · <b>${eur(d.pending)}</b> en attente${y ? ` · <span class="up">${d.ca >= y ? "▲ +" + Math.round((d.ca / y - 1) * 100) + " % vs hier" : ""}</span>` : ""}`;
+    cols(d, state.hit); state.hit = null;
+    $("mods").innerHTML = d.models.slice(0, 5).map(m => `<span>${esc(m.name)}<b>${eur(m.ca)}</b></span>`).join("");
+    $("live").innerHTML = d.live.slice(0, 6).map(l => `<span class="lv">${esc(l.username)} · ${esc(l.model_name)}</span>`).join("") || "<span>Personne en shift</span>";
+  }
+  function sale(e) {
+    SND.whoosh(); setTimeout(() => SND.sale(e.amount >= 60), 260);
+    const t = document.createElement("div"); t.className = "tk"; const am = "+" + Math.round(e.amount).toLocaleString("fr-FR") + "€";
+    t.innerHTML = `<div class="dim"></div><div class="streak"></div><div class="lbl">NOUVELLE VENTE</div><div class="amt">${[...am].map((c, i) => `<span style="--i:${i}">${c}</span>`).join("")}</div><div class="who">${esc(e.username)} <em>sur</em> ${esc(e.model_name)}</div>`;
+    document.body.appendChild(t); $("world").classList.remove("shake"); setTimeout(() => { void $("world").offsetWidth; $("world").classList.add("shake"); }, 380);
+    setTimeout(() => fountain(W / 2, H * .5, e.amount >= 60 ? 260 : 150, ["#ffffff", "#9be8c6", "#5fd3a2", "#a46bff"]), 420);
+    setTimeout(() => { t.remove(); $("stage").classList.add("zoom"); state.hit = e.username; if (state.d) state(state.d); setTimeout(() => $("stage").classList.remove("zoom"), 1800); }, reduce ? 1500 : 3500);
+  }
+  SALLE.start({ state, sale });
+})();
+</script>
+</body>
+</html>

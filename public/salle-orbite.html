@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Salle de contrôle · Orbite — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="/style.css">
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#000}
+body{font-family:Inter,system-ui,sans-serif;color:#eaf6f1;--g:#5fd3a2;--v:#8b6cff}
+canvas#c{position:fixed;inset:0;width:100%;height:100%}
+.scan{position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px);mix-blend-mode:overlay}
+.vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.75) 100%)}
+.hud{position:fixed;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;letter-spacing:.18em;color:rgba(234,246,241,.55);text-transform:uppercase}
+.corner{position:fixed;width:26px;height:26px;border-color:rgba(95,211,162,.5);border-style:solid;pointer-events:none}
+.c1{left:18px;top:18px;border-width:1px 0 0 1px}.c2{right:18px;top:18px;border-width:1px 1px 0 0}.c3{left:18px;bottom:18px;border-width:0 0 1px 1px}.c4{right:18px;bottom:18px;border-width:0 1px 1px 0}
+.tl{left:38px;top:34px}.tl .lg-sh{width:150px;display:block;margin-bottom:10px}.tl b{color:var(--g)}
+.tl .rec{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ff5a5a;margin-right:8px;animation:bl 1.2s infinite}@keyframes bl{50%{opacity:.2}}
+.tr{right:38px;top:30px;text-align:right}.tr .clk{font:300 44px/1 Inter;letter-spacing:-.02em;color:#fff;font-variant-numeric:tabular-nums}.tr .clk b{font-weight:700}
+/* jauge centrale */
+.core{position:fixed;left:50%;top:50%;width:min(52vh,560px);height:min(52vh,560px);transform:translate(-50%,-50%);pointer-events:none}
+.core svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.core .rot{transform-origin:50% 50%;animation:rot 60s linear infinite}.core .rot2{transform-origin:50% 50%;animation:rot 26s linear infinite reverse}
+@keyframes rot{to{transform:rotate(1turn)}}
+.core .arc{transition:stroke-dashoffset 1.6s cubic-bezier(.2,.9,.25,1)}
+.mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.mid .k{font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.32em;color:rgba(234,246,241,.55)}
+.mid .v{font:900 clamp(56px,9vh,110px)/1 Inter;letter-spacing:-.06em;margin:10px 0 6px;font-variant-numeric:tabular-nums;color:#fff;text-shadow:0 0 40px rgba(95,211,162,.35)}
+.mid .v small{font-size:.38em;color:rgba(255,255,255,.4);margin-left:.1em}
+.mid .s{font-size:13px;color:rgba(234,246,241,.65)}.mid .s b{color:#fff}.mid .y{margin-top:8px;font-family:ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.12em}
+.mid.flash .v{animation:fl .9s ease-out}@keyframes fl{0%{color:#5fd3a2;transform:scale(1.08);text-shadow:0 0 80px #5fd3a2}100%{color:#fff;transform:none}}
+/* panneaux */
+.panel{position:fixed;width:300px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.panel h5{margin:0 0 10px;font-size:10.5px;letter-spacing:.3em;color:rgba(234,246,241,.5);font-weight:600;display:flex;justify-content:space-between;border-bottom:1px solid rgba(95,211,162,.18);padding-bottom:8px}
+.lb{left:38px;bottom:40px}.rb{right:38px;bottom:40px}.lm{left:38px;top:50%;transform:translateY(-50%)}
+.log div{font-size:12px;line-height:1.9;color:rgba(234,246,241,.7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log div b{color:var(--g);font-weight:700}.log div.n{color:#fff}.log .cur{display:inline-block;width:7px;height:13px;background:var(--g);vertical-align:-2px;animation:bl 1s infinite}
+.rk div{display:flex;align-items:center;gap:10px;font-size:12.5px;line-height:2.1;transition:transform .8s cubic-bezier(.34,1.56,.64,1)}
+.rk i{font-style:normal;width:18px;color:rgba(234,246,241,.4)}.rk span{flex:1;color:#fff;font-family:Inter;font-weight:600;letter-spacing:0}.rk em{font-style:normal;color:var(--g)}
+.rk div:first-child i{color:#f2c94c}
+.md div{margin-bottom:12px}.md span{display:flex;justify-content:space-between;font-size:12px;color:rgba(234,246,241,.75)}.md span b{color:#fff;font-family:Inter}
+.md i{display:block;height:3px;margin-top:6px;background:rgba(255,255,255,.08);position:relative}.md i em{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--v),#c6b4ff);box-shadow:0 0 12px var(--v);transition:width 1.4s cubic-bezier(.2,.9,.25,1)}
+/* annonce */
+.pop{position:fixed;left:50%;top:calc(50% - min(26vh,280px) - 70px);transform:translateX(-50%);pointer-events:none;text-align:center;font-family:Inter}
+.pop .a{font:900 64px/1 Inter;letter-spacing:-.05em;color:#5fd3a2;text-shadow:0 0 50px rgba(95,211,162,.7);animation:pa 3s cubic-bezier(.2,.9,.25,1) forwards}
+.pop .w{font-family:ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.25em;color:#fff;margin-top:8px;animation:pa 3s .08s cubic-bezier(.2,.9,.25,1) forwards;opacity:0}
+@keyframes pa{0%{opacity:0;transform:translateY(30px) scale(.6);filter:blur(10px)}14%{opacity:1;transform:none;filter:none}80%{opacity:1}100%{opacity:0;transform:translateY(-40px);filter:blur(6px)}}
+@media(max-width:900px){.panel{display:none}.tr .clk{font-size:30px}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas><div class="scan"></div><div class="vig"></div>
+<span class="corner c1"></span><span class="corner c2"></span><span class="corner c3"></span><span class="corner c4"></span>
+<div class="hud tl"><span id="logo"></span><span class="rec"></span>Salle de contrôle · <b>en direct</b></div>
+<div class="hud tr"><div class="clk" id="clk"></div><div id="day" style="margin-top:8px"></div></div>
+<div class="core"><svg viewBox="0 0 400 400" id="gauge"></svg>
+  <div class="mid" id="mid"><div class="k">CHIFFRE D'AFFAIRES DU JOUR</div><div class="v" id="v">0<small>€</small></div><div class="s" id="sub"></div><div class="y" id="vy"></div></div></div>
+<div class="panel lm"><h5><span>CRÉATRICES</span><span id="mN"></span></h5><div class="md" id="md"></div></div>
+<div class="panel lb"><h5><span>JOURNAL</span><span id="cnt"></span></h5><div class="log" id="log"></div></div>
+<div class="panel rb"><h5><span>CLASSEMENT</span><span>JOUR</span></h5><div class="rk" id="rk"></div></div>
+<script src="/common.js"></script>
+<script src="/salle-core.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id), { SND, eur, reduce } = SALLE;
+  try { $("logo").innerHTML = logoHTML(); } catch (e) {}
+  setInterval(() => { const d = new Date(); $("clk").innerHTML = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }).replace(":", "<b>:</b>") + `<span style="font-size:.45em;opacity:.5"> ${String(d.getSeconds()).padStart(2, "0")}</span>`; $("day").textContent = d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }); }, 250);
+  /* ---------- jauge SVG ---------- */
+  const R = 168, C = 2 * Math.PI * R;
+  $("gauge").innerHTML = `<defs><linearGradient id="ga" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b6cff"/><stop offset=".55" stop-color="#5fd3a2"/><stop offset="1" stop-color="#c8ffe9"/></linearGradient>
+      <filter id="gl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+    <g class="rot">${Array.from({ length: 120 }, (_, i) => { const a = i / 120 * Math.PI * 2, r1 = 192, r2 = i % 10 ? 186 : 178; return `<line x1="${200 + Math.cos(a) * r1}" y1="${200 + Math.sin(a) * r1}" x2="${200 + Math.cos(a) * r2}" y2="${200 + Math.sin(a) * r2}" stroke="rgba(234,246,241,${i % 10 ? .18 : .45})" stroke-width="${i % 10 ? 1 : 1.6}"/>`; }).join("")}</g>
+    <circle cx="200" cy="200" r="${R}" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="10"/>
+    <circle class="arc" id="arc" cx="200" cy="200" r="${R}" fill="none" stroke="url(#ga)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C}" transform="rotate(-90 200 200)" filter="url(#gl)"/>
+    <circle id="rec" cx="200" cy="${200 - R}" r="5" fill="#f2c94c" filter="url(#gl)"/>
+    <g class="rot2"><circle cx="200" cy="200" r="140" fill="none" stroke="rgba(95,211,162,.22)" stroke-width="1" stroke-dasharray="2 9"/></g>
+    <circle cx="200" cy="200" r="128" fill="none" stroke="rgba(139,108,255,.15)" stroke-width="1"/>`;
+  let shownCA = 0, targetCA = 0;
+  const roll = () => { shownCA += (targetCA - shownCA) * .08; if (Math.abs(targetCA - shownCA) < .5) shownCA = targetCA; $("v").innerHTML = Math.round(shownCA).toLocaleString("fr-FR") + "<small>€</small>"; requestAnimationFrame(roll); }; roll();
+  /* ---------- canvas : étoiles, orbites, comètes, ondes ---------- */
+  const cv = $("c"), x = cv.getContext("2d"); let W, H, DPR;
+  const size = () => { DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; x.setTransform(DPR, 0, 0, DPR, 0, 0); }; size(); addEventListener("resize", size);
+  const stars = Array.from({ length: 260 }, () => ({ x: Math.random(), y: Math.random(), z: Math.random() * .9 + .1, tw: Math.random() * 6 }));
+  let nodes = [], comets = [], waves = [], sparks = [];
+  const cx = () => W / 2, cy = () => H / 2, core = () => Math.min(H * .26, 280);
+  function layout(board, live) {
+    const liveSet = new Set(live.map(l => l.username)), mx = Math.max(1, ...board.map(b => b.ca));
+    const all = board.slice(0, 10); live.forEach(l => { if (!all.find(b => b.username === l.username)) all.push({ username: l.username, ca: 0, n: 0 }); });
+    all.forEach((b, i) => { let n = nodes.find(o => o.name === b.username);
+      if (!n) { n = { name: b.username, ang: Math.random() * Math.PI * 2, bump: 0 }; nodes.push(n); }
+      n.ca = b.ca; n.n = b.n; n.live = liveSet.has(b.username); n.r = 16 + Math.sqrt(b.ca / mx) * 18; n.orb = i % 2; n.rank = i; n.spd = (n.orb ? .00011 : -.00016) * (1 + i * .03); });
+    nodes = nodes.filter(n => all.find(b => b.username === n.name));
+  }
+  // les orbites restent dans l'espace libre entre les panneaux latéraux
+  const orbit = o => { const lim = Math.max(core() * 1.25, W / 2 - (W > 900 ? 370 : 30)); return { rx: Math.min((core() + o) * 1.55, lim * (o > 100 ? 1 : .8)), ry: core() * .98 + o * .55 }; };
+  const pos = n => { const e = orbit(n.orb ? 170 : 90); return { x: cx() + Math.cos(n.ang) * e.rx, y: cy() + Math.sin(n.ang) * e.ry }; };
+  let t0 = performance.now();
+  function frame(t) {
+    const dt = Math.min(50, t - t0); t0 = t; x.clearRect(0, 0, W, H);
+    // nébuleuse
+    const g = x.createRadialGradient(cx(), cy(), 0, cx(), cy(), Math.max(W, H) * .6); g.addColorStop(0, "rgba(40,90,75,.35)"); g.addColorStop(.4, "rgba(40,25,90,.18)"); g.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = g; x.fillRect(0, 0, W, H);
+    // étoiles (dérive lente en profondeur)
+    stars.forEach(s => { s.x -= .00002 * dt * s.z; if (s.x < 0) s.x += 1; const a = .25 + .5 * Math.abs(Math.sin(t / 1200 + s.tw)) * s.z; x.fillStyle = `rgba(255,255,255,${a})`; x.fillRect(s.x * W, s.y * H, s.z * 1.6, s.z * 1.6); });
+    // orbites
+    [90, 170].forEach((o, i) => { const e = orbit(o); x.save(); x.strokeStyle = i ? "rgba(139,108,255,.16)" : "rgba(95,211,162,.16)"; x.setLineDash([3, 8]); x.lineDashOffset = -t / (i ? 60 : 40); x.beginPath(); x.ellipse(cx(), cy(), e.rx, e.ry, 0, 0, Math.PI * 2); x.stroke(); x.restore(); });
+    // nœuds (chatters)
+    nodes.sort((a, b) => Math.sin(a.ang) - Math.sin(b.ang)).forEach(n => { if (!reduce) n.ang += n.spd * dt; const p = pos(n), depth = .75 + .25 * Math.sin(n.ang), r = n.r * depth * (1 + n.bump * .35); n.bump *= .94;
+      if (n.live) { const pr = r + 8 + 4 * Math.sin(t / 300 + n.ang * 3); x.strokeStyle = `rgba(95,211,162,${.45 * depth})`; x.lineWidth = 1.5; x.beginPath(); x.arc(p.x, p.y, pr, 0, Math.PI * 2); x.stroke(); }
+      const gg = x.createRadialGradient(p.x - r * .3, p.y - r * .3, 1, p.x, p.y, r); gg.addColorStop(0, n.rank === 0 ? "#fff3c4" : "#2c2c35"); gg.addColorStop(1, n.rank === 0 ? "#b8892a" : "#111116");
+      x.shadowColor = n.bump > .05 ? "#5fd3a2" : n.rank === 0 ? "rgba(242,201,76,.6)" : "rgba(139,108,255,.4)"; x.shadowBlur = 20 + n.bump * 60; x.fillStyle = gg; x.beginPath(); x.arc(p.x, p.y, r, 0, Math.PI * 2); x.fill(); x.shadowBlur = 0;
+      x.strokeStyle = `rgba(255,255,255,${.25 * depth})`; x.lineWidth = 1; x.stroke();
+      x.fillStyle = n.rank === 0 ? "#1a1203" : "#fff"; x.font = `800 ${Math.round(r * .8)}px Inter`; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(n.name[0].toUpperCase(), p.x, p.y + 1);
+      x.globalAlpha = depth; x.fillStyle = "#fff"; x.font = "600 12px Inter"; x.fillText(n.name, p.x, p.y + r + 14); x.fillStyle = "rgba(95,211,162,.9)"; x.font = "500 11px ui-monospace,Menlo,monospace"; x.fillText(eur(n.ca), p.x, p.y + r + 29); x.globalAlpha = 1; });
+    // comètes : du chatter vers le cœur
+    comets = comets.filter(c => { c.k += dt / c.dur; const p0 = c.from(), k = Math.min(1, c.k), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      const mx2 = (p0.x + cx()) / 2 + (cy() - p0.y) * .35, my2 = (p0.y + cy()) / 2 + (p0.x - cx()) * .35, bz = u => ({ x: (1 - u) * (1 - u) * p0.x + 2 * (1 - u) * u * mx2 + u * u * cx(), y: (1 - u) * (1 - u) * p0.y + 2 * (1 - u) * u * my2 + u * u * cy() });
+      for (let i = 0; i < 26; i++) { const u = Math.max(0, e - i * .012), q = bz(u), a = (1 - i / 26); x.fillStyle = `rgba(${i < 3 ? "255,255,255" : "95,211,162"},${a * .9})`; x.beginPath(); x.arc(q.x, q.y, (7 - i * .22) * a + .5, 0, Math.PI * 2); x.fill(); }
+      const h = bz(e); x.shadowColor = "#5fd3a2"; x.shadowBlur = 40; x.fillStyle = "#fff"; x.beginPath(); x.arc(h.x, h.y, 5, 0, Math.PI * 2); x.fill(); x.shadowBlur = 0;
+      if (Math.random() < .6) sparks.push({ x: h.x, y: h.y, vx: (Math.random() - .5) * 1.5, vy: (Math.random() - .5) * 1.5, l: 1 });
+      if (k >= 1) { c.done(); return false; } return true; });
+    // étincelles
+    sparks = sparks.filter(s => { s.x += s.vx; s.y += s.vy; s.vx *= .97; s.vy *= .97; s.l -= .02; x.fillStyle = `rgba(160,255,220,${s.l})`; x.fillRect(s.x, s.y, 2, 2); return s.l > 0; });
+    // ondes de choc
+    waves = waves.filter(w => { w.k += dt / 1400; const r = core() * (1 + w.k * 2.2); x.strokeStyle = `rgba(${w.c},${(1 - w.k) * .7})`; x.lineWidth = 3 * (1 - w.k) + .5; x.beginPath(); x.ellipse(cx(), cy(), r, r * (w.flat ? .55 : 1), 0, 0, Math.PI * 2); x.stroke(); return w.k < 1; });
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  /* ---------- rendu des données ---------- */
+  function state(d, first) {
+    state.d = d; targetCA = d.ca; if (first) shownCA = d.ca * .0;
+    const max = Math.max(d.record, d.ca * 1.12, 100), k = Math.min(1, d.ca / max);
+    $("arc").style.strokeDashoffset = C * (1 - k); const ra = (d.record / max) * Math.PI * 2 - Math.PI / 2; $("rec").setAttribute("cx", 200 + Math.cos(ra) * R); $("rec").setAttribute("cy", 200 + Math.sin(ra) * R);
+    $("sub").innerHTML = `<b>${eur(d.validated)}</b> validés · <b>${eur(d.pending)}</b> en attente · <b>${d.count}</b> ventes`;
+    $("vy").innerHTML = d.yesterday ? (d.ca >= d.yesterday ? `<span style="color:#5fd3a2">▲ ${Math.round((d.ca / d.yesterday - 1) * 100)} % VS HIER</span>` : `<span style="color:#ff8a8a">▼ ${Math.round((1 - d.ca / d.yesterday) * 100)} % VS HIER</span>`) : "";
+    layout(d.board, d.live);
+    const mm = Math.max(1, ...d.models.map(m => m.ca)); $("mN").textContent = d.models.length;
+    $("md").innerHTML = d.models.slice(0, 5).map(m => `<div><span>${esc(m.name)}<b>${eur(m.ca)}</b></span><i><em style="width:${m.ca / mm * 100}%"></em></i></div>`).join("");
+    const before = {}; document.querySelectorAll("#rk div").forEach(el => before[el.dataset.n] = el.getBoundingClientRect().top);
+    $("rk").innerHTML = d.board.slice(0, 6).map((b, i) => `<div data-n="${esc(b.username)}"><i>${String(i + 1).padStart(2, "0")}</i><span>${esc(b.username)}</span><em>${eur(b.ca)}</em></div>`).join("");
+    if (!reduce) document.querySelectorAll("#rk div").forEach(el => { const o = before[el.dataset.n]; if (o != null) { const dy = o - el.getBoundingClientRect().top; if (dy) el.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: 800, easing: "cubic-bezier(.34,1.56,.64,1)" }); } });
+    if (first) { $("log").innerHTML = (d.feed || []).slice(0, 7).map(f => `<div><b>+${eur(f.amount)}</b> ${esc(f.username)} › ${esc(f.model_name)}</div>`).join("") + '<div><span class="cur"></span></div>'; }
+    $("cnt").textContent = d.count + " VENTES";
+  }
+  function typeLog(e) { const log = $("log"), row = document.createElement("div"); row.className = "n"; log.insertBefore(row, log.firstChild);
+    const txt = `+${eur(e.amount)} ${e.username} › ${e.model_name}`; let i = 0; const ty = () => { i++; row.innerHTML = `<b>${esc(txt.slice(0, Math.min(i, eur(e.amount).length + 1)))}</b>${esc(txt.slice(eur(e.amount).length + 1, i))}`; if (i < txt.length) setTimeout(ty, 22); else row.className = ""; }; ty();
+    while (log.children.length > 9) log.removeChild(log.children[log.children.length - 2]); }
+  function sale(e, d) {
+    const n = nodes.find(o => o.name === e.username) || nodes[0]; const big = e.amount >= 60;
+    SND.whoosh();
+    const go = () => { // arrivée au cœur
+      SND.sale(big); waves.push({ k: 0, c: "95,211,162" }, { k: -.12, c: "139,108,255", flat: true }); if (big) waves.push({ k: -.25, c: "255,243,196" });
+      for (let i = 0; i < (big ? 160 : 80); i++) { const a = Math.random() * Math.PI * 2, v = 1 + Math.random() * (big ? 7 : 4); sparks.push({ x: cx(), y: cy(), vx: Math.cos(a) * v, vy: Math.sin(a) * v, l: 1 }); }
+      const m = $("mid"); m.classList.remove("flash"); void m.offsetWidth; m.classList.add("flash");
+      const p = document.createElement("div"); p.className = "pop"; p.innerHTML = `<div class="a">+${eur(e.amount)}</div><div class="w">${esc(e.username)} › ${esc(e.model_name)}</div>`; document.body.appendChild(p); setTimeout(() => p.remove(), 3200);
+      typeLog(e); if (n) n.bump = 1;
+      if (state.d && state.d.ca >= state.d.record && !state.rec) { state.rec = true; setTimeout(SND.record, 500); } };
+    if (n && !reduce) { n.bump = .6; comets.push({ k: 0, dur: 1100, from: () => pos(n), done: go }); } else go();
+  }
+  SALLE.start({ state, sale });
+})();
+</script>
+</body>
+</html>

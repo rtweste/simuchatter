@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Salle de contrôle · Bourse — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><meta name="theme-color" content="#050607">
+<link rel="stylesheet" href="/style.css">
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#050607}
+body{font-family:Inter,system-ui,sans-serif;color:#e8ecef;--g:#2fe39a;--r:#ff5f6d;--a:#ffb547;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+.app{height:100vh;height:100dvh;display:grid;grid-template-rows:auto 44px 1fr 150px;gap:0}
+/* en-tête */
+.hd{display:flex;align-items:center;gap:22px;padding:16px 26px;border-bottom:1px solid #15191d;background:linear-gradient(180deg,#0a0d10,#050607)}
+.hd .lg-sh{width:130px}.hd .mk{font:700 11px var(--mono);letter-spacing:.2em;color:#7d8790;display:flex;align-items:center;gap:8px}
+.hd .mk i{width:8px;height:8px;border-radius:50%;background:var(--g);box-shadow:0 0 10px var(--g);animation:bk 1.4s infinite}@keyframes bk{50%{opacity:.3}}
+.hd .idx{display:flex;gap:26px;margin-left:30px}.hd .idx div{font:600 11px var(--mono);color:#7d8790;letter-spacing:.1em}.hd .idx b{display:block;font:700 17px var(--mono);color:#fff;letter-spacing:0;margin-top:3px}
+.hd .clk{margin-left:auto;font:700 26px var(--mono);color:#fff;font-variant-numeric:tabular-nums}
+/* bandeau défilant */
+.tape{position:relative;overflow:hidden;border-bottom:1px solid #15191d;background:#07090b;display:flex;align-items:center}
+.tape .tr{display:flex;gap:42px;white-space:nowrap;animation:tp 50s linear infinite;padding-left:100%}@keyframes tp{to{transform:translateX(-100%)}}
+.tape span{font:600 13px var(--mono);color:#aeb6bd}.tape span b{color:#fff}.tape span em{font-style:normal;color:var(--g)}
+.tape span.hot{color:#fff;text-shadow:0 0 12px rgba(47,227,154,.8)}
+.tape::before,.tape::after{content:"";position:absolute;top:0;bottom:0;width:80px;z-index:2}.tape::before{left:0;background:linear-gradient(90deg,#07090b,transparent)}.tape::after{right:0;background:linear-gradient(-90deg,#07090b,transparent)}
+.tape .lbl{position:absolute;left:0;top:0;bottom:0;z-index:3;display:flex;align-items:center;padding:0 14px;background:var(--g);color:#04130c;font:800 11px var(--mono);letter-spacing:.14em}
+/* corps */
+.body{display:grid;grid-template-columns:1fr 430px;min-height:0}
+.chart{position:relative;border-right:1px solid #15191d;min-height:0}
+.chart canvas{position:absolute;inset:0;width:100%;height:100%}
+.quote{position:absolute;left:28px;top:22px;z-index:2}
+.quote small{font:600 11px var(--mono);letter-spacing:.2em;color:#7d8790}
+.quote .px{font:800 clamp(52px,6.6vw,96px)/1 var(--mono);letter-spacing:-.04em;color:#fff;margin:6px 0;font-variant-numeric:tabular-nums;transition:color .3s}
+.quote .px.up{color:var(--g);text-shadow:0 0 40px rgba(47,227,154,.45)}
+.quote .ch{font:700 16px var(--mono)}.quote .ch.up{color:var(--g)}.quote .ch.dn{color:var(--r)}
+.quote .ch span{display:inline-block;padding:3px 9px;border-radius:6px;margin-right:10px}.quote .ch.up span{background:rgba(47,227,154,.14)}.quote .ch.dn span{background:rgba(255,95,109,.14)}
+.leg{position:absolute;right:20px;top:24px;z-index:2;display:flex;gap:16px;font:600 11px var(--mono);color:#7d8790;letter-spacing:.08em}.leg i{display:inline-block;width:18px;height:2px;vertical-align:middle;margin-right:6px}
+/* cotations */
+.book{display:flex;flex-direction:column;min-height:0}
+.book h5{margin:0;padding:14px 18px;font:700 11px var(--mono);letter-spacing:.2em;color:#7d8790;border-bottom:1px solid #15191d;display:grid;grid-template-columns:1fr 90px 90px 70px}
+.book h5 span:not(:first-child){text-align:right}
+.rows{flex:1;overflow:hidden;position:relative}
+.row{position:absolute;left:0;right:0;height:58px;display:grid;grid-template-columns:1fr 90px 90px 70px;align-items:center;padding:0 18px;border-bottom:1px solid #0f1316;transition:transform .9s cubic-bezier(.34,1.3,.64,1)}
+.row .nm{display:flex;align-items:center;gap:10px;font-weight:700;font-size:14px}.row .nm i{font:700 11px var(--mono);color:#56606a;width:18px;font-style:normal}
+.row .nm small{display:block;font:500 11px var(--mono);color:#7d8790}
+.row canvas{width:90px;height:30px}
+.row .v{text-align:right;font:700 15px var(--mono);font-variant-numeric:tabular-nums}.row .d{text-align:right;font:700 12px var(--mono);color:var(--g)}
+.row.fl{animation:rf 1.6s ease-out}@keyframes rf{0%{background:rgba(47,227,154,.35)}100%{background:transparent}}
+.row.lead .nm{color:var(--a)}
+/* créatrices (carte de chaleur) */
+.heat{display:flex;gap:2px;padding:2px;border-top:1px solid #15191d;background:#07090b}
+.tile{position:relative;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;padding:14px 16px;overflow:hidden;transition:flex-grow 1.4s cubic-bezier(.2,.9,.25,1),background .6s}
+.tile b{font:800 20px Inter;letter-spacing:-.02em}.tile span{font:700 15px var(--mono)}.tile small{font:500 11px var(--mono);opacity:.75}
+.tile.fl::after{content:"";position:absolute;inset:0;background:#fff;animation:tf .9s ease-out forwards}@keyframes tf{from{opacity:.45}to{opacity:0}}
+/* ordre exécuté */
+.ord{position:fixed;right:450px;top:120px;z-index:10;pointer-events:none}
+.ord div{margin-bottom:10px;padding:14px 18px;border-radius:12px;background:rgba(4,19,12,.92);border:1px solid rgba(47,227,154,.6);box-shadow:0 0 40px rgba(47,227,154,.25);font:600 12px var(--mono);color:#cfe;animation:od 3.4s cubic-bezier(.2,.9,.25,1) forwards;min-width:240px}
+.ord b{display:block;font:800 30px var(--mono);color:var(--g);margin:4px 0 2px;letter-spacing:-.02em}
+@keyframes od{0%{opacity:0;transform:translateX(60px) scale(.9)}10%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}
+@media(max-width:1000px){html,body{overflow:auto}.app{height:auto;grid-template-rows:auto 44px 60vh auto auto}.body{grid-template-columns:1fr}.book{min-height:380px}.hd .idx{display:none}.ord{right:16px}.heat{flex-wrap:wrap;height:auto}.tile{flex-basis:45%;height:90px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="hd"><span id="logo"></span><span class="mk"><i></i>MARCHÉ OUVERT · STELLADS</span>
+    <div class="idx"><div>VENTES<b id="iN">0</b></div><div>PANIER MOY.<b id="iA">0 €</b></div><div>VALIDÉ<b id="iV">0 €</b></div><div>EN SHIFT<b id="iL">0</b></div><div>RECORD<b id="iR">0 €</b></div></div>
+    <div class="clk" id="clk"></div></div>
+  <div class="tape"><span class="lbl">LIVE</span><div class="tr" id="tape"></div></div>
+  <div class="body">
+    <div class="chart"><canvas id="cv"></canvas>
+      <div class="quote"><small>CHIFFRE D'AFFAIRES DU JOUR · BRUT</small><div class="px" id="px">0 €</div><div class="ch" id="ch"></div></div>
+      <div class="leg"><span><i style="background:#2fe39a"></i>AUJOURD'HUI</span><span><i style="background:#56606a"></i>HIER</span></div></div>
+    <div class="book"><h5><span>CHATTER</span><span>TENDANCE</span><span>CA</span><span>VAR.</span></h5><div class="rows" id="rows"></div></div>
+  </div>
+  <div class="heat" id="heat"></div>
+</div>
+<div class="ord" id="ord"></div>
+<script src="/common.js"></script>
+<script src="/salle-core.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id), { SND, eur, reduce } = SALLE;
+  try { $("logo").innerHTML = logoHTML(); } catch (e) {}
+  setInterval(() => { $("clk").textContent = new Date().toLocaleTimeString("fr-FR"); }, 250);
+  let D = null, shown = 0, target = 0, spikes = [], reveal = 0;
+  const roll = () => { shown += (target - shown) * .09; if (Math.abs(target - shown) < .5) shown = target; $("px").textContent = Math.round(shown).toLocaleString("fr-FR") + " €"; requestAnimationFrame(roll); }; roll();
+  /* ---------- graphique ---------- */
+  const cv = $("cv"), x = cv.getContext("2d"); let W, H, DPR;
+  const size = () => { const r = cv.getBoundingClientRect(); DPR = Math.min(2, devicePixelRatio || 1); W = r.width; H = r.height; cv.width = W * DPR; cv.height = H * DPR; x.setTransform(DPR, 0, 0, DPR, 0, 0); }; size(); addEventListener("resize", size);
+  const cum = s => { let a = 0; return s.map(p => [p[0], a += p[1]]); };
+  function draw(t) {
+    x.clearRect(0, 0, W, H); if (!D) return requestAnimationFrame(draw);
+    reveal = Math.min(1, reveal + .012);
+    const pad = { l: 28, r: 70, t: 170, b: 34 }, cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+    const el = Math.max(3600e3, Date.now() - D.day0), span = Math.max(el * 1.08, 6 * 3600e3);
+    const A = cum(D.series), Y = cum(D.seriesY || []), maxV = Math.max(100, ...A.map(p => p[1]), ...(Y.length ? [Y[Y.length - 1][1] * Math.min(1, span / 864e5) * 1.0] : [0]), D.ca) * 1.18;
+    const X = ms => pad.l + Math.min(1, ms / span) * cw, Yp = v => pad.t + ch - v / maxV * ch;
+    // grille
+    x.font = "600 11px ui-monospace,Menlo,monospace"; x.fillStyle = "#56606a"; x.textAlign = "right";
+    for (let i = 0; i <= 4; i++) { const v = maxV / 4 * i, y = Yp(v); x.strokeStyle = "rgba(255,255,255,.05)"; x.beginPath(); x.moveTo(pad.l, y); x.lineTo(W - pad.r, y); x.stroke(); x.fillText(Math.round(v) + " €", W - 10, y + 4); }
+    x.textAlign = "center"; for (let h = 0; h <= 24; h += 3) { const ms = h * 3600e3; if (ms > span) break; const xx = X(ms); x.strokeStyle = "rgba(255,255,255,.035)"; x.beginPath(); x.moveTo(xx, pad.t); x.lineTo(xx, pad.t + ch); x.stroke(); x.fillText(String(h).padStart(2, "0") + "h", xx, H - 12); }
+    // hier (fantôme)
+    if (Y.length) { x.strokeStyle = "rgba(125,135,144,.45)"; x.setLineDash([4, 6]); x.lineWidth = 1.5; x.beginPath(); x.moveTo(X(0), Yp(0)); Y.filter(p => p[0] <= span).forEach(p => x.lineTo(X(p[0]), Yp(p[1]))); x.stroke(); x.setLineDash([]); }
+    // aujourd'hui : courbe en escalier lissée + remplissage dégradé
+    const pts = [[0, 0], ...A, [Date.now() - D.day0, A.length ? A[A.length - 1][1] : 0]], lim = (Date.now() - D.day0) * reveal;
+    const path = () => { x.beginPath(); x.moveTo(X(0), Yp(0)); let last = 0; pts.forEach(p => { if (p[0] > lim) return; x.lineTo(X(p[0]), Yp(last)); x.lineTo(X(p[0]), Yp(p[1])); last = p[1]; }); x.lineTo(X(lim), Yp(last)); return last; };
+    let lastV = path(); x.lineTo(X(lim), Yp(0)); x.closePath(); const gr = x.createLinearGradient(0, pad.t, 0, pad.t + ch); gr.addColorStop(0, "rgba(47,227,154,.35)"); gr.addColorStop(1, "rgba(47,227,154,0)"); x.fillStyle = gr; x.fill();
+    path(); x.strokeStyle = "#2fe39a"; x.lineWidth = 2.5; x.shadowColor = "#2fe39a"; x.shadowBlur = 18; x.stroke(); x.shadowBlur = 0;
+    // point « maintenant »
+    const nx = X(lim), ny = Yp(lastV), pr = 6 + 4 * Math.abs(Math.sin(t / 400));
+    x.fillStyle = "rgba(47,227,154,.18)"; x.beginPath(); x.arc(nx, ny, pr * 2.2, 0, Math.PI * 2); x.fill(); x.fillStyle = "#fff"; x.beginPath(); x.arc(nx, ny, 5, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = "rgba(47,227,154,.4)"; x.setLineDash([2, 4]); x.beginPath(); x.moveTo(nx, ny); x.lineTo(W - pad.r, ny); x.stroke(); x.setLineDash([]);
+    x.fillStyle = "#2fe39a"; x.fillRect(W - pad.r + 2, ny - 11, 66, 22); x.fillStyle = "#04130c"; x.font = "800 12px ui-monospace,Menlo,monospace"; x.textAlign = "center"; x.fillText(Math.round(shown) + " €", W - pad.r + 35, ny + 4);
+    // pics des dernières ventes
+    spikes = spikes.filter(s => { s.k += 1 / 200; const a = Math.max(0, 1 - s.k), sy = ny - 20 - s.k * 90;
+      x.strokeStyle = `rgba(47,227,154,${a})`; x.lineWidth = 1; x.beginPath(); x.moveTo(nx, ny); x.lineTo(nx, sy + 8); x.stroke();
+      x.fillStyle = `rgba(4,19,12,${a * .92})`; x.strokeStyle = `rgba(47,227,154,${a})`; const w = 150; x.beginPath(); x.roundRect ? x.roundRect(nx - w / 2, sy - 34, w, 40, 8) : x.rect(nx - w / 2, sy - 34, w, 40); x.fill(); x.stroke();
+      x.fillStyle = `rgba(47,227,154,${a})`; x.font = "800 16px ui-monospace,Menlo,monospace"; x.fillText("▲ +" + s.am + " €", nx, sy - 14); x.fillStyle = `rgba(255,255,255,${a * .8})`; x.font = "600 10.5px ui-monospace,Menlo,monospace"; x.fillText(s.who, nx, sy); return s.k < 1; });
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+  /* ---------- cotations ---------- */
+  const prev = {};
+  function spark(c, uid) { const ctx = c.getContext("2d"), d = Math.min(2, devicePixelRatio || 1); c.width = 90 * d; c.height = 30 * d; ctx.scale(d, d);
+    const s = cum(D.series.filter(p => p[2] === uid)); if (s.length < 1) return; const mx = s[s.length - 1][1] || 1, el = Math.max(1, Date.now() - D.day0);
+    ctx.beginPath(); ctx.moveTo(0, 28); s.forEach(p => ctx.lineTo(p[0] / el * 90, 28 - p[1] / mx * 24)); ctx.lineTo(90, 28 - 24); ctx.strokeStyle = "#2fe39a"; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.lineTo(90, 30); ctx.lineTo(0, 30); ctx.closePath(); const g = ctx.createLinearGradient(0, 0, 0, 30); g.addColorStop(0, "rgba(47,227,154,.3)"); g.addColorStop(1, "rgba(47,227,154,0)"); ctx.fillStyle = g; ctx.fill(); }
+  function rows(hit) {
+    const box = $("rows"), list = D.board.slice(0, 9);
+    list.forEach((b, i) => { let r = box.querySelector(`[data-u="${CSS.escape(b.username)}"]`);
+      if (!r) { r = document.createElement("div"); r.className = "row"; r.dataset.u = b.username; r.style.transform = `translateY(${i * 58 + 300}px)`; r.innerHTML = `<div class="nm"><i></i><div><span></span><small></small></div></div><canvas></canvas><div class="v"></div><div class="d"></div>`; box.appendChild(r); }
+      requestAnimationFrame(() => r.style.transform = `translateY(${i * 58}px)`);
+      r.classList.toggle("lead", i === 0); r.querySelector("i").textContent = String(i + 1).padStart(2, "0"); r.querySelector("span").textContent = b.username; r.querySelector("small").textContent = b.n + " ventes";
+      r.querySelector(".v").textContent = eur(b.ca); const dv = b.ca - (prev[b.username] ?? b.ca); r.querySelector(".d").textContent = dv > 0 ? "▲ " + Math.round(dv) : r.querySelector(".d").textContent || "—";
+      spark(r.querySelector("canvas"), b.id);
+      if (hit && hit === b.username) { r.classList.remove("fl"); void r.offsetWidth; r.classList.add("fl"); }
+      prev[b.username] = b.ca; });
+    [...box.children].forEach(r => { if (!list.find(b => b.username === r.dataset.u)) r.remove(); });
+  }
+  function heat(hit) {
+    const mx = Math.max(1, ...D.models.map(m => m.ca)), tot = D.models.reduce((t, m) => t + m.ca, 0) || 1, box = $("heat");
+    D.models.forEach(m => { let t = box.querySelector(`[data-m="${CSS.escape(m.name)}"]`); if (!t) { t = document.createElement("div"); t.className = "tile"; t.dataset.m = m.name; t.innerHTML = "<small></small><b></b><span></span>"; box.appendChild(t); }
+      const k = m.ca / mx; t.style.flexGrow = Math.max(.35, m.ca / tot * 10); t.style.background = `linear-gradient(160deg,rgba(47,227,154,${.12 + k * .5}),rgba(10,60,40,${.25 + k * .4}))`;
+      t.querySelector("b").textContent = m.name; t.querySelector("span").textContent = eur(m.ca); t.querySelector("small").textContent = Math.round(m.ca / tot * 100) + " % · " + m.n + " ventes";
+      if (hit === m.name) { t.classList.remove("fl"); void t.offsetWidth; t.classList.add("fl"); } });
+  }
+  function tape() { $("tape").innerHTML = (D.feed || []).slice(0, 14).map((f, i) => `<span class="${i === 0 && tape.hot ? "hot" : ""}"><b>${esc(f.username.toUpperCase())}</b> <em>▲ +${Math.round(f.amount)} €</em> ${esc(f.model_name.toUpperCase())} · ${new Date(f.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>`).join(""); }
+  /* ---------- données ---------- */
+  function state(d, first) {
+    D = d; target = d.ca; if (first) { shown = 0; reveal = 0; }
+    $("iN").textContent = d.count; $("iA").textContent = eur(d.avg); $("iV").textContent = eur(d.validated); $("iL").textContent = d.live.length; $("iR").textContent = eur(d.record);
+    const y = d.yesterday, ch = $("ch"); if (y) { const up = d.ca >= y, p = Math.round(Math.abs(d.ca / y - 1) * 100); ch.className = "ch " + (up ? "up" : "dn"); ch.innerHTML = `<span>${up ? "▲" : "▼"} ${p} %</span>${up ? "+" : "−"}${eur(Math.abs(d.ca - y))} vs hier à la même heure`; }
+    rows(state.hit); heat(state.hitM); if (first) tape(); state.hit = state.hitM = null;
+  }
+  function sale(e) {
+    SND.sale(e.amount >= 60); spikes.push({ k: 0, am: Math.round(e.amount), who: (e.username + " · " + e.model_name).toUpperCase() });
+    const p = $("px"); p.classList.add("up"); setTimeout(() => p.classList.remove("up"), 1600);
+    state.hit = e.username; state.hitM = e.model_name; tape.hot = true; setTimeout(tape, 50);
+    const o = document.createElement("div"); o.innerHTML = `ORDRE EXÉCUTÉ · ${new Date().toLocaleTimeString("fr-FR")}<b>+${eur(e.amount)}</b>${esc(e.username.toUpperCase())} › ${esc(e.model_name.toUpperCase())}`; $("ord").prepend(o); setTimeout(() => o.remove(), 3500);
+  }
+  SALLE.start({ state, sale });
+})();
+</script>
+</body>
+</html>

@@ -96,6 +96,11 @@ canvas.fx{position:fixed;inset:0;pointer-events:none;z-index:19}
   </div>
   <div class="card"><h4><span>CRÉATRICES AUJOURD'HUI</span></h4><div class="models" id="models"></div></div>
 </div>
+<div id="vbar" style="position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:40;display:flex;gap:6px;padding:6px;border-radius:14px;background:rgba(10,10,10,.75);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(10px);opacity:.3;transition:opacity .3s" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=.3">
+  <a href="/salle" style="height:30px;padding:0 11px;border-radius:9px;background:#f5f5f5;color:#0a0a0a;font:700 12px Inter;text-decoration:none;display:flex;align-items:center">Classique</a>
+  <a href="/salle-orbite" style="height:30px;padding:0 11px;border-radius:9px;color:#bbb;font:700 12px Inter;text-decoration:none;display:flex;align-items:center">Orbite</a>
+  <a href="/salle-bourse" style="height:30px;padding:0 11px;border-radius:9px;color:#bbb;font:700 12px Inter;text-decoration:none;display:flex;align-items:center">Bourse</a>
+  <a href="/salle-scene" style="height:30px;padding:0 11px;border-radius:9px;color:#bbb;font:700 12px Inter;text-decoration:none;display:flex;align-items:center">Scène</a></div>
 <div class="sound" id="soundGate"><button type="button" id="soundOn">🔊 Lancer la salle de contrôle<small>avec le son à chaque vente</small></button></div>
 <script src="/common.js"></script>
 <script>
