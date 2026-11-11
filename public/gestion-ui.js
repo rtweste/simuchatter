@@ -119,8 +119,6 @@ async function fiche(id) {
   dr.querySelectorAll("[data-a]").forEach(b => b.onclick = async () => {
     const a = b.dataset.a;
     try {
-      if (a === "dlx") { await api(`/api/admin/users/${c.id}/deadline`, { body: { hours: 24 } });
-        toast(tr.deadline.state === "rejected" ? `${esc(c.username)} a 24 h de plus · son compte est réactivé` : `${esc(c.username)} a 24 h de plus pour terminer sa formation`, true); S.ok(); close(); loadTeam(true); }
       if (a === "pw" || a === "pwre") { pw.classList.add("on"); pw.querySelector("code").textContent = genPw(); S.tick(); }
       if (a === "pwcopy") { await copy(pw.querySelector("code").textContent); toast("Mot de passe copié", true); }
       if (a === "pwset") { const p = pw.querySelector("code").textContent; await api("/api/admin/users/" + c.id, { method: "PATCH", body: { password: p } }); await copy(`Site : stellads.fr\nIdentifiant : ${c.username}\nMot de passe : ${p}`);
@@ -156,14 +154,25 @@ function dlSec(c) {
     : `<b style="color:#e07a7a">Délai dépassé · candidature refusée</b><small>Compte désactivé automatiquement le ${new Date(d.rejectedAt).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}. Tu peux lui redonner 24 h : son compte sera réactivé.</small>`;
   return `<div class="sec"><span class="lab">DÉLAI DE ${d.hours} H</span><div class="dlbox">${st}</div>${d.state === "met" ? "" : `<div class="acts" style="margin-top:8px"><button data-a="dlx" style="grid-column:span 2">${d.state === "rejected" ? "Redonner 24 h et réactiver le compte" : "Donner 24 h de plus"}</button></div>`}</div>`;
 }
+// bloc « Entretien manager » de la fiche élève
+function ivSum(c) {
+  const iv = c.training.interview; if (!iv) return "";
+  const IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1z"/><path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 13l2 2 4-4"/></svg>';
+  const when = ms => new Date(ms).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const sub = iv.done ? `Fait par ${esc(iv.by || "?")} · ${when(iv.doneAt)}` : iv.started ? `Commencé par ${esc(iv.by || "?")} · ${when(iv.startedAt)}` : c.training.ready ? "Ses critères sont verts : c'est le moment" : "Dernière étape avant de passer chatter";
+  return `<div class="ivs" data-ivs><div class="h"><span class="ic">${IC}</span><div><b class="t">Entretien manager</b><small>${sub}</small></div>${iv.done ? `<span class="dec ${iv.decision}">${esc(iv.decisionLabel || "")}${iv.test ? " · test" : ""}</span>` : ""}</div>
+    ${iv.done ? "" : `<div class="pg">${Array.from({ length: iv.total }, (_, k) => `<i class="${k < iv.answered ? "on" : ""}"></i>`).join("")}</div><div class="meta"><span>${iv.started ? "Enregistré automatiquement" : "6 questions · environ 10 min"}</span><b>${iv.answered} / ${iv.total} questions</b></div>`}
+    <button class="go${iv.done ? " gh" : ""}" data-a="iv">${iv.done ? "Revoir l'entretien" : iv.started ? "Reprendre l'entretien" : "Commencer l'entretien"}</button></div>`;
+}
 function tfiche(c) {
   const tr = c.training, s = tr.stats, notes = n => `<div class="note"><button class="del" data-del="${n.id}" aria-label="Supprimer la note">✕</button><small>${esc(n.kind || "Remarque")} · ${dShort(n.created_at)}${n.by_name ? " · " + esc(n.by_name) : ""}</small>${esc(n.text)}</div>`;
   openDr(`<div class="dh">${avatar(c.username)}<div><b>${esc(c.username)} ${tr.deadline && tr.deadline.state === "rejected" ? '<span class="tag w">Candidature refusée</span>' : tr.ready ? '<span class="tag v">Prêt</span>' : '<span class="tag f">En formation</span>'}</b><small>En formation depuis ${sinceTxt(c.created_at)}</small></div><button class="x" aria-label="Fermer">✕</button></div>
     <div class="dk"><div><small>Score moyen (5 dern.)</small><b class="${s.avg5 >= 70 ? "g" : ""}" style="${s.avg5 >= 70 ? "color:#5fd3a2" : ""}">${s.avg5 ?? "—"}</b><em>meilleur : ${s.best ?? "—"}</em></div><div><small>Sessions terminées</small><b>${s.sessions}</b><em>dont ${s.hard} difficile${s.hard > 1 ? "s" : ""} réussie${s.hard > 1 ? "s" : ""}</em></div></div>
     <div class="rdy${tr.ready ? "" : " no"}"><span class="ic">${tr.ready ? "✓" : tr.done}</span><span>${tr.ready ? `Les ${tr.total} critères sont remplis. ${esc(c.username)} peut passer chatter.` : `${tr.done} critère${tr.done > 1 ? "s" : ""} sur ${tr.total} rempli${tr.done > 1 ? "s" : ""}.`}</span></div>
     <div class="sec"><span class="lab">CRITÈRES</span>${tr.criteria.map(k => `<div class="tck${k.ok ? " ok" : ""}"><span class="bx">${k.ok ? CK : ""}</span><div>${esc(k.label)}${k.sub ? `<small>${esc(k.sub)}</small>` : ""}</div><span class="v${k.ok ? "" : " no"}">${k.test ? '<span class="ttest">test</span>' : ""}${esc(k.value)}</span></div>`).join("")}</div>
-    ${dlSec(c)}
-    <button class="valid${tr.ready ? "" : " soft"}" data-a="promote">${tr.ready ? "Valider la formation" : "Valider la formation quand même"}</button>
+    ${dlSec(c)}${ivSum(c)}
+    ${(() => { const iv = tr.interview || {}; const lock = !iv.done || iv.decision === "refused";
+      return `<button class="valid${tr.ready ? "" : " soft"}${lock ? " lock" : ""}" data-a="promote" style="margin-top:12px">${!iv.done ? "Valider la formation · entretien à faire" : iv.decision === "refused" ? "Entretien refusé" : tr.ready ? "Valider la formation" : "Valider la formation quand même"}</button>`; })()}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><a class="gbtn" href="/app#gestion" style="text-decoration:none">Assigner un entraînement</a><a class="gbtn" href="/app#gestion" style="text-decoration:none">Voir ses sessions →</a></div>
     <div class="mut" style="margin-top:10px;line-height:1.5">Une fois validée, ${esc(c.username)} voit le planning, les ventes et sa paie. Tu pourras lui ajouter des shifts.</div>
     <div class="sec"><span class="lab">OUTIL DE TEST · VISIBLE PAR TOI SEULEMENT</span><div class="acts">
@@ -179,6 +188,12 @@ function tfiche(c) {
   dr.querySelectorAll("[data-a]").forEach(b => b.onclick = async () => {
     const a = b.dataset.a;
     try {
+      if (a === "iv") { S.open(); ENTRETIEN.open(c, b, async (sum, fin) => { tr.interview = sum;
+          if (!fin) { const blk = dr.querySelector("[data-ivs]"); if (blk) { const h = b.onclick; blk.outerHTML = ivSum(c); const nb = dr.querySelector('[data-ivs] [data-a="iv"]'); if (nb) { nb.onclick = h; b = nb; } } }
+          if (fin) { toast(`Entretien de ${esc(c.username)} enregistré · ${esc(sum.decisionLabel)}`, sum.decision !== "refused"); const f = await api("/api/admin/team/" + c.id).catch(() => null); if (f) setTimeout(() => tfiche({ ...c, ...f, training: f.training || c.training }), 650); loadTeam(true); } });
+        return; }
+      if (a === "dlx") { await api(`/api/admin/users/${c.id}/deadline`, { body: { hours: 24 } });
+        toast(tr.deadline.state === "rejected" ? `${esc(c.username)} a 24 h de plus · son compte est réactivé` : `${esc(c.username)} a 24 h de plus pour terminer sa formation`, true); S.ok(); close(); loadTeam(true); }
       if (a === "promote") { if (!tr.ready && !b.dataset.sure) { b.dataset.sure = 1; b.textContent = "Confirmer : il n'a pas rempli tous les critères"; return; }
         await api(`/api/admin/users/${c.id}/promote`, { body: {} }); b.classList.remove("soft"); b.classList.add("done"); b.textContent = `✓ ${c.username} est chatter`;
         toast(`${esc(c.username)} est maintenant chatter · il apparaît dans le planning et la paie`, true); S.ok();

@@ -282,7 +282,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       if (r && ready && !r.met_at && !r.rejected_at) { db.prepare("UPDATE trainee_deadline SET met_at = ? WHERE user_id = ?").run(Date.now(), uid); r.met_at = Date.now(); }
       dl = dlView(r);
     }
-    return { criteria, done, total, ready, tip, fans, simReady, course: co, test: byp ? byp.level : null, deadline: dl,
+    return { criteria, done, total, ready, tip, fans, simReady, course: co, test: byp ? byp.level : null, deadline: dl, interview: u && u.role === "trainee" && !noDl && typeof interview === "function" ? interview(uid) : null,
       day: u ? Math.floor((Date.now() - u.created_at) / 864e5) + 1 : 1,
       stats: { avg5, best: n ? Math.max(...sims.map(s => s.score)) : null, sessions: n, rt, hard: hardOk, trend: sims.slice(0, 8).map(s => s.score).reverse() } };
   }
@@ -296,15 +296,72 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     if (mode === "reset") {
       db.prepare("DELETE FROM training_bypass WHERE user_id = ?").run(u.id); db.prepare("DELETE FROM course_progress WHERE user_id = ?").run(u.id);
       db.prepare("DELETE FROM training_ready WHERE user_id = ?").run(u.id); db.prepare("UPDATE users SET intro_seen = 0 WHERE id = ?").run(u.id);
-      db.prepare("DELETE FROM trainee_deadline WHERE user_id = ?").run(u.id);
-      log(req.user.id, "a", `Test : formation de **${u.username}** remise à zéro`, "Critères forcés, vidéos, présentation et délai de 24 h réinitialisés");
+      db.prepare("DELETE FROM trainee_deadline WHERE user_id = ?").run(u.id); db.prepare("DELETE FROM interviews WHERE user_id = ?").run(u.id);
+      log(req.user.id, "a", `Test : formation de **${u.username}** remise à zéro`, "Critères forcés, vidéos, présentation, délai de 24 h et entretien réinitialisés");
     } else {
       db.prepare("INSERT INTO training_bypass (user_id, level, at) VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET level = excluded.level, at = excluded.at").run(u.id, mode, now);
       if (mode === "all") { const ins = db.prepare("INSERT INTO course_progress (user_id, video_id, max_pos, dur, upd, done_at) VALUES (?,?,?,?,?,?) ON CONFLICT(user_id, video_id) DO UPDATE SET done_at = COALESCE(course_progress.done_at, excluded.done_at)");
-        courseList().forEach(v => ins.run(u.id, v.id, 0, null, now, now)); }
+        courseList().forEach(v => ins.run(u.id, v.id, 0, null, now, now));
+        const A = { _test: true }; IV_QUESTIONS.forEach(q => A[q.id] = q.type === "slots" ? { v: agency().slots.slice(0, 2).map(x => x[0]), note: "" } : q.type === "rating" ? { v: 4, note: "" } : { v: "ok", note: "" });
+        db.prepare("INSERT INTO interviews (user_id, by_id, started_at, updated_at, done_at, decision, answers) VALUES (?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET answers = excluded.answers, done_at = excluded.done_at, decision = excluded.decision, updated_at = excluded.updated_at")
+          .run(u.id, req.user.id, now, now, now, "recommended", JSON.stringify(A)); }
       log(req.user.id, "a", `Test : ${mode === "all" ? "toute la formation validée" : "critères du simulateur validés"} pour **${u.username}**`, "Outil de test du manager");
     }
     res.json({ ok: true, training: training(u.id) });
+  });
+  /* =================== ENTRETIEN MANAGER (dernière étape avant de passer chatter) =================== */
+  db.exec("CREATE TABLE IF NOT EXISTS interviews (user_id INTEGER PRIMARY KEY, by_id INTEGER, started_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, done_at INTEGER, decision TEXT, answers TEXT NOT NULL DEFAULT '{}')");
+  const OK3 = (a, b, c) => [{ v: "ok", label: a, tone: "ok" }, { v: "mid", label: b, tone: "mid" }, { v: "bad", label: c, tone: "bad" }];
+  const IV_QUESTIONS = [
+    { id: "dispo", cat: "Disponibilités", type: "slots", q: "Sur quels shifts du planning peux-tu travailler ?", hint: "Coche tous les créneaux qu'il peut tenir régulièrement." },
+    { id: "motiv", cat: "Motivation", type: "choice", q: "Pourquoi tu veux devenir chatter chez StellADS ?", hint: "Cherche une vraie envie : la vente, l'écrit, la régularité. Méfie-toi du « c'est de l'argent facile ».", options: OK3("Convaincant", "Moyen", "Pas convaincant") },
+    { id: "exp", cat: "Expérience", type: "choice", q: "As-tu déjà fait du chat, de la vente ou du service client ?", hint: "Pas obligatoire : le simulateur a déjà montré son niveau. Ça t'aide à savoir comment l'accompagner.", options: OK3("Oui, en vente ou chat", "Un peu", "Aucune") },
+    { id: "situ", cat: "Mise en situation", type: "choice", q: "« Un fan te dit qu'il n'a plus d'argent ce mois-ci mais il veut absolument la vidéo. Tu fais quoi ? »", hint: "Bonne réponse : il respecte le refus, ne met pas de pression et garde le lien pour plus tard.", options: OK3("Respecte les règles", "Partiellement", "Met la pression") },
+    { id: "rules", cat: "Règles de l'agence", type: "choice", q: "Que fais-tu quand un média payant passe de « En attente » à « Accepté » ?", hint: "Bonne réponse : il prend une capture d'écran de la vente et la dépose sur le dashboard StellADS, dans « Mes ventes ».", options: OK3("Bonne réponse", "Hésitant", "Ne sait pas") },
+    { id: "feel", cat: "Ton ressenti", type: "rating", q: "Note globale de l'entretien", hint: "Ton impression générale : sérieux, ponctualité, façon de parler." }];
+  const IV_DECISIONS = { recommended: "Recommandé", review: "À revoir", refused: "Refusé" };
+  const ivRow = uid => { const r = db.prepare("SELECT * FROM interviews WHERE user_id = ?").get(uid); if (r) r.answers = J(r.answers) || {}; return r; };
+  const ivAnswered = (q, a) => !!a && (q.type === "slots" ? Array.isArray(a.v) && a.v.length > 0 : q.type === "rating" ? a.v >= 1 && a.v <= 5 : !!q.options.find(o => o.v === a.v));
+  function interview(uid) {
+    const r = ivRow(uid), ans = r ? r.answers : {}, by = r && r.by_id ? db.prepare("SELECT username FROM users WHERE id = ?").get(r.by_id) : null;
+    const answered = IV_QUESTIONS.filter(q => ivAnswered(q, ans[q.id])).length;
+    return { started: !!r, done: !!(r && r.done_at), answered, total: IV_QUESTIONS.length, decision: r ? r.decision : null, decisionLabel: r && r.decision ? IV_DECISIONS[r.decision] : null,
+      by: by ? by.username : null, startedAt: r ? r.started_at : null, updatedAt: r ? r.updated_at : null, doneAt: r ? r.done_at : null, test: !!(ans._test) };
+  }
+  app.get("/api/admin/users/:id/interview", auth, admin, (req, res) => {
+    const u = db.prepare("SELECT id, username, role FROM users WHERE id = ?").get(parseInt(req.params.id, 10)); if (!u) return res.status(404).json({ error: "Introuvable" });
+    const r = ivRow(u.id);
+    res.json({ questions: IV_QUESTIONS, slots: agency().slots.map(s => ({ id: s[0], label: s[0], start: s[1], end: s[2] })), decisions: IV_DECISIONS,
+      answers: r ? r.answers : {}, decision: r ? r.decision : null, summary: interview(u.id), training: training(u.id) });
+  });
+  // enregistrement au fil de l'eau (chaque clic) ; « done » termine l'entretien avec la décision
+  app.put("/api/admin/users/:id/interview", auth, admin, (req, res) => {
+    const u = db.prepare("SELECT id, username, role FROM users WHERE id = ?").get(parseInt(req.params.id, 10));
+    if (!u || u.role !== "trainee") return res.status(400).json({ error: "Ce compte n'est pas en formation" });
+    const b = req.body || {}, now = Date.now(), r = ivRow(u.id), ans = r ? r.answers : {}, slotIds = agency().slots.map(s => s[0]);
+    for (const q of IV_QUESTIONS) { const a = b.answers && b.answers[q.id]; if (a === undefined) continue;
+      if (a === null) { delete ans[q.id]; continue; }
+      const note = String(a.note || "").slice(0, 800);
+      if (q.type === "slots") ans[q.id] = { v: (Array.isArray(a.v) ? a.v : []).filter(x => slotIds.includes(x)), note };
+      else if (q.type === "rating") ans[q.id] = { v: Math.max(0, Math.min(5, parseInt(a.v, 10) || 0)), note };
+      else ans[q.id] = { v: q.options.some(o => o.v === a.v) ? a.v : null, note }; }
+    let decision = r ? r.decision : null; if (b.decision !== undefined) decision = IV_DECISIONS[b.decision] ? b.decision : null;
+    let doneAt = r ? r.done_at : null;
+    if (b.done) {
+      const miss = IV_QUESTIONS.filter(q => !ivAnswered(q, ans[q.id]));
+      if (miss.length) return res.status(400).json({ error: `Il reste ${miss.length} question${miss.length > 1 ? "s" : ""} : ${miss.map(q => q.cat).join(", ")}` });
+      if (!decision) return res.status(400).json({ error: "Choisis une décision" });
+      doneAt = now;
+    }
+    if (r) db.prepare("UPDATE interviews SET answers = ?, decision = ?, updated_at = ?, done_at = ? WHERE user_id = ?").run(JSON.stringify(ans), decision, now, doneAt, u.id);
+    else db.prepare("INSERT INTO interviews (user_id, by_id, started_at, updated_at, done_at, decision, answers) VALUES (?,?,?,?,?,?,?)").run(u.id, req.user.id, now, now, doneAt, decision, JSON.stringify(ans));
+    if (b.done) { const d = ans.dispo ? ans.dispo.v.join(", ") : "";
+      log(req.user.id, "a", `a fait passer l'entretien de **${u.username}** · ${IV_DECISIONS[decision]}`, `Note ${ans.feel ? ans.feel.v : "?"} / 5${d ? " · dispo : " + d : ""}`); }
+    res.json({ ok: true, summary: interview(u.id) });
+  });
+  // rouvrir un entretien terminé pour le modifier
+  app.post("/api/admin/users/:id/interview/reopen", auth, admin, (req, res) => {
+    db.prepare("UPDATE interviews SET done_at = NULL, updated_at = ? WHERE user_id = ?").run(Date.now(), parseInt(req.params.id, 10)); res.json({ ok: true });
   });
   // Manager : donner du temps en plus à un élève (+24 h), ce qui réactive aussi une candidature refusée pour délai
   app.post("/api/admin/users/:id/deadline", auth, admin, (req, res) => {
@@ -338,6 +395,9 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   app.post("/api/admin/users/:id/promote", auth, admin, (req, res) => {
     const u = db.prepare("SELECT id, role FROM users WHERE id = ?").get(parseInt(req.params.id, 10));
     if (!u || u.role !== "trainee") return res.status(400).json({ error: "Ce compte n'est pas en formation" });
+    const iv = interview(u.id);
+    if (!iv.done && !req.body?.force) return res.status(400).json({ error: "Fais d'abord passer l'entretien" });
+    if (iv.done && iv.decision === "refused" && !req.body?.force) return res.status(400).json({ error: "L'entretien est marqué « Refusé »" });
     db.prepare("UPDATE users SET role = 'chatter' WHERE id = ?").run(u.id); db.prepare("DELETE FROM training_ready WHERE user_id = ?").run(u.id);
     res.json({ ok: true });
   });
