@@ -212,6 +212,29 @@
 }
 @media(max-width:400px){.vt-filters button{padding:0 8px;font-size:11.5px}.vt-big{font-size:46px}}
 @media (prefers-reduced-motion:reduce){.vt *,.vt-sheet{animation-duration:.01s!important;transition-duration:.01s!important}}
+
+/* capture en double */
+.vt-dup{display:none}
+.vt-dup.on{display:flex;gap:12px;align-items:center;padding:12px;border-radius:16px;border:1px solid rgba(224,122,122,.5);background:linear-gradient(135deg,rgba(224,122,122,.14),rgba(224,122,122,.04));animation:dupIn .6s cubic-bezier(.34,1.56,.64,1) both;position:relative;overflow:hidden}
+.vt-dup.close{border-color:rgba(232,182,92,.5);background:linear-gradient(135deg,rgba(232,182,92,.13),rgba(232,182,92,.03))}
+.vt-dup::after{content:"";position:absolute;left:-40%;top:0;bottom:0;width:40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);animation:dupSh 2.6s ease-in-out infinite}
+@keyframes dupIn{from{opacity:0;transform:translateY(-6px) scale(.97)}}@keyframes dupSh{0%{left:-40%}60%,100%{left:120%}}
+.vt-dup .th{width:54px;height:72px;border-radius:10px;background:#111 center/cover;border:1px solid rgba(255,255,255,.12);flex-shrink:0;cursor:zoom-in}
+.vt-dup .tx{flex:1;min-width:0}.vt-dup b{display:block;font-size:13.5px;color:#f0b3b3}.vt-dup.close b{color:#f0cf91}
+.vt-dup small{display:block;color:#bdbdbd;font-size:12px;line-height:1.45;margin-top:2px}
+.vt-dup .bts{display:flex;gap:6px;margin-top:8px}.vt-dup button{height:30px;padding:0 10px;border-radius:9px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.25);color:#eee;font-weight:700;font-size:12px}
+.vt-dup button.r{background:#e07a7a;border-color:#e07a7a;color:#0a0a0a}
+.vt-cmp{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.86);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;opacity:0;transition:opacity .3s}
+.vt-cmp.on{opacity:1}
+.vt-cmp .row{display:flex;gap:16px;max-width:100%;max-height:78vh}
+.vt-cmp figure{margin:0;display:flex;flex-direction:column;gap:8px;align-items:center;min-width:0;transform:translateY(14px);opacity:0;transition:transform .5s cubic-bezier(.34,1.56,.64,1),opacity .4s}
+.vt-cmp.on figure{transform:none;opacity:1}.vt-cmp.on figure+figure{transition-delay:.08s}
+.vt-cmp img{max-height:70vh;max-width:44vw;border-radius:14px;border:1px solid #333;object-fit:contain;background:#111}
+.vt-cmp figcaption{font-size:12.5px;color:#bbb;text-align:center}.vt-cmp figcaption b{color:#fff}
+.vt-cmp .x{height:42px;padding:0 18px;border-radius:12px;border:1px solid #333;background:#111;color:#eee;font-weight:700}
+.vt-cmp .tag{font-size:12px;font-weight:800;padding:5px 11px;border-radius:999px;background:rgba(224,122,122,.18);color:#f0b3b3}.vt-cmp .tag.close{background:rgba(232,182,92,.16);color:#f0cf91}
+@media(max-width:700px){.vt-cmp .row{flex-direction:column;overflow:auto}.vt-cmp img{max-width:88vw;max-height:36vh}}
+.vt-hdup{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:999px;background:rgba(224,122,122,.16);color:#f0b3b3;vertical-align:1px}.vt-hdup.close{background:rgba(232,182,92,.15);color:#f0cf91}
 </style>
 </head>
 <body>
@@ -267,6 +290,7 @@
         <div class="vt-cap" id="qCap" role="button" aria-label="Agrandir la capture"><div class="bg"></div><img class="main" alt="Capture de la vente"><span class="zoom">⤢ Agrandir</span><span class="flash"></span></div>
         <div class="vt-pan">
           <div class="vt-who" id="qWho"></div>
+          <div class="vt-dup" id="qDup"></div>
           <div class="vt-note" id="qNote"></div>
           <div><div class="vt-lab" style="margin-bottom:6px">Montant brut</div>
             <div class="vt-am"><button id="amMinus" aria-label="Moins 5 €">−</button><input id="qAmt" inputmode="decimal" aria-label="Montant brut" autocomplete="off"><span class="cur">€</span><button id="amPlus" aria-label="Plus 5 €">+</button></div></div>
@@ -567,10 +591,35 @@ function qShow() {
   im.classList.remove("ld"); im.onload = () => im.classList.add("ld"); im.src = img(s.id);
   cap.querySelector(".bg").style.backgroundImage = `url("${img(s.id)}")`;
   $("qWho").innerHTML = `<span class="vt-av">${esc((s.username || "?")[0])}</span><div><b>${esc(s.username)}</b><small>${esc(s.model_name)} · ${whenTxt(s.sold_at)}</small></div>`;
+  qDup(s);
   $("qNote").style.display = s.note ? "" : "none"; $("qNote").textContent = s.note ? `« ${s.note} »` : "";
   $("qAmt").value = String(s.amount).replace(".", ",");
   qHint();
   qReasons(false);
+}
+// alerte « capture déjà utilisée » : identique ou très ressemblante à une autre vente
+const ST_TXT = { validated: "validée", refused: "refusée", pending: "en attente" };
+function qDup(s) {
+  const el = $("qDup"), d = s.dup; el.className = "vt-dup"; el.innerHTML = ""; if (!d) return;
+  const who = d.sameUser ? "par lui-même" : `par <b style="display:inline;color:#fff">${esc(d.username)}</b>`;
+  el.className = "vt-dup on" + (d.kind === "close" ? " close" : "");
+  el.innerHTML = `<span class="th" style="background-image:url('${img(d.id)}')" data-cmp title="Comparer"></span><div class="tx"><b>${d.kind === "same" ? "⚠ Capture déjà utilisée" : "⚠ Capture très ressemblante"}</b>
+    <small>${d.kind === "same" ? "Exactement la même image" : "Presque la même image"} qu'une vente de ${E(d.amount)} déclarée ${who} le ${whenTxt(d.sold_at)} sur ${esc(d.model_name)} · ${ST_TXT[d.status] || d.status}.</small>
+    <div class="bts"><button data-cmp>Comparer</button><button class="r" data-dref>Refuser : doublon</button></div></div>`;
+  el.querySelectorAll("[data-cmp]").forEach(b => b.onclick = () => compare(s));
+  el.querySelector("[data-dref]").onclick = () => { qReasons(true); document.querySelectorAll("#qReasons .rs button").forEach(b => b.classList.toggle("on", b.textContent === "Doublon")); VS.tick(); };
+  VS.tick && setTimeout(() => { try { VS.tick(); } catch (e) {} }, 200);
+}
+function compare(s) {
+  const d = s.dup, c = document.createElement("div"); c.className = "vt-cmp";
+  c.innerHTML = `<span class="tag ${d.kind}">${d.kind === "same" ? "Images identiques" : "Images très ressemblantes"}</span>
+    <div class="row"><figure><img src="${img(d.id)}" alt="Capture d'origine"><figcaption>Avant · <b>${esc(d.username)}</b> · ${E(d.amount)} · ${whenTxt(d.sold_at)} · ${ST_TXT[d.status] || ""}</figcaption></figure>
+      <figure><img src="${img(s.id)}" alt="Capture à valider"><figcaption>À valider · <b>${esc(s.username)}</b> · ${E(s.amount)} · ${whenTxt(s.sold_at)}</figcaption></figure></div>
+    <button class="x">Fermer</button>`;
+  document.body.appendChild(c); requestAnimationFrame(() => c.classList.add("on"));
+  const off = () => { c.classList.remove("on"); setTimeout(() => c.remove(), 300); document.removeEventListener("keydown", k); };
+  const k = e => { if (e.key === "Escape") { e.stopPropagation(); off(); } };
+  c.onclick = e => { if (e.target === c || e.target.classList.contains("x")) off(); }; document.addEventListener("keydown", k);
 }
 function qHint() { const s = qCur(); if (!s) return; const v = parseNum($("qAmt").value);
   $("qHint").innerHTML = v > 0 && v !== s.declared_amount ? `Déclarée à <b>${E(s.declared_amount)}</b> · tu la corriges à <b>${E(v)}</b>` : "Corrige le montant si la capture ne correspond pas"; }
@@ -689,7 +738,7 @@ async function loadHist() {
   d.sales.forEach((s, i) => {
     const dl = dayLabel(s.sold_at); if (dl !== last) { html += `<div class="vt-day">${dl}</div>`; last = dl; }
     html += `<div class="vt-rw vt-hrw" style="animation-delay:${Math.min(i, 12) * .03}s">${thumb(s)}
-      <div class="vt-rm"><div class="vt-a">${amtHtml(s)}</div><small><span class="who">${esc(s.username)}</span> · ${esc(s.model_name)} · ${hm(s.sold_at)}${s.note ? " · " + esc(s.note) : ""}</small>
+      <div class="vt-rm"><div class="vt-a">${amtHtml(s)}</div><small><span class="who">${esc(s.username)}</span> · ${esc(s.model_name)} · ${hm(s.sold_at)}${s.note ? " · " + esc(s.note) : ""}${s.dup ? `<span class="vt-hdup ${s.dup.kind}">${s.dup.kind === "same" ? "capture déjà utilisée" : "capture ressemblante"}</span>` : ""}</small>
         ${s.reviewer ? `<small>par ${esc(s.reviewer)}</small>` : ""}${s.status === "refused" && s.reason ? `<div class="vt-why">${esc(s.reason)}</div>` : ""}</div>
       <div class="vt-rr"><span class="vt-pill ${s.status}"><i></i>${STATUS[s.status]}</span>
         <div style="display:flex;gap:6px">${s.status !== "pending" ? `<button class="vt-sb" data-back="${s.id}">Remettre en attente</button>` : ""}<button class="vt-sb del" data-hdel="${s.id}" aria-label="Supprimer">✕</button></div></div></div>`;

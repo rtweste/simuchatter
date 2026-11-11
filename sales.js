@@ -20,11 +20,53 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
   CREATE INDEX IF NOT EXISTS sales_status ON sales(status, created_at);
   CREATE INDEX IF NOT EXISTS sales_user ON sales(user_id, sold_at);
   `);
+  // détection des captures en double (empreinte de l'image)
+  const IH = require("./imghash");
+  for (const [c, t] of [["sha", "TEXT"], ["phash", "TEXT"], ["ratio", "REAL"], ["dup_of", "INTEGER"], ["dup_kind", "TEXT"], ["dup_dist", "INTEGER"], ["dup_checked", "INTEGER"]])
+    if (!db.prepare("PRAGMA table_info(sales)").all().some(x => x.name === c)) db.exec(`ALTER TABLE sales ADD COLUMN ${c} ${t}`);
+  db.exec("CREATE INDEX IF NOT EXISTS sales_sha ON sales(sha)");
+  const DUP_DAYS = 180;
+  // cherche une vente plus ancienne avec la même capture (identique) ou une capture très ressemblante
+  const fileOf = id => { const r = db.prepare("SELECT image, mime FROM sales WHERE id = ?").get(id); if (!r || !r.image) return null;
+    const f = path.join(UP, path.basename(r.image)); return fs.existsSync(f) ? { buf: fs.readFileSync(f), mime: r.mime } : null; };
+  function findDup(id, fp, buf, mime) {
+    const since = Date.now() - DUP_DAYS * 864e5;
+    const same = db.prepare("SELECT id FROM sales WHERE sha = ? AND id <> ? AND created_at > ? ORDER BY id LIMIT 1").get(fp.sha, id, since);
+    if (same) return { of: same.id, kind: "same", dist: 0 };
+    if (!fp.phash) return null;
+    // 1) tri rapide par empreinte, 2) vérification fine pixel par pixel sur les quelques candidats
+    const cands = [];
+    for (const r of db.prepare("SELECT id, phash, ratio FROM sales WHERE phash IS NOT NULL AND id <> ? AND created_at > ?").all(id, since)) {
+      if (fp.ratio && r.ratio && Math.abs(fp.ratio - r.ratio) > .08) continue;
+      const d = IH.distance(fp.phash, r.phash); if (d <= IH.CLOSE) cands.push({ id: r.id, d });
+    }
+    if (!cands.length) return null;
+    if (!buf) { const me = fileOf(id); if (!me) return null; buf = me.buf; mime = me.mime; }
+    for (const c of cands.sort((a, b) => a.d - b.d).slice(0, 6)) {
+      const o = fileOf(c.id); if (!o) continue;
+      const diff = IH.fineDiff(buf, mime, o.buf, o.mime);
+      if (diff !== null && diff <= IH.FINE) return { of: c.id, kind: "close", dist: Math.round(diff * 10000) };
+    }
+    return null;
+  }
+  const saveDup = (id, dup) => db.prepare("UPDATE sales SET dup_of = ?, dup_kind = ?, dup_dist = ?, dup_checked = 1 WHERE id = ?").run(dup ? dup.of : null, dup ? dup.kind : null, dup ? dup.dist : null, id);
+  // anciennes ventes : on calcule leur empreinte en arrière-plan, sans ralentir le site
+  (function backfill() {
+    const rows = db.prepare("SELECT id, image, mime FROM sales WHERE sha IS NULL AND image IS NOT NULL ORDER BY id").all(); let i = 0;
+    const step = () => { if (i >= rows.length) { const todo = db.prepare("SELECT id, sha, phash, ratio FROM sales WHERE dup_checked IS NULL AND sha IS NOT NULL ORDER BY id").all();
+        todo.forEach(r => { try { saveDup(r.id, findDup(r.id, r)); } catch (e) {} }); return; }
+      const r = rows[i++]; try { const f = path.join(UP, path.basename(r.image)); if (fs.existsSync(f)) { const fp = IH.fingerprint(fs.readFileSync(f), r.mime);
+        db.prepare("UPDATE sales SET sha = ?, phash = ?, ratio = ? WHERE id = ?").run(fp.sha, fp.phash, fp.ratio, r.id); } else db.prepare("UPDATE sales SET sha = '', dup_checked = 1 WHERE id = ?").run(r.id); } catch (e) {}
+      setTimeout(step, 30); };
+    setTimeout(step, 4000);
+  })();
+  const dupInfo = s => { if (!s.dup_of) return null; const o = db.prepare("SELECT s.id, s.user_id, s.amount, s.sold_at, s.status, u.username, m.name model_name FROM sales s JOIN users u ON u.id = s.user_id JOIN models m ON m.id = s.model_id WHERE s.id = ?").get(s.dup_of);
+    return o ? { kind: s.dup_kind, dist: s.dup_dist, id: o.id, username: o.username, sameUser: o.user_id === s.user_id, amount: o.amount, sold_at: o.sold_at, status: o.status, model_name: o.model_name } : null; };
   const locked = ms => { try { return !!db.prepare("SELECT 1 FROM period_locks WHERE period = ?").get(periodOfDate(parisDate(ms))); } catch (e) { return false; } };
   const num = (v, min, max) => { const n = Number(v); return Number.isFinite(n) && n >= min && n <= max ? n : null; };
   const pub = s => ({ id: s.id, user_id: s.user_id, username: s.username, model_id: s.model_id, model_name: s.model_name,
     amount: s.amount, declared_amount: s.declared_amount, sold_at: s.sold_at, note: s.note, status: s.status, reason: s.reason,
-    reviewer: s.reviewer, reviewed_at: s.reviewed_at, created_at: s.created_at, period: periodOfDate(parisDate(s.sold_at)) });
+    reviewer: s.reviewer, reviewed_at: s.reviewed_at, created_at: s.created_at, period: periodOfDate(parisDate(s.sold_at)), dup: dupInfo(s) });
   const SELECT = `SELECT s.*, u.username, m.name model_name, r.username reviewer FROM sales s
     JOIN users u ON u.id = s.user_id JOIN models m ON m.id = s.model_id LEFT JOIN users r ON r.id = s.reviewed_by`;
 
@@ -40,11 +82,17 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     if (sold_at > Date.now() + 5 * 60e3) return res.status(400).json({ error: "La date de vente est dans le futur" });
     if (locked(sold_at)) return res.status(400).json({ error: "Cette quinzaine est clôturée : la vente ne peut plus être ajoutée" });
     if (!MIME[mime] || !Buffer.isBuffer(req.body) || req.body.length < 100) return res.status(400).json({ error: "Ajoutez une capture d'écran (image)" });
+    let fp = null; try { fp = IH.fingerprint(req.body, mime); } catch (e) {}
+    // même capture déjà déclarée par ce chatter : on le prévient tout de suite plutôt que de la faire refuser
+    if (fp) { const mine = db.prepare("SELECT amount, sold_at FROM sales WHERE sha = ? AND user_id = ? AND status <> 'refused' ORDER BY id DESC LIMIT 1").get(fp.sha, req.user.id);
+      if (mine) return res.status(409).json({ error: `Tu as déjà déclaré cette capture (vente de ${String(mine.amount).replace(".", ",")} € du ${new Date(mine.sold_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", timeZone: "Europe/Paris" })}). Si c'est une autre vente, prends une nouvelle capture.` }); }
     const info = db.prepare(`INSERT INTO sales (user_id, model_id, amount, declared_amount, sold_at, note, mime, created_at)
       VALUES (?,?,?,?,?,?,?,?)`).run(req.user.id, model_id, amount, amount, sold_at, note, mime, Date.now());
     const file = `sale-${info.lastInsertRowid}-${Date.now().toString(36)}.${MIME[mime]}`;
     fs.writeFileSync(path.join(UP, file), req.body);
     db.prepare("UPDATE sales SET image = ? WHERE id = ?").run(file, info.lastInsertRowid);
+    if (fp) { db.prepare("UPDATE sales SET sha = ?, phash = ?, ratio = ? WHERE id = ?").run(fp.sha, fp.phash, fp.ratio, info.lastInsertRowid);
+      try { saveDup(info.lastInsertRowid, findDup(info.lastInsertRowid, fp, req.body, mime)); } catch (e) {} }
     res.json({ ok: true, id: info.lastInsertRowid });
   });
 
