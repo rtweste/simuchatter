@@ -9,7 +9,8 @@
 const CHATFX = (() => {
   const G = "95,211,162";
   const reduce = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const snd = (name, ...a) => { try { window.FX && FX.sound[name] && FX.sound[name](...a); } catch (e) {} };
+  // FX est déclaré avec « const » dans simu-fx.js : il n'est pas accessible via window.FX
+  const snd = (name, ...a) => { try { if (typeof FX !== "undefined" && FX.sound[name]) FX.sound[name](...a); } catch (e) {} };
   const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
   const tierOf = p => p >= 60 ? 4 : p >= 35 ? 3 : p >= 20 ? 2 : 1;
   function sale(root, card, price, onRev) {
