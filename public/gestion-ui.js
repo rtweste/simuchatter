@@ -51,11 +51,21 @@ qa(".tabs button").forEach(b => b.addEventListener("click", () => { S.tick(); ta
 /* =================== ÉQUIPE =================== */
 let T = null, F = "all";
 const avatar = (n, live, cls = "") => `<span class="av ${cls}">${esc((n || "?")[0].toUpperCase())}${live ? '<i class="dot"></i>' : ""}</span>`;
-const warnOf = c => c.points >= (T?.warnAt || 3) || (c.punctuality != null && c.punctuality < 80);
+const warnOf = c => c.role === "chatter" && (c.points >= (T?.warnAt || 3) || (c.punctuality != null && c.punctuality < 80));
+const CK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const sinceTxt = ms => { const d = Math.floor((Date.now() - ms) / 864e5); return d < 1 ? "aujourd'hui" : d === 1 ? "1 j" : d + " j"; };
+// carte d'un stagiaire
+function tcard(c, i) {
+  const tr = c.training || { done: 0, total: 6, ready: false, stats: {} }, s = tr.stats || {};
+  return `<div class="pc${tr.ready ? " ready" : ""}${c.active ? "" : " off"}${c.isNew ? " new" : ""}" data-id="${c.id}" tabindex="0" role="button" style="animation-delay:${.04 + i * .04}s"><div class="r1">${avatar(c.username, false)}<div><b>${esc(c.username)}</b><small>En formation depuis ${sinceTxt(c.created_at)}</small></div>${!c.active ? '<span class="tag w">Désactivé</span>' : tr.ready ? '<span class="tag v"><i></i>Prêt</span>' : '<span class="tag f">En formation</span>'}</div>
+    <div class="st"><div><small>SCORE MOYEN</small><b style="color:${s.avg5 >= 70 ? "#5fd3a2" : "#fff"}">${s.avg5 ?? "—"}</b></div><div><small>SESSIONS</small><b>${s.sessions ?? 0}</b></div><div><small>CRITÈRES</small><b>${tr.done} / ${tr.total}</b></div></div>
+    <div class="pg"><span class="t"><i style="width:${tr.total ? Math.round(tr.done / tr.total * 100) : 0}%"></i></span><b>${tr.ready ? "Prêt · " : ""}${tr.done} / ${tr.total}</b></div></div>`;
+}
 const nextTxt = s => { const d = new Date(s.start_ms), today = new Date().toDateString(), tom = new Date(Date.now() + 864e5).toDateString();
   return `${d.toDateString() === today ? "Aujourd'hui" : d.toDateString() === tom ? "Demain" : d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" })} ${s.start}–${s.end} · ${s.model}`; };
 const hrs = h => { const m = Math.round((h || 0) * 60); return `${Math.floor(m / 60)} h${m % 60 ? " " + String(m % 60).padStart(2, "0") : ""}`; };
 function card(c, i) {
+  if (c.role === "trainee") return tcard(c, i);
   const st = !c.active ? "Compte désactivé" : c.live ? "En shift · " + c.live : c.next[0] ? "Prochain : " + nextTxt(c.next[0]) : "Pas de shift prévu";
   const tag = !c.active ? '<span class="tag w">Désactivé</span>' : c.suspendedUntil ? '<span class="tag r"><i></i>Suspendu</span>' : warnOf(c) ? '<span class="tag r"><i></i>À surveiller</span>' : c.live ? '<span class="tag v live"><i></i>En shift</span>' : "";
   const pc = c.punctuality;
@@ -65,9 +75,12 @@ function card(c, i) {
 }
 function renderTeam() {
   const k = T.kpis;
-  $("teamKpis").innerHTML = `<div><small>Chatters actifs</small><b>${k.active}</b></div><div style="animation-delay:.04s"><small>En shift maintenant</small><b style="color:${k.live ? "#5fd3a2" : "#fff"}">${k.live}</b></div>
-    <div style="animation-delay:.08s"><small>Ponctualité moyenne</small><b>${k.punctuality == null ? "—" : k.punctuality + " %"}</b></div><div style="animation-delay:.12s"><small>Paie · ${PER}</small><b>${E(k.pay)}</b></div>`;
-  const L = T.team.filter(c => F === "all" ? c.active : F === "live" ? c.active && c.live : F === "warn" ? c.active && warnOf(c) : !c.active);
+  $("teamKpis").innerHTML = (k.trainees && F === "train" ? `<div><small>Chatters actifs</small><b>${k.active}</b></div><div style="animation-delay:.04s"><small>En formation</small><b>${k.trainees}</b></div><div style="animation-delay:.08s"><small>Prêts à valider</small><b style="color:${k.ready ? "#5fd3a2" : "#fff"}">${k.ready}</b></div>`
+    : `<div><small>Chatters actifs</small><b>${k.active}</b></div><div style="animation-delay:.04s"><small>En shift maintenant</small><b style="color:${k.live ? "#5fd3a2" : "#fff"}">${k.live}</b></div><div style="animation-delay:.08s"><small>${k.trainees ? "En formation" : "Ponctualité moyenne"}</small><b>${k.trainees ? `${k.trainees}${k.ready ? ` <span style="font-size:13px;color:#5fd3a2">· ${k.ready} prêt${k.ready > 1 ? "s" : ""}</span>` : ""}` : k.punctuality == null ? "—" : k.punctuality + " %"}</b></div>`) +
+    `<div style="animation-delay:.12s"><small>Paie · ${PER}</small><b>${E(k.pay)}</b></div>`;
+  $("nTrain").textContent = k.trainees || "";
+  const L = T.team.filter(c => F === "all" ? c.active : F === "live" ? c.active && c.live : F === "train" ? c.active && c.role === "trainee" : F === "warn" ? c.active && warnOf(c) : !c.active)
+    .sort((a, b) => F === "train" ? (b.training?.ready ? 1 : 0) - (a.training?.ready ? 1 : 0) || (b.training?.done || 0) - (a.training?.done || 0) : 0);
   $("teamGrid").innerHTML = L.length ? L.map(card).join("") : '<div class="mut" style="padding:20px 4px">Personne dans ce filtre.</div>';
   T.team.forEach(c => delete c.isNew);
   qa(".pc").forEach(p => { const go = () => fiche(+p.dataset.id); p.addEventListener("click", go); p.addEventListener("keydown", e => { if (e.key === "Enter") go(); }); });
@@ -78,6 +91,7 @@ async function loadTeam(force) { if (T && !force) return renderTeam(); try { T =
 
 async function fiche(id) {
   let c; try { c = await api("/api/admin/team/" + id); } catch (e) { return fail(e); }
+  if (c.role === "trainee") return tfiche(c);
   const isMe = T.me === c.id, since = new Date(c.created_at).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
   const lateTxt = c.punctuality == null ? "pas encore de shift terminé" : !c.late && !c.absent ? "toujours à l'heure" : [c.late ? `${c.late} retard${c.late > 1 ? "s" : ""} · ${c.lateMin} min` : "", c.absent ? `${c.absent} absence${c.absent > 1 ? "s" : ""}` : ""].filter(Boolean).join(" · ");
   const notes = n => `<div class="note"><button class="del" data-del="${n.id}" aria-label="Supprimer la note">✕</button><small>${esc(n.kind || "Remarque")} · ${dShort(n.created_at)}${n.by_name ? " · " + esc(n.by_name) : ""}</small>${esc(n.text)}</div>`;
@@ -123,10 +137,56 @@ async function fiche(id) {
   });
 }
 
+
+/* ----- fiche d'un stagiaire ----- */
+function tfiche(c) {
+  const tr = c.training, s = tr.stats, notes = n => `<div class="note"><button class="del" data-del="${n.id}" aria-label="Supprimer la note">✕</button><small>${esc(n.kind || "Remarque")} · ${dShort(n.created_at)}${n.by_name ? " · " + esc(n.by_name) : ""}</small>${esc(n.text)}</div>`;
+  openDr(`<div class="dh">${avatar(c.username)}<div><b>${esc(c.username)} ${tr.ready ? '<span class="tag v">Prêt</span>' : '<span class="tag f">En formation</span>'}</b><small>En formation depuis ${sinceTxt(c.created_at)}</small></div><button class="x" aria-label="Fermer">✕</button></div>
+    <div class="dk"><div><small>Score moyen (5 dern.)</small><b class="${s.avg5 >= 70 ? "g" : ""}" style="${s.avg5 >= 70 ? "color:#5fd3a2" : ""}">${s.avg5 ?? "—"}</b><em>meilleur : ${s.best ?? "—"}</em></div><div><small>Sessions terminées</small><b>${s.sessions}</b><em>dont ${s.hard} difficile${s.hard > 1 ? "s" : ""} réussie${s.hard > 1 ? "s" : ""}</em></div></div>
+    <div class="rdy${tr.ready ? "" : " no"}"><span class="ic">${tr.ready ? "✓" : tr.done}</span><span>${tr.ready ? `Les ${tr.total} critères sont remplis. ${esc(c.username)} peut passer chatter.` : `${tr.done} critère${tr.done > 1 ? "s" : ""} sur ${tr.total} rempli${tr.done > 1 ? "s" : ""}.`}</span></div>
+    <div class="sec"><span class="lab">CRITÈRES</span>${tr.criteria.map(k => `<div class="tck${k.ok ? " ok" : ""}"><span class="bx">${k.ok ? CK : ""}</span><div>${esc(k.label)}${k.sub ? `<small>${esc(k.sub)}</small>` : ""}</div><span class="v${k.ok ? "" : " no"}">${esc(k.value)}</span></div>`).join("")}</div>
+    <button class="valid${tr.ready ? "" : " soft"}" data-a="promote">${tr.ready ? "Valider la formation" : "Valider la formation quand même"}</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><a class="gbtn" href="/app#gestion" style="text-decoration:none">Assigner un entraînement</a><a class="gbtn" href="/app#gestion" style="text-decoration:none">Voir ses sessions →</a></div>
+    <div class="mut" style="margin-top:10px;line-height:1.5">Une fois validée, ${esc(c.username)} voit le planning, les ventes et sa paie. Tu pourras lui ajouter des shifts.</div>
+    <div class="sec"><span class="lab">COMPTE</span><div class="acts"><button data-a="pw">Nouveau mot de passe</button><button data-a="copy">Copier l'identifiant</button><button data-a="off" class="r" style="grid-column:span 2">${c.active ? "Désactiver le compte" : "Réactiver le compte"}</button></div>
+      <div class="pw"><code></code><button class="sb" data-a="pwcopy">Copier</button><button class="sb" data-a="pwre" aria-label="Autre mot de passe">↻</button><button class="sb w" data-a="pwset">Valider</button></div></div>
+    <div class="sec"><span class="lab">NOTES PRIVÉES · VISIBLES PAR LES MANAGERS SEULEMENT</span><div data-notes>${c.notes.map(notes).join("") || '<div class="mut" data-none>Aucune note pour l\'instant.</div>'}</div>
+      <div class="nchips"><button class="on">Remarque</button><button>Point fort</button><button>À travailler</button></div><div class="nin"><input placeholder="Ajouter une note sur ${esc(c.username)}…" maxlength="600"><button class="sb w" data-a="note" style="height:40px">Ajouter</button></div></div>`);
+  const pw = dr.querySelector(".pw");
+  dr.querySelectorAll(".nchips button").forEach(b => b.onclick = () => dr.querySelectorAll(".nchips button").forEach(x => x.classList.toggle("on", x === b)));
+  dr.querySelectorAll("[data-a]").forEach(b => b.onclick = async () => {
+    const a = b.dataset.a;
+    try {
+      if (a === "promote") { if (!tr.ready && !b.dataset.sure) { b.dataset.sure = 1; b.textContent = "Confirmer : il n'a pas rempli tous les critères"; return; }
+        await api(`/api/admin/users/${c.id}/promote`, { body: {} }); b.classList.remove("soft"); b.classList.add("done"); b.textContent = `✓ ${c.username} est chatter`;
+        toast(`${esc(c.username)} est maintenant chatter · il apparaît dans le planning et la paie`, true); S.ok();
+        burst(b); setTimeout(() => { close(); loadTeam(true); }, 1300); }
+      if (a === "pw" || a === "pwre") { pw.classList.add("on"); pw.querySelector("code").textContent = genPw(); S.tick(); }
+      if (a === "pwcopy") { await copy(pw.querySelector("code").textContent); toast("Mot de passe copié", true); }
+      if (a === "pwset") { const p = pw.querySelector("code").textContent; await api("/api/admin/users/" + c.id, { method: "PATCH", body: { password: p } }); await copy(`Site : stellads.fr\nIdentifiant : ${c.username}\nMot de passe : ${p}`); pw.classList.remove("on"); toast(`Nouveau mot de passe de ${esc(c.username)} enregistré et copié`, true); }
+      if (a === "copy") { await copy(c.username); toast(`Identifiant « ${esc(c.username)} » copié`, true); }
+      if (a === "off") { if (!b.dataset.sure && c.active) { b.dataset.sure = 1; b.textContent = "Confirmer la désactivation"; return; }
+        await api("/api/admin/users/" + c.id, { method: "PATCH", body: { active: !c.active } }); toast(c.active ? `Compte de ${esc(c.username)} désactivé` : `Compte de ${esc(c.username)} réactivé`, !c.active); close(); loadTeam(true); }
+      if (a === "note") { const inp = dr.querySelector(".nin input"), t = inp.value.trim(); if (!t) return inp.focus();
+        await api(`/api/admin/team/${c.id}/notes`, { body: { kind: dr.querySelector(".nchips button.on").textContent, text: t } });
+        const f = await api("/api/admin/team/" + c.id); dr.querySelector("[data-notes]").innerHTML = f.notes.map(notes).join(""); inp.value = ""; toast("Note ajoutée", true); }
+    } catch (e) { fail(e); }
+  });
+  dr.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { try { await api("/api/admin/notes/" + b.dataset.del, { method: "DELETE" }); b.closest(".note").remove(); } catch (e) { fail(e); } });
+}
+// petits éclats verts sur le bouton de validation
+function burst(el) {
+  const r = el.getBoundingClientRect(), box = document.createElement("div"); box.style.cssText = `position:fixed;left:${r.left + r.width / 2}px;top:${r.top + r.height / 2}px;z-index:95;pointer-events:none`;
+  for (let i = 0; i < 22; i++) { const d = document.createElement("i"), a = i / 22 * 6.283, dist = 90 + Math.random() * 90;
+    d.style.cssText = `position:absolute;width:8px;height:8px;border-radius:50%;background:#5fd3a2;box-shadow:0 0 10px #5fd3a2;transition:transform .9s cubic-bezier(.2,.8,.2,1),opacity .9s;transform:translate(-4px,-4px)`;
+    box.appendChild(d); requestAnimationFrame(() => requestAnimationFrame(() => { d.style.transform = `translate(${Math.cos(a) * dist}px,${Math.sin(a) * dist}px) scale(.3)`; d.style.opacity = 0; })); }
+  document.body.appendChild(box); setTimeout(() => box.remove(), 1000);
+}
 /* ----- ajouter un chatter ----- */
 $("addBtn").onclick = async () => {
   if (!T) await loadTeam(true);
   sh.classList.remove("ok"); $("nuName").value = ""; $("nuErr").textContent = ""; $("nuPw").textContent = genPw();
+  qa("#nuRole button").forEach(x => x.classList.toggle("on", x.dataset.v === "trainee"));
   $("nuModels").innerHTML = T.models.map(m => `<button data-m="${m.id}">${esc(m.name)}</button>`).join("");
   $("nuModels").querySelectorAll("button").forEach(b => b.onclick = () => { b.classList.toggle("on"); S.tick(); });
   sh.classList.add("on"); scrim.classList.add("on"); S.open(); setTimeout(() => $("nuName").focus(), 300);
@@ -223,7 +283,21 @@ function drawSlots(nw) {
 $("slNo").onclick = () => $("slotAdd").classList.remove("on");
 $("slOk").onclick = () => { const a = $("slA").value, b = $("slB").value; if (!a || !b) return; const lbl = $("slName").value.trim() || `${+a.slice(0, 2)}–${+b.slice(0, 2)}`;
   SL.push([lbl, a, b]); SL.sort((x, y) => x[1].localeCompare(y[1]) || x[2].localeCompare(y[2])); $("slotAdd").classList.remove("on"); $("slName").value = ""; drawSlots(); regDirty(); S.tick(); };
+const TRK = [["sessions", "Sessions terminées", "au moins", ""], ["avg", "Score moyen sur les 5 dernières", "au moins", "/100"], ["hard", "Sessions difficiles réussies", "score de 70 ou plus", ""],
+  ["fans", "Profils de fans différents réussis", "score de 70 ou plus", ""], ["ethics", "Aucune alerte éthique", "sur les dernières sessions", "sess."], ["rt", "Temps de réponse moyen", "au maximum", "s"]];
+function drawTr() {
+  const t = AG.training;
+  $("trCrit").innerHTML = TRK.map(([k, a, b, u]) => `<div class="set" data-tk="${k}"><span>${a}<small>${b}</small></span><div class="rt"><div class="unit"><input value="${t[k].v}" inputmode="numeric" aria-label="${a}">${u}</div><button class="tg2${t[k].on ? "" : " off"}" aria-label="Activer ce critère"></button></div></div>`).join("")
+    + `<div class="set" data-tk="notify"><span>Me prévenir quand un stagiaire est prêt<small>Noté dans le Journal et badge « Prêt » sur sa carte</small></span><button class="tg2${t.notify ? "" : " off"}" aria-label="Prévenir"></button></div>`;
+  $("trCrit").querySelectorAll("input").forEach(i => i.addEventListener("input", regDirty));
+  $("trCrit").querySelectorAll(".tg2").forEach(b => b.onclick = () => { b.classList.toggle("off"); regDirty(); S.tick(); });
+}
+function readTr() {
+  const o = {}; TRK.forEach(([k]) => { const r = $("trCrit").querySelector(`[data-tk="${k}"]`); o[k] = { v: num(r.querySelector("input").value), on: !r.querySelector(".tg2").classList.contains("off") }; if (k === "hard") o[k].score = AG.training.hard.score; });
+  o.notify = !$("trCrit").querySelector('[data-tk="notify"] .tg2').classList.contains("off"); return o;
+}
 function fillReg() {
+  drawTr();
   TI = AG.tiers.map(t => t.prime ? { from: t.from, prime: t.prime } : { from: t.from, rate: t.rate }); SL = AG.slots.map(s => [...s]);
   qa("[data-s]").forEach(i => i.value = String(AG[i.dataset.s] ?? "").replace(".", ","));
   drawTiers(); drawSlots(); calc(); $("regBar").classList.remove("on");
@@ -234,7 +308,7 @@ $("regCancel").onclick = () => { fillReg(); toast("Modifications annulées"); };
 $("regSave").onclick = async () => {
   const sorted = TI.map(t => ({ ...t })).sort((a, b) => a.from - b.from); let cur = 0;
   const tiers = sorted.map(t => { if (!t.prime) cur = t.rate; return { from: t.from, rate: t.prime ? cur : t.rate, prime: t.prime || 0 }; });
-  const body = { tiers, slots: SL }; qa("[data-s]").forEach(i => body[i.dataset.s] = num(i.value));
+  const body = { tiers, slots: SL, training: readTr() }; qa("[data-s]").forEach(i => body[i.dataset.s] = num(i.value));
   try { const r = await api("/api/admin/agency", { method: "PUT", body }); AG = r.agency; fillReg(); toast("Réglages enregistrés · la compta est recalculée", true); S.ok(); T = null; CR = null; }
   catch (e) { fail(e); }
 };

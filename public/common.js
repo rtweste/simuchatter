@@ -37,8 +37,8 @@ const ICONS = {
 };
 const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ""}</svg>`;
 const MODULES = [
-  { id: "home", label: "Accueil", href: "/home", icon: "home", section: null, roles: ["admin", "chatter"] },
-  { id: "simu", label: "Simu Chatter", short: "Simu", href: "/app", icon: "chat", section: "Formation", roles: ["admin", "chatter"],
+  { id: "home", label: "Accueil", href: "/home", icon: "home", section: null, roles: ["admin", "chatter", "trainee"] },
+  { id: "simu", label: "Simu Chatter", short: "Simu", href: "/app", icon: "chat", section: "Formation", roles: ["admin", "chatter", "trainee"],
     desc: "Entraînez-vous face à un fan simulé par l'IA et recevez une évaluation détaillée." },
   { id: "planning", label: "Planning", href: "/planning", icon: "calendar", section: "Organisation", roles: ["admin", "chatter"],
     desc: "Créneaux de la semaine et pointage des shifts." },
@@ -57,7 +57,12 @@ const LOGO_SVG = `<svg aria-hidden="true" focusable="false" viewBox="-4 -4 703.5
 // Logo animé (reflet qui traverse le mot)
 const logoHTML = () => `<span class="lg-sh"><span class="base">${LOGO_SVG}</span><span class="shine">${LOGO_SVG}</span></span>`;
 function renderShell(active, me) {
-  if (me && me.role !== "admin") PLANREM.start();
+  if (me && me.role === "chatter") PLANREM.start();
+  // un stagiaire n'a accès qu'à l'accueil et au simulateur
+  if (me && me.role === "trainee" && !["home", "simu"].includes(active)) {
+    addEventListener("unhandledrejection", e => { if (e.reason && e.reason.redirect) e.preventDefault(); });
+    go("/home"); throw Object.assign(new Error("Redirection vers l'accueil"), { redirect: true }); }
+  window.ME_SHELL = me; setTimeout(() => { try { INTRO.check(me); } catch (e) {} }, 0);
   const el = document.getElementById("sidebar"); if (!el) return;
   const mods = MODULES.filter(m => m.roles.includes(me.role));
   const badge = m => m.id === "ventes" && me.role === "admin";
@@ -66,8 +71,8 @@ function renderShell(active, me) {
     if (m.section && m.section !== sec) { sec = m.section; html += `<div class="sec">${esc(sec)}</div>`; }
     html += `<a href="${m.href}" style="--i:${i}" data-tip="${esc(m.label)}" class="${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""}>${icon(m.icon)}<span class="lb">${chars(m.label)}</span><span class="sr">${esc(m.label)}</span>${badge(m) ? '<em class="navbadge hidden" data-badge></em>' : ""}</a>`;
   });
-  html += `<span class="nv-line" aria-hidden="true"></span></nav><div class="me"><span class="av">${esc(me.username[0])}</span><div><b>${esc(me.username)}</b><small>${me.role === "admin" ? "Manager" : "Chatter"}</small></div>
-    <button onclick="logout()" title="Déconnexion" aria-label="Déconnexion">${icon("logout")}</button></div>`;
+  html += `<span class="nv-line" aria-hidden="true"></span></nav><div class="me"><span class="av">${esc(me.username[0])}</span><div><b>${esc(me.username)}</b><small>${me.role === "admin" ? "Manager" : me.role === "trainee" ? "En formation" : "Chatter"}</small></div>
+    ${me.role !== "admin" && INTRO_ON ? `<button onclick="INTRO.show(ME_SHELL,{replay:true})" title="Revoir la présentation" aria-label="Revoir la présentation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg></button>` : ""}<button onclick="logout()" title="Déconnexion" aria-label="Déconnexion" ${me.role !== "admin" && INTRO_ON ? 'style="margin-left:0"' : ""}>${icon("logout")}</button></div>`;
   el.innerHTML = html;
   // mode réduit (ordinateur) : mémorisé d'une page à l'autre
   const col = el.querySelector(".sb-col");
@@ -310,4 +315,75 @@ const PLANREM = (() => {
       push("Un shift est à reprendre", `${w.from_name} · ${w.model_name} · ${w.start} → ${w.end}`); });
   }
   return { start() { if (on) return; on = true; setTimeout(check, 2500); setInterval(() => { if (!document.hidden) check(); }, 60000); document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); }); } };
+})();
+
+/* =====================================================================
+   Vidéo de présentation : obligatoire une fois, à la première connexion d'un chatter
+   ===================================================================== */
+// vidéo d'accueil : activée quand on la mettra en ligne (fichier /video/presentation-chatters.mp4)
+const INTRO_ON = false;
+const INTRO = window.INTRO = (() => {
+  const SRC = "/video/presentation-chatters.mp4";
+  let box = null;
+  const css = `
+  .in-ov{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(5,5,5,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);opacity:0;transition:opacity .5s}
+  .in-ov.on{opacity:1}
+  .in-w{width:min(1100px,100%);display:flex;flex-direction:column;gap:18px;transform:translateY(16px) scale(.98);transition:transform .7s cubic-bezier(.2,.9,.2,1)}
+  .in-ov.on .in-w{transform:none}
+  .in-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .in-eb{font-size:11px;letter-spacing:.18em;color:#7a7a7a;font-weight:700}
+  .in-t{font-family:Inter,sans-serif;font-weight:900;letter-spacing:-.045em;font-size:clamp(28px,4.4vw,46px);line-height:1.04;margin-top:6px;color:#f5f5f5}
+  .in-t em{font-style:italic;background:linear-gradient(100deg,#fff,#8a8a8a 55%,#e6e6e6);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.08em}
+  .in-sub{font-size:13px;color:#8a8a8a;font-weight:600;max-width:340px}
+  .in-v{position:relative;aspect-ratio:16/9;border-radius:22px;overflow:hidden;background:#000;border:1px solid #232323;box-shadow:0 40px 120px -30px rgba(0,0,0,.9)}
+  .in-v video{display:block;width:100%;height:100%;object-fit:contain;background:#000}
+  .in-cv{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(circle at 50% 45%,rgba(20,20,20,.55),rgba(0,0,0,.85));transition:opacity .4s;text-align:center;padding:20px}
+  .in-cv.off{opacity:0;pointer-events:none}
+  .in-play{width:86px;height:86px;border-radius:50%;border:0;background:#ededed;color:#0a0a0a;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 0 0 rgba(255,255,255,.4);animation:inPulse 2s infinite}
+  .in-play svg{width:34px;height:34px;margin-left:5px}
+  @keyframes inPulse{0%{box-shadow:0 0 0 0 rgba(255,255,255,.35)}70%{box-shadow:0 0 0 22px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
+  .in-cv b{font-weight:900;font-size:18px;color:#fff}.in-cv small{font-size:13px;color:#8a8a8a;font-weight:600}
+  .in-ft{display:flex;align-items:center;gap:14px}
+  .in-bar{flex:1;height:6px;border-radius:4px;background:#1f1f1f;overflow:hidden}.in-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#bdbdbd,#fff);border-radius:4px}
+  .in-tm{font-size:12px;font-weight:800;color:#8a8a8a;font-variant-numeric:tabular-nums;min-width:86px;text-align:right}
+  .in-go{height:52px;border:0;border-radius:15px;padding:0 26px;background:#ededed;color:#0a0a0a;font-weight:900;font-size:16px;cursor:pointer;font-family:inherit}
+  .in-ghost{height:44px;border:1px solid #2a2a2a;border-radius:13px;padding:0 18px;background:#161616;color:#e6e6e6;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
+  .in-ps{position:absolute;left:50%;top:50%;width:70px;height:70px;margin:-35px 0 0 -35px;border-radius:50%;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;color:#fff;opacity:0;transition:opacity .25s;pointer-events:none}
+  .in-ps.on{opacity:1}
+  @media (max-width:640px){.in-ov{padding:14px}.in-v{border-radius:16px}.in-sub{display:none}}`;
+  const fmt = s => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+  function show(me, opts = {}) {
+    if (box) return;
+    const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
+    box = document.createElement("div"); box.className = "in-ov"; box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true"); box.setAttribute("aria-label", "Vidéo de présentation");
+    box.innerHTML = `<div class="in-w">
+      <div class="in-hd"><div><div class="in-eb">BIENVENUE</div><div class="in-t">Salut <em>${esc(me.username)}.</em></div></div>
+        <div class="in-sub">Avant de commencer, regarde cette présentation de 2 minutes : elle t'explique tout le site.</div></div>
+      <div class="in-v"><video playsinline preload="auto" src="${SRC}"></video>
+        <div class="in-ps"><svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></div>
+        <div class="in-cv" data-start><button class="in-play" aria-label="Lancer la présentation"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12.5-7.5z"/></svg></button><b>Lancer la présentation</b><small>Monte le son 🔊</small></div>
+        <div class="in-cv off" data-end><b style="font-size:24px">Tu es prêt.</b><small>Tu peux la revoir quand tu veux depuis le menu.</small><div style="display:flex;gap:10px;margin-top:6px"><button class="in-ghost" data-again>Revoir</button><button class="in-go" data-go>C'est parti</button></div></div>
+        <div class="in-cv off" data-err><b>La vidéo ne se charge pas</b><small>Vérifie ta connexion. Tu pourras la regarder plus tard depuis le menu.</small><button class="in-go" data-go>Continuer</button></div></div>
+      <div class="in-ft"><span class="in-bar"><i></i></span><span class="in-tm">—</span>${opts.replay ? '<button class="in-ghost" data-close>Fermer</button>' : ""}</div></div>`;
+    document.body.appendChild(box); document.body.style.overflow = "hidden";
+    requestAnimationFrame(() => box.classList.add("on"));
+    const v = box.querySelector("video"), bar = box.querySelector(".in-bar i"), tm = box.querySelector(".in-tm"), ps = box.querySelector(".in-ps");
+    let maxT = 0, started = false;
+    const start = () => { box.querySelector("[data-start]").classList.add("off"); box.querySelector("[data-end]").classList.add("off"); started = true; v.play().catch(() => {}); };
+    box.querySelector("[data-start]").onclick = start;
+    v.addEventListener("timeupdate", () => { if (!v.seeking) maxT = Math.max(maxT, v.currentTime); bar.style.width = (v.currentTime / (v.duration || 1) * 100) + "%"; tm.textContent = v.duration ? `${fmt(v.duration - v.currentTime)} restantes` : "—"; });
+    // pas d'avance rapide : on revient au plus loin déjà regardé
+    v.addEventListener("seeking", () => { if (!opts.replay && v.currentTime > maxT + .5) v.currentTime = maxT; });
+    v.addEventListener("click", () => { if (!started) return; if (v.paused) v.play(); else v.pause(); });
+    v.addEventListener("pause", () => { if (!v.ended) ps.classList.add("on"); }); v.addEventListener("play", () => ps.classList.remove("on"));
+    v.addEventListener("ended", () => { box.querySelector("[data-end]").classList.remove("off"); if (!opts.replay) api("/api/me/intro-seen", { body: {} }).catch(() => {}); });
+    v.addEventListener("error", () => box.querySelector("[data-err]").classList.remove("off"));
+    box.querySelector("[data-again]").onclick = () => { v.currentTime = 0; start(); };
+    box.querySelectorAll("[data-go], [data-close]").forEach(b => b.onclick = close);
+    document.addEventListener("keydown", key);
+  }
+  function key(e) { if (!box) return; const v = box.querySelector("video"); if (e.key === " " && !box.querySelector("[data-start]").classList.contains("off")) return;
+    if (e.key === " ") { e.preventDefault(); v.paused ? v.play() : v.pause(); } }
+  function close() { if (!box) return; const b = box; b.querySelector("video").pause(); b.classList.remove("on"); setTimeout(() => b.remove(), 500); box = null; document.body.style.overflow = ""; document.removeEventListener("keydown", key); }
+  return { show, check: me => { if (INTRO_ON && me && me.role !== "admin" && !me.introSeen && !EMBED) show(me); } };
 })();

@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="StellADS">
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/formation.css">
 <style>
 /* ===================== Accueil « bento » ===================== */
 .hm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding-bottom:10px}
@@ -558,6 +559,7 @@
   </main>
 </div>
 <script src="/common.js"></script>
+<script src="/formation-ui.js"></script>
 <script src="/home-fx.js"></script>
 <script>
 const pad = n => String(n).padStart(2, "0");
@@ -997,7 +999,7 @@ async function load() {
   // préparé pendant l'intro : on charge tout, puis on attend le signal de la page de connexion
   let pre = null;
   if (EMBED) {
-    pre = api("/api/home");
+    pre = api("/api/home").catch(() => null);
     await new Promise(res => {
       const t = setTimeout(res, 20000);
       addEventListener("message", e => { if (e.origin !== location.origin || e.data?.type !== "stOpen") return;
@@ -1008,10 +1010,12 @@ async function load() {
   }
   ME = await api("/api/me");
   renderShell("home", ME);
+  // stagiaire : accueil de formation seulement
+  if (ME.role === "trainee") { const box = $("hm"); box.className = ""; box.id = "trHome"; await TRAINEE.render(box, ME); return; }
   // grande ouverture une seule fois par session (juste après l'intro), version courte ensuite
   try { if (!sessionStorage.getItem("stHome")) { MODE = "open"; sessionStorage.setItem("stHome", "1"); } } catch (e) {}
   if (MODE === "open") await new Promise(r => setTimeout(r, 120));
-  if (pre) { try { D = await pre; D.role === "admin" ? renderAdmin() : renderChatter(); afterRender(); MODE = "static"; } catch (e) { await load(); } }
+  if (pre) { try { D = await pre; if (!D) throw 0; D.role === "admin" ? renderAdmin() : renderChatter(); afterRender(); MODE = "static"; } catch (e) { await load(); } }
   else await load();
   // le manager voit le fil d'activité se mettre à jour tout seul
   setInterval(async () => { if (document.hidden) return; try { const d = await api("/api/home"); if (FX) { FX.push(d.feed); FX.setLive(d.live); } if (d.role !== "admin") { D.feed = d.feed; D.live = d.live; return; } if (d.pendingSales.n !== D.pendingSales.n) { updateBadge(d.pendingSales.n); const n = d.pendingSales.n, c = document.querySelector(".a-hero .act .n"), l = document.querySelector(".a-hero .hline");

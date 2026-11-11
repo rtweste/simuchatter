@@ -31,8 +31,8 @@
   <!-- ============ ÉQUIPE ============ -->
   <section class="pane on" data-p="team">
     <div class="kpis" id="teamKpis"></div>
-    <div class="bar"><div class="seg" id="teamSeg"><button class="on" data-v="all">Tous</button><button data-v="live">En shift</button><button data-v="warn">À surveiller</button><button data-v="off">Désactivés</button></div>
-      <button class="wbtn" id="addBtn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Ajouter un chatter</button></div>
+    <div class="bar"><div class="seg" id="teamSeg"><button class="on" data-v="all">Tous</button><button data-v="live">En shift</button><button data-v="train">En formation <b id="nTrain" style="opacity:.6"></b></button><button data-v="warn">À surveiller</button><button data-v="off">Désactivés</button></div>
+      <button class="wbtn" id="addBtn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Ajouter un compte</button></div>
     <div class="grid" id="teamGrid"><div class="ld">Chargement…</div></div>
   </section>
 
@@ -67,6 +67,7 @@
           <div class="set"><span>Tolérance de retard<small>Au-delà, le pointage compte comme un retard</small></span><div class="unit"><input data-s="tolerance" inputmode="decimal">min</div></div>
           <div class="set"><span>Alerte « pas pointé »<small>Le manager est prévenu après</small></span><div class="unit"><input data-s="missedAlert" inputmode="decimal">min</div></div>
           <div class="set"><span>Rappel avant le shift<small>Envoyé aux chatters</small></span><div class="unit"><input data-s="reminder" inputmode="decimal">min</div></div></div>
+        <div class="card crit" style="--d:.12s"><div class="ch"><h3>Critères de <em>formation</em></h3><span class="mut">Pour passer de « En formation » à « Chatter »</span></div><div id="trCrit"></div></div>
       </div>
     </div>
     <div class="savebar" id="regBar"><b>Modifications non enregistrées</b><div style="display:flex;gap:8px"><button class="sb" id="regCancel">Annuler</button><button class="sb w" id="regSave">Enregistrer</button></div></div>
@@ -105,10 +106,10 @@
   <div class="scrim" id="scrim"></div>
   <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Fiche"></aside>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Ajouter un chatter">
-    <div class="form"><div class="shd"><b>Ajouter un <em>chatter</em></b><button class="x" data-x aria-label="Fermer">✕</button></div>
+    <div class="form"><div class="shd"><b>Ajouter un <em>compte</em></b><button class="x" data-x aria-label="Fermer">✕</button></div>
       <div class="fl"><span class="lab">IDENTIFIANT</span><input class="fi" id="nuName" placeholder="ex. lucas" autocomplete="off" autocapitalize="off"></div>
       <div class="fl"><span class="lab">MOT DE PASSE · GÉNÉRÉ AUTOMATIQUEMENT</span><div class="gen"><code id="nuPw"></code><button class="sb" id="nuRe">↻ Autre</button><button class="sb" id="nuCp">Copier</button></div></div>
-      <div class="fl"><span class="lab">RÔLE</span><div class="pick" id="nuRole"><button class="on" data-v="chatter">Chatter</button><button data-v="admin">Manager</button></div></div>
+      <div class="fl"><span class="lab">RÔLE</span><div class="roles" id="nuRole"><button class="on" data-v="trainee">En formation<small>Simu seulement</small></button><button data-v="chatter">Chatter<small>Tout l'espace</small></button><button data-v="admin">Manager<small>Accès complet</small></button></div></div>
       <div class="fl"><span class="lab">CRÉATRICES HABITUELLES</span><div class="pick" id="nuModels"></div></div>
       <div class="mut" style="margin-top:12px">Tu pourras lui ajouter des shifts depuis le Planning.</div>
       <div class="err" id="nuErr"></div>
