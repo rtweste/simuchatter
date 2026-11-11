@@ -50,6 +50,10 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     PRIMARY KEY (period, user_id, model_id));
   CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
   `);
+  // renfort : pointage parallèle sur une 2e créatrice pendant un shift (reinforce = 1, parent_id = pointage principal)
+  if (!cols("clocks").includes("reinforce")) db.exec("ALTER TABLE clocks ADD COLUMN reinforce INTEGER NOT NULL DEFAULT 0");
+  if (!cols("clocks").includes("parent_id")) db.exec("ALTER TABLE clocks ADD COLUMN parent_id INTEGER");
+  if (!cols("clocks").includes("until_at")) db.exec("ALTER TABLE clocks ADD COLUMN until_at INTEGER");
   const getSetting = (k, d) => db.prepare("SELECT value FROM settings WHERE key = ?").get(k)?.value ?? d;
 
   const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s || "");
@@ -100,12 +104,12 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
 
   /* ================= PLANNING : pointage ================= */
   const openClock = uid => db.prepare(`SELECT c.*, m.name model_name FROM clocks c JOIN models m ON m.id = c.model_id
-    WHERE c.user_id = ? AND c.end_at IS NULL`).get(uid);
+    WHERE c.user_id = ? AND c.end_at IS NULL AND c.reinforce = 0`).get(uid);
 
   app.get("/api/clock/me", auth, (req, res) => {
     const p = periodInfo(req.query.period) || periodInfo(currentPeriod());
     const rows = db.prepare(`SELECT c.*, m.name model_name FROM clocks c JOIN models m ON m.id = c.model_id
-      WHERE c.user_id = ? ORDER BY c.start_at DESC LIMIT 200`).all(req.user.id)
+      WHERE c.user_id = ? AND c.reinforce = 0 ORDER BY c.start_at DESC LIMIT 200`).all(req.user.id)
       .filter(c => periodOfDate(parisDate(c.start_at)) === p.key);
     const hours = rows.reduce((t, c) => t + ((c.end_at || Date.now()) - c.start_at) / 3.6e6, 0);
     const today = parisDate(Date.now());
@@ -123,7 +127,10 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   });
   app.post("/api/clock/out", auth, (req, res) => {
     const c = openClock(req.user.id); if (!c) return res.status(400).json({ error: "Aucun shift en cours" });
-    db.prepare("UPDATE clocks SET end_at = ? WHERE id = ?").run(Date.now(), c.id);
+    const now = Date.now();
+    db.prepare("UPDATE clocks SET end_at = ? WHERE id = ?").run(now, c.id);
+    // les renforts s'arrêtent avec le shift (au plus tard à l'heure prévue)
+    db.prepare("UPDATE clocks SET end_at = MIN(?, COALESCE(until_at, ?)) WHERE user_id = ? AND reinforce = 1 AND end_at IS NULL").run(now, now, req.user.id);
     res.json({ ok: true });
   });
 
@@ -322,7 +329,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
         short: x.status === "validated" ? "vente validée" : "vente refusée", sub: x.model_name, amt: x.amount });
     });
     db.prepare(`SELECT c.start_at, c.end_at, u.username, m.name model_name FROM clocks c JOIN users u ON u.id = c.user_id JOIN models m ON m.id = c.model_id
-      ORDER BY c.start_at DESC LIMIT 30`).all().forEach(k => {
+      WHERE c.reinforce = 0 ORDER BY c.start_at DESC LIMIT 30`).all().forEach(k => {
       ev.push({ t: k.start_at, k: "c", who: k.username, text: `a commencé son shift sur ${k.model_name}`, short: "a commencé son shift", sub: k.model_name });
       if (k.end_at) { const h = (k.end_at - k.start_at) / 3.6e6; const dur = `${Math.floor(h)} h ${String(Math.round(h % 1 * 60)).padStart(2, "0")}`; ev.push({ t: k.end_at, k: "c", who: k.username, text: `a terminé son shift · ${dur}`, short: "a terminé son shift", sub: dur }); }
     });
@@ -331,7 +338,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     return ev.filter(e => e.t).sort((a, b) => b.t - a.t).slice(0, 24);
   }
   const liveNow = () => db.prepare(`SELECT c.start_at, u.username, m.name model_name FROM clocks c JOIN users u ON u.id = c.user_id
-      JOIN models m ON m.id = c.model_id WHERE c.end_at IS NULL ORDER BY c.start_at`).all();
+      JOIN models m ON m.id = c.model_id WHERE c.end_at IS NULL AND c.reinforce = 0 ORDER BY c.start_at`).all();
   app.get("/api/home", auth, (req, res) => {
     const p = periodInfo(currentPeriod()), now = Date.now(), today = parisDate(now);
     const days = lastDays(7, now), days14 = lastDays(14, now), elapsed = periodElapsed(p, today);
@@ -341,7 +348,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     const upcomingOf = uid => db.prepare(`SELECT s.date, s.start, s.end, m.name model_name FROM shifts s JOIN models m ON m.id = s.model_id
       WHERE s.user_id = ? AND s.date >= ? ORDER BY s.date, s.start LIMIT 4`).all(uid, today);
     const openOf = uid => db.prepare(`SELECT c.start_at, c.model_id, m.name model_name FROM clocks c JOIN models m ON m.id = c.model_id
-      WHERE c.user_id = ? AND c.end_at IS NULL`).get(uid) || null;
+      WHERE c.user_id = ? AND c.end_at IS NULL AND c.reinforce = 0`).get(uid) || null;
     const sims = db.prepare("SELECT user_id, score, started_at FROM sims WHERE status = 'done' AND started_at >= ?").all(week);
 
     if (req.user.role !== "admin") {
@@ -350,13 +357,13 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       const validated = mine.filter(s => s.status === "validated").reduce((t, s) => t + s.amount, 0);
       const pending = mine.filter(s => s.status === "pending").reduce((t, s) => t + s.amount, 0);
       const baseAmt = base === "brut" ? validated : validated * (1 - fee / 100);
-      const hours = db.prepare("SELECT start_at, end_at FROM clocks WHERE user_id = ?").all(req.user.id)
+      const hours = db.prepare("SELECT start_at, end_at FROM clocks WHERE user_id = ? AND reinforce = 0").all(req.user.id)
         .filter(c => inP(c.start_at)).reduce((t, c) => t + ((c.end_at || now) - c.start_at) / 3.6e6, 0);
       const last = db.prepare("SELECT score, persona_id, started_at FROM sims WHERE user_id = ? AND status = 'done' ORDER BY started_at DESC LIMIT 1").get(req.user.id);
       const my7 = sims.filter(x => x.user_id === req.user.id);
       // séries des 7 derniers jours + tendance par rapport aux 7 jours d'avant
       const allMine = db.prepare("SELECT amount, status, sold_at FROM sales WHERE user_id = ?").all(req.user.id);
-      const clocksMine = db.prepare("SELECT start_at, end_at FROM clocks WHERE user_id = ?").all(req.user.id);
+      const clocksMine = db.prepare("SELECT start_at, end_at FROM clocks WHERE user_id = ? AND reinforce = 0").all(req.user.id);
       const salesDay = d => allMine.filter(x => x.status === "validated" && parisDate(x.sold_at) === d).reduce((t, x) => t + x.amount, 0);
       const hoursDay = d => clocksMine.filter(c => parisDate(c.start_at) === d).reduce((t, c) => t + ((c.end_at || now) - c.start_at) / 3.6e6, 0);
       const sum = (arr, f) => arr.reduce((t, d) => t + f(d), 0);
@@ -398,14 +405,14 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     }
     const c = computeCompta(p.key);
     const live = db.prepare(`SELECT c.start_at, u.username, m.name model_name FROM clocks c JOIN users u ON u.id = c.user_id
-      JOIN models m ON m.id = c.model_id WHERE c.end_at IS NULL ORDER BY c.start_at`).all();
+      JOIN models m ON m.id = c.model_id WHERE c.end_at IS NULL AND c.reinforce = 0 ORDER BY c.start_at`).all();
     const todayShifts = db.prepare(`SELECT s.start, s.end, u.username, m.name model_name FROM shifts s JOIN users u ON u.id = s.user_id
       JOIN models m ON m.id = s.model_id WHERE s.date = ? ORDER BY s.start`).all(today);
     const pendingSales = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(amount),0) total FROM sales WHERE status = 'pending'").get();
     const board = boardOf(inP);
     // séries des 7 derniers jours
     const allSales = db.prepare("SELECT amount, status, sold_at, created_at FROM sales").all();
-    const allClocks = db.prepare("SELECT user_id, start_at, end_at FROM clocks").all();
+    const allClocks = db.prepare("SELECT user_id, start_at, end_at FROM clocks WHERE reinforce = 0").all();
     const series = {
       sales: days.map(d => allSales.filter(x => x.status === "validated" && parisDate(x.sold_at) === d).reduce((t, x) => t + x.amount, 0)),
       pending: days.map(d => allSales.filter(x => parisDate(x.created_at) === d).length),

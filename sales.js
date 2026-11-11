@@ -49,7 +49,10 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
   /* ---------- Mes ventes (chatter) ---------- */
   app.get("/api/sales/mine", auth, (req, res) => {
     const rows = db.prepare(`${SELECT} WHERE s.user_id = ? ORDER BY s.sold_at DESC LIMIT 300`).all(req.user.id).map(pub);
-    res.json({ sales: rows, models: db.prepare("SELECT id, name FROM models ORDER BY name").all() });
+    // créatrices sur lesquelles le chatter est pointé en ce moment (principale puis renforts)
+    let active = [];
+    try { active = db.prepare("SELECT model_id, reinforce FROM clocks WHERE user_id = ? AND end_at IS NULL AND (until_at IS NULL OR until_at > ?) ORDER BY reinforce, start_at").all(req.user.id, Date.now()); } catch (e) {}
+    res.json({ sales: rows, models: db.prepare("SELECT id, name FROM models ORDER BY name").all(), active });
   });
   app.delete("/api/sales/:id", auth, (req, res) => {
     const s = db.prepare("SELECT * FROM sales WHERE id = ?").get(parseInt(req.params.id, 10));

@@ -389,6 +389,7 @@ app.delete("/api/admin/models/:id", auth, admin, (req, res) => {
 /* ----- Planning & compta ----- */
 const validatedByPeriod = require("./sales")(app, db, auth, admin, path.dirname(DB_PATH));
 require("./compta")(app, db, auth, admin, validatedByPeriod);
+require("./planning")(app, db, auth, admin);
 /* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */
 LIVE = require("./simlive")(app, db, auth, admin, { loadSim, publicSim, PERSONAS, busy });
 

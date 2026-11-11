@@ -75,7 +75,7 @@ module.exports = function mount(app, db, auth, admin, h) {
     const all7 = done.filter(s => s.started_at > d7), allP = done.filter(s => s.started_at > d14 && s.started_at <= d7);
     const bestS = done.filter(s => s.started_at > d7).sort((a, b) => b.score - a.score)[0];
     const live = liveList(), liveIds = new Set(live.map(l => l.userId));
-    const shifts = db.prepare("SELECT c.user_id, u.username, m.name model FROM clocks c JOIN users u ON u.id = c.user_id JOIN models m ON m.id = c.model_id WHERE c.end_at IS NULL").all()
+    const shifts = db.prepare("SELECT c.user_id, u.username, m.name model FROM clocks c JOIN users u ON u.id = c.user_id JOIN models m ON m.id = c.model_id WHERE c.end_at IS NULL AND c.reinforce = 0").all()
       .filter(s => !liveIds.has(s.user_id)).map(s => { const last = done.find(d => d.user_id === s.user_id); return { userId: s.user_id, user: s.username, model: s.model, lastScore: last?.score ?? null, lastAt: last?.started_at || null }; });
     const assignments = db.prepare("SELECT a.*, u.username FROM sim_assignments a JOIN users u ON u.id = a.user_id WHERE a.done_at IS NULL OR a.done_at > ? ORDER BY a.done_at IS NOT NULL, a.created_at DESC").all(now - 7 * 864e5)
       .map(a => ({ ...a, persona: persona(a.persona_id).name, label: persona(a.persona_id).label }));
