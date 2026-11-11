@@ -49,7 +49,7 @@ function tab(t) {
 qa(".tabs button").forEach(b => b.addEventListener("click", () => { S.tick(); tab(b.dataset.t); }));
 
 /* =================== ÉQUIPE =================== */
-let T = null, F = "all";
+let T = null, F = "chat";
 const avatar = (n, live, cls = "") => `<span class="av ${cls}">${esc((n || "?")[0].toUpperCase())}${live ? '<i class="dot"></i>' : ""}</span>`;
 const warnOf = c => c.role === "chatter" && (c.points >= (T?.warnAt || 3) || (c.punctuality != null && c.punctuality < 80));
 const CK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -79,8 +79,9 @@ function renderTeam() {
     : `<div><small>Chatters actifs</small><b>${k.active}</b></div><div style="animation-delay:.04s"><small>En shift maintenant</small><b style="color:${k.live ? "#5fd3a2" : "#fff"}">${k.live}</b></div><div style="animation-delay:.08s"><small>${k.trainees ? "En formation" : "Ponctualité moyenne"}</small><b>${k.trainees ? `${k.trainees}${k.ready ? ` <span style="font-size:13px;color:#5fd3a2">· ${k.ready} prêt${k.ready > 1 ? "s" : ""}</span>` : ""}` : k.punctuality == null ? "—" : k.punctuality + " %"}</b></div>`) +
     `<div style="animation-delay:.12s"><small>Paie · ${PER}</small><b>${E(k.pay)}</b></div>`;
   $("nTrain").textContent = k.trainees || "";
-  const L = T.team.filter(c => F === "all" ? c.active : F === "live" ? c.active && c.live : F === "train" ? c.active && c.role === "trainee" : F === "warn" ? c.active && warnOf(c) : !c.active)
-    .sort((a, b) => F === "train" ? (b.training?.ready ? 1 : 0) - (a.training?.ready ? 1 : 0) || (b.training?.done || 0) - (a.training?.done || 0) : 0);
+  // Chatter : chatters actifs · Tous : tout le monde, comptes désactivés compris (affichés en dernier)
+  const L = T.team.filter(c => F === "all" ? true : F === "chat" ? c.active && c.role === "chatter" : F === "live" ? c.active && c.live : F === "train" ? c.active && c.role === "trainee" : F === "warn" ? c.active && warnOf(c) : c.active)
+    .sort((a, b) => F === "train" ? (b.training?.ready ? 1 : 0) - (a.training?.ready ? 1 : 0) || (b.training?.done || 0) - (a.training?.done || 0) : F === "all" ? (b.active ? 1 : 0) - (a.active ? 1 : 0) : 0);
   $("teamGrid").innerHTML = L.length ? L.map(card).join("") : '<div class="mut" style="padding:20px 4px">Personne dans ce filtre.</div>';
   T.team.forEach(c => delete c.isNew);
   qa(".pc").forEach(p => { const go = () => fiche(+p.dataset.id); p.addEventListener("click", go); p.addEventListener("keydown", e => { if (e.key === "Enter") go(); }); });
@@ -250,7 +251,7 @@ $("nuCreate").onclick = async () => {
     $("nuCred").innerHTML = `Site : <b>stellads.fr</b><br>Identifiant : <b>${esc(id)}</b><br>Mot de passe : <b>${esc(pw)}</b>`; $("nuCred").dataset.t = `Site : stellads.fr\nIdentifiant : ${id}\nMot de passe : ${pw}`;
     sh.classList.add("ok"); S.ok();
     T = await api("/api/admin/team"); const n = T.team.find(x => x.id === r.id); if (n) n.isNew = true;
-    F = "all"; qa("#teamSeg button").forEach(x => x.classList.toggle("on", x.dataset.v === "all")); renderTeam();
+    F = role === "trainee" ? "train" : role === "chatter" ? "chat" : "all"; qa("#teamSeg button").forEach(x => x.classList.toggle("on", x.dataset.v === F)); renderTeam();
   } catch (e) { $("nuErr").textContent = e.message; S.warn(); }
   $("nuCreate").disabled = false;
 };
