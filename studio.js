@@ -22,7 +22,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
   CREATE TABLE IF NOT EXISTS pauses (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, clock_id INTEGER NOT NULL, start_at INTEGER NOT NULL, end_at INTEGER, over_logged INTEGER NOT NULL DEFAULT 0);
   CREATE INDEX IF NOT EXISTS pauses_clock ON pauses(clock_id);
   `);
-  col("models", "profile", "TEXT"); col("models", "photos", "TEXT");
+  col("models", "profile", "TEXT"); col("models", "photos", "TEXT"); col("models", "photo_focus", "TEXT");
   const J = (s, d) => { try { return s ? JSON.parse(s) : d; } catch (e) { return d; } };
   const user = id => db.prepare("SELECT id, username, role FROM users WHERE id = ?").get(id);
   const eur = n => Math.round(n * 100) / 100 + " €";
@@ -141,7 +141,8 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
       const top = db.prepare("SELECT u.username, SUM(s.amount) t FROM sales s JOIN users u ON u.id = s.user_id WHERE s.model_id = ? AND s.status = 'validated' AND s.sold_at > ? GROUP BY s.user_id ORDER BY t DESC LIMIT 1").get(m.id, since);
       const hours = db.prepare("SELECT s.amount, s.sold_at FROM sales s WHERE s.model_id = ? AND s.status = 'validated' AND s.sold_at > ?").all(m.id, since * 1 - 60 * 864e5);
       const byH = Array(24).fill(0); hours.forEach(x => { byH[+new Date(x.sold_at).toLocaleTimeString("fr-FR", { hour: "2-digit", timeZone: "Europe/Paris" }).slice(0, 2)] += x.amount; });
-      return { id: m.id, name: m.name, style: m.style, prices: m.prices, profile: cleanProfile(J(m.profile, {})), photos: J(m.photos, []).map((_, i) => photoUrl(m, i)),
+      const fo = J(m.photo_focus, {});
+      return { id: m.id, name: m.name, style: m.style, prices: m.prices, profile: cleanProfile(J(m.profile, {})), photos: J(m.photos, []).map((_, i) => photoUrl(m, i)), focus: J(m.photos, []).map(f => fo[f] || [50, 35]),
         mine: { n: mine.n, total: Math.round(mine.t), best: mine.best || 0 }, team: { n: team.n, total: Math.round(team.t), avg: team.avg || 0, top: top ? top.username : null },
         goldHour: byH.some(v => v) ? byH.indexOf(Math.max(...byH)) : null, live: [...new Set(live.filter(l => l.model_id === m.id).map(l => l.username))] };
     });
@@ -169,6 +170,12 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
     const m = db.prepare("SELECT * FROM models WHERE id = ?").get(+req.params.id); if (!m) return res.status(404).json({ error: "Créatrice introuvable" });
     const ph = J(m.photos, []), i = +req.params.i; if (ph[i]) { const [x] = ph.splice(i, 1); ph.unshift(x); }
     db.prepare("UPDATE models SET photos = ? WHERE id = ?").run(JSON.stringify(ph), m.id); res.json({ ok: true });
+  });
+  // point de la photo à garder visible quand elle est recadrée (carte verticale, vignettes)
+  app.post("/api/admin/creators/:id/photo/:i/focus", auth, admin, (req, res) => {
+    const m = db.prepare("SELECT * FROM models WHERE id = ?").get(+req.params.id), f = m && J(m.photos, [])[+req.params.i]; if (!f) return res.status(404).json({ error: "Photo introuvable" });
+    const c = v => Math.max(0, Math.min(100, Math.round(Number(v) || 0))), fo = J(m.photo_focus, {}); fo[f] = [c(req.body?.x), c(req.body?.y)];
+    db.prepare("UPDATE models SET photo_focus = ? WHERE id = ?").run(JSON.stringify(fo), m.id); res.json({ ok: true });
   });
   app.get("/api/creators/:id/photo/:i", auth, (req, res) => {
     const m = db.prepare("SELECT photos FROM models WHERE id = ?").get(+req.params.id), f = m && J(m.photos, [])[+req.params.i];

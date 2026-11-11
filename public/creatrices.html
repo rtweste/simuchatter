@@ -37,7 +37,7 @@
 .cr-cd.on{box-shadow:0 40px 90px rgba(0,0,0,.7),0 0 0 2px rgba(255,255,255,.18),0 0 80px var(--glow,rgba(179,136,255,.35))}
 .cr-dots{display:flex;justify-content:center;gap:6px;margin-bottom:10px}
 .cr-dots i{width:7px;height:7px;border-radius:4px;background:#333;transition:width .4s cubic-bezier(.34,1.56,.64,1),background .4s}.cr-dots i.on{width:26px;background:var(--a)}
-.cr-nav{position:absolute;top:50%;z-index:5;width:46px;height:46px;margin-top:-23px;border-radius:50%;border:1px solid #333;background:rgba(15,15,15,.7);backdrop-filter:blur(10px);color:#fff;font-size:18px;cursor:pointer}
+.cr-nav{position:absolute;top:50%;z-index:200;width:46px;height:46px;margin-top:-23px;border-radius:50%;border:1px solid #333;background:rgba(15,15,15,.7);backdrop-filter:blur(10px);color:#fff;font-size:18px;cursor:pointer}
 .cr-nav.p{left:24px}.cr-nav.n{right:24px}
 @media(max-width:700px){.cr-nav{display:none}}
 /* détail */
@@ -104,14 +104,14 @@
 .cr-st .gh svg{width:70px;height:70px;flex-shrink:0}
 /* galerie */
 .cr-gal{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -4px;padding:0 4px}
-.cr-gal button{flex:0 0 130px;aspect-ratio:3/4;border-radius:16px;border:0;padding:0;overflow:hidden;cursor:zoom-in;scroll-snap-align:start;background:#151515;animation:crIn .6s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(.2s + var(--k) * 60ms)}
+.cr-gal button{flex:0 0 auto;height:174px;aspect-ratio:var(--r,3/4);transition:aspect-ratio .5s cubic-bezier(.2,.9,.25,1);border-radius:16px;border:0;padding:0;overflow:hidden;cursor:zoom-in;scroll-snap-align:start;background:#151515;animation:crIn .6s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(.2s + var(--k) * 60ms)}
 .cr-gal img{width:100%;height:100%;object-fit:cover;transition:transform .5s}.cr-gal button:hover img{transform:scale(1.07)}
 .cr-lb{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.9);display:grid;place-items:center;cursor:zoom-out;animation:crFade .3s both}
 .cr-lb img{max-width:92vw;max-height:88vh;border-radius:16px;animation:crZoom .5s cubic-bezier(.2,.9,.25,1) both}
 @keyframes crFade{from{opacity:0}}@keyframes crZoom{from{transform:scale(.85);opacity:0}}
 /* éditeur */
 .cr-scrim{position:fixed;inset:0;z-index:150;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .35s}.cr-scrim.on{opacity:1;pointer-events:auto}
-.cr-dw{position:fixed;z-index:151;top:12px;right:12px;bottom:12px;width:min(520px,calc(100vw - 24px));border-radius:26px;background:#0f0f0f;border:1px solid #232323;transform:translateX(calc(100% + 30px));transition:transform .6s cubic-bezier(.2,.9,.25,1);display:flex;flex-direction:column;overflow:hidden}
+.cr-dw{position:fixed;z-index:151;isolation:isolate;top:12px;right:12px;bottom:12px;width:min(520px,calc(100vw - 24px));border-radius:26px;background:#0f0f0f;border:1px solid #232323;transform:translateX(calc(100% + 30px));transition:transform .6s cubic-bezier(.2,.9,.25,1);display:flex;flex-direction:column;overflow:hidden}
 .cr-dw.on{transform:none}
 @media(max-width:600px){.cr-dw{top:auto;left:0;right:0;bottom:0;width:auto;height:92dvh;border-radius:26px 26px 0 0;transform:translateY(105%)}}
 .cr-dw .hd{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid #1d1d1d}.cr-dw .hd b{font-size:16px}.cr-dw .hd button{margin-left:auto;width:34px;height:34px;border-radius:50%;border:0;background:#1d1d1d;color:#fff;cursor:pointer}
@@ -131,6 +131,23 @@
 .cr-phs .rm{right:4px;top:4px}.cr-phs .cv{left:4px;top:4px}.cr-phs div.c0::after{content:"COUV.";position:absolute;left:4px;bottom:4px;font:900 8.5px Inter;letter-spacing:.1em;background:#fff;color:#000;padding:2px 5px;border-radius:5px}
 .cr-phs label{width:76px;aspect-ratio:3/4;border-radius:12px;border:1.5px dashed #333;display:grid;place-items:center;font-size:22px;color:#777;cursor:pointer;position:relative}
 .cr-phs label input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.cr-phs .fc{left:4px;bottom:4px;font-size:13px!important}.cr-phs div.c0 .fc{bottom:22px}
+.cr-fc{position:absolute;inset:0;z-index:5;background:#0f0f0f;display:flex;flex-direction:column;gap:14px;padding:18px;overflow:auto;opacity:0;transform:translateY(20px);transition:opacity .3s,transform .45s cubic-bezier(.2,.9,.25,1)}
+.cr-fc.on{opacity:1;transform:none}
+.cr-fc .hd{padding:0;border:0;display:block}.cr-fc .hd b{display:block;font-size:16px}.cr-fc .hd small{display:block;font-size:12.5px;color:#888;margin-top:3px}
+.cr-fc .stg{position:relative;width:100%;max-height:46vh;border-radius:16px;overflow:hidden;cursor:crosshair;touch-action:none;background:#000;margin:0 auto}
+.cr-fc .stg img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;user-select:none}
+.cr-fc .fr{position:absolute;border:2px solid #fff;border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.6);transition:left .25s cubic-bezier(.2,.9,.25,1),top .25s cubic-bezier(.2,.9,.25,1);pointer-events:none}
+.cr-fc .stg.dr .fr{transition:none}
+.cr-fc .pt{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 0 4px rgba(179,136,255,.5),0 4px 14px rgba(0,0,0,.6);pointer-events:none;transition:left .25s cubic-bezier(.2,.9,.25,1),top .25s cubic-bezier(.2,.9,.25,1)}
+.cr-fc .stg.dr .pt{transition:none;transform:scale(1.2)}
+.cr-fc .pt::after{content:"";position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#fff}
+.cr-fc .pvw{display:flex;gap:14px;align-items:center}
+.cr-fc .pc{position:relative;flex:0 0 96px;height:135px;border-radius:14px;background-size:cover;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.5);transition:background-position .25s}
+.cr-fc .pc::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.8))}
+.cr-fc .pc span{position:absolute;left:8px;bottom:7px;z-index:1;font:900 15px Inter;letter-spacing:-.03em}
+.cr-fc .pvw b{display:block;font-size:13.5px}.cr-fc .pvw small{display:block;font-size:12px;color:#888;margin-top:4px;line-height:1.45}
+.cr-fc .bt{display:flex;gap:8px;margin-top:auto}.cr-fc .bt button{flex:1;height:48px;border-radius:14px;border:0;font:800 14px Inter;cursor:pointer}.cr-fc .bt .p{background:#ededed;color:#0a0a0a}.cr-fc .bt .s{background:#1d1d1d;color:#fff}
 .cr-ac{display:flex;gap:6px;flex-wrap:wrap}.cr-ac button{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer}.cr-ac button.on{border-color:#fff;box-shadow:0 0 0 2px #000 inset}
 @media(prefers-reduced-motion:reduce){.cr *{animation:none!important;transition:none!important}}
 </style>
@@ -163,7 +180,7 @@ const kchars = s => [...String(s)].map((ch, k) => `<span style="--k:${k}">${ch =
 function buildCar() {
   const car = $("car"); car.querySelectorAll(".cr-cd").forEach(n => n.remove());
   C.forEach((c, i) => { const [a, a2] = accOf(c, i), d = document.createElement("div"); d.className = "cr-cd"; d.dataset.i = i; d.style.setProperty("--glow", a + "66");
-    d.innerHTML = `<div class="ph" style="${c.photos[0] ? `background-image:url('${c.photos[0]}')` : `background:radial-gradient(120% 90% at 20% 10%,${a},transparent 60%),radial-gradient(100% 80% at 90% 90%,${a2},transparent 60%),#151515`}"></div>${c.photos[0] ? "" : `<div class="ini">${esc(c.name[0])}</div>`}<div class="gr"></div><div class="sh"></div>
+    d.innerHTML = `<div class="ph" style="${c.photos[0] ? `background-image:url('${c.photos[0]}');background-position:${c.focus[0][0]}% ${c.focus[0][1]}%` : `background:radial-gradient(120% 90% at 20% 10%,${a},transparent 60%),radial-gradient(100% 80% at 90% 90%,${a2},transparent 60%),#151515`}"></div>${c.photos[0] ? "" : `<div class="ini">${esc(c.name[0])}</div>`}<div class="gr"></div><div class="sh"></div>
       ${c.live.length ? `<span class="lv"><i></i>en shift · ${esc(c.live.join(", "))}</span>` : ""}<div class="in"><b>${esc(c.name)}</b><small>${esc(c.profile.tagline || c.style.slice(0, 90))}</small></div>`;
     d.onclick = () => { if (Math.abs(drag.moved) < 6) goC(i); }; car.appendChild(d); });
   $("dots").innerHTML = C.map((_, i) => `<i class="${i === cur ? "on" : ""}"></i>`).join("");
@@ -214,7 +231,7 @@ function paint() {
         <div><small>Tes ventes sur elle</small><b data-n="${c.mine.total}">0 €</b></div><div><small>Ton record</small><b>${c.mine.best ? eur(c.mine.best) : "—"}</b></div>
         <div><small>Panier moyen · 30 j</small><b>${c.team.avg ? eur(c.team.avg) : "—"}</b></div><div><small>Meilleur chatter · 30 j</small><b>${esc(c.team.top || "—")}</b></div>
         ${gh != null ? `<div class="gh"><svg viewBox="0 0 70 70"><circle cx="35" cy="35" r="30" fill="none" stroke="#262626" stroke-width="5"/><circle cx="35" cy="35" r="30" fill="none" stroke="var(--a)" stroke-width="5" stroke-linecap="round" stroke-dasharray="15 174" transform="rotate(${ang - 90 - 14} 35 35)"/><line x1="35" y1="35" x2="35" y2="12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" transform="rotate(${ang} 35 35)"/><circle cx="35" cy="35" r="3" fill="#fff"/></svg><div><small>Heure où elle vend le plus</small><b>${String(gh).padStart(2, "0")} h – ${String((gh + 1) % 24).padStart(2, "0")} h</b></div></div>` : ""}</div></div>
-      ${c.photos.length ? `<div class="cr-b cr-rv" style="--i:5"><h3><span class="ic">📸</span>Ses <em>photos</em></h3><div class="cr-gal">${c.photos.map((u, k) => `<button style="--k:${k}" data-z="${u}"><img src="${u}" alt="" loading="lazy"></button>`).join("")}</div></div>` : ""}
+      ${c.photos.length ? `<div class="cr-b cr-rv" style="--i:5"><h3><span class="ic">📸</span>Ses <em>photos</em></h3><div class="cr-gal">${c.photos.map((u, k) => `<button style="--k:${k}" data-z="${u}"><img src="${u}" alt="" loading="lazy" onload="this.parentNode.style.setProperty('--r',(this.naturalWidth/this.naturalHeight).toFixed(3))"></button>`).join("")}</div></div>` : ""}
     </div></div>`;
   requestAnimationFrame(() => requestAnimationFrame(() => document.querySelectorAll(".cr-sl .tk").forEach(t => t.style.setProperty("--v", t.dataset.v + "%"))));
   document.querySelectorAll("[data-z]").forEach(b => b.onclick = () => { const l = document.createElement("div"); l.className = "cr-lb"; l.innerHTML = `<img src="${b.dataset.z}" alt="">`; l.onclick = () => l.remove(); document.body.appendChild(l); });
@@ -236,7 +253,7 @@ function openEd() {
   const c = C[cur], p = c.profile, v = k => Array.isArray(p[k]) ? p[k].join("\n") : p[k] || "";
   const fld = ([k, l, t, ph]) => `<div class="cr-fl"><label>${l}</label>${t === "ta" ? `<textarea data-k="${k}" rows="${["story", "voice", "fanTips"].includes(k) ? 4 : 3}" placeholder="${esc(ph || "")}">${esc(v(k))}</textarea>` : `<input data-k="${k}" value="${esc(v(k))}" placeholder="${esc(ph || "")}">`}</div>`;
   $("dw").innerHTML = `<div class="hd"><b>Fiche de ${esc(c.name)}</b><button id="dwX" aria-label="Fermer">✕</button></div><div class="bd">
-    <div class="cr-fl"><label>Photos <small>· la première sert de couverture</small></label><div class="cr-phs" id="phs">${c.photos.map((u, i) => `<div class="c${i}"><img src="${u}" alt=""><button class="rm" data-rm="${i}" aria-label="Supprimer">✕</button>${i ? `<button class="cv" data-cv="${i}" aria-label="Mettre en couverture">★</button>` : ""}</div>`).join("")}${c.photos.length < 8 ? `<label>+<input type="file" accept="image/*" id="phIn" multiple></label>` : ""}</div></div>
+    <div class="cr-fl"><label>Photos <small>· la première sert de couverture</small></label><div class="cr-phs" id="phs">${c.photos.map((u, i) => `<div class="c${i}"><img src="${u}" alt="" style="object-position:${c.focus[i][0]}% ${c.focus[i][1]}%"><button class="fc" data-fc="${i}" aria-label="Recadrer">⌖</button><button class="rm" data-rm="${i}" aria-label="Supprimer">✕</button>${i ? `<button class="cv" data-cv="${i}" aria-label="Mettre en couverture">★</button>` : ""}</div>`).join("")}${c.photos.length < 8 ? `<label>+<input type="file" accept="image/*" id="phIn" multiple></label>` : ""}</div></div>
     <div class="cr-fl"><label>Couleur de sa fiche</label><div class="cr-ac" id="acc">${["", "#b388ff", "#ff7ab6", "#5fd3a2", "#7dd3fc", "#ffd23f", "#ff6a3d", "#ff6b6b"].map(x => `<button data-a="${x}" class="${(p.accent || "") === x ? "on" : ""}" style="background:${x || "conic-gradient(#b388ff,#ff7ab6,#5fd3a2,#b388ff)"}" aria-label="${x || "auto"}"></button>`).join("")}</div></div>
     ${fld(F[0])}<div class="cr-r2">${fld(F[1])}${fld(F[2])}${fld(F[3])}</div>${F.slice(4, 8).map(fld).join("")}
     <div class="cr-fl"><label>Son style</label>${[["douceur", "Douce", "Piquante"], ["familiarite", "Distante", "Familière"], ["emojis", "Peu d'emojis", "Plein"], ["rythme", "Courts", "Longs"]].map(([k, l, r]) => `<div class="cr-rg"><span>${l}</span><input type="range" min="0" max="100" data-s="${k}" value="${p.sliders[k]}"><span>${r}</span></div>`).join("")}</div>
@@ -246,10 +263,33 @@ function openEd() {
   $("dwX").onclick = closeEd;
   const reload = async () => { await load(); openEd(); };
   $("phs").querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => { await api(`/api/admin/creators/${c.id}/photo/${b.dataset.rm}`, { method: "DELETE" }); reload(); });
+  $("phs").querySelectorAll("[data-fc]").forEach(b => b.onclick = () => focusPick(c, +b.dataset.fc, reload));
   $("phs").querySelectorAll("[data-cv]").forEach(b => b.onclick = async () => { await api(`/api/admin/creators/${c.id}/photo/${b.dataset.cv}/cover`, { body: {} }); reload(); });
   if ($("phIn")) $("phIn").onchange = async e => { for (const f of [...e.target.files].slice(0, 8)) { const r = await fetch(`/api/admin/creators/${c.id}/photo`, { method: "POST", headers: { "Content-Type": f.type || "image/jpeg" }, body: f, credentials: "same-origin" }); if (!r.ok) notify("Photo refusée", (await r.json().catch(() => ({}))).error || "", "err"); } reload(); };
   $("dwSave").onclick = async () => { const o = { accent: acc, sliders: {} }; $("dw").querySelectorAll("[data-k]").forEach(i => o[i.dataset.k] = i.value); $("dw").querySelectorAll("[data-s]").forEach(i => o.sliders[i.dataset.s] = +i.value);
     try { await api(`/api/admin/creators/${c.id}/profile`, { method: "PUT", body: { profile: o } }); notify("Fiche enregistrée", `Les chatters voient la fiche de ${c.name}`, "ok"); closeEd(); await load(); } catch (e) { notify("Erreur", e.message, "err"); } };
+}
+// recadrage : on glisse le point à garder visible, le cadre de la carte suit en direct
+function focusPick(c, i, done) {
+  const u = c.photos[i]; let [fx, fy] = c.focus[i], RI = 1; const RC = 270 / 380;
+  const el = document.createElement("div"); el.className = "cr-fc";
+  el.innerHTML = `<div class="hd"><b>Recadrer la photo</b><small>Glisse le point sur son visage : c'est la zone gardée sur la carte</small></div>
+    <div class="stg" id="fcS"><img src="${u}" alt="" id="fcI"><span class="fr" id="fcF"></span><span class="pt" id="fcP"></span></div>
+    <div class="pvw"><div class="pc" id="fcC" style="background-image:url('${u}')"><span>${esc(c.name)}</span></div><div><b>Aperçu de la carte</b><small>Les photos en largeur (16:9) sont recadrées en hauteur sur la carte. Dans la galerie de la fiche, elles s'affichent en entier.</small></div></div>
+    <div class="bt"><button class="s" id="fcX">Annuler</button><button class="p" id="fcOk">Enregistrer le cadrage</button></div>`;
+  $("dw").appendChild(el); requestAnimationFrame(() => el.classList.add("on"));
+  const paint = () => { const S = $("fcS"), I = $("fcI"), F = $("fcF"); $("fcP").style.left = fx + "%"; $("fcP").style.top = fy + "%"; $("fcC").style.backgroundPosition = `${fx}% ${fy}%`;
+    let w = 1, h = 1; if (RI > RC) w = RC / RI; else h = RI / RC;
+    F.style.width = w * 100 + "%"; F.style.height = h * 100 + "%"; F.style.left = (1 - w) * fx + "%"; F.style.top = (1 - h) * fy + "%"; };
+  $("fcI").onload = () => { RI = $("fcI").naturalWidth / $("fcI").naturalHeight; $("fcS").style.aspectRatio = RI; paint(); };
+  if ($("fcI").complete && $("fcI").naturalWidth) $("fcI").onload();
+  let drag = false; const set = e => { const r = $("fcS").getBoundingClientRect(); fx = Math.round(Math.max(0, Math.min(100, (e.clientX - r.left) / r.width * 100))); fy = Math.round(Math.max(0, Math.min(100, (e.clientY - r.top) / r.height * 100))); paint(); };
+  $("fcS").addEventListener("pointerdown", e => { drag = true; $("fcS").setPointerCapture(e.pointerId); $("fcS").classList.add("dr"); set(e); });
+  $("fcS").addEventListener("pointermove", e => drag && set(e)); $("fcS").addEventListener("pointerup", () => { drag = false; $("fcS").classList.remove("dr"); });
+  const close = () => { el.classList.remove("on"); setTimeout(() => el.remove(), 350); };
+  $("fcX").onclick = close;
+  $("fcOk").onclick = async () => { try { await api(`/api/admin/creators/${c.id}/photo/${i}/focus`, { body: { x: fx, y: fy } }); notify("Cadrage enregistré", "", "ok"); close(); done(); } catch (e) { notify("Erreur", e.message, "err"); } };
+  paint();
 }
 function closeEd() { $("scrim").classList.remove("on"); $("dw").classList.remove("on"); }
 $("scrim").onclick = closeEd;
