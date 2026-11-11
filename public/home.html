@@ -655,7 +655,7 @@ function renderChatter() {
     : `<span><b>Palier maximum atteint</b> : 15 % + 40 € de prime. Bravo !</span>`;
   const h = new Date().getHours(), hello = h < 5 ? "Bonne nuit" : h < 18 ? "Bonjour" : "Bonsoir";
   const date = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
-  const chips = `<a class="act hot" href="/ventes">${icon("receipt")}<span>Déclarer<span class="lx"> une vente</span></span></a><a class="act" href="/planning">${icon("calendar")}Planning</a><a class="act" href="/app">${icon("chat")}Simulateur</a>${DZ.chip()}`;
+  const chips = `<a class="act hot" href="/ventes">${icon("receipt")}<span>Déclarer<span class="lx"> une vente</span></span></a><a class="act" href="/planning">${icon("calendar")}Planning</a><a class="act" href="/app">${icon("chat")}Simulateur</a><button class="act" type="button" style="font-family:inherit;cursor:pointer" onclick="INTRO.show(ME_SHELL,{replay:true})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg><span>Vidéo<span class="lx"> de présentation</span></span></button>${DZ.chip()}`;
   const goal = nx ? nx.from : Math.max(T.net * 1.2, 1), ahead = T.projNet >= goal;
   const hero = `<div class="b hero a-hero" style="${wv("hero")}"><div class="stars">${stars()}</div><span class="glow"></span>
     <div class="hero2"><div class="hl"><div class="eyebrow" style="position:relative;margin:0">${esc(date)}<span class="hp"> · période du ${esc(D.period.label.replace(/ \d{4}$/, ""))}</span></div>

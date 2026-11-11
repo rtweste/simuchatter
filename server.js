@@ -253,6 +253,9 @@ app.get("/api/me", auth, (req, res) => {
     if (deadline.state === "rejected") return res.status(401).json({ error: "Session expirée" }); }
   res.json({ id: req.user.id, username: req.user.username, role: req.user.role, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro, deadline });
 });
+// nouvelle version de la vidéo : les élèves déjà inscrits la regardent une fois (une seule réinitialisation)
+setTimeout(() => { try { const k = db.prepare("SELECT value FROM settings WHERE key = 'intro_version'").get();
+  if (!k || k.value !== "2") { db.prepare("UPDATE users SET intro_seen = 0 WHERE role = 'trainee'").run(); db.prepare("INSERT INTO settings (key, value) VALUES ('intro_version', '2') ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(); } } catch (e) { console.error("intro v2", e.message); } }, 0);
 app.post("/api/me/intro-seen", auth, (req, res) => { db.prepare("UPDATE users SET intro_seen = 1 WHERE id = ?").run(req.user.id); res.json({ ok: true }); });
 
 /* ----- Données de configuration ----- */
