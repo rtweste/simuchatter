@@ -442,6 +442,7 @@ const COMPTA = require("./compta")(app, db, auth, admin, validatedByPeriod);
 const PLAN = require("./planning")(app, db, auth, admin);
 /* ----- Gestion : équipe, créatrices, réglages, journal, sanctions ----- */
 GEST = require("./gestion")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, PERSONAS });
+require("./candidatures")(app, db, auth, admin, { bcrypt, gest: GEST });   // page publique /postuler
 /* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */
 LIVE = require("./simlive")(app, db, auth, admin, { loadSim, publicSim, PERSONAS, busy });
 

@@ -44,7 +44,7 @@ const LOADED = {};
 function tab(t) {
   qa(".tabs button").forEach(x => x.classList.toggle("on", x.dataset.t === t)); qa(".pane").forEach(p => p.classList.toggle("on", p.dataset.p === t));
   try { history.replaceState(null, "", "#" + t); } catch (e) {}
-  ({ team: loadTeam, crea: loadCrea, reg: loadReg, jour: loadJour, sanc: loadSanc })[t]();
+  ({ team: loadTeam, crea: loadCrea, reg: loadReg, jour: loadJour, sanc: loadSanc, cand: loadCand })[t]();
 }
 qa(".tabs button").forEach(b => b.addEventListener("click", () => { S.tick(); tab(b.dataset.t); }));
 
@@ -466,6 +466,63 @@ $("manualBtn").onclick = async () => {
   };
 };
 
+/* =================== CANDIDATURES (page publique /postuler) =================== */
+let K = null, KF = "new";
+const ago = ms => { const m = Math.round((Date.now() - ms) / 6e4); return m < 1 ? "à l'instant" : m < 60 ? `il y a ${m} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : `il y a ${Math.round(m / 1440)} j`; };
+const waNum = c => { let d = String(c).replace(/[^\d+]/g, ""); if (d.startsWith("+")) return d.slice(1); if (d.startsWith("00")) return d.slice(2); if (d.startsWith("0")) return "33" + d.slice(1); return d; };
+const contactUrl = (a, msg) => a.contactType === "whatsapp" ? `https://wa.me/${waNum(a.contact)}${msg ? "?text=" + encodeURIComponent(msg) : ""}` : a.contactType === "telegram" ? `https://t.me/${a.contact.replace(/^@/, "")}` : `mailto:${a.contact}${msg ? "?subject=" + encodeURIComponent("Ta candidature StellADS") + "&body=" + encodeURIComponent(msg) : ""}`;
+const CI = { whatsapp: '<path d="M20.5 11.6a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.6-4.2A8.5 8.5 0 1 1 20.5 11.6z"/>', telegram: '<path d="m21 4-18 7 6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/>', email: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>' };
+const cic = t => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${CI[t] || ""}</svg>`;
+async function loadCand(force) { if (K && !force) return renderCand(); try { K = await api("/api/admin/applications"); $("nCand").textContent = K.counts.new || ""; renderCand(); } catch (e) { fail(e); } }
+function renderCand() {
+  const link = location.origin + "/postuler";
+  q("#candTop").innerHTML = `<div class="ck"><div><small>Nouvelles</small><b style="color:${K.counts.new ? "#5fd3a2" : "#fff"}">${K.counts.new}</b></div><div><small>Comptes créés</small><b>${K.counts.accepted}</b></div><div><small>Refusées</small><b>${K.counts.refused}</b></div></div>
+    <div class="clink"><div><small>LIEN À METTRE DANS TES PUBS</small><code>${esc(link)}?src=<span>tiktok</span></code><em>Remplace « tiktok » par le nom de la pub (insta, snap…) pour savoir laquelle t'amène le plus de candidats.</em></div><button class="sb w" data-cl>Copier</button><a class="sb" href="/postuler" target="_blank" rel="noopener">Voir la page</a></div>
+    ${K.sources.length ? `<div class="csrc"><small>D'OÙ VIENNENT LES CANDIDATS · 30 JOURS</small>${K.sources.map(x => { const mx = Math.max(...K.sources.map(y => y.n)); return `<div><span>${esc(x.source)}</span><i><em style="width:${x.n / mx * 100}%"></em></i><b>${x.n}</b><small>${x.hired} recruté${x.hired > 1 ? "s" : ""}</small></div>`; }).join("")}</div>` : ""}`;
+  q("#candTop [data-cl]").onclick = async () => { await copy(link + "?src=tiktok"); toast("Lien copié", true); S.tick(); };
+  qa("#candSeg button").forEach(b => b.classList.toggle("on", b.dataset.v === KF));
+  const L = K.items.filter(a => KF === "all" || a.status === ({ new: "new", ok: "accepted", no: "refused" })[KF]);
+  q("#candList").innerHTML = L.length ? L.map((a, i) => `<div class="cc${a.status === "new" && !a.seen ? " nw" : ""} ${a.status}" data-id="${a.id}" tabindex="0" role="button" style="animation-delay:${.03 + i * .03}s">
+      <div class="r1">${avatar(a.firstName)}<div><b>${esc(a.firstName)} <span class="age">${a.age} ans</span></b><small>${ago(a.at)}${a.source ? ` · <span class="src">${esc(a.source)}</span>` : ""}</small></div>
+        ${a.status === "accepted" ? '<span class="tag v">Compte créé</span>' : a.status === "refused" ? '<span class="tag w">Refusée</span>' : !a.seen ? '<span class="tag v"><i></i>Nouvelle</span>' : ""}</div>
+      <div class="cmeta"><span>${cic(a.contactType)}${esc(a.contact)}</span><span>${esc(a.expLabel || "")}</span></div>
+      <div class="chips">${a.slots.map(x => `<span>${esc(x)}</span>`).join("")}</div>
+      <p class="ctest">« ${esc(a.testReply)} »</p></div>`).join("")
+    : `<div class="ld">${KF === "new" ? "Aucune nouvelle candidature. Partage le lien dans tes pubs 🙂" : "Rien ici pour l'instant."}</div>`;
+  qa("#candList .cc").forEach(c => { c.onclick = () => candFiche(K.items.find(a => a.id === +c.dataset.id)); c.onkeydown = e => { if (e.key === "Enter") c.click(); }; });
+}
+function candFiche(a) {
+  if (!a.seen) { a.seen = true; api(`/api/admin/applications/${a.id}/seen`, { body: {} }).catch(() => {}); }
+  const sec = (l, h) => `<div class="sec"><span class="lab">${l}</span>${h}</div>`;
+  openDr(`<div class="dh">${avatar(a.firstName)}<div><b>${esc(a.firstName)}, ${a.age} ans</b><small>Candidature ${ago(a.at)}${a.source ? " · pub : " + esc(a.source) : ""}</small></div><button class="x" aria-label="Fermer">✕</button></div>
+    ${a.dup ? `<div class="cwarn">⚠ Ce contact a déjà envoyé ${a.dup} autre${a.dup > 1 ? "s" : ""} candidature${a.dup > 1 ? "s" : ""}.</div>` : ""}
+    ${sec("CONTACT", `<a class="ccontact" href="${esc(contactUrl(a))}" target="_blank" rel="noopener">${cic(a.contactType)}<span><small>${esc(a.contactLabel)}</small>${esc(a.contact)}</span><em>Écrire →</em></a>`)}
+    ${sec("DISPONIBILITÉS", `<div class="chips">${a.slots.map(x => `<span>${esc(x)}</span>`).join("")}</div>`)}
+    ${sec("EXPÉRIENCE", `<div class="ctx">${esc(a.expLabel || "—")}</div>`)}
+    ${sec("MOTIVATION", `<div class="ctx">${esc(a.motivation || "")}</div>`)}
+    ${sec("PETIT TEST · RÉPONSE AU FAN", `<div class="cchat"><div class="fan">salut 😊 ça va ? je viens de m'abonner, tu fais quoi ce soir ?</div><div class="me">${esc(a.testReply || "")}</div></div>`)}
+    <div data-acc>${a.status === "accepted" ? `<div class="cdone">✓ Compte élève créé${a.user ? ` : <b>${esc(a.user.username)}</b>` : ""}. Il apparaît dans Équipe → En formation.</div>`
+      : `<div class="acts" style="margin-top:16px"><button class="valid" data-a="acc" style="grid-column:span 2">Créer son compte élève</button>${a.status === "refused" ? `<button data-a="re" style="grid-column:span 2">Remettre en « Nouvelles »</button>` : `<button data-a="no" class="r" style="grid-column:span 2">Refuser la candidature</button>`}</div>`}</div>
+    <div class="sec"><div class="acts"><button data-a="del" class="r" style="grid-column:span 2">Supprimer ses données</button></div><div class="mut" style="margin-top:8px;line-height:1.5">À faire si la personne te demande d'effacer sa candidature.</div></div>`);
+  dr.querySelectorAll("[data-a]").forEach(b => b.onclick = async () => { const x = b.dataset.a;
+    try {
+      if (x === "acc") { b.disabled = true; b.textContent = "Création…";
+        const r = await api(`/api/admin/applications/${a.id}/accept`, { body: {} }); S.ok(); burst(b);
+        const msg = `Salut ${a.firstName} ! Ta candidature chez StellADS est acceptée 🎉\nTa formation commence sur notre site :\n\nSite : ${location.origin}\nIdentifiant : ${r.username}\nMot de passe : ${r.password}\n\nAttention : à ta première connexion, tu as 24 h pour terminer ta formation.`;
+        dr.querySelector("[data-acc]").innerHTML = `<div class="ccred"><div class="h">✓ Compte élève créé</div><div class="kv"><small>Identifiant</small><code>${esc(r.username)}</code></div><div class="kv"><small>Mot de passe</small><code>${esc(r.password)}</code></div>
+          <a class="valid" href="${esc(contactUrl(a, msg))}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;margin-top:12px">${cic(a.contactType)}Envoyer ses accès ${a.contactType === "email" ? "par e-mail" : "sur " + esc(a.contactLabel)}</a>
+          <button class="gbtn" data-cp style="width:100%;margin-top:8px">Copier le message</button><div class="mut" style="margin-top:8px;line-height:1.5">Le message est déjà écrit avec ses accès${a.contactType === "telegram" ? " : copie-le puis colle-le dans Telegram" : ""}. Le mot de passe n'est affiché qu'ici : note-le ou envoie-le maintenant.</div></div>`;
+        dr.querySelector("[data-cp]").onclick = async () => { await copy(msg); toast("Message copié", true); };
+        if (a.contactType === "telegram") copy(msg);
+        K = null; loadCand(true); T = null; }
+      if (x === "no") { if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = "Confirmer le refus"; return; } await api(`/api/admin/applications/${a.id}/refuse`, { body: {} }); toast(`Candidature de ${esc(a.firstName)} refusée`); close(); loadCand(true); }
+      if (x === "re") { await api(`/api/admin/applications/${a.id}/reopen`, { body: {} }); toast("Candidature remise en « Nouvelles »", true); close(); loadCand(true); }
+      if (x === "del") { if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = "Confirmer la suppression définitive"; return; } await api(`/api/admin/applications/${a.id}`, { method: "DELETE" }); toast("Candidature supprimée"); close(); loadCand(true); }
+    } catch (e) { fail(e); b.disabled = false; } });
+}
+qa("#candSeg button").forEach(b => b.addEventListener("click", () => { KF = b.dataset.v; S.tick(); renderCand(); }));
+setInterval(() => document.querySelectorAll("[data-dlend]").forEach(e => { const l = +e.dataset.dlend - Date.now(); e.textContent = (e.classList.contains("dlt") ? "⏳ " : "") + dlLeft(l); }), 30e3);
+
 return { tab, loadSanc };
 })();
 
@@ -474,9 +531,9 @@ return { tab, loadSanc };
   if (me.role !== "admin") { location.href = "/home"; return; }
   renderShell("admin", me);
   const h = (location.hash || "").slice(1);
-  GE.tab(["team", "crea", "reg", "jour", "sanc"].includes(h) ? h : "team");
+  GE.tab(["team", "crea", "reg", "jour", "sanc", "cand"].includes(h) ? h : "team");
+  if (h !== "cand") api("/api/admin/applications/count").then(c => { $("nCand").textContent = c.new || ""; }).catch(() => {});
   // compteur « à traiter » visible dès l'ouverture
   if (h !== "sanc") api("/api/admin/sanctions").then(s => { $("nTodo").textContent = s.kpis.todo || ""; }).catch(() => {});
 })();
 
-setInterval(() => document.querySelectorAll("[data-dlend]").forEach(e => { const l = +e.dataset.dlend - Date.now(); e.textContent = (e.classList.contains("dlt") ? "⏳ " : "") + dlLeft(l); }), 30e3);

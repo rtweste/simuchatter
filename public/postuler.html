@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Deviens chatter — StellADS</title>
+<meta name="description" content="Rejoins l'équipe StellADS : formation offerte, shifts selon tes disponibilités, rémunération à la commission.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#000000">
+<meta property="og:title" content="Deviens chatter — StellADS"><meta property="og:description" content="Formation offerte · shifts selon tes dispos · payé à la commission. Candidature en 2 minutes.">
+<link rel="stylesheet" href="/style.css">
+<style>
+html,body{background:#000;margin:0}
+body{font-family:Inter,system-ui,sans-serif;color:#f5f5f5;--g:#5fd3a2;--sp:cubic-bezier(.34,1.56,.64,1);--ez:cubic-bezier(.2,.9,.25,1)}
+.pg{position:relative;min-height:100vh;min-height:100dvh;overflow:hidden}
+.sky{position:fixed;inset:-40px;pointer-events:none}.sky .layer{position:absolute;inset:0}
+.l1{animation:drift 90s linear infinite}.l2{animation:drift 55s linear infinite}
+.st{position:absolute;border-radius:50%;background:#fff;animation:tw ease-in-out infinite}.l2 .st{box-shadow:0 0 6px rgba(255,255,255,.6)}
+@keyframes tw{0%,100%{opacity:var(--o)}50%{opacity:calc(var(--o) * .25)}}
+@keyframes drift{from{transform:translateY(0)}to{transform:translateY(-120px)}}
+.halo{position:fixed;left:30%;top:40%;width:900px;height:900px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(95,211,162,.07),rgba(255,255,255,0) 60%);pointer-events:none;animation:breathe 8s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:.7}50%{opacity:1}}
+.shoot{position:fixed;top:12%;left:70%;width:160px;height:1px;background:linear-gradient(90deg,rgba(255,255,255,0),#fff);transform:rotate(-24deg);opacity:0;animation:shoot 10s ease-out 3s infinite}
+@keyframes shoot{0%{opacity:0;transform:rotate(-24deg) translateX(0)}2%{opacity:1}9%{opacity:0;transform:rotate(-24deg) translateX(-460px)}100%{opacity:0}}
+.wrap{position:relative;z-index:2;max-width:1120px;margin:0 auto;padding:40px 28px 60px;display:grid;grid-template-columns:1fr 470px;gap:56px;align-items:center;min-height:100vh;min-height:100dvh;box-sizing:border-box}
+.in{opacity:0;transform:translateY(16px);animation:in .9s var(--ez) forwards}
+@keyframes in{to{opacity:1;transform:none}}
+/* présentation */
+.hero .lg-sh{width:210px;display:block}
+.hero .ey{margin:42px 0 14px;font-size:11px;letter-spacing:.24em;font-weight:700;color:var(--g);display:flex;align-items:center;gap:10px}.hero .ey i{width:28px;height:1px;background:currentColor}
+.hero h1{margin:0;font:800 clamp(38px,5.2vw,64px)/1.02 Inter;letter-spacing:-.045em}
+.hero h1 em{font-style:italic;font-weight:800;background:linear-gradient(100deg,#fff 10%,#9be8c6 45%,#fff 80%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 6s ease-in-out infinite}
+@keyframes shine{0%,100%{background-position:100% 0}50%{background-position:0 0}}
+.hero p.lead{margin:20px 0 30px;color:#a3a3a3;font-size:16px;line-height:1.6;max-width:470px}
+.perks{display:grid;gap:12px;max-width:470px}
+.perk{display:flex;gap:14px;align-items:center;padding:14px 16px;border-radius:16px;background:rgba(18,18,18,.55);border:1px solid rgba(255,255,255,.07);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.perk .ic{width:40px;height:40px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(95,211,162,.12);color:var(--g)}.perk .ic svg{width:20px;height:20px}
+.perk b{display:block;font-size:14.5px}.perk small{color:#8f8f8f;font-size:12.5px}
+.adult{margin-top:22px;font-size:12px;color:#6f6f6f;display:flex;gap:8px;align-items:center}.adult span{border:1px solid #333;border-radius:6px;padding:2px 6px;font-weight:700;color:#999}
+/* carte du formulaire */
+.card{position:relative;border-radius:26px;background:rgba(13,13,13,.78);border:1px solid rgba(255,255,255,.09);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:0 40px 120px rgba(0,0,0,.6);overflow:hidden;min-height:560px;display:flex;flex-direction:column}
+.card::before{content:"";position:absolute;inset:0;border-radius:26px;padding:1px;background:linear-gradient(140deg,rgba(95,211,162,.5),transparent 30%,transparent 70%,rgba(255,255,255,.15));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.top{padding:22px 26px 0}
+.steps{display:flex;gap:6px}.steps i{flex:1;height:4px;border-radius:2px;background:#222;overflow:hidden;position:relative}
+.steps i::after{content:"";position:absolute;inset:0;background:var(--g);transform:scaleX(0);transform-origin:left;transition:transform .6s var(--ez)}
+.steps i.on::after{transform:none}
+.meta{display:flex;justify-content:space-between;margin-top:10px;font-size:11.5px;color:#777;letter-spacing:.04em}.meta b{color:#ddd;font-weight:600}
+.stage{position:relative;flex:1;overflow:hidden}
+.sec{position:absolute;inset:0;padding:22px 26px 10px;overflow:auto}
+.sec h2{margin:0 0 6px;font:800 25px/1.2 Inter;letter-spacing:-.025em}.sec h2 em{font-style:italic;color:#bdbdbd}
+.sec .hint{margin:0 0 18px;color:#8f8f8f;font-size:13px;line-height:1.5}
+.sec .r{opacity:0}.sec.show .r{animation:in .6s var(--ez) both;animation-delay:calc(var(--d,0) * 60ms)}
+label.l{display:block;font-size:11px;letter-spacing:.14em;color:#777;font-weight:700;margin:14px 0 7px}
+.f{width:100%;box-sizing:border-box;height:50px;border-radius:14px;background:#0a0a0a;border:1px solid #262626;color:#f2f2f2;font:15px Inter;padding:0 15px;transition:border-color .25s,box-shadow .25s}
+.f:focus{outline:0;border-color:#4a4a4a;box-shadow:0 0 0 4px rgba(95,211,162,.08)}
+textarea.f{height:auto;min-height:96px;padding:13px 15px;line-height:1.5;resize:none}
+.row{display:grid;grid-template-columns:1fr 110px;gap:10px}
+.seg{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:14px;background:#0a0a0a;border:1px solid #232323}
+.seg button{position:relative;z-index:1;height:40px;border-radius:10px;border:0;background:transparent;color:#999;font:600 13px Inter;cursor:pointer;transition:color .3s;display:flex;align-items:center;justify-content:center;gap:6px}
+.seg button.on{color:#0a0a0a}
+.seg .th{position:absolute;top:4px;bottom:4px;left:4px;width:calc((100% - 16px) / 3);border-radius:10px;background:#f5f5f5;transition:transform .5s var(--sp);opacity:0}.seg .th.on{opacity:1}
+.slots{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.slot{position:relative;overflow:hidden;text-align:left;padding:15px 16px;border-radius:15px;border:1px solid #2a2a2a;background:#111;color:#ddd;cursor:pointer;isolation:isolate;transition:transform .35s var(--sp),border-color .3s}
+.slot::before{content:"";position:absolute;inset:0;background:#f5f5f5;clip-path:circle(0% at var(--x,50%) var(--y,50%));transition:clip-path .55s var(--ez);z-index:-1}
+.slot.on::before{clip-path:circle(150% at var(--x,50%) var(--y,50%))}.slot.on{color:#0a0a0a;border-color:#f5f5f5}.slot:active{transform:scale(.96)}
+.slot b{display:block;font-size:18px;font-weight:800}.slot small{font-size:12px;opacity:.6;font-variant-numeric:tabular-nums}
+.slot .tk{position:absolute;right:12px;top:12px;width:20px;height:20px;border-radius:50%;border:1.5px solid #3a3a3a;display:flex;align-items:center;justify-content:center;transition:.35s var(--sp)}
+.slot .tk path{fill:none;stroke:#f5f5f5;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:24;stroke-dashoffset:24;transition:stroke-dashoffset .4s .1s var(--ez)}
+.slot.on .tk{background:#0a0a0a;border-color:#0a0a0a;transform:scale(1.1)}.slot.on .tk path{stroke-dashoffset:0}
+.opts{display:grid;gap:8px}
+.opt{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;border:1px solid #262626;background:#0f0f0f;color:#cfcfcf;font:600 14px Inter;cursor:pointer;text-align:left;transition:border-color .3s,background .3s,transform .3s var(--sp)}
+.opt i{width:18px;height:18px;border-radius:50%;border:1.5px solid #444;flex-shrink:0;position:relative;transition:.3s}
+.opt i::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--g);transform:scale(0);transition:transform .35s var(--sp)}
+.opt.on{border-color:rgba(95,211,162,.55);background:rgba(95,211,162,.08);color:#fff}.opt.on i{border-color:var(--g)}.opt.on i::after{transform:none}.opt:active{transform:scale(.98)}
+/* petit test */
+.chat{padding:16px;border-radius:18px;background:#0a0a0a;border:1px solid #222}
+.bub{display:inline-block;max-width:80%;padding:10px 14px;border-radius:18px 18px 18px 5px;background:#1f1f1f;font-size:14px;line-height:1.45}
+.who{font-size:11px;color:#777;margin:0 0 6px 4px}
+.typing{display:inline-flex;gap:4px;padding:12px 14px;border-radius:18px;background:#1f1f1f;margin-bottom:8px}.typing i{width:6px;height:6px;border-radius:50%;background:#888;animation:ty 1.2s infinite}.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes ty{0%,60%,100%{transform:none;opacity:.5}30%{transform:translateY(-4px);opacity:1}}
+.me{margin-top:12px;display:flex;justify-content:flex-end}
+.me textarea{width:86%;min-height:64px;border-radius:18px 18px 5px 18px;background:#f5f5f5;color:#0a0a0a;border:0;font:14px/1.45 Inter;padding:11px 14px;resize:none;box-sizing:border-box}
+.me textarea:focus{outline:0;box-shadow:0 0 0 4px rgba(95,211,162,.2)}
+.me textarea::placeholder{color:#888}
+/* consentement */
+.recap{display:grid;gap:8px;margin-bottom:16px}
+.recap div{display:flex;justify-content:space-between;gap:12px;padding:11px 14px;border-radius:12px;background:#0f0f0f;border:1px solid #222;font-size:13px}.recap small{color:#777}.recap b{text-align:right}
+.cons{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:14px;border:1px solid #262626;background:#0f0f0f;cursor:pointer;font-size:12.5px;line-height:1.5;color:#bbb}
+.cons .bx{width:22px;height:22px;border-radius:7px;border:1.5px solid #444;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:.3s var(--sp)}
+.cons .bx path{fill:none;stroke:#0a0a0a;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:24;stroke-dashoffset:24;transition:stroke-dashoffset .35s .05s}
+.cons.on .bx{background:var(--g);border-color:var(--g);transform:scale(1.08)}.cons.on .bx path{stroke-dashoffset:0}
+/* pied */
+.ft{display:flex;gap:10px;align-items:center;padding:16px 26px 22px}
+.err{flex:1;font-size:12.5px;color:#e07a7a;min-height:16px}
+.bt{height:50px;padding:0 20px;border-radius:15px;border:1px solid #2a2a2a;background:transparent;color:#ccc;font:700 14px Inter;cursor:pointer;transition:transform .3s var(--sp),opacity .3s}
+.bt:active{transform:scale(.96)}.bt[hidden]{display:none}
+.bt.w{background:#f5f5f5;color:#0a0a0a;border-color:#f5f5f5;min-width:150px;position:relative;overflow:hidden;margin-left:auto}
+.bt.w.go::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-50%;background:linear-gradient(90deg,transparent,rgba(95,211,162,.5),transparent);animation:sh 2.2s ease-in-out infinite}
+@keyframes sh{0%{left:-50%}70%,100%{left:120%}}
+.bt.w.busy{color:transparent}.bt.w.busy::before{content:"";position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px;border-radius:50%;border:2.5px solid #0a0a0a;border-right-color:transparent;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(1turn)}}
+.shake{animation:shake .45s}@keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+/* réussite */
+.done{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;opacity:0;pointer-events:none}
+.done.on{opacity:1;pointer-events:auto}
+.done .ok{width:96px;height:96px;border-radius:50%;background:rgba(95,211,162,.12);display:flex;align-items:center;justify-content:center;position:relative}
+.done .ok::before,.done .ok::after{content:"";position:absolute;inset:0;border-radius:50%;border:1px solid rgba(95,211,162,.5);animation:ring 2.4s ease-out infinite}.done .ok::after{animation-delay:1.2s}
+@keyframes ring{from{transform:scale(1);opacity:.8}to{transform:scale(1.9);opacity:0}}
+.done .ok svg{width:46px;height:46px}.done .ok path{fill:none;stroke:var(--g);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:40;stroke-dashoffset:40}
+.done.on .ok{animation:pop .7s var(--sp) both}.done.on .ok path{animation:draw .6s .35s var(--ez) forwards}
+@keyframes pop{from{transform:scale(.4);opacity:0}}@keyframes draw{to{stroke-dashoffset:0}}
+.done h2{margin:26px 0 8px;font:800 28px Inter;letter-spacing:-.03em}.done p{margin:0;color:#9a9a9a;font-size:14.5px;line-height:1.6;max-width:320px}
+.done .r{opacity:0}.done.on .r{animation:in .7s var(--ez) both;animation-delay:calc(.5s + var(--d,0) * 90ms)}
+canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+@media(max-width:900px){
+  .wrap{grid-template-columns:1fr;gap:26px;padding:22px 16px 40px;min-height:0}
+  .hero .lg-sh{width:150px}.hero .ey{margin:26px 0 10px}.hero p.lead{margin:14px 0 18px;font-size:14.5px}
+  .perks{grid-template-columns:1fr;gap:8px}.perk{padding:11px 13px}.perk .ic{width:34px;height:34px}
+  .card{min-height:660px}.ft{flex-wrap:wrap}.err{order:-1;flex-basis:100%;text-align:center}.err:empty{display:none}.perk small{display:none}.perk{padding:10px 12px}.sec{padding:20px 18px 10px}.top{padding:20px 18px 0}.ft{padding:14px 18px 18px}.sec h2{font-size:22px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.in,.sec .r,.done .r{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="pg">
+  <div class="sky" aria-hidden="true"><div class="layer l1" id="far"></div><div class="layer l2" id="near"></div><span class="shoot"></span></div>
+  <div class="halo" aria-hidden="true"></div>
+  <main class="wrap">
+    <section class="hero">
+      <div class="in" style="animation-delay:.1s" id="logo" aria-label="StellADS"></div>
+      <div class="ey in" style="animation-delay:.25s"><i></i>ON RECRUTE</div>
+      <h1 class="in" style="animation-delay:.35s">Deviens <em>chatter</em><br>chez StellADS.</h1>
+      <p class="lead in" style="animation-delay:.5s">Tu gères les conversations des créatrices de contenu que l'agence accompagne. On te forme, tu choisis tes shifts, tu es payé sur ce que tu vends.</p>
+      <div class="perks">
+        <div class="perk in" style="animation-delay:.62s"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg></span><div><b>Formation offerte</b><small>Un simulateur avec de faux fans et des vidéos pour apprendre</small></div></div>
+        <div class="perk in" style="animation-delay:.72s"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div><b>Des shifts selon tes dispos</b><small>Matin, après-midi, soir ou nuit : tu choisis</small></div></div>
+        <div class="perk in" style="animation-delay:.82s"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span><div><b>Payé à la commission</b><small>Plus tu vends, plus tu gagnes, avec des paliers et des primes</small></div></div>
+      </div>
+      <div class="adult in" style="animation-delay:.95s"><span>18+</span>Réservé aux personnes majeures : les créatrices publient sur des plateformes pour adultes.</div>
+    </section>
+
+    <section class="card in" style="animation-delay:.45s" aria-label="Formulaire de candidature">
+      <canvas class="fx"></canvas>
+      <div class="top"><div class="steps" id="bars"></div><div class="meta"><span id="stepName"></span><b id="stepNum"></b></div></div>
+      <div class="stage" id="stage"></div>
+      <div class="ft"><button class="bt" id="prev" type="button">←</button><span class="err" id="err" role="alert"></span><button class="bt w" id="next" type="button">Continuer</button></div>
+      <div class="done" id="done">
+        <div class="ok"><svg viewBox="0 0 48 48"><path d="M13 25l8 8 15-17"/></svg></div>
+        <h2 class="r" style="--d:0">Candidature envoyée</h2>
+        <p class="r" style="--d:1" id="doneTxt">Merci ! On regarde ta candidature et on revient vers toi très vite.</p>
+      </div>
+      <input class="hp" id="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+    </section>
+  </main>
+</div>
+<script src="/common.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id), reduce = matchMedia("(prefers-reduced-motion: reduce)").matches, T0 = Date.now();
+  try { $("logo").innerHTML = logoHTML(); } catch (e) {}
+  // ciel étoilé
+  [["far", 90, 1.2, .5], ["near", 35, 2, .9]].forEach(([id, n, sz, op]) => { const el = $(id); for (let i = 0; i < n; i++) { const s = document.createElement("span"); s.className = "st"; const z = Math.random() * sz + .4;
+    s.style.cssText = `left:${Math.random() * 100}%;top:${Math.random() * 110}%;width:${z}px;height:${z}px;--o:${(Math.random() * op + .1).toFixed(2)};animation-duration:${3 + Math.random() * 5}s;animation-delay:${-Math.random() * 5}s`; el.appendChild(s); } });
+  const P = new URLSearchParams(location.search), SRC = P.get("src") || P.get("utm_source") || P.get("ref") || "";
+  const A = { firstName: "", age: "", contactType: "whatsapp", contact: "", slots: [], exp: "", motivation: "", testReply: "", consent: false };
+  let C = null, cur = 0;
+  const STEPS = [
+    { name: "Toi", html: () => `<h2 class="r" style="--d:0">Faisons <em>connaissance</em></h2><p class="hint r" style="--d:1">Ça prend 2 minutes. On te recontacte par le moyen de ton choix.</p>
+      <div class="row r" style="--d:2"><div><label class="l" for="fn">PRÉNOM</label><input class="f" id="fn" maxlength="40" autocomplete="given-name" value="${esc(A.firstName)}"></div><div><label class="l" for="ag">ÂGE</label><input class="f" id="ag" inputmode="numeric" maxlength="2" value="${esc(A.age)}"></div></div>
+      <label class="l r" style="--d:3">ON TE CONTACTE SUR</label><div class="seg r" style="--d:3" id="ct"><span class="th"></span>${Object.entries(C.contact).map(([k, l]) => `<button type="button" data-k="${k}" class="${A.contactType === k ? "on" : ""}">${l}</button>`).join("")}</div>
+      <input class="f r" style="--d:4;margin-top:10px" id="co" value="${esc(A.contact)}">`,
+      wire: s => { const ph = { whatsapp: ["Ton numéro WhatsApp", "tel"], telegram: ["Ton pseudo Telegram (ex. @prenom)", "text"], email: ["Ton adresse e-mail", "email"] };
+        const co = s.querySelector("#co"), th = s.querySelector(".th"), bs = [...s.querySelectorAll("#ct button")];
+        const place = () => { const i = bs.findIndex(b => b.dataset.k === A.contactType); th.style.transform = `translateX(calc(${i * 100}% + ${i * 4}px))`; th.classList.add("on"); co.placeholder = ph[A.contactType][0]; co.type = ph[A.contactType][1]; };
+        bs.forEach(b => b.onclick = () => { A.contactType = b.dataset.k; bs.forEach(x => x.classList.toggle("on", x === b)); place(); co.focus(); }); place();
+        s.querySelector("#fn").oninput = e => A.firstName = e.target.value; s.querySelector("#ag").oninput = e => { e.target.value = e.target.value.replace(/\D/g, ""); A.age = e.target.value; }; co.oninput = e => A.contact = e.target.value; },
+      check: () => A.firstName.trim().length < 2 ? "Indique ton prénom" : !(+A.age >= 18) ? "Il faut avoir 18 ans ou plus pour postuler" : A.contact.trim().length < 4 ? "Indique où on peut te contacter" : "" },
+    { name: "Tes dispos", html: () => `<h2 class="r" style="--d:0">Quand peux-tu <em>travailler</em> ?</h2><p class="hint r" style="--d:1">Coche tous les shifts que tu peux tenir régulièrement.</p>
+      <div class="slots">${C.slots.map((x, i) => `<button type="button" class="slot r${A.slots.includes(x.id) ? " on" : ""}" style="--d:${i + 2}" data-s="${esc(x.id)}"><span class="tk"><svg viewBox="0 0 24 24" width="12" height="12"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><b>${esc(x.id)}</b><small>${x.start} → ${x.end}</small></button>`).join("")}</div>`,
+      wire: s => s.querySelectorAll("[data-s]").forEach(b => b.onclick = e => { const r = b.getBoundingClientRect(); b.style.setProperty("--x", (e.clientX - r.left) + "px"); b.style.setProperty("--y", (e.clientY - r.top) + "px");
+        const k = b.dataset.s; A.slots = A.slots.includes(k) ? A.slots.filter(x => x !== k) : [...A.slots, k]; b.classList.toggle("on"); }),
+      check: () => A.slots.length ? "" : "Choisis au moins un créneau" },
+    { name: "Ton profil", html: () => `<h2 class="r" style="--d:0">Parle-nous de <em>toi</em></h2><p class="hint r" style="--d:1">Pas besoin d'expérience : on forme tout le monde.</p>
+      <div class="opts">${Object.entries(C.exp).map(([k, l], i) => `<button type="button" class="opt r${A.exp === k ? " on" : ""}" style="--d:${i + 2}" data-e="${k}"><i></i>${esc(l)}</button>`).join("")}</div>
+      <label class="l r" style="--d:5" for="mo">POURQUOI TU VEUX NOUS REJOINDRE ?</label><textarea class="f r" style="--d:6" id="mo" maxlength="800" placeholder="Quelques phrases suffisent">${esc(A.motivation)}</textarea>`,
+      wire: s => { s.querySelectorAll("[data-e]").forEach(b => b.onclick = () => { A.exp = b.dataset.e; s.querySelectorAll("[data-e]").forEach(x => x.classList.toggle("on", x === b)); }); const mo = s.querySelector("#mo"), fit = () => { mo.style.height = "auto"; mo.style.height = Math.max(96, Math.min(200, mo.scrollHeight + 2)) + "px"; }; fit(); mo.oninput = e => { A.motivation = e.target.value; fit(); }; },
+      check: () => !A.exp ? "Indique ton expérience" : A.motivation.trim().length < 15 ? "Dis-nous en quelques mots pourquoi tu veux nous rejoindre" : "" },
+    { name: "Petit test", html: () => `<h2 class="r" style="--d:0">À toi de <em>répondre</em></h2><p class="hint r" style="--d:1">Un fan écrit à la créatrice. Réponds à sa place : naturel, chaleureux, sans fautes. Il n'y a pas de piège.</p>
+      <div class="chat r" style="--d:2"><div class="who">Thomas · nouvel abonné</div><div id="tw"><span class="typing"><i></i><i></i><i></i></span></div>
+        <div class="me"><textarea id="tr" maxlength="600" placeholder="Écris ta réponse…">${esc(A.testReply)}</textarea></div></div>`,
+      wire: s => { const tw = s.querySelector("#tw"); setTimeout(() => { tw.innerHTML = `<div class="bub">salut 😊 ça va ? je viens de m'abonner, tu fais quoi ce soir ?</div>`; if (!reduce && tw.animate) tw.animate([{ opacity: 0, transform: "translateY(6px) scale(.96)" }, { opacity: 1, transform: "none" }], { duration: 400, easing: "cubic-bezier(.34,1.56,.64,1)" }); }, A.testReply ? 0 : 1100);
+        const tr = s.querySelector("#tr"), fit = () => { tr.style.height = "auto"; tr.style.height = Math.min(180, tr.scrollHeight + 2) + "px"; }; fit(); tr.oninput = e => { A.testReply = e.target.value; fit(); }; },
+      check: () => A.testReply.trim().length < 5 ? "Réponds au message du fan" : "" },
+    { name: "Envoi", html: () => `<h2 class="r" style="--d:0">On <em>vérifie</em> et on envoie</h2><p class="hint r" style="--d:1">Tu peux revenir en arrière pour modifier.</p>
+      <div class="recap">${[["Prénom", `${esc(A.firstName)}, ${esc(A.age)} ans`], [C.contact[A.contactType], esc(A.contact)], ["Shifts", A.slots.map(esc).join(" · ")], ["Expérience", esc(C.exp[A.exp] || "")]].map((x, i) => `<div class="r" style="--d:${i + 2}"><small>${x[0]}</small><b>${x[1]}</b></div>`).join("")}</div>
+      <div class="cons r${A.consent ? " on" : ""}" style="--d:6" id="cs" role="checkbox" aria-checked="${A.consent}" tabindex="0"><span class="bx"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>J'ai 18 ans ou plus et j'accepte que StellADS garde ces informations pour étudier ma candidature. Je peux demander leur suppression à tout moment.</span></div>`,
+      wire: s => { const c = s.querySelector("#cs"); c.onclick = c.onkeydown = e => { if (e.type === "keydown" && e.key !== " " && e.key !== "Enter") return; e.preventDefault(); A.consent = !A.consent; c.classList.toggle("on", A.consent); c.setAttribute("aria-checked", A.consent); paintBtn(); }; },
+      check: () => A.consent ? "" : "Coche la case d'accord pour envoyer ta candidature" }];
+
+  function bars() { $("bars").innerHTML = STEPS.map((_, i) => `<i class="${i <= cur ? "on" : ""}"></i>`).join(""); $("stepName").textContent = STEPS[cur].name.toUpperCase(); $("stepNum").textContent = `${cur + 1} / ${STEPS.length}`; }
+  function paintBtn() { const last = cur === STEPS.length - 1; $("next").textContent = last ? "Envoyer ma candidature" : "Continuer"; $("next").classList.toggle("go", last && A.consent); $("prev").hidden = cur === 0; }
+  function go(i, first) {
+    const dir = i >= cur ? 1 : -1, stage = $("stage"), old = stage.querySelector(".sec"); cur = i;
+    const s = document.createElement("div"); s.className = "sec"; s.innerHTML = STEPS[i].html(); stage.appendChild(s); STEPS[i].wire(s);
+    if (old) { if (!reduce && old.animate) old.animate([{ opacity: 1, transform: "none", filter: "blur(0)" }, { opacity: 0, transform: `translateX(${-40 * dir}px)`, filter: "blur(6px)" }], { duration: 260, fill: "forwards" }).onfinish = () => old.remove(); else old.remove(); }
+    if (!first && !reduce && s.animate) s.animate([{ opacity: 0, transform: `translateX(${60 * dir}px)`, filter: "blur(8px)" }, { opacity: 1, transform: "none", filter: "blur(0)" }], { duration: 520, easing: "cubic-bezier(.2,1,.3,1)" });
+    requestAnimationFrame(() => s.classList.add("show")); $("err").textContent = ""; bars(); paintBtn();
+    if (!first) { const f = s.querySelector("input.f,textarea"); if (f && innerWidth > 900) setTimeout(() => f.focus({ preventScroll: true }), 450); }
+  }
+  // une fois apparue, la carte garde son opacité même quand on la secoue
+  document.querySelectorAll(".in").forEach(el => el.addEventListener("animationend", () => { el.classList.remove("in"); el.style.animationDelay = ""; }, { once: true }));
+  const fail = m => { $("err").textContent = m; const c = document.querySelector(".card"); c.classList.remove("shake"); void c.offsetWidth; c.classList.add("shake"); };
+  $("prev").onclick = () => go(Math.max(0, cur - 1));
+  $("next").onclick = async () => {
+    const e = STEPS[cur].check(); if (e) return fail(e);
+    if (cur < STEPS.length - 1) return go(cur + 1);
+    const b = $("next"); b.classList.add("busy"); b.disabled = true;
+    try { await api("/api/apply", { body: { ...A, source: SRC, website: $("website").value, t: Date.now() - T0 } }); success(); }
+    catch (er) { fail(er.message); b.classList.remove("busy"); b.disabled = false; }
+  };
+  document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); $("next").click(); } });
+  function success() {
+    const via = { whatsapp: "sur WhatsApp", telegram: "sur Telegram", email: "par e-mail" }[A.contactType];
+    $("doneTxt").textContent = `Merci ${A.firstName.trim()} ! On regarde ta candidature et on revient vers toi ${via} très vite.`;
+    document.querySelectorAll(".top,.stage,.ft").forEach(el => { if (!reduce && el.animate) el.animate([{ opacity: 1 }, { opacity: 0, filter: "blur(6px)" }], { duration: 350, fill: "forwards" }); else el.style.opacity = 0; });
+    setTimeout(() => { $("done").classList.add("on"); confetti(); }, 300);
+  }
+  function confetti() {
+    if (reduce) return; const cv = document.querySelector("canvas.fx"), card = document.querySelector(".card"), r = card.getBoundingClientRect(), d = devicePixelRatio || 1; cv.width = r.width * d; cv.height = r.height * d; const x = cv.getContext("2d"); x.scale(d, d);
+    const cols = ["#5fd3a2", "#f5f5f5", "#9be8c6", "#3fae80"], P = Array.from({ length: 140 }, () => { const a = -Math.PI / 2 + (Math.random() - .5) * 2.4, v = 6 + Math.random() * 9; return { x: r.width / 2, y: r.height * .38, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: Math.random() * 6, vr: (Math.random() - .5) * .4, w: 4 + Math.random() * 5, h: 7 + Math.random() * 7, c: cols[Math.random() * 4 | 0] }; });
+    const t0 = performance.now(); (function f(t) { const k = (t - t0) / 1800; x.clearRect(0, 0, r.width, r.height); P.forEach(p => { p.vy += .3; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.r += p.vr; x.save(); x.globalAlpha = Math.max(0, 1 - k); x.translate(p.x, p.y); x.rotate(p.r); x.fillStyle = p.c; x.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.r * 2))); x.restore(); }); if (k < 1) requestAnimationFrame(f); else x.clearRect(0, 0, r.width, r.height); })(t0);
+  }
+  api("/api/apply/config").then(c => { C = c; go(0, true); }).catch(() => { $("stage").innerHTML = '<div class="sec show"><p class="hint">Le formulaire est momentanément indisponible. Réessaie dans quelques minutes.</p></div>'; });
+})();
+</script>
+</body>
+</html>

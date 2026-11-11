@@ -23,6 +23,7 @@
   <div class="hdr"><div><div class="eb">MANAGER</div><h1 class="ttl">La <em>gestion.</em></h1></div></div>
   <div class="tabs" role="tablist">
     <button class="on" data-t="team">Équipe<b id="nTeam"></b></button>
+    <button data-t="cand">Candidatures<b id="nCand"></b></button>
     <button data-t="crea">Créatrices<b id="nCrea"></b></button>
     <button data-t="reg">Réglages</button>
     <button data-t="jour">Journal</button>
@@ -35,6 +36,13 @@
     <div class="bar"><div class="seg" id="teamSeg"><button class="on" data-v="all">Tous</button><button data-v="live">En shift</button><button data-v="train">En formation <b id="nTrain" style="opacity:.6"></b></button><button data-v="warn">À surveiller</button><button data-v="off">Désactivés</button></div>
       <button class="wbtn" id="addBtn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Ajouter un compte</button></div>
     <div class="grid" id="teamGrid"><div class="ld">Chargement…</div></div>
+  </section>
+
+  <!-- ============ CANDIDATURES ============ -->
+  <section class="pane" data-p="cand">
+    <div id="candTop" class="ctop"></div>
+    <div class="bar"><div class="seg" id="candSeg"><button class="on" data-v="new">Nouvelles</button><button data-v="ok">Comptes créés</button><button data-v="no">Refusées</button><button data-v="all">Toutes</button></div></div>
+    <div class="grid" id="candList"><div class="ld">Chargement…</div></div>
   </section>
 
   <!-- ============ CRÉATRICES ============ -->
