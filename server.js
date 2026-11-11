@@ -14,6 +14,8 @@ const DB_PATH = process.env.DB_PATH || path.join(__dirname, "data", "app.db");
 const DAILY_LIMIT = parseInt(process.env.DAILY_SIM_LIMIT || "10", 10); // simulations / chatter / jour
 const MAX_MESSAGES = parseInt(process.env.MAX_MESSAGES_PER_SIM || "40", 10);
 const HINT_PENALTY = 3;
+let LIVE = null;   // module « simlive » (réglages dont la limite par jour)
+const dailyLimit = () => LIVE ? LIVE.getSet().limit : DAILY_LIMIT;
 const PROD = process.env.NODE_ENV === "production";
 
 if (!ai.MOCK && !process.env.ANTHROPIC_API_KEY) {
@@ -204,7 +206,7 @@ app.post("/api/logout", (req, res) => {
 app.get("/api/me", auth, (req, res) => {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const used = db.prepare("SELECT COUNT(*) n FROM sims WHERE user_id = ? AND started_at >= ?").get(req.user.id, today.getTime()).n;
-  res.json({ id: req.user.id, username: req.user.username, role: req.user.role, dailyLimit: DAILY_LIMIT, usedToday: used });
+  res.json({ id: req.user.id, username: req.user.username, role: req.user.role, dailyLimit: dailyLimit(), usedToday: used });
 });
 
 /* ----- Données de configuration ----- */
@@ -227,7 +229,7 @@ app.post("/api/sims", auth, async (req, res) => {
   if (req.user.role !== "admin") {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const used = db.prepare("SELECT COUNT(*) n FROM sims WHERE user_id = ? AND started_at >= ?").get(req.user.id, today.getTime()).n;
-    if (used >= DAILY_LIMIT) return res.status(429).json({ error: `Limite de ${DAILY_LIMIT} simulations par jour atteinte.` });
+    if (used >= dailyLimit()) return res.status(429).json({ error: `Limite de ${dailyLimit()} simulations par jour atteinte.` });
   }
   // Ferme les anciennes simulations non terminées
   db.prepare("UPDATE sims SET status = 'abandoned', ended_at = ? WHERE user_id = ? AND status = 'active'").run(Date.now(), req.user.id);
@@ -315,6 +317,7 @@ app.post("/api/sims/:id/end", auth, async (req, res) => {
     sim.report = JSON.stringify(report);
     sim.status = "done"; sim.ended_at = Date.now(); sim.pending_ppv = null;
     saveSim(sim);
+    try { LIVE && LIVE.onEnd(sim); } catch (e) { console.error(e); }
     res.json(publicSim(sim));
   });
 });
@@ -386,6 +389,8 @@ app.delete("/api/admin/models/:id", auth, admin, (req, res) => {
 /* ----- Planning & compta ----- */
 const validatedByPeriod = require("./sales")(app, db, auth, admin, path.dirname(DB_PATH));
 require("./compta")(app, db, auth, admin, validatedByPeriod);
+/* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */
+LIVE = require("./simlive")(app, db, auth, admin, { loadSim, publicSim, PERSONAS, busy });
 
 /* ----- Pages ----- */
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html"] }));
