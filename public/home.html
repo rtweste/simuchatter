@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/handover.css">
 <link rel="stylesheet" href="/wall.css">
+<link rel="stylesheet" href="/team.css">
 <link rel="stylesheet" href="/formation.css">
 <style>
 /* ===================== Accueil « bento » ===================== */
@@ -565,6 +566,7 @@
 <script src="/home-fx.js"></script>
 <script src="/handover-ui.js"></script>
 <script src="/wall-ui.js"></script>
+<script src="/team-ui.js"></script>
 <script>
 const pad = n => String(n).padStart(2, "0");
 const todayIso = (() => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; })();
@@ -881,6 +883,7 @@ function openSound() {
 function afterRender() {
   if (D && D.role !== "admin" && window.HANDOVER) HANDOVER.inbox(document.getElementById("hm"));
   if (D && window.WALL && (!ME || ME.role !== "trainee")) WALL.mount(document.getElementById("hm"), D.role === "admin");
+  if (D && window.TEAMUI && ME) TEAMUI.mount(document.getElementById("hm"), ME);
   // cercle de l'objectif
   const fg = document.querySelector(".ringw .fg");
   if (fg) { const go = () => fg.style.strokeDashoffset = fg.dataset.off; if (MODE === "open" && !reduce) setTimeout(go, 1800); else if (MODE === "quick") setTimeout(go, 80); else { fg.style.transition = "none"; go(); } }

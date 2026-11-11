@@ -453,6 +453,7 @@ GEST = require("./gestion")(app, db, auth, admin, { compta: COMPTA, planning: PL
 require("./candidatures")(app, db, auth, admin, { bcrypt, gest: GEST });   // page publique /postuler
 HAND = require("./handover")(app, db, auth, admin, { planning: PLAN, gest: GEST });   // passation de shift
 require("./teamfx")(app, db, auth, admin, { planning: PLAN, gest: GEST, PERSONAS });   // salle de contrôle, radar, mur des ventes
+require("./extras")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, gest: GEST, ai });   // assistant, Wrapped, team leaders
 /* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */
 LIVE = require("./simlive")(app, db, auth, admin, { loadSim, publicSim, PERSONAS, busy });
 

@@ -67,6 +67,11 @@ function renderShell(active, me) {
     go("/home"); throw Object.assign(new Error("Redirection vers l'accueil"), { redirect: true }); }
   window.ME_SHELL = me; setTimeout(() => { try { INTRO.check(me); } catch (e) {} }, 0);
   if (me && me.role === "trainee") setTimeout(() => { try { DEADLINE.mount(me.deadline); } catch (e) {} }, 0);
+  // assistant « Demande à StellADS » pour les chatters et les élèves (pas dans le simulateur, où il gênerait la saisie)
+  if (me && (me.role === "chatter" || me.role === "trainee") && active !== "simu" && !window.ASSIST) {
+    const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/assist.css"; document.head.appendChild(l);
+    const sc = document.createElement("script"); sc.src = "/assist-ui.js"; sc.onload = () => { try { ASSIST_MOUNT(me); } catch (e) {} }; document.body.appendChild(sc);
+  }
   const el = document.getElementById("sidebar"); if (!el) return;
   const mods = MODULES.filter(m => m.roles.includes(me.role));
   const badge = m => m.id === "ventes" && me.role === "admin";

@@ -55,7 +55,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     tiers: compta.getTiers(), tolerance: a.tolerance ?? 5, missedAlert: a.missedAlert ?? 10, reminder: a.reminder ?? 30, creatorPct: a.creatorPct ?? 50,
     slots: a.slots || [["6–9", "06:00", "09:00"], ["6–12", "06:00", "12:00"], ["12–18", "12:00", "18:00"], ["18–2", "18:00", "02:00"], ["18–3", "18:00", "03:00"]],
     fee: Number(getSet("platform_fee", "25")), goalCa: Number(getSet("goal_ca", "20000")), goalChatter: Number(getSet("goal_chatter", "300")),
-    rules: rules(), thresholds: th(), training: trCfg() }; };
+    rules: rules(), thresholds: th(), training: trCfg(), tlPrime: a.tlPrime ?? 30, assistantInfo: a.assistantInfo || "" }; };
   const user = id => db.prepare("SELECT id, username, role, active, created_at FROM users WHERE id = ?").get(id);
   const model = id => db.prepare("SELECT id, name FROM models WHERE id = ?").get(id);
 
@@ -114,7 +114,8 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       if (t.some(x => x.from === null || x.rate === null || x.prime === null)) return res.status(400).json({ error: "Palier invalide" });
       a.tiers = t.map(x => ({ from: x.from, rate: x.rate, ...(x.prime ? { prime: x.prime } : {}) })); compta.setTiers(a.tiers);
     }
-    for (const [k, lo, hi] of [["tolerance", 0, 120], ["missedAlert", 1, 240], ["reminder", 5, 240], ["creatorPct", 0, 100]]) if (b[k] !== undefined) { const v = num(b[k], lo, hi); if (v === null) return res.status(400).json({ error: "Valeur invalide : " + k }); a[k] = v; }
+    if (b.assistantInfo !== undefined) a.assistantInfo = String(b.assistantInfo || "").slice(0, 4000);
+    for (const [k, lo, hi] of [["tolerance", 0, 120], ["missedAlert", 1, 240], ["reminder", 5, 240], ["creatorPct", 0, 100], ["tlPrime", 0, 1000]]) if (b[k] !== undefined) { const v = num(b[k], lo, hi); if (v === null) return res.status(400).json({ error: "Valeur invalide : " + k }); a[k] = v; }
     if (b.slots !== undefined) {
       if (!Array.isArray(b.slots) || b.slots.some(s => !Array.isArray(s) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(s[1]) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(s[2]))) return res.status(400).json({ error: "Créneau invalide" });
       a.slots = b.slots.map(s => [String(s[0]).slice(0, 12), s[1], s[2]]);
@@ -545,5 +546,5 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   // lecture du délai : si l'heure est passée, le refus est appliqué tout de suite (sans attendre le balayage de la minute)
   const refusedByInterview = uid => { const r = db.prepare("SELECT decision, done_at FROM interviews WHERE user_id = ?").get(uid); return !!(r && r.done_at && r.decision === "refused"); };
   const deadline = uid => { let r = dlRow(uid); if (r && !r.met_at && !r.rejected_at && r.deadline_at <= Date.now()) { rejectExpired(); r = dlRow(uid); } return dlView(r); };
-  return { middleware, log, agency, startDeadline, deadline, refusedByInterview };
+  return { middleware, log, agency, startDeadline, deadline, refusedByInterview, training };
 };

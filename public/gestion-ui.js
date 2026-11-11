@@ -105,12 +105,13 @@ async function fiche(id) {
     <div class="sec"><span class="lab">CRÉATRICES HABITUELLES · TOUCHE POUR CHANGER</span><div class="pick" data-crea>${models.map(m => `<button class="${c.creators.some(x => x.id === m.id) ? "on" : ""}" data-m="${m.id}">${esc(m.name)}</button>`).join("")}</div></div>
     <div class="sec"><div class="simu"><span>${c.simu == null ? "Simu : aucune session terminée" : `Simu : moyenne <b>${c.simu}/100</b> sur ${c.simuN > 1 ? `ses ${c.simuN} dernières sessions` : "sa dernière session"}`}</span><a href="/app#gestion">Voir dans Simu Chatter →</a></div></div>
     <div class="sec"><span class="lab">POINTS DE SANCTION</span><div class="ln"><span>Sur ${T.windowDays || 30} jours glissants</span><b>${c.points} pt${c.points > 1 ? "s" : ""}</b></div>${c.sanctions.filter(s => s.status === "active").slice(0, 3).map(s => `<div class="ln"><span>${esc(s.label)}<br><small class="mut">${dShort(s.created_at)}</small></span><b>${s.amount ? `<span style="color:#e07a7a">−${E(s.amount)}</span>` : `+${s.points} pt`}</b></div>`).join("")}</div>
+    ${isMe || c.role === "admin" ? "" : '<div data-tl></div>'}
     ${isMe ? "" : `<div class="sec"><span class="lab">COMPTE</span><div class="acts"><button data-a="pw">Nouveau mot de passe</button><button data-a="role">${c.role === "admin" ? "Repasser chatter" : "Passer manager"}</button><button data-a="copy">Copier l'identifiant</button><button data-a="off" class="r">${c.active ? "Désactiver le compte" : "Réactiver le compte"}</button></div>
       <div class="pw"><code></code><button class="sb" data-a="pwcopy">Copier</button><button class="sb" data-a="pwre" aria-label="Autre mot de passe">↻</button><button class="sb w" data-a="pwset">Valider</button></div></div>`}
     <div class="sec"><span class="lab">NOTES PRIVÉES · VISIBLES PAR LES MANAGERS SEULEMENT</span><div data-notes>${c.notes.map(notes).join("") || '<div class="mut" data-none>Aucune note pour l\'instant.</div>'}</div>
       <div class="nchips"><button class="on">Remarque</button><button>Point fort</button><button>À travailler</button></div><div class="nin"><input placeholder="Ajouter une note sur ${esc(c.username)}…" maxlength="600"><button class="sb w" data-a="note" style="height:40px">Ajouter</button></div></div>`, () => { if (dirtyTeam) { dirtyTeam = false; loadTeam(true); } });
   let dirtyTeam = false;
-  const pw = dr.querySelector(".pw");
+  const pw = dr.querySelector(".pw"); tlLoad(c);
   dr.querySelectorAll(".nchips button").forEach(b => b.onclick = () => dr.querySelectorAll(".nchips button").forEach(x => x.classList.toggle("on", x === b)));
   dr.querySelectorAll("[data-crea] button").forEach(b => b.onclick = async () => { b.classList.toggle("on"); S.tick();
     try { await api(`/api/admin/team/${c.id}/creators`, { method: "PUT", body: { models: [...dr.querySelectorAll("[data-crea] button.on")].map(x => +x.dataset.m) } }); dirtyTeam = true; } catch (e) { fail(e); } });
@@ -181,11 +182,12 @@ function tfiche(c) {
       <button data-a="tsim"${tr.test ? " disabled" : ""}>Valider le simulateur (test)</button><button data-a="tall"${tr.test === "all" ? " disabled" : ""}>Tout valider (test)</button>
       <button data-a="treset" style="grid-column:span 2">Réinitialiser (test)</button></div>
       <div class="mut" style="margin-top:8px;line-height:1.5">Pour tester le parcours. « Réinitialiser » retire les validations de test, remet les vidéos et la présentation à zéro. Les vraies sessions du simulateur sont conservées.</div></div>
+    <div data-tl></div>
     <div class="sec"><span class="lab">COMPTE</span><div class="acts"><button data-a="pw">Nouveau mot de passe</button><button data-a="copy">Copier l'identifiant</button><button data-a="off" class="r" style="grid-column:span 2">${c.active ? "Désactiver le compte" : "Réactiver le compte"}</button></div>
       <div class="pw"><code></code><button class="sb" data-a="pwcopy">Copier</button><button class="sb" data-a="pwre" aria-label="Autre mot de passe">↻</button><button class="sb w" data-a="pwset">Valider</button></div></div>
     <div class="sec"><span class="lab">NOTES PRIVÉES · VISIBLES PAR LES MANAGERS SEULEMENT</span><div data-notes>${c.notes.map(notes).join("") || '<div class="mut" data-none>Aucune note pour l\'instant.</div>'}</div>
       <div class="nchips"><button class="on">Remarque</button><button>Point fort</button><button>À travailler</button></div><div class="nin"><input placeholder="Ajouter une note sur ${esc(c.username)}…" maxlength="600"><button class="sb w" data-a="note" style="height:40px">Ajouter</button></div></div>`);
-  const pw = dr.querySelector(".pw");
+  const pw = dr.querySelector(".pw"); tlLoad(c);
   dr.querySelectorAll(".nchips button").forEach(b => b.onclick = () => dr.querySelectorAll(".nchips button").forEach(x => x.classList.toggle("on", x === b)));
   dr.querySelectorAll("[data-a]").forEach(b => b.onclick = async () => {
     const a = b.dataset.a;
@@ -346,15 +348,16 @@ function fillReg() {
   drawTr();
   TI = AG.tiers.map(t => t.prime ? { from: t.from, prime: t.prime } : { from: t.from, rate: t.rate }); SL = AG.slots.map(s => [...s]);
   qa("[data-s]").forEach(i => i.value = String(AG[i.dataset.s] ?? "").replace(".", ","));
+  qa("[data-st]").forEach(i => i.value = AG[i.dataset.st] || "");
   drawTiers(); drawSlots(); calc(); $("regBar").classList.remove("on");
 }
-qa("[data-s]").forEach(i => i.addEventListener("input", regDirty));
+qa("[data-s]").forEach(i => i.addEventListener("input", regDirty)); qa("[data-st]").forEach(i => i.addEventListener("input", regDirty));
 async function loadReg(force) { if (AG && !force) return; try { AG = await api("/api/admin/agency"); fillReg(); } catch (e) { fail(e); } }
 $("regCancel").onclick = () => { fillReg(); toast("Modifications annulées"); };
 $("regSave").onclick = async () => {
   const sorted = TI.map(t => ({ ...t })).sort((a, b) => a.from - b.from); let cur = 0;
   const tiers = sorted.map(t => { if (!t.prime) cur = t.rate; return { from: t.from, rate: t.prime ? cur : t.rate, prime: t.prime || 0 }; });
-  const body = { tiers, slots: SL, training: readTr() }; qa("[data-s]").forEach(i => body[i.dataset.s] = num(i.value));
+  const body = { tiers, slots: SL, training: readTr() }; qa("[data-s]").forEach(i => body[i.dataset.s] = num(i.value)); qa("[data-st]").forEach(i => body[i.dataset.st] = i.value);
   try { const r = await api("/api/admin/agency", { method: "PUT", body }); AG = r.agency; fillReg(); toast("Réglages enregistrés · la compta est recalculée", true); S.ok(); T = null; CR = null; }
   catch (e) { fail(e); }
 };
@@ -484,6 +487,20 @@ async function loadRadar() {
     const b = c.querySelector("[data-as]"); if (b) b.onclick = async () => { b.disabled = true; b.textContent = "…";
       try { await api("/api/admin/assignments", { body: { userId: r.id, personaId: r.training.personaId, difficulty: r.training.difficulty, goal: 70, dueAt: Date.now() + 3 * 864e5, note: "Remise à niveau : " + r.signals.map(s => s.t).join(", ") } });
         b.textContent = "✓ Assigné · à faire sous 3 jours"; toast(`Entraînement assigné à ${esc(r.username)}`, true); S.ok(); burst(b); } catch (e) { b.disabled = false; b.textContent = "Réessayer"; fail(e); } }; });
+}
+
+/* =================== TEAM LEADER (dans la fiche) =================== */
+async function tlLoad(c) {
+  const box = dr.querySelector("[data-tl]"); if (!box) return; let d; try { d = await api("/api/admin/team-lead/" + c.id); } catch (e) { return; }
+  if (!dr.contains(box)) return;
+  const eur0 = n => Math.round(n).toLocaleString("fr-FR") + " €";
+  box.innerHTML = `<div class="sec"><span class="lab">TEAM LEADER</span>
+    ${c.role !== "admin" ? `<div class="tlsel"><select aria-label="Team leader"><option value="">Pas de team leader</option>${d.candidates.map(x => `<option value="${x.id}" ${d.leader && d.leader.id === x.id ? "selected" : ""}>${esc(x.username)}</option>`).join("")}</select><button class="sb w" data-tls>Enregistrer</button></div>
+      <div class="mut" style="margin-top:8px;line-height:1.5">${d.leader ? (d.leader.goalAt ? `🎉 Objectif atteint : ${esc(d.leader.username)} a reçu sa prime de ${eur0(d.leader.prime || d.prime)}.` : `${esc(d.leader.username)} accompagne ${esc(c.username)}. Prime de <b>${eur0(d.prime)}</b> quand ${esc(c.username)} atteint <b>${eur0(d.target)}</b> de ventes nettes sur une quinzaine.`) : "Choisis un chatter confirmé pour accompagner cette recrue : il voit ses chiffres sur son accueil et peut lui laisser des conseils."}</div>` : ""}
+    ${d.recruits.length ? `<div class="mut" style="margin-top:10px">Team leader de : ${d.recruits.map(r => `<b style="color:#fff">${esc(r.username)}</b>${r.goal_at ? " ✓" : ""}`).join(", ")}</div>` : ""}</div>`;
+  const b = box.querySelector("[data-tls]"); if (b) b.onclick = async () => { b.disabled = true;
+    try { await api("/api/admin/team-lead/" + c.id, { method: "PUT", body: { leaderId: box.querySelector("select").value || null } }); toast(box.querySelector("select").value ? `Team leader enregistré pour ${esc(c.username)}` : "Team leader retiré", true); S.ok(); tlLoad(c); }
+    catch (e) { fail(e); b.disabled = false; } };
 }
 
 /* =================== CANDIDATURES (page publique /postuler) =================== */

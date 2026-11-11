@@ -230,4 +230,15 @@ async function readSale(buf, mime, tag) {
   return tu && tu.input && typeof tu.input.is_sale === "boolean" ? tu.input : null;
 }
 
-module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead };
+/* ---------- Assistant des chatters (« Demande à StellADS ») ---------- */
+async function assistant(system, history, tag) {
+  if (MOCK) { const q = (history[history.length - 1] || {}).content || "";
+    return /paie|gagn|commission/i.test(q) ? "Mode test : d'après tes chiffres, ta paie de la quinzaine est indiquée plus haut dans mes infos. [Réponse simulée]"
+      : /sanction|point/i.test(q) ? "Mode test : tu peux voir tes points dans Ma paie. [Réponse simulée]"
+      : "Mode test : voici une réponse simulée. En vrai, je réponds à partir des règles de l'agence et de tes chiffres. [Réponse simulée]"; }
+  const res = await client.messages.create({ model: MODEL_HINT, max_tokens: 600, system, messages: history });
+  try { if (usageHook && res.usage) usageHook({ ...(tag || {}), kind: "assistant" }, MODEL_HINT, res.usage); } catch (e) {}
+  return res.content.filter(c => c.type === "text").map(c => c.text).join("").trim();
+}
+
+module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead, assistant };

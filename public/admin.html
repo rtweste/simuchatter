@@ -77,6 +77,11 @@
           <div class="set"><span>Tolérance de retard<small>Au-delà, le pointage compte comme un retard</small></span><div class="unit"><input data-s="tolerance" inputmode="decimal">min</div></div>
           <div class="set"><span>Alerte « pas pointé »<small>Le manager est prévenu après</small></span><div class="unit"><input data-s="missedAlert" inputmode="decimal">min</div></div>
           <div class="set"><span>Rappel avant le shift<small>Envoyé aux chatters</small></span><div class="unit"><input data-s="reminder" inputmode="decimal">min</div></div></div>
+        <div class="card" style="--d:.1s"><div class="ch"><h3>Team leaders <em>&amp; assistant</em></h3></div>
+          <div class="set"><span>Prime du team leader<small>Versée automatiquement quand sa recrue atteint le premier palier sur une quinzaine</small></span><div class="unit"><input data-s="tlPrime" inputmode="decimal">€</div></div>
+          <div style="margin-top:12px"><span class="lab" style="display:block;margin-bottom:6px">INFOS POUR L'ASSISTANT « DEMANDE À STELLADS »</span>
+            <textarea data-st="assistantInfo" maxlength="4000" rows="5" placeholder="Ce que l'assistant doit savoir en plus des règles du site : contact du manager, consignes par créatrice, horaires de paiement, liens utiles…" style="width:100%;box-sizing:border-box;border-radius:12px;background:#0b0b0b;border:1px solid #262626;color:#eee;font:13px/1.5 Inter;padding:10px 12px;resize:vertical"></textarea>
+            <div class="mut" style="margin-top:6px">L'assistant répond uniquement à partir des règles de l'agence, de ces infos et des chiffres du chatter.</div></div></div>
         <div class="card crit" style="--d:.12s"><div class="ch"><h3>Critères de <em>formation</em></h3><span class="mut">Pour passer de « En formation » à « Chatter »</span></div><div id="trCrit"></div></div>
       </div>
     </div>

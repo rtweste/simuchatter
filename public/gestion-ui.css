@@ -329,3 +329,5 @@
 .rdr-c .tr{display:flex;flex-wrap:wrap;gap:6px}.rdr-c .tr small{flex-basis:100%}
 .rdr-c .tr button{height:36px;padding:0 12px;border-radius:11px;border:0;background:#f5f5f5;color:#0a0a0a;font-weight:700;font-size:12.5px;cursor:pointer;flex:1}
 .rdr-c .tr button.gh{flex:0 0 auto;background:transparent;color:#ccc;border:1px solid #2a2a2a}.rdr-c .tr button[disabled]{opacity:.6}
+
+.tlsel{display:flex;gap:8px}.tlsel select{flex:1;height:40px;border-radius:11px;background:#0b0b0b;border:1px solid #262626;color:#fff;font:13.5px Inter;padding:0 10px}.tlsel .sb{height:40px}
