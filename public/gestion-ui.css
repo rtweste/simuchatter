@@ -283,3 +283,5 @@
 .ge .tg2.off{background:#2a2a2a}.ge .tg2.off::after{right:19px;background:#8a8a8a}
 .ge .set .rt{display:flex;align-items:center;gap:10px}
 .ge .crit .unit input{width:52px}
+.ge .ttest{display:inline-block;margin-right:8px;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;border-radius:6px;padding:2px 6px;background:#262626;color:#9a9a9a;vertical-align:middle}
+.ge .acts button:disabled{opacity:.4;cursor:default}

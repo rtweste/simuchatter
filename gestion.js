@@ -202,6 +202,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
 
   /* =================== FORMATION (rôle « En formation ») =================== */
   db.exec("CREATE TABLE IF NOT EXISTS training_ready (user_id INTEGER PRIMARY KEY, at INTEGER NOT NULL)");
+  db.exec("CREATE TABLE IF NOT EXISTS training_bypass (user_id INTEGER PRIMARY KEY, level TEXT NOT NULL, at INTEGER NOT NULL)");
   db.exec("CREATE TABLE IF NOT EXISTS course_progress (user_id INTEGER NOT NULL, video_id TEXT NOT NULL, max_pos REAL NOT NULL DEFAULT 0, dur REAL, upd INTEGER, done_at INTEGER, PRIMARY KEY (user_id, video_id))");
   function course(uid, unlocked) {
     const rows = {}; db.prepare("SELECT video_id, max_pos, dur, done_at FROM course_progress WHERE user_id = ?").all(uid).forEach(r => rows[r.video_id] = r);
@@ -230,7 +231,8 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       { key: "fans", label: `${pl(c.fans.v, "profil")} de fans réussi${c.fans.v > 1 ? "s" : ""}`, sub: "score de 70 ou plus", value: `${fansOk.size} / ${c.fans.v}`, ok: fansOk.size >= c.fans.v, pct: fansOk.size / c.fans.v },
       { key: "ethics", label: "Aucune alerte éthique", sub: `sur les ${c.ethics.v} dernières sessions`, value: !n ? "—" : eth ? pl(eth, "alerte") : "✓", ok: n > 0 && eth === 0, pct: n && !eth ? 1 : 0 },
       { key: "rt", label: `Réponse moyenne < ${c.rt.v} s`, sub: "sur les 5 dernières sessions", value: rt == null ? "—" : `${rt} s`, ok: rt != null && rt < c.rt.v, pct: rt ? Math.min(1, c.rt.v / rt) : 0 }];
-    const simCrit = all.filter(x => c[x.key].on).map(x => ({ ...x, pct: Math.max(0, Math.min(1, x.pct)) }));
+    const byp = db.prepare("SELECT level FROM training_bypass WHERE user_id = ?").get(uid);
+    const simCrit = all.filter(x => c[x.key].on).map(x => ({ ...x, pct: Math.max(0, Math.min(1, x.pct)) })).map(x => byp && !x.ok ? { ...x, ok: true, pct: 1, test: true } : x);
     const simReady = simCrit.every(x => x.ok), co = course(uid, simReady);
     const criteria = co.total ? [...simCrit, { key: "course", label: "Formation Twizz terminée", sub: simReady ? `${co.total} vidéos à regarder jusqu'au bout` : "se débloque quand les critères du simulateur sont verts", value: `${co.done} / ${co.total}`, ok: co.complete, pct: co.done / co.total }] : simCrit;
     const done = criteria.filter(x => x.ok).length, total = criteria.length, ready = total > 0 && done === total;
@@ -249,11 +251,29 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       db.prepare("INSERT OR IGNORE INTO training_ready (user_id, at) VALUES (?, ?)").run(uid, Date.now());
       log(uid, "a", `**${u.username}** a rempli tous les critères de formation`, "Prêt : sa formation peut être validée");
     }
-    return { criteria, done, total, ready, tip, fans, simReady, course: co,
+    return { criteria, done, total, ready, tip, fans, simReady, course: co, test: byp ? byp.level : null,
       day: u ? Math.floor((Date.now() - u.created_at) / 864e5) + 1 : 1,
       stats: { avg5, best: n ? Math.max(...sims.map(s => s.score)) : null, sessions: n, rt, hard: hardOk, trend: sims.slice(0, 8).map(s => s.score).reverse() } };
   }
   app.get("/api/training", auth, (req, res) => res.json(training(req.user.id)));
+  // Outil de test (manager) : forcer les critères d'un élève, ou le remettre à zéro
+  app.post("/api/admin/users/:id/training-test", auth, admin, (req, res) => {
+    const u = db.prepare("SELECT id, username, role FROM users WHERE id = ?").get(parseInt(req.params.id, 10)), mode = req.body.mode;
+    if (!u || u.role !== "trainee") return res.status(400).json({ error: "Ce compte n'est pas en formation" });
+    if (!["sim", "all", "reset"].includes(mode)) return res.status(400).json({ error: "Action inconnue" });
+    const now = Date.now();
+    if (mode === "reset") {
+      db.prepare("DELETE FROM training_bypass WHERE user_id = ?").run(u.id); db.prepare("DELETE FROM course_progress WHERE user_id = ?").run(u.id);
+      db.prepare("DELETE FROM training_ready WHERE user_id = ?").run(u.id); db.prepare("UPDATE users SET intro_seen = 0 WHERE id = ?").run(u.id);
+      log(req.user.id, "a", `Test : formation de **${u.username}** remise à zéro`, "Critères forcés, vidéos et présentation réinitialisés");
+    } else {
+      db.prepare("INSERT INTO training_bypass (user_id, level, at) VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET level = excluded.level, at = excluded.at").run(u.id, mode, now);
+      if (mode === "all") { const ins = db.prepare("INSERT INTO course_progress (user_id, video_id, max_pos, dur, upd, done_at) VALUES (?,?,?,?,?,?) ON CONFLICT(user_id, video_id) DO UPDATE SET done_at = COALESCE(course_progress.done_at, excluded.done_at)");
+        courseList().forEach(v => ins.run(u.id, v.id, 0, null, now, now)); }
+      log(req.user.id, "a", `Test : ${mode === "all" ? "toute la formation validée" : "critères du simulateur validés"} pour **${u.username}**`, "Outil de test du manager");
+    }
+    res.json({ ok: true, training: training(u.id) });
+  });
   // Avancement d'une vidéo : on ne peut pas sauter de passage (la position ne peut avancer que du temps réellement écoulé)
   app.post("/api/course/:id/progress", auth, (req, res) => {
     const uid = req.user.id, T = training(uid), v = T.course.videos.find(x => x.id === req.params.id);

@@ -144,10 +144,14 @@ function tfiche(c) {
   openDr(`<div class="dh">${avatar(c.username)}<div><b>${esc(c.username)} ${tr.ready ? '<span class="tag v">Prêt</span>' : '<span class="tag f">En formation</span>'}</b><small>En formation depuis ${sinceTxt(c.created_at)}</small></div><button class="x" aria-label="Fermer">✕</button></div>
     <div class="dk"><div><small>Score moyen (5 dern.)</small><b class="${s.avg5 >= 70 ? "g" : ""}" style="${s.avg5 >= 70 ? "color:#5fd3a2" : ""}">${s.avg5 ?? "—"}</b><em>meilleur : ${s.best ?? "—"}</em></div><div><small>Sessions terminées</small><b>${s.sessions}</b><em>dont ${s.hard} difficile${s.hard > 1 ? "s" : ""} réussie${s.hard > 1 ? "s" : ""}</em></div></div>
     <div class="rdy${tr.ready ? "" : " no"}"><span class="ic">${tr.ready ? "✓" : tr.done}</span><span>${tr.ready ? `Les ${tr.total} critères sont remplis. ${esc(c.username)} peut passer chatter.` : `${tr.done} critère${tr.done > 1 ? "s" : ""} sur ${tr.total} rempli${tr.done > 1 ? "s" : ""}.`}</span></div>
-    <div class="sec"><span class="lab">CRITÈRES</span>${tr.criteria.map(k => `<div class="tck${k.ok ? " ok" : ""}"><span class="bx">${k.ok ? CK : ""}</span><div>${esc(k.label)}${k.sub ? `<small>${esc(k.sub)}</small>` : ""}</div><span class="v${k.ok ? "" : " no"}">${esc(k.value)}</span></div>`).join("")}</div>
+    <div class="sec"><span class="lab">CRITÈRES</span>${tr.criteria.map(k => `<div class="tck${k.ok ? " ok" : ""}"><span class="bx">${k.ok ? CK : ""}</span><div>${esc(k.label)}${k.sub ? `<small>${esc(k.sub)}</small>` : ""}</div><span class="v${k.ok ? "" : " no"}">${k.test ? '<span class="ttest">test</span>' : ""}${esc(k.value)}</span></div>`).join("")}</div>
     <button class="valid${tr.ready ? "" : " soft"}" data-a="promote">${tr.ready ? "Valider la formation" : "Valider la formation quand même"}</button>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><a class="gbtn" href="/app#gestion" style="text-decoration:none">Assigner un entraînement</a><a class="gbtn" href="/app#gestion" style="text-decoration:none">Voir ses sessions →</a></div>
     <div class="mut" style="margin-top:10px;line-height:1.5">Une fois validée, ${esc(c.username)} voit le planning, les ventes et sa paie. Tu pourras lui ajouter des shifts.</div>
+    <div class="sec"><span class="lab">OUTIL DE TEST · VISIBLE PAR TOI SEULEMENT</span><div class="acts">
+      <button data-a="tsim"${tr.test ? " disabled" : ""}>Valider le simulateur (test)</button><button data-a="tall"${tr.test === "all" ? " disabled" : ""}>Tout valider (test)</button>
+      <button data-a="treset" style="grid-column:span 2">Réinitialiser (test)</button></div>
+      <div class="mut" style="margin-top:8px;line-height:1.5">Pour tester le parcours. « Réinitialiser » retire les validations de test, remet les vidéos et la présentation à zéro. Les vraies sessions du simulateur sont conservées.</div></div>
     <div class="sec"><span class="lab">COMPTE</span><div class="acts"><button data-a="pw">Nouveau mot de passe</button><button data-a="copy">Copier l'identifiant</button><button data-a="off" class="r" style="grid-column:span 2">${c.active ? "Désactiver le compte" : "Réactiver le compte"}</button></div>
       <div class="pw"><code></code><button class="sb" data-a="pwcopy">Copier</button><button class="sb" data-a="pwre" aria-label="Autre mot de passe">↻</button><button class="sb w" data-a="pwset">Valider</button></div></div>
     <div class="sec"><span class="lab">NOTES PRIVÉES · VISIBLES PAR LES MANAGERS SEULEMENT</span><div data-notes>${c.notes.map(notes).join("") || '<div class="mut" data-none>Aucune note pour l\'instant.</div>'}</div>
@@ -161,6 +165,10 @@ function tfiche(c) {
         await api(`/api/admin/users/${c.id}/promote`, { body: {} }); b.classList.remove("soft"); b.classList.add("done"); b.textContent = `✓ ${c.username} est chatter`;
         toast(`${esc(c.username)} est maintenant chatter · il apparaît dans le planning et la paie`, true); S.ok();
         burst(b); setTimeout(() => { close(); loadTeam(true); }, 1300); }
+      if (a === "tsim" || a === "tall" || a === "treset") { if (a === "treset" && !b.dataset.sure) { b.dataset.sure = 1; b.textContent = "Confirmer la remise à zéro"; return; }
+        await api(`/api/admin/users/${c.id}/training-test`, { body: { mode: { tsim: "sim", tall: "all", treset: "reset" }[a] } });
+        toast(a === "treset" ? `Formation de ${esc(c.username)} remise à zéro` : a === "tall" ? `Toute la formation de ${esc(c.username)} est validée (test)` : `Simulateur de ${esc(c.username)} validé (test) : la formation Twizz est débloquée`, true); S.ok();
+        close(); loadTeam(true); }
       if (a === "pw" || a === "pwre") { pw.classList.add("on"); pw.querySelector("code").textContent = genPw(); S.tick(); }
       if (a === "pwcopy") { await copy(pw.querySelector("code").textContent); toast("Mot de passe copié", true); }
       if (a === "pwset") { const p = pw.querySelector("code").textContent; await api("/api/admin/users/" + c.id, { method: "PATCH", body: { password: p } }); await copy(`Site : stellads.fr\nIdentifiant : ${c.username}\nMot de passe : ${p}`); pw.classList.remove("on"); toast(`Nouveau mot de passe de ${esc(c.username)} enregistré et copié`, true); }
