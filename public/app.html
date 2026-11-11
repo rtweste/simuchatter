@@ -20,16 +20,6 @@
 .persona.sel{border-color:var(--accent);background:#1f1f1f}
 .persona b{display:block;margin-bottom:4px}
 .persona span.d{font-size:12px;color:var(--muted);line-height:1.4;display:block;margin-bottom:8px}
-#chatScreen{height:100vh;height:100dvh;display:flex;flex-direction:column}
-.topbar{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
-.avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3a4256,#20242f);display:flex;align-items:center;justify-content:center;font-weight:700}
-.topbar .who b{display:block}.topbar .who span{font-size:12px;color:var(--muted)}
-.stats{display:flex;gap:18px}.stat{text-align:right}.stat small{display:block;color:var(--muted);font-size:11px}.stat b{font-size:15px}
-@media(max-width:700px){.stats{display:none}}
-.main{flex:1;display:flex;min-height:0}
-.chat{flex:1;display:flex;flex-direction:column;min-width:0}
-#msgs{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:6px}
-#msgs > *{flex-shrink:0}
 .msg{max-width:70%;padding:9px 13px;border-radius:16px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
 .msg.fan{background:var(--them);align-self:flex-start;border-bottom-left-radius:4px}
 .msg.me{background:var(--me);color:#0a0a0a;align-self:flex-end;border-bottom-right-radius:4px}
@@ -41,24 +31,6 @@
 .typing i{width:6px;height:6px;background:var(--muted);border-radius:50%;animation:b 1.2s infinite}
 .typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
 @keyframes b{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
-.composer{border-top:1px solid var(--line);padding:12px 16px;background:var(--panel);display:flex;gap:8px;align-items:flex-end}
-.composer textarea{min-height:44px;max-height:140px;resize:none}
-.side{width:300px;border-left:1px solid var(--line);background:var(--panel);padding:16px;overflow-y:auto}
-#infoBtn{display:none}
-@media(max-width:860px){
-  .side{display:none}
-  .side.open{display:block;position:fixed;left:0;right:0;bottom:0;top:120px;width:auto;z-index:20;border-left:0;border-top:1px solid var(--line);box-shadow:0 -10px 40px rgba(0,0,0,.6)}
-  #infoBtn{display:inline-block}
-  #chatScreen{height:calc(100dvh - 55px)}
-  .topbar{padding:10px 12px;gap:10px}
-  .topbar .avatar{width:34px;height:34px}
-  .msg{max-width:85%}
-  .composer{padding:10px}
-  #ppvBtn{padding:10px}
-}
-.side h3{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:18px 0 8px}
-.side h3:first-child{margin-top:0}
-.hint{background:#2a2414;border:1px solid #4d4020;color:#f3d999;border-radius:10px;padding:10px;font-size:13px;line-height:1.45;margin-top:8px}
 
 /* ===================== Choix du fan ===================== */
 .persona{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:14px;background:#111;border:1px solid var(--line);transition:border-color .25s,background .25s,transform .25s cubic-bezier(.3,1.4,.5,1)}
@@ -77,19 +49,8 @@
 @keyframes scrOut{to{opacity:0;transform:scale(.97)}}
 
 /* ===================== Conversation ===================== */
-.topbar{position:relative}
-.avatar{position:relative;background:#2c3a52}
-.avatar::after{content:"";position:absolute;right:0;bottom:0;width:10px;height:10px;border-radius:50%;background:var(--good);box-shadow:0 0 0 2px var(--panel)}
-.avatar.off::after{background:#555}
-.topbar .who span{display:block;height:16px;overflow:hidden}
-.topbar .who span.typingtxt{color:var(--good);animation:stIn .25s ease}
 @keyframes stIn{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
-.stat b{display:inline-block;font-variant-numeric:tabular-nums}
-.stat b.bump{animation:bump .6s cubic-bezier(.3,1.6,.5,1)}
 @keyframes bump{40%{transform:scale(1.25);color:#d6bd86}100%{transform:none}}
-.imeter{position:absolute;left:0;right:0;bottom:-1px;height:3px;background:#1a1a1a;display:none}
-.imeter i{position:absolute;left:0;top:0;bottom:0;border-radius:0 3px 3px 0;transition:width 1.2s cubic-bezier(.2,.8,.2,1),background 1s;box-shadow:0 0 10px currentColor}
-.imeter.show{display:block}
 .msg{animation:pop .45s cubic-bezier(.3,1.4,.5,1) both;border-radius:18px}
 .msg.fan{transform-origin:left bottom;border-bottom-left-radius:5px}
 .msg.me{transform-origin:right bottom;border-bottom-right-radius:5px}
@@ -101,11 +62,6 @@
 .typing i{width:7px;height:7px}
 .hint{animation:hintIn .5s cubic-bezier(.3,1.4,.5,1)}
 @keyframes hintIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-#ppvBtn{display:inline-flex;align-items:center;gap:6px}
-#ppvBtn svg{width:16px;height:16px}
-.toast{position:fixed;left:50%;top:76px;z-index:60;transform:translate(-50%,-16px);background:#17140d;border:1px solid #5a4a26;color:#ecd9a8;border-radius:20px;padding:9px 16px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:all .45s cubic-bezier(.3,1.4,.5,1);white-space:nowrap;box-shadow:0 10px 30px rgba(0,0,0,.5)}
-.toast.show{opacity:1;transform:translate(-50%,0)}
-@media(max-width:860px){.toast{top:calc(122px + env(safe-area-inset-top))}}
 /* PPV */
 .ppv{width:240px;border-radius:18px;background:#151515;border:1px solid #2c2c2c;animation:pop .5s cubic-bezier(.3,1.4,.5,1) both;position:relative;transition:border-color .5s,box-shadow .5s,opacity .5s}
 .ppv .pic{height:140px;position:relative;overflow:hidden;background:#222}
@@ -285,11 +241,11 @@ body:has(#reportScreen:not(.hidden)) .main-area{padding-bottom:0}
 /* ===== Téléphone : conversation fixe, sans zoom ni page qui bouge ===== */
 @media(max-width:860px){
   /* 16 px minimum : sinon l'iPhone zoome sur le champ quand on tape dedans */
-  .composer textarea,#ppvModal input,#ppvModal textarea{font-size:16px}
+  #input,#ppvModal input,#ppvModal textarea{font-size:16px}
   html:has(#chatScreen:not(.hidden)),body:has(#chatScreen:not(.hidden)){overflow:hidden;height:100%;overscroll-behavior:none}
   #chatScreen{position:fixed;left:0;right:0;top:var(--ct,55px);height:var(--ch,calc(100dvh - 55px));z-index:10;background:var(--bg);will-change:transform}
   #msgs{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-  .composer{padding-bottom:max(10px,env(safe-area-inset-bottom))}
+  #chatScreen .composer{padding-bottom:max(10px,env(safe-area-inset-bottom))}
   #chatScreen,#chatScreen *{touch-action:manipulation}
 }
 .sndon{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:70;display:inline-flex;align-items:center;gap:8px;background:#ededed;color:#0a0a0a;border:0;border-radius:24px;padding:11px 18px;font:inherit;font-size:13.5px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:sndIn .45s cubic-bezier(.3,1.4,.5,1) both}
@@ -485,6 +441,7 @@ details.dcard[open] summary{margin-bottom:12px}
 
 </style>
 <link rel="stylesheet" href="/eval-fx.css">
+<link rel="stylesheet" href="/chat-fx.css">
 </head>
 <body>
 <div class="shell">
@@ -517,40 +474,37 @@ details.dcard[open] summary{margin-bottom:12px}
 
 <!-- ============ CHAT ============ -->
 <div id="chatScreen" class="hidden">
-  <div class="topbar">
-    <div class="avatar" id="fanAvatar">?</div>
-    <div class="who"><b id="fanName">Fan</b><span id="fanSub"></span></div>
-    <div class="spacer"></div>
-    <div class="stats">
-      <div class="stat"><small>Revenu</small><b id="stRev">0 €</b></div>
-      <div class="stat"><small>Tps réponse moy.</small><b id="stRt">—</b></div>
-      <div class="stat"><small>Messages</small><b id="stMsgs">0</b></div>
+  <div class="cq-main">
+    <div class="cq-hdr">
+      <div class="cq-av" id="fanAvatar">?</div>
+      <div class="cq-who"><b id="fanName">Fan</b><span id="fanSub"></span></div>
+      <div class="cq-sp"></div>
+      <button class="cq-icb" id="hintBtnM" aria-label="Conseil du coach (−3 pts)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button>
+      <button class="cq-icb" id="infoBtn" aria-label="Infos de la session" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16v-4M12 8h.01M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18"/></svg></button>
+      <button class="cq-end" id="endBtn">Terminer & évaluer</button>
     </div>
-    <button class="btn ghost small" id="infoBtn" aria-expanded="false">Infos</button>
-    <button class="btn ghost small" id="endBtn">Terminer & évaluer</button>
-    <div class="imeter" id="imeter"><i id="imeterBar"></i></div>
-  </div>
-  <div class="main">
-    <div class="chat">
-      <div id="msgs"></div>
-      <div class="composer">
-        <button class="btn ghost" id="ppvBtn" title="Envoyer un contenu payant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z"/></svg>PPV</button>
-        <textarea id="input" placeholder="Écrire en tant que la créatrice…  (Entrée pour envoyer, Maj+Entrée pour aller à la ligne)"></textarea>
-        <button class="btn" id="sendBtn">Envoyer</button>
-      </div>
-    </div>
-    <div class="side">
-      <h3>Objectif</h3><div id="goal" style="line-height:1.5;font-size:13px"></div>
-      <h3>Créatrice incarnée</h3><div id="creatorInfo" style="line-height:1.5;font-size:13px;color:var(--muted)"></div>
-      <h3>Prix indicatifs</h3><div id="priceInfo" style="line-height:1.5;font-size:13px;color:var(--muted)"></div>
-      <h3>Intérêt du fan</h3>
-      <div class="meter" id="meterWrap" style="visibility:hidden"><div id="meter" style="width:50%"></div></div>
-      <label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="showMeter" style="width:auto"> Afficher (mode débutant)</label>
-      <h3>Coach</h3>
-      <button class="btn ghost small" id="hintBtn" style="width:100%">💡 Demander un conseil (−3 pts)</button>
-      <div id="hints"></div>
+    <div class="cq-mst"><span data-revtarget>Revenu <b data-rev>0 €</b></span><span data-meter>Intérêt <b data-inum>—</b><i class="cq-ib" data-ib><i></i></i></span><span>Réponse <b data-rt>—</b></span><span>Msgs <b data-cnt>0</b></span></div>
+    <div class="cq-hintsM" id="hintsM"></div>
+    <div id="msgs"></div>
+    <div class="cq-clock idle" id="clock" data-l="0"><span class="ring"><svg viewBox="0 0 26 26"><circle cx="13" cy="13" r="10" fill="none" stroke="#222" stroke-width="3"/><circle class="pr" cx="13" cy="13" r="10" fill="none" stroke-width="3" stroke-linecap="round"/></svg></span><span class="lbl">Le fan écrit…</span><b>—</b><span class="cq-st">RAPIDE</span></div>
+    <div class="cq-demo hidden" id="demoBar"><span>Tester les effets de vente (manager, non compté) :</span><button data-demo="10">10 €</button><button data-demo="25">25 €</button><button data-demo="40">40 €</button><button data-demo="80">80 €</button></div>
+    <div class="composer">
+      <button class="cq-pbtn" id="ppvBtn" title="Envoyer un contenu payant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z"/></svg><span>PPV</span></button>
+      <textarea id="input" rows="1" placeholder="Écrire en tant que la créatrice…  (Entrée pour envoyer, Maj+Entrée pour aller à la ligne)"></textarea>
+      <button class="cq-send" id="sendBtn" aria-label="Envoyer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
     </div>
   </div>
+  <aside class="cq-dash side">
+    <div class="cq-tile cq-rev" data-revtarget><div class="cq-lab">REVENU DE LA SESSION</div><div class="cq-big" id="stRev" data-rev>0 €</div><div class="cq-demoNote" id="demoNote"></div></div>
+    <div class="cq-tile"><div class="cq-lab">INTÉRÊT DU FAN <span class="cq-tgw"><span data-meter data-ilab class="cq-ilab">—</span><button class="cq-tg on" id="showMeter" role="switch" aria-checked="true" aria-label="Afficher l'intérêt du fan (mode débutant)"></button></span></div>
+      <div data-meter><div class="cq-big"><span data-inum>—</span><small>/100</small></div>
+      <svg class="cq-spark" id="spark" viewBox="0 0 290 64" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="cqspg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".1"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><path class="a" fill="url(#cqspg)"/><path class="l"/><circle class="pt" r="4" stroke="#111" stroke-width="2"/></svg></div>
+      <p class="cq-off" data-meteroff>Mode expert : l'intérêt est caché, lis les signaux du fan.</p></div>
+    <div class="cq-g2"><div class="cq-tile"><div class="cq-lab">RÉPONSE MOY.</div><div class="cq-big sm" id="stRt" data-rt>—</div></div><div class="cq-tile"><div class="cq-lab">MESSAGES</div><div class="cq-big sm" id="stMsgs" data-cnt>0</div></div></div>
+    <div class="cq-tile"><div class="cq-lab">TA MISSION</div><p class="cq-goal" id="goal"></p><div class="cq-steps"><div class="cq-stp" data-step><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i>Créer le lien</div><div class="cq-stp" data-step><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i>Créer l'envie</div><div class="cq-stp" data-step><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i>Proposer un contenu</div><div class="cq-stp" data-step><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i>Conclure la vente</div></div></div>
+    <div class="cq-tile"><div class="cq-lab">CRÉATRICE INCARNÉE</div><div class="cq-crea" id="creatorInfo"></div><div class="cq-tags" id="priceInfo"></div></div>
+    <div class="cq-tile"><div class="cq-lab">COACH <span>−3 pts / conseil</span></div><div class="cq-coach"><button id="hintBtn">💡 Conseil</button><button id="ppvBtn2">🔒 Envoyer un PPV</button></div><div id="hints"></div></div>
+  </aside>
 </div>
 
 <!-- ============ RAPPORT ============ -->
@@ -560,19 +514,18 @@ details.dcard[open] summary{margin-bottom:12px}
 </div>
 
 <!-- PPV -->
-<div class="modal hidden" id="ppvModal">
+<div class="modal hidden cq-sheet" id="ppvModal">
   <div class="card">
-    <h2>Envoyer un PPV</h2>
-    <label>Description du contenu (ce que voit le fan dans l'aperçu)</label>
+    <div class="cq-shd"><b>Envoyer un <em>PPV</em></b><button class="cq-x" id="ppvCancel" aria-label="Fermer">✕</button></div>
+    <div class="cq-lab">CE QUE TU ENVOIES</div>
     <textarea id="ppvDesc" rows="3" placeholder="ex. 3 photos en tenue de sport après ma séance, jamais postées"></textarea>
-    <label>Prix (€)</label>
-    <input id="ppvPrice" type="number" min="1" max="1000" value="15">
-    <label>Message d'accompagnement (optionnel)</label>
+    <div class="cq-lab">PRIX</div>
+    <div class="cq-chips" id="ppvChips"><button type="button" data-p="10">10 €</button><button type="button" data-p="15" class="on">15 €</button><button type="button" data-p="25">25 €</button><button type="button" data-p="40">40 €</button><button type="button" data-p="60">60 €</button></div>
+    <input id="ppvPrice" type="number" min="1" max="1000" value="15" aria-label="Prix en euros">
+    <div class="cq-tip" id="ppvTip"></div>
+    <div class="cq-lab">MESSAGE (FACULTATIF)</div>
     <input id="ppvMsg" placeholder="ex. je les ai prises rien que pour toi 🙈">
-    <div class="row" style="margin-top:16px;justify-content:flex-end">
-      <button class="btn ghost small" id="ppvCancel">Annuler</button>
-      <button class="btn small" id="ppvSend">Envoyer le PPV</button>
-    </div>
+    <button class="cq-go" id="ppvSend">Envoyer le PPV</button>
   </div>
 </div>
 
@@ -582,12 +535,13 @@ details.dcard[open] summary{margin-bottom:12px}
 <script src="/common.js"></script>
 <script src="/simu-fx.js"></script>
 <script src="/eval-fx.js"></script>
+<script src="/chat-fx.js"></script>
 <script>
 let PERSONAS = [], MODELS = [], selPersona = null, SIM = null, busy = false, chatterCount = 0;
 
 /* ---------- Accueil ---------- */
 async function init() {
-  const me = await api("/api/me");
+  const me = await api("/api/me"); window.IS_ADMIN = me.role === "admin";
   renderShell("simu", me);
   $("quota").textContent = me.role === "admin" ? "Compte manager : pas de limite quotidienne" :
     `Simulations aujourd'hui : ${me.usedToday} / ${me.dailyLimit}`;
@@ -682,18 +636,23 @@ async function startSim(fromReport) {
 }
 
 /* ---------- Chat ---------- */
+// état de la conversation (chrono, courbe d'intérêt, mission, démo manager)
+const CQ = { hist: [], wait0: 0, waiting: false, ppvSent: false, bought: false, demo: 0, revHold: false };
 function openChat(sim) {
   SIM = sim; chatterCount = 0;
+  Object.assign(CQ, { hist: [sim.interest], wait0: 0, waiting: false, ppvSent: false, bought: false, demo: 0, revHold: false });
   $("homeScreen").classList.add("hidden"); $("chatScreen").classList.remove("hidden");
-  $("msgs").innerHTML = ""; $("hints").innerHTML = "";
-  $("fanName").textContent = sim.persona.name; $("fanAvatar").textContent = sim.persona.name[0];
-  $("fanAvatar").style.background = fanColor(sim.persona.id); $("fanAvatar").classList.remove("off");
+  $("msgs").innerHTML = ""; $("hints").innerHTML = ""; $("hintsM").innerHTML = ""; $("demoNote").textContent = "";
+  $("fanName").textContent = sim.persona.name; $("fanAvatar").textContent = sim.persona.name[0]; $("fanAvatar").classList.remove("off");
   $("fanSub").textContent = "en ligne · " + sim.persona.label; $("fanSub").className = "";
   shownRev = sim.revenue || 0;
   $("goal").textContent = sim.persona.goal;
-  $("creatorInfo").innerHTML = `<b style="color:var(--text)">${esc(sim.creator_name)}</b><br>${esc(sim.creator_style)}`;
-  $("priceInfo").textContent = sim.prices;
-  sys(`Session démarrée — vous écrivez en tant que ${sim.creator_name}`);
+  $("creatorInfo").innerHTML = `<b>${esc(sim.creator_name)}</b> · ${esc(sim.creator_style)}`;
+  $("priceInfo").innerHTML = String(sim.prices || "").split(/\s*[·|]\s*|\n+/).filter(Boolean).map(t => `<span>${esc(t)}</span>`).join("");
+  $("ppvTip").textContent = sim.prices ? "Prix indicatifs de " + sim.creator_name + " : " + sim.prices : "";
+  $("demoBar").classList.toggle("hidden", !window.IS_ADMIN);
+  $("infoBtn").setAttribute("aria-expanded", "false"); document.querySelector(".cq-dash").classList.remove("open");
+  sys(`Session démarrée — tu écris en tant que ${sim.creator_name}`);
   fitChat();
   updateStats();
 }
@@ -745,46 +704,85 @@ function setPPV(id, status) {
   el.textContent = t; card.classList.remove("bought", "refused", "nego", "replaced"); if (c) card.classList.add(c);
 }
 function typing(on) {
+  if (on) CQ.waiting = false;
   if (SIM && !SIM.left) { $("fanSub").textContent = on ? "en train d'écrire…" : "en ligne · " + SIM.persona.label; $("fanSub").className = on ? "typingtxt" : ""; }
   let t = $("typingEl");
   if (on && !t) { t = document.createElement("div"); t.id = "typingEl"; t.className = "typing"; t.innerHTML = "<i></i><i></i><i></i>"; $("msgs").appendChild(t); scrollDown(); }
   if (!on && t) t.remove();
 }
 let shownRev = 0, revRaf = null;
+const revShown = () => (SIM ? SIM.revenue : 0) + CQ.demo;
 function animateRev(to) {
   const from = shownRev, t0 = performance.now(); shownRev = to; cancelAnimationFrame(revRaf);
-  const el = $("stRev"); el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump");
-  const step = now => { const x = Math.min(1, (now - t0) / 900); el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - x, 3))) + " €"; if (x < 1) revRaf = requestAnimationFrame(step); };
+  const step = now => { const x = Math.min(1, (now - t0) / 900), v = Math.round(from + (to - from) * (1 - Math.pow(1 - x, 3)));
+    document.querySelectorAll("#chatScreen [data-rev]").forEach(e => e.textContent = v + " €"); if (x < 1) revRaf = requestAnimationFrame(step); };
   revRaf = requestAnimationFrame(step);
 }
+const iCol = v => v >= 75 ? "#5fd3a2" : v >= 45 ? "#ededed" : "#e07a7a", iLab = v => v >= 75 ? "Très intéressé" : v >= 45 ? "Intéressé" : "Distant";
 function updateStats() {
-  if (SIM.revenue !== shownRev) animateRev(SIM.revenue); else $("stRev").textContent = SIM.revenue + " €";
-  $("stMsgs").textContent = chatterCount;
-  $("stRt").textContent = SIM.avgRt !== null && SIM.avgRt !== undefined ? SIM.avgRt + " s" : "—";
-  $("meter").style.width = SIM.interest + "%";
-  $("meter").style.background = scoreColor(SIM.interest >= 60 ? 70 : SIM.interest >= 30 ? 50 : 0);
-  $("meterWrap").style.visibility = $("showMeter").checked ? "visible" : "hidden";
-  const c = SIM.interest >= 75 ? "#3ccf91" : SIM.interest >= 45 ? "#d9d9d9" : "#c99a62";
-  $("imeter").classList.toggle("show", $("showMeter").checked);
-  $("imeterBar").style.width = SIM.interest + "%"; $("imeterBar").style.background = c; $("imeterBar").style.color = c;
+  if (!CQ.revHold) { const r = revShown(); if (r !== shownRev) animateRev(r); else document.querySelectorAll("#chatScreen [data-rev]").forEach(e => e.textContent = r + " €"); }
+  const Q = s => document.querySelectorAll("#chatScreen " + s);
+  Q("[data-cnt]").forEach(e => e.textContent = chatterCount);
+  Q("[data-rt]").forEach(e => e.textContent = SIM.avgRt !== null && SIM.avgRt !== undefined ? SIM.avgRt + " s" : "—");
+  const v = Math.round(SIM.interest), c = iCol(v);
+  if (CQ.hist[CQ.hist.length - 1] !== v) CQ.hist.push(v);
+  Q("[data-inum]").forEach(e => { e.textContent = v; e.style.color = c; });
+  Q("[data-ilab]").forEach(e => { e.textContent = iLab(v); e.style.color = c; });
+  Q("[data-ib] > i").forEach(e => { e.style.width = v + "%"; e.style.background = c; });
+  const sp = $("spark"), h0 = CQ.hist.slice(-12), hs = h0.length === 1 ? [h0[0], h0[0]] : h0, n = hs.length, Wd = 290, Hh = 64, X = i => i / (n - 1) * Wd, Y = x => Hh - x / 100 * Hh;
+  const d = hs.map((x, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(x).toFixed(1)}`).join(" ");
+  sp.querySelector(".l").setAttribute("d", d); sp.querySelector(".l").style.stroke = c;
+  sp.querySelector(".a").setAttribute("d", d + ` L${Wd} ${Hh} L0 ${Hh} Z`);
+  const pt = sp.querySelector(".pt"); pt.setAttribute("cx", Wd); pt.setAttribute("cy", Y(hs[n - 1]).toFixed(1)); pt.style.fill = c;
+  // mission : chaque étape se coche toute seule
+  const done = [chatterCount >= 1, chatterCount >= 4 || v >= 70 || CQ.ppvSent, CQ.ppvSent, CQ.bought];
+  for (let i = 2; i >= 0; i--) done[i] = done[i] || done[i + 1];   // une étape franchie valide les précédentes
+  const cur = done.indexOf(false);
+  document.querySelectorAll("#chatScreen [data-step]").forEach((e, i) => { e.classList.toggle("done", done[i]); e.classList.toggle("cur", i === cur); });
 }
-$("showMeter").onchange = () => SIM && updateStats();
-$("infoBtn").onclick = () => { const o = document.querySelector(".side").classList.toggle("open"); $("infoBtn").setAttribute("aria-expanded", o); $("infoBtn").textContent = o ? "Fermer" : "Infos"; };
+// mode débutant : affiche ou cache l'intérêt du fan (mémorisé)
+function setMeter(on) { $("showMeter").classList.toggle("on", on); $("showMeter").setAttribute("aria-checked", on); $("chatScreen").classList.toggle("nometer", !on); try { localStorage.setItem("stMeter", on ? "1" : "0"); } catch (e) {} }
+setMeter((() => { try { return localStorage.getItem("stMeter") !== "0"; } catch (e) { return true; } })());
+$("showMeter").onclick = () => setMeter(!$("showMeter").classList.contains("on"));
+$("infoBtn").onclick = () => { const o = document.querySelector(".cq-dash").classList.toggle("open"); $("infoBtn").setAttribute("aria-expanded", o); };
+document.addEventListener("pointerdown", e => { const d = document.querySelector(".cq-dash"); if (d.classList.contains("open") && !d.contains(e.target) && !$("infoBtn").contains(e.target)) { d.classList.remove("open"); $("infoBtn").setAttribute("aria-expanded", "false"); } });
 if (window.innerWidth < 700) { $("input").placeholder = "Écrire en tant que la créatrice…"; $("endBtn").textContent = "Évaluer"; }
-function setBusy(b) { busy = b; ["sendBtn", "ppvBtn", "hintBtn"].forEach(id => $(id).disabled = b || SIM?.left); }
+function setBusy(b) { busy = b; ["sendBtn", "ppvBtn", "ppvBtn2", "hintBtn", "hintBtnM"].forEach(id => $(id).disabled = b || SIM?.left); }
+// chrono : temps écoulé depuis la dernière réponse du fan
+(function clockLoop() {
+  const ck = $("clock");
+  if (SIM && !$("chatScreen").classList.contains("hidden")) {
+    const s = CQ.waiting ? (performance.now() - CQ.wait0) / 1000 : 0, l = s < 20 ? 0 : s < 45 ? 1 : 2, C = 2 * Math.PI * 10;
+    ck.dataset.l = l; ck.classList.toggle("idle", !CQ.waiting);
+    ck.querySelector("b").textContent = CQ.waiting ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : "—";
+    ck.querySelector(".lbl").textContent = SIM.left ? "Le fan est parti" : CQ.waiting ? "Il attend ta réponse" : busy ? "Le fan écrit…" : "À toi d'ouvrir la conversation";
+    ck.querySelector(".cq-st").textContent = ["RAPIDE", "CORRECT", "LENT"][l];
+    const pr = ck.querySelector(".pr"); pr.style.strokeDasharray = C; pr.style.strokeDashoffset = C * (1 - Math.min(1, s / 60)); pr.style.stroke = ["#5fd3a2", "#ededed", "#e07a7a"][l];
+  }
+  requestAnimationFrame(clockLoop);
+})();
+// célébration d'une vente (vraie ou démo)
+function celebrate(card, price) {
+  CQ.revHold = true;
+  CHATFX.sale($("chatScreen"), card, price, () => { CQ.revHold = false; animateRev(revShown()); });
+}
 
 async function showTurn(turn) {
   for (let i = 0; i < turn.replies.length; i++) {
     typing(true); await sleep(turn.replies[i].delay); typing(false);
     bubble("fan", turn.replies[i].text);
   }
+  let sold = null;
   if (turn.ppv) {
     setPPV(turn.ppv.id, turn.ppv.status);
-    if (turn.ppv.status === "acheté") { FX.sound.sale(); toast(`PPV acheté · +${turn.ppv.price} €`); try { navigator.vibrate && navigator.vibrate(40); } catch (e) {} }
+    if (turn.ppv.status === "acheté") { CQ.bought = true; const card = $("ppv" + (ppvAlias[turn.ppv.id] || turn.ppv.id)); if (card) { sold = [card, turn.ppv.price]; CQ.revHold = true; }
+      if (CHATFX.tierOf(turn.ppv.price) <= 2) toast(`PPV acheté · +${turn.ppv.price} €`); }
   }
   SIM.revenue = turn.revenue; SIM.interest = turn.interest;
+  if (sold) celebrate(sold[0], sold[1]);
   if (turn.left) { SIM.left = true; $("fanAvatar").classList.add("off"); $("fanSub").textContent = "hors ligne"; $("fanSub").className = ""; sys("Le fan a quitté la conversation. Cliquez sur « Terminer & évaluer »."); }
   updateStats();
+  if (!SIM.left) { CQ.wait0 = performance.now(); CQ.waiting = true; }
 }
 // Tps de réponse : recalculé côté serveur, on l'affiche après chaque tour
 async function refreshRt() { try { const s = await api("/api/sims/" + SIM.id); SIM.avgRt = s.avgRt; updateStats(); } catch (e) {} }
@@ -808,12 +806,17 @@ async function act(path, body, before) {
 function send() {
   const text = $("input").value.trim(); if (!text || busy) return;
   FX.unlock();
+  CQ.waiting = false;
   act("message", { text }, () => { $("input").value = ""; bubble("me", text); chatterCount++; updateStats(); });
 }
 $("sendBtn").onclick = send;
 $("input").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
 
-$("ppvBtn").onclick = () => { if (!busy && !SIM.left) { $("ppvModal").classList.remove("hidden"); $("ppvDesc").focus(); } };
+const openPPV = () => { if (!busy && !SIM.left) { $("ppvModal").classList.remove("hidden"); document.querySelector(".cq-dash").classList.remove("open"); setTimeout(() => $("ppvDesc").focus(), 50); } };
+$("ppvBtn").onclick = openPPV; $("ppvBtn2").onclick = openPPV;
+$("ppvModal").addEventListener("click", e => { if (e.target === $("ppvModal")) $("ppvModal").classList.add("hidden"); });
+document.querySelectorAll("#ppvChips button").forEach(b => b.onclick = () => { $("ppvPrice").value = b.dataset.p; document.querySelectorAll("#ppvChips button").forEach(x => x.classList.toggle("on", x === b)); });
+$("ppvPrice").oninput = () => document.querySelectorAll("#ppvChips button").forEach(x => x.classList.toggle("on", x.dataset.p === $("ppvPrice").value));
 $("ppvCancel").onclick = () => $("ppvModal").classList.add("hidden");
 let lastPPV = null;
 $("ppvSend").onclick = () => {
@@ -821,7 +824,8 @@ $("ppvSend").onclick = () => {
   if (!desc || !price || price < 1) return;
   $("ppvModal").classList.add("hidden");
   const tmpId = "tmp" + Date.now();
-  act("ppv", { desc, price, msg }, () => {
+  CQ.waiting = false;
+  act("ppv", { desc, price, msg }, () => { CQ.ppvSent = true;
     $("ppvDesc").value = ""; $("ppvMsg").value = "";
     if (lastPPV) setPPV(lastPPV, "remplacé");
     if (msg) { bubble("me", msg); chatterCount++; }
@@ -829,13 +833,28 @@ $("ppvSend").onclick = () => {
   });
 };
 
-$("hintBtn").onclick = async () => {
+async function askHint() {
   if (busy) return; setBusy(true);
-  const box = document.createElement("div"); box.className = "hint"; box.textContent = "Le coach réfléchit…"; $("hints").prepend(box);
-  try { const r = await api(`/api/sims/${SIM.id}/hint`, { body: {} }); box.textContent = "💡 " + r.text; SIM.hints = r.hints; }
-  catch (e) { box.textContent = e.message; }
+  const box = document.createElement("div"); box.className = "hint"; box.innerHTML = `<b class="hh">CONSEIL DU COACH <span>−3 pts</span></b><div>Le coach réfléchit…</div>`;
+  (innerWidth <= 860 ? $("hintsM") : $("hints")).prepend(box);
+  const el = box.lastElementChild;
+  try { const r = await api(`/api/sims/${SIM.id}/hint`, { body: {} }); SIM.hints = r.hints; el.textContent = "";
+    for (let i = 0; i <= r.text.length; i += 2) { el.textContent = r.text.slice(0, i); await sleep(12); } el.textContent = r.text; }
+  catch (e) { el.textContent = e.message; }
   setBusy(false);
-};
+}
+$("hintBtn").onclick = askHint; $("hintBtnM").onclick = askHint;
+// manager : tester les effets de vente sans discuter (rien n'est envoyé au serveur ni compté)
+const DEMO_TXT = { 10: "2 photos en tenue de sport 🙈", 25: "Vidéo de ma séance de ce matin", 40: "Vidéo longue, jamais postée", 80: "Pack exclusif : 3 vidéos rien que pour toi" };
+document.querySelectorAll("#demoBar [data-demo]").forEach(b => b.onclick = async () => {
+  if (!window.IS_ADMIN || !SIM) return; FX.unlock();
+  const price = +b.dataset.demo, id = "demo" + Date.now();
+  ppvCard(id, DEMO_TXT[price] || "Contenu exclusif", price); const card = $("ppv" + id); card.classList.add("demo");
+  await sleep(900); setPPV(id, "acheté"); CQ.demo += price;
+  $("demoNote").textContent = `dont ${CQ.demo} € de démo (non compté)`;
+  if (CHATFX.tierOf(price) <= 2) toast(`Démo · PPV acheté · +${price} €`);
+  celebrate(card, price);
+});
 
 $("endBtn").onclick = async () => {
   if (busy) return;
