@@ -44,6 +44,8 @@ const MODULES = [
     desc: "Créneaux de la semaine et pointage des shifts." },
   { id: "ventes", label: "Ventes", href: "/ventes", icon: "receipt", section: "Organisation", roles: ["admin", "chatter"],
     desc: "Déclarez vos ventes avec la capture d'écran. Le manager les valide." },
+  { id: "paie", label: "Ma paie", href: "/paie", icon: "euro", section: "Organisation", roles: ["chatter"],
+    desc: "Ta paie de la quinzaine : commission, paliers, primes et historique." },
   { id: "compta", label: "Compta", href: "/compta", icon: "euro", section: "Manager", roles: ["admin"],
     desc: "Revenus par période de 15 jours, part des créatrices, commissions des chatters." },
   { id: "admin", label: "Gestion", href: "/admin", icon: "team", section: "Manager", roles: ["admin"],

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ma paie — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StellADS">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/compta-ui.css">
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area">
+<div class="wrap cv">
+  <div class="c-hdr">
+    <div><div class="eyebrow">Organisation</div><h1 class="c-ttl">Ma <em>paie.</em></h1></div>
+    <div class="c-pnav"><button id="prevP" aria-label="Quinzaine précédente">‹</button><b id="pLab">…</b><button id="nextP" aria-label="Quinzaine suivante">›</button></div>
+  </div>
+  <div class="c-pg">
+    <div class="c-pcol">
+      <div class="c-card c-phero" id="hero"></div>
+      <div class="c-card" style="--d:.1s"><div class="c-ch"><h3>Primes et <em>retenues</em></h3></div><div id="adj"></div></div>
+    </div>
+    <div class="c-pcol">
+      <div class="c-card" style="--d:.06s"><div class="c-ch"><h3>Ta <em>quinzaine</em></h3></div><div class="c-kv" id="kv"></div></div>
+      <div class="c-card" style="--d:.14s"><div class="c-ch"><h3>Mes <em>paies</em></h3><span class="c-mut">Les dernières quinzaines</span></div><div class="c-hist" id="hist"></div></div>
+    </div>
+  </div>
+</div>
+</main>
+</div>
+<script src="/common.js"></script>
+<script>
+const E = n => n == null || isNaN(n) ? "—" : (Math.round(n * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: Math.abs(n % 1) > .004 ? 2 : 0, maximumFractionDigits: 2 }) + " €";
+const dShort = ms => new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function countTo(el, to, dur = 1300) { const t0 = performance.now(); if (REDUCED) { el.textContent = E(to); return; }
+  const st = t => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = E(k < 1 ? to * e : to); if (k < 1) requestAnimationFrame(st); }; requestAnimationFrame(st); }
+let D = null, P = null;
+async function load(p) {
+  D = await api("/api/my-pay" + (p || P ? `?period=${p || P}` : "")); P = D.period.key;
+  const me = D.me, units = D.base === "brut" ? "brutes" : "nettes";
+  $("pLab").textContent = D.period.label;
+  const today = new Date(), payDay = (() => { const [y, m, h] = P.split("-").map((x, i) => i < 2 ? +x : x); return h === "A" ? new Date(y, m - 1, 16) : new Date(y, m, 1); })();
+  const status = me.paid ? `<span class="c-tag v"><i></i>Payée le ${dShort(me.paid.at)}</span>` : D.locked ? `<span class="c-tag w"><i></i>Validée · paiement à venir</span>` : today < payDay ? `<span class="c-tag w"><i></i>Quinzaine en cours</span>` : `<span class="c-tag w"><i></i>À payer</span>`;
+  // paliers
+  const L = D.tiers, max = Math.max(me.sales * 1.15, (L.find(t => t.from > me.sales) || L[L.length - 1]).from * 1.05, 1000);
+  const marks = L.filter(t => t.from > 0 && t.from <= max).map((t, i, a) => `<span class="mk${me.sales >= t.from ? " on" : ""}${t.from / max > .85 ? " last" : ""}" style="left:${t.from / max * 100}%"><span>${t.prime ? "+" + t.prime + " €" : t.rate + " %"}</span></span>`).join("");
+  const nx = me.next, nxTxt = !nx ? `Palier maximum atteint : <b>${me.rate} %</b>${me.prime ? ` + <b>${me.prime} €</b> de prime` : ""}.`
+    : `Plus que <b>${E(Math.ceil(nx.gap))}</b> de ventes ${units} pour ${nx.prime && nx.rate === me.rate ? `débloquer la prime de <b>${nx.prime} €</b>` : `passer à <b>${nx.rate} %</b>`}`;
+  const shades = ["#2a2a2a", "#3a3a3a", "#4d4d4d", "#6a6a6a"];
+  const parts = D.bands.filter(b => b.amount > 0).map((b, i) => [b.amount, `${b.rate} %`, shades[Math.min(3, D.bands.indexOf(b))], "#fff"]);
+  if (me.prime) parts.push([me.prime, "", "#3a8f6c", "#06130d"]);
+  const pos = me.adjustments.filter(a => a.amount > 0).reduce((t, a) => t + a.amount, 0); if (pos) parts.push([pos, "", "#5fd3a2", "#06130d"]);
+  $("hero").innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="c-lab">Ta paie · ${esc(D.period.label)}</div>${status}</div>
+    <div class="c-pbig" id="big">0 €</div>
+    <div class="c-mut" style="margin-top:6px">Commission sur <b style="color:#fff">${E(me.sales)}</b> de ventes ${units} validées${me.prime || me.adjTotal ? ", primes et ajustements compris" : ""}</div>
+    <div class="c-ptk"><span class="f" id="tf"></span>${marks}</div>
+    <div class="c-nx">${nxTxt}</div>
+    ${parts.length ? `<div class="c-lab" style="margin-top:22px">D'où vient ta paie</div><div class="c-stk">${parts.map((p, i) => `<span style="flex:${p[0]};background:${p[2]};color:${p[3]};--dl:${.3 + i * .1}s" title="${E(p[0])}">${p[1]}</span>`).join("")}</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:#8a8a8a;font-weight:700"><span>Commission par tranche <b style="color:#fff">${E(me.commission)}</b></span>${me.prime ? `<span>Prime de palier <b style="color:#5fd3a2">+${E(me.prime)}</b></span>` : ""}${me.adjTotal ? `<span>Primes et retenues <b style="color:${me.adjTotal > 0 ? "#5fd3a2" : "#e07a7a"}">${me.adjTotal > 0 ? "+" : ""}${E(me.adjTotal)}</b></span>` : ""}</div>` : ""}`;
+  countTo($("big"), me.pay);
+  requestAnimationFrame(() => requestAnimationFrame(() => $("tf").style.width = Math.min(100, me.sales / max * 100) + "%"));
+  $("kv").innerHTML = `<div><small>Ventes validées</small><b>${me.salesCount || 0}</b></div><div><small>En attente</small><b>${D.pending.n}${D.pending.n ? " · " + E(D.pending.total) : ""}</b></div>
+    <div><small>Heures pointées</small><b>${hrs(me.hours || 0)}</b>${me.renfortHours ? `<small style="margin-top:2px">+ ${hrs(me.renfortHours)} en renfort</small>` : ""}</div><div><small>Palier</small><b style="color:${me.rate >= 15 ? "#5fd3a2" : "#fff"}">${me.rate} %</b></div>`;
+  $("adj").innerHTML = !me.prime && !me.adjustments.length ? `<div class="c-empty">Aucune prime ni retenue sur cette quinzaine.</div>` : `<div class="c-lines" style="margin-top:0;border-top:0">
+    ${me.prime ? `<div class="c-ln adj"><span>Prime de palier<small>Palier de ventes atteint</small></span><b>+${E(me.prime)}</b></div>` : ""}
+    ${me.adjustments.map(a => `<div class="c-ln adj ${a.amount < 0 ? "n" : ""}"><span>${a.amount > 0 ? "Prime du manager" : "Retenue"}<small>${a.reason ? "« " + esc(a.reason) + " »" : "Sans motif"}</small></span><b>${a.amount > 0 ? "+" : ""}${E(a.amount)}</b></div>`).join("")}</div>`;
+  $("hist").innerHTML = !D.history.length ? `<div class="c-empty">Pas encore d'historique.</div>` : D.history.map((h, i) => `<div class="c-hp" data-p="${h.key}" style="animation-delay:${.15 + i * .05}s"><div><b>${esc(h.label)}</b><small>Fiche de paie</small></div>
+    <div class="r"><b>${E(h.pay)}</b><small>${h.paid ? `<span class="c-tag v"><i></i>Payée le ${dShort(h.paid.at)}</span>` : '<span class="c-tag w"><i></i>À payer</span>'}</small></div></div>`).join("");
+  document.querySelectorAll("[data-p]").forEach(d => d.onclick = () => { load(d.dataset.p); scrollTo({ top: 0, behavior: "smooth" }); });
+}
+$("prevP").onclick = () => { const [y, m, h] = P.split("-"); load(h === "B" ? `${y}-${m}-A` : (+m === 1 ? `${+y - 1}-12-B` : `${y}-${String(+m - 1).padStart(2, "0")}-B`)); };
+$("nextP").onclick = () => { const [y, m, h] = P.split("-"); load(h === "A" ? `${y}-${m}-B` : (+m === 12 ? `${+y + 1}-01-A` : `${y}-${String(+m + 1).padStart(2, "0")}-A`)); };
+(async () => {
+  const me = await api("/api/me");
+  if (me.role === "admin") { location.href = "/compta"; return; }
+  renderShell("paie", me);
+  await load();
+})();
+</script>
+</body>
+</html>

@@ -11,286 +11,94 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="StellADS">
-
 <link rel="stylesheet" href="/style.css">
-<style>
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px}
-.kpis .card b{font-size:22px}
-.kpis .card.main{border-color:#3a3a3a}
-.money{width:120px;text-align:right;padding:7px 9px}
-.pct{width:72px;text-align:right;padding:7px 9px}
-td.num,th.num{text-align:right;white-space:nowrap}
-tr.total td{font-weight:700;border-top:1px solid #3a3a3a}
-.warn{color:var(--warn);font-size:12px}
-.saved{outline:1px solid var(--good)!important}
-.weeknav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.weeknav b{min-width:170px;text-align:center}
-.hint{font-size:12px;color:var(--muted);margin:8px 0 0;line-height:1.5}
-/* ===== Graphiques ===== */
-.charts{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:20px;margin-bottom:20px}
-@media(max-width:900px){.charts{grid-template-columns:1fr}}
-.charts .card{position:relative}
-.charts h2{margin-bottom:2px}
-.csub{font-size:12px;color:var(--muted);margin-bottom:12px}
-.lgd2{position:absolute;right:20px;top:20px;display:flex;gap:14px;font-size:12px;color:#9a9a9a}
-.lgd2 i{display:inline-block;width:14px;height:2px;border-radius:2px;vertical-align:middle;margin-right:6px}
-@media(max-width:600px){.lgd2{position:static;margin:0 0 8px}}
-.chart{position:relative;height:260px;margin-left:44px}
-@media(max-width:600px){.chart{height:180px}}
-.chart svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.chart .yl{position:absolute;left:-44px;width:38px;text-align:right;font-size:10px;color:#666;transform:translateY(-50%)}
-.chart .gl{position:absolute;left:0;right:0;height:1px;background:#1d1d1d}
-.chart .pt{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:#0a0a0a;border:2px solid #ededed;box-sizing:border-box;z-index:2}
-.chart .pt.cur{width:11px;height:11px;margin:-5.5px 0 0 -5.5px;background:#ededed}
-.chart .hit{position:absolute;top:0;bottom:0;z-index:3;cursor:default}
-.chart .tip{position:absolute;z-index:4;transform:translate(-50%,-100%);margin-top:-14px;background:#1b1b1b;border:1px solid #2e2e2e;border-radius:10px;padding:7px 10px;font-size:12px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s}
-.chart .tip b{display:block;font-size:14px}
-.chart .tip small{color:#8f8f8f}
-.xl{display:flex;justify-content:space-between;margin:10px 0 0 44px;font-size:10px;color:#777}
-.xl span{flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.xl span:first-child{text-align:left}.xl span:last-child{text-align:right}
-@media(max-width:600px){.xl span:nth-child(even){visibility:hidden}}
-.anim .ln{stroke-dasharray:3000;stroke-dashoffset:3000;animation:lnDraw 1.6s cubic-bezier(.4,0,.2,1) .15s forwards}
-.anim .ln2{stroke-dasharray:3000;stroke-dashoffset:3000;animation:lnDraw 1.6s cubic-bezier(.4,0,.2,1) .4s forwards}
-@keyframes lnDraw{to{stroke-dashoffset:0}}
-.anim .ar{opacity:0;animation:arIn 1s ease 1.1s forwards}
-@keyframes arIn{to{opacity:1}}
-.anim .pt{opacity:0;animation:ptIn .4s cubic-bezier(.3,1.8,.5,1) forwards}
-@keyframes ptIn{from{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}
-.donut{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-.donut .ring{position:relative;width:170px;height:170px;flex-shrink:0;margin:0 auto}
-.donut .ring svg{transform:rotate(-90deg)}
-.donut .ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.donut .ctr small{font-size:11px;color:#8f8f8f}.donut .ctr b{font-family:Outfit,Inter,sans-serif;font-size:21px;font-weight:400}
-.donut .lg{flex:1;min-width:190px}
-.lgr{display:grid;grid-template-columns:10px 1fr auto 42px;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #1c1c1c;font-size:13px}
-.lgr:last-child{border:0}
-.lgr i{width:10px;height:10px;border-radius:3px}
-.lgr small{color:#8f8f8f;text-align:right}
-.anim .seg{animation:segIn .9s cubic-bezier(.4,0,.2,1) both}
-@keyframes segIn{from{stroke-dasharray:0 1000}}
-.anim .lgr{animation:fadeUp .5s ease both}
-.cempty{color:var(--muted);font-size:13px;padding:30px 0;text-align:center}
-</style>
+<link rel="stylesheet" href="/compta-ui.css">
 </head>
 <body>
 <div class="shell">
 <aside class="sidebar" id="sidebar"></aside>
 <main class="main-area">
-<div class="wrap">
-  <div class="pagehead"><div><div class="eyebrow">Manager</div><h1>Compta</h1></div><div class="spacer"></div>
-    <div class="weeknav">
-      <button class="btn ghost small" id="prevP" aria-label="Période précédente">←</button>
-      <b id="pLabel"></b>
-      <button class="btn ghost small" id="nextP" aria-label="Période suivante">→</button>
-      <button class="btn small" id="exportBtn">Exporter pour Excel</button>
+<div class="wrap cv" id="root">
+  <div class="c-hdr">
+    <div><div class="eyebrow">Manager</div><h1 class="c-ttl">La <em>compta.</em></h1></div>
+    <div class="c-hr">
+      <div class="c-seg" role="tablist"><button class="on" data-pm="q">Quinzaine</button><button data-pm="m">Mois</button></div>
+      <div class="c-pnav"><button id="prevP" aria-label="Précédent">‹</button><b><span id="pLab">…</span><span class="c-tag v c-lockchip" id="lockChip"><i></i>Clôturée</span></b><button id="nextP" aria-label="Suivant">›</button></div>
+      <button class="c-gbtn" id="exportBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Exporter</button>
     </div>
   </div>
 
-  <div class="kpis" id="kpis"></div>
-  <div id="alerts"></div>
-
-  <div class="charts">
-    <div class="card" id="lineCard"><h2>Évolution du chiffre d'affaires</h2><div class="csub">7 dernières périodes de 15 jours</div>
-      <div class="lgd2"><span><i style="background:#ededed"></i>CA brut</span><span><i style="background:#8a8a8a"></i>CA net</span></div>
-      <div id="lineChart"><div class="sk" style="height:260px"></div></div></div>
-    <div class="card" id="donutCard"><h2>Répartition du CA net</h2><div class="csub" id="donutSub">Période affichée</div><div id="donutChart"><div class="sk" style="height:170px;width:170px;border-radius:50%;margin:0 auto"></div></div></div>
-  </div>
-
-  <div class="card" style="margin-bottom:20px">
-    <h2>Revenus par créatrice</h2>
-    <div class="tablewrap" id="modelsTable"></div>
-    <p class="hint">Saisissez seulement le CA brut de la période : le CA net se calcule tout seul (CA brut moins la commission de la plateforme). « % créatrice » est la part du CA net qui revient à la créatrice. Tout s'enregistre automatiquement.</p>
-  </div>
-
-  <div class="grid" style="margin-bottom:20px">
-    <div class="card">
-      <h2>À payer aux chatters</h2>
-      <div class="tablewrap" id="chattersTable"></div>
-      <p class="hint">Commission par paliers sur le net de la période, chaque taux ne s'appliquant qu'à sa tranche : 10 % jusqu'à 500 €, 12 % de 500 à 1 000 €, 14 % de 1 000 à 1 400 €, 15 % au-delà. Primes : 10 € dès 2 000 €, 20 € dès 3 000 €, 40 € dès 4 000 €. « Palier » = taux de la dernière tranche atteinte.</p>
+  <!-- ============ QUINZAINE ============ -->
+  <div id="vQ">
+    <div class="c-top">
+      <div class="c-card c-hero">
+        <div class="c-kp">
+          <div><div class="c-lab">CA brut · <span id="hLab"></span><span class="c-trend" id="hTrend"></span></div><div class="c-big"><span id="kBrut">0</span><small>€</small></div></div>
+          <div class="c-sub"><small>CA NET</small><b id="kNet">—</b></div>
+          <div class="c-sub"><small>MARGE AGENCE</small><b id="kMargin" class="g">—</b></div>
+        </div>
+        <div class="c-flow"><div class="c-lab" style="margin-bottom:8px">D'où vient le CA net</div><div class="c-src" id="srcBar"></div></div>
+        <div class="c-flow"><div class="c-lab" style="margin-bottom:8px">Où va le chiffre d'affaires</div><div class="c-fbar" id="flowBar"></div><div class="c-fleg" id="flowLeg"></div></div>
+      </div>
+      <div class="c-card c-proj" style="--d:.06s" id="projCard"></div>
     </div>
-    <div class="card">
-      <h2>Réglages</h2>
-      <label for="feeInp">Commission de la plateforme (CA brut → CA net)</label>
-      <div class="row"><input id="feeInp" class="pct" inputmode="decimal" style="width:90px"> <span>%</span></div>
-      <label for="modeSel">Ventes attribuées aux chatters</label>
-      <select id="modeSel"><option value="ventes">Ventes validées (captures d'écran)</option><option value="heures">Au prorata des heures pointées</option></select>
-      <label for="baseSel">Commission des chatters calculée sur</label>
-      <select id="baseSel"><option value="net">le CA net</option><option value="brut">le CA brut</option></select>
-      <p class="hint" id="modeHint"></p>
-      <label for="goalCa">Objectif de CA brut par période (accueil du manager)</label>
-      <div class="row"><input id="goalCa" class="money" inputmode="decimal" style="width:130px"> <span>€</span></div>
-
+    <div class="c-alerts" id="alerts"></div>
+    <div class="c-card" style="--d:.1s;margin-bottom:14px">
+      <div class="c-ch"><h3>Paie des <em>chatters</em></h3><span class="c-mut">Touche une ligne pour voir la fiche</span></div>
+      <div id="payTable"></div>
+      <div class="c-paybar"><b id="paidN"></b><span class="c-ptrack"><i id="paidBar"></i></span><span class="c-mut" id="dueTxt"></span></div>
     </div>
+    <div class="c-card" style="--d:.14s;margin-bottom:14px">
+      <div class="c-ch"><h3>Les <em>créatrices</em></h3><span class="c-mut">Chatting automatique (brut − <span class="feeTxt">25</span> %) · le reste se saisit en net</span></div>
+      <div class="c-crs" id="creators"></div>
+    </div>
+    <div class="c-card c-close" style="--d:.18s" id="closeCard">
+      <div><h3>Clôturer la <em>période</em></h3><div class="c-mut" style="margin-top:4px">Une fois clôturée, plus aucune vente, pointage ou montant ne peut modifier cette quinzaine.</div><div class="c-chk" id="checks"></div></div>
+      <button class="c-wbtn" id="closeBtn">Clôturer la période</button>
+      <div class="c-lockfx"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#5fd3a2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="sh" d="M8 11V8a4 4 0 0 1 8 0v3"/><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M12 15v2"/></svg>
+        <div><b>Période clôturée</b><small id="lockTxt"></small></div><button class="c-sb" id="reopenBtn">Rouvrir</button></div>
+    </div>
+    <details class="c-card c-more" style="--d:.2s">
+      <summary><h3>Réglages et <em>détail</em></h3><span class="c-mut">Commission de la plateforme, calcul des commissions, corrections manuelles</span></summary>
+      <div class="c-set">
+        <label>Commission de la plateforme sur le chatting (%)<input id="feeInp" inputmode="decimal"></label>
+        <label>Ventes attribuées aux chatters<select id="modeSel"><option value="ventes">Ventes validées (captures)</option><option value="heures">Au prorata des heures pointées</option></select></label>
+        <label>Commission des chatters calculée sur<select id="baseSel"><option value="net">Le net</option><option value="brut">Le brut</option></select></label>
+        <label>Objectif de CA brut par quinzaine (€)<input id="goalCa" inputmode="decimal"></label>
+      </div>
+      <div class="c-lab" style="margin:18px 0 8px">Détail par chatter et par créatrice</div>
+      <div class="tablewrap" id="linesTable"></div>
+      <p class="c-mut" style="margin-top:8px">Laisse « Montant retenu » vide pour garder le calcul automatique, ou saisis un montant pour le remplacer.</p>
+    </details>
   </div>
 
-  <div class="card">
-    <h2>Détail par chatter et par créatrice</h2>
-    <div class="tablewrap" id="linesTable"></div>
-    <p class="hint">Laissez « Montant retenu » vide pour utiliser le calcul automatique. Saisissez un montant pour le remplacer.</p>
+  <!-- ============ MOIS ============ -->
+  <div id="vM" class="hidden">
+    <div class="c-top">
+      <div class="c-card c-hero">
+        <div class="c-kp">
+          <div><div class="c-lab">CA brut · <span id="mLab"></span><span class="c-trend" id="mTrend"></span></div><div class="c-big"><span id="mBrut">0</span><small>€</small></div></div>
+          <div class="c-sub"><small>CA NET</small><b id="mNet">—</b></div>
+          <div class="c-sub"><small>MARGE AGENCE</small><b id="mMargin" class="g">—</b></div>
+        </div>
+        <div class="c-flow"><div class="c-lab" style="margin-bottom:8px">D'où vient le CA net</div><div class="c-src" id="mSrc"></div></div>
+        <div class="c-flow"><div class="c-lab" style="margin-bottom:8px">Où va le chiffre d'affaires</div><div class="c-fbar" id="mFlow"></div><div class="c-fleg" id="mLeg"></div></div>
+      </div>
+      <div class="c-card" style="--d:.06s"><div class="c-ch" style="margin-bottom:4px"><div class="c-lab">Les 2 quinzaines</div><span id="mState"></span></div><div class="c-qz" id="mHalves"></div></div>
+    </div>
+    <div class="c-g2">
+      <div class="c-card" style="--d:.1s"><div class="c-ch"><h3>Paie des chatters <em>sur le mois</em></h3><span class="c-mut" id="mPayTot"></span></div><div class="c-mp" id="mPay"></div></div>
+      <div class="c-card" style="--d:.14s"><div class="c-ch"><h3>Créatrices <em>sur le mois</em></h3></div><div id="mCreators"></div></div>
+    </div>
   </div>
 </div>
 </main>
 </div>
 
+<div class="c-scrim" id="scrim"></div>
+<aside class="c-drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Fiche de paie"></aside>
+
 <script src="/common.js"></script>
-<script>
-let C = null, PERIOD = null;
-const parseNum = v => { const s = String(v).trim().replace(/\s/g, "").replace(",", "."); return s === "" ? "" : Number(s); };
-const fix2 = n => n == null ? "" : String(Math.round(n * 100) / 100).replace(".", ",");
-
-let HIST = null, animKey = null;
-async function load(p) {
-  const q = p || PERIOD ? `?period=${p || PERIOD}` : "";
-  const [c, h] = await Promise.all([api("/api/admin/compta" + q), api("/api/admin/compta/history" + q).catch(() => null)]);
-  C = c; HIST = h; PERIOD = C.period.key; render(); renderCharts();
-}
-
-/* ---------- Graphiques ---------- */
-function niceMax(v) { if (v <= 0) return 1000; const p = Math.pow(10, Math.floor(Math.log10(v))); return Math.ceil(v * 1.12 / (p / 2)) * (p / 2); }
-const kfmt = v => v >= 1000 ? (Math.round(v / 100) / 10).toString().replace(".", ",") + " k€" : Math.round(v) + " €";
-const shortLbl = k => { const [y, m, h] = k.split("-"); const M = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."][m - 1]; return (h === "A" ? "1–15 " : "16–") + (h === "A" ? M : new Date(+y, +m, 0).getDate() + " " + M); };
-function renderCharts() {
-  const anim = animKey !== PERIOD; animKey = PERIOD;
-  // courbe
-  const P = HIST ? HIST.periods : [];
-  if (!P.length || P.every(x => !x.brut)) {
-    $("lineChart").innerHTML = `<div class="cempty">Saisissez le CA brut des créatrices (tableau ci-dessous) : l'évolution apparaîtra ici au fil des périodes.</div>`;
-  } else {
-    const max = niceMax(Math.max(...P.map(x => x.brut || 0))), n = P.length;
-    const X = i => n === 1 ? 50 : i / (n - 1) * 100, Y = v => 100 - (v || 0) / max * 100;
-    const line = k => P.map((x, i) => `${i ? "L" : "M"}${X(i).toFixed(2)} ${Y(x[k]).toFixed(2)}`).join(" ");
-    const area = line("brut") + ` L100 100 L0 100 Z`;
-    const grid = [0, .25, .5, .75, 1].map(f => `<div class="gl" style="top:${(1 - f) * 100}%"></div><div class="yl" style="top:${(1 - f) * 100}%">${kfmt(max * f)}</div>`).join("");
-    const pts = P.map((x, i) => `<div class="pt ${i === n - 1 ? "cur" : ""}" style="left:${X(i)}%;top:${Y(x.brut)}%;animation-delay:${0.9 + i * 0.08}s"></div>`).join("");
-    const hits = P.map((x, i) => `<div class="hit" data-i="${i}" style="left:${X(i) - 50 / Math.max(1, n - 1)}%;width:${100 / Math.max(1, n - 1)}%"></div>`).join("");
-    $("lineChart").innerHTML = `<div class="chart ${anim ? "anim" : ""}" role="img" aria-label="Évolution du CA brut et net sur ${n} périodes">${grid}
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-        <defs><linearGradient id="gA" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ededed" stop-opacity=".10"/><stop offset="1" stop-color="#ededed" stop-opacity="0"/></linearGradient></defs>
-        <path class="ar" d="${area}" fill="url(#gA)"/>
-        <path class="ln2" d="${line("net")}" fill="none" stroke="#8a8a8a" stroke-width="2" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/>
-        <path class="ln" d="${line("brut")}" fill="none" stroke="#ededed" stroke-width="2.2" vector-effect="non-scaling-stroke"/>
-      </svg>${pts}${hits}<div class="tip" id="cTip"></div></div>
-      <div class="xl">${P.map(x => `<span>${shortLbl(x.key)}</span>`).join("")}</div>`;
-    // l'animation pointillée du CA net doit retrouver son pointillé une fois dessinée
-    if (anim) setTimeout(() => { const l = document.querySelector(".ln2"); if (l) { l.style.animation = "none"; l.style.strokeDasharray = "5 5"; l.style.strokeDashoffset = "0"; } }, 2100);
-    else { const l = document.querySelector(".ln2"); if (l) l.style.strokeDasharray = "5 5"; }
-    document.querySelectorAll(".chart .hit").forEach(h => {
-      const i = +h.dataset.i, x = P[i], tip = $("cTip");
-      const show = () => { tip.innerHTML = `<small>${esc(x.label)}</small><b>${eur(x.brut)}</b><small>net ${eur(x.net)} · marge ${eur(x.margin)}</small>`; tip.style.left = X(i) + "%"; tip.style.top = Y(x.brut) + "%"; tip.style.opacity = 1; };
-      h.onmouseenter = show; h.onclick = show; h.onmouseleave = () => tip.style.opacity = 0;
-    });
-  }
-  // anneau
-  const t = C.totals, parts = [["Créatrices", t.creators, "#ededed"], ["Chatters", t.chatters, "#5a5a5a"], ["Agence", Math.max(0, t.margin), "#a8a8a8"]];
-  const total = parts.reduce((a, p) => a + p[1], 0);
-  $("donutSub").textContent = `Période du ${C.period.label}`;
-  if (!total) { $("donutChart").innerHTML = `<div class="cempty">Pas encore de CA net sur cette période.</div>`; return; }
-  const R = 72, Cc = 2 * Math.PI * R; let acc = 0;
-  const segs = parts.map(([n, v, col], i) => { const L = v / total * Cc; const out = `<circle class="seg" cx="85" cy="85" r="${R}" fill="none" stroke="${col}" stroke-width="18" stroke-dasharray="${Math.max(0, L - (v ? 2.5 : 0)).toFixed(1)} ${Cc.toFixed(1)}" stroke-dashoffset="${(-acc).toFixed(1)}" style="animation-delay:${0.2 + i * 0.22}s"/>`; acc += L; return out; }).join("");
-  $("donutChart").innerHTML = `<div class="donut ${anim ? "anim" : ""}"><div class="ring"><svg width="170" height="170" viewBox="0 0 170 170" role="img" aria-label="Répartition du CA net : ${parts.map(p => p[0] + " " + Math.round(p[1] / total * 100) + " %").join(", ")}"><circle cx="85" cy="85" r="${R}" fill="none" stroke="#191919" stroke-width="18"/>${segs}</svg>
-    <div class="ctr"><small>CA net</small><b>${eur(t.net)}</b></div></div>
-    <div class="lg">${parts.map(([n, v, col], i) => `<div class="lgr" style="animation-delay:${0.4 + i * 0.15}s"><i style="background:${col}"></i><span>${n}</span><b>${eur(v)}</b><small>${Math.round(v / total * 100)} %</small></div>`).join("")}
-    ${t.margin < 0 ? `<p class="hint" style="color:var(--bad)">Marge négative : ${eur(t.margin)}.</p>` : ""}</div></div>`;
-}
-function flash(el) { el.classList.add("saved"); setTimeout(() => el.classList.remove("saved"), 900); }
-async function save(path, body, el) {
-  try { await api(path, { method: "PUT", body }); flash(el); await load(); }
-  catch (e) { el.style.outline = "1px solid var(--bad)"; el.title = e.message; }
-}
-
-function render() {
-  const t = C.totals;
-  $("pLabel").textContent = C.period.label;
-  $("baseSel").value = C.base; $("feeInp").value = fix2(C.fee); $("modeSel").value = C.mode;
-  if (C.goals) { $("goalCa").value = fix2(C.goals.ca); }
-  $("modeHint").innerHTML = C.mode === "ventes"
-    ? "Chaque chatter est crédité des <b>ventes qu'il a déclarées et que vous avez validées</b> (page Ventes). Si la commission est calculée sur le CA net, la commission de la plateforme est déduite de ses ventes brutes. Vous pouvez corriger un montant dans le détail ci-dessous."
-    : "Les ventes de chaque créatrice sont réparties entre les chatters <b>selon leurs heures pointées</b> sur ce compte pendant la période. Vous pouvez corriger un montant dans le détail ci-dessous.";
-  $("kpis").innerHTML = [
-    ["CA brut", eur(t.brut)], ["CA net", eur(t.net)], ["Part des créatrices", eur(t.creators)],
-    ["Commissions chatters", eur(t.chatters)], ["Marge de l'agence", eur(t.margin), true]
-  ].map(([l, v, main]) => `<div class="card kpi ${main ? "main" : ""}"><small>${l}</small><b ${main ? `style="color:${t.margin >= 0 ? "var(--good)" : "var(--bad)"}"` : ""}>${v}</b></div>`).join("");
-
-  // alertes
-  const al = [];
-  if (C.unattributed.length) al.push(`Aucune heure pointée pour : <b>${C.unattributed.map(esc).join(", ")}</b>. Leurs ventes ne sont attribuées à aucun chatter : ajoutez des pointages (Planning › Pointages) ou un montant manuel.`);
-  C.models.forEach(m => { if (m.commissionBase > 0 && m.attributed > 0 && Math.abs(m.attributed - m.commissionBase) > 1)
-    al.push(C.mode === "ventes"
-      ? `<b>${esc(m.name)}</b> : ${eur(m.attributed)} de ventes validées (CA ${C.base}) pour ${eur(m.commissionBase)} saisis. Écart de ${eur(m.commissionBase - m.attributed)}.`
-      : `<b>${esc(m.name)}</b> : ${eur(m.attributed)} attribués aux chatters pour ${eur(m.commissionBase)} de CA ${C.base}. Vérifiez les montants corrigés.`); });
-  $("alerts").innerHTML = al.map(a => `<div class="notice" style="margin:0 0 14px;border:1px solid #4d4020;background:#2a2414;color:#f3d999">⚠️ ${a}</div>`).join("");
-
-  // créatrices
-  $("modelsTable").innerHTML = `<table><tr><th>Créatrice</th><th class="num">CA brut</th><th class="num">CA net <span style="font-weight:400">(−${fix2(C.fee)} %)</span></th><th class="num">% créatrice</th><th class="num">Part créatrice</th><th class="num">Part agence</th><th class="num">Heures pointées</th></tr>` +
-    C.models.map(m => `<tr><td><b>${esc(m.name)}</b></td>
-      <td class="num"><input class="money" inputmode="decimal" data-rev="brut" data-m="${m.id}" value="${fix2(m.brut)}" placeholder="0" aria-label="CA brut ${esc(m.name)}"></td>
-      <td class="num" title="CA brut − ${fix2(C.fee)} %">${m.net == null ? "—" : eur(m.net)}</td>
-      <td class="num"><input class="pct" inputmode="decimal" data-cpct="${m.id}" value="${fix2(m.creator_pct)}" aria-label="% créatrice ${esc(m.name)}"> %</td>
-      <td class="num">${eur(m.creatorPay)}</td><td class="num">${eur(m.agencyShare)}</td><td class="num">${hrs(m.totalHours)}</td></tr>`).join("") +
-    `<tr class="total"><td>Total</td><td class="num">${eur(t.brut)}</td><td class="num">${eur(t.net)}</td><td></td><td class="num">${eur(t.creators)}</td><td class="num">${eur(t.agencyShare)}</td><td class="num">${hrs(C.models.reduce((a, m) => a + m.totalHours, 0))}</td></tr></table>`;
-  document.querySelectorAll("[data-rev]").forEach(inp => inp.onchange = () => {
-    const m = C.models.find(x => x.id == inp.dataset.m);
-    save("/api/admin/revenue", { period: PERIOD, model_id: m.id, brut: parseNum(inp.value) }, inp);
-  });
-  document.querySelectorAll("[data-cpct]").forEach(inp => inp.onchange = () => save(`/api/admin/models/${inp.dataset.cpct}/pct`, { creator_pct: parseNum(inp.value) }, inp));
-
-  // chatters
-  const chs = C.chatters.filter(c => c.active || c.pay > 0);
-  $("chattersTable").innerHTML = !chs.length ? "<div style='color:var(--muted)'>Aucun chatter.</div>" :
-    `<table><tr><th>Chatter</th><th class="num">Palier</th><th class="num">Heures</th><th class="num">Ventes attribuées</th><th class="num">À payer</th></tr>` +
-    chs.map(c => `<tr><td><b>${esc(c.username)}</b></td><td class="num">${c.rate} %${c.prime ? ` + ${c.prime} €` : ""}</td>
-      <td class="num">${hrs(c.hours)}</td><td class="num">${eur(c.sales)}</td><td class="num"><b>${eur(c.pay)}</b></td></tr>`).join("") +
-    `<tr class="total"><td>Total</td><td></td><td class="num">${hrs(chs.reduce((a, c) => a + c.hours, 0))}</td><td class="num">${eur(chs.reduce((a, c) => a + c.sales, 0))}</td><td class="num">${eur(t.chatters)}</td></tr></table>`;
-
-
-  // détail
-  $("linesTable").innerHTML = !C.lines.length ? `<div style='color:var(--muted)'>${C.mode === "ventes" ? "Aucune vente validée sur cette période (page Ventes)." : "Aucune heure pointée sur cette période. Les chatters pointent depuis la page Planning."}</div>` :
-    `<table><tr><th>Chatter</th><th>Créatrice</th><th class="num">Heures</th>${C.mode === "ventes" ? '<th class="num">Ventes validées (brut)</th>' : ""}<th class="num">Calcul auto</th><th class="num">Montant retenu</th><th class="num">Taux</th><th class="num">Commission</th></tr>` +
-    C.lines.map(l => `<tr><td><b>${esc(l.username)}</b></td><td>${esc(l.model_name)}</td><td class="num">${hrs(l.hours)}</td>${C.mode === "ventes" ? `<td class="num">${eur(l.validatedBrut)}</td>` : ""}<td class="num">${eur(l.auto)}</td>
-      <td class="num"><input class="money" inputmode="decimal" data-attr="${l.user_id}:${l.model_id}" value="${l.override == null ? "" : fix2(l.override)}" placeholder="${fix2(l.auto)}" aria-label="Montant retenu"></td>
-      <td class="num">${fix2(l.pct)} %</td><td class="num">${eur(l.pay)}</td></tr>`).join("") + "</table>";
-  document.querySelectorAll("[data-attr]").forEach(inp => inp.onchange = () => {
-    const [u, m] = inp.dataset.attr.split(":"); const v = parseNum(inp.value);
-    save("/api/admin/attribution", { period: PERIOD, user_id: u, model_id: m, amount: v === "" ? null : v }, inp);
-  });
-}
-
-$("goalCa").onchange = () => save("/api/admin/settings", { goal_ca: parseNum($("goalCa").value) }, $("goalCa"));
-$("feeInp").onchange = () => save("/api/admin/settings", { platform_fee: parseNum($("feeInp").value), period: PERIOD }, $("feeInp"));
-$("modeSel").onchange = () => save("/api/admin/settings", { attribution_mode: $("modeSel").value }, $("modeSel"));
-$("baseSel").onchange = () => save("/api/admin/settings", { commission_base: $("baseSel").value }, $("baseSel"));
-$("prevP").onclick = () => load(C.period.prev);
-$("nextP").onclick = () => load(C.period.next);
-
-// Export CSV lisible par Excel (point-virgule, virgule décimale, accents)
-$("exportBtn").onclick = () => {
-  const n = v => v == null ? "" : String(Math.round(v * 100) / 100).replace(".", ",");
-  const q = s => `"${String(s ?? "").replace(/"/g, '""')}"`;
-  const rows = [[`StellADS — Compta ${C.period.label}`], [],
-    ["REVENUS PAR CRÉATRICE"], ["Créatrice", "CA brut", "CA net", "% créatrice", "Part créatrice", "Part agence", "Heures pointées"],
-    ...C.models.map(m => [m.name, n(m.brut), n(m.net), n(m.creator_pct), n(m.creatorPay), n(m.agencyShare), n(m.totalHours)]),
-    ["Total", n(C.totals.brut), n(C.totals.net), "", n(C.totals.creators), n(C.totals.agencyShare)], [],
-    ["À PAYER AUX CHATTERS"], ["Chatter", "Taux %", "Heures", "Ventes attribuées", "À payer"],
-    ...C.chatters.filter(c => c.active || c.pay > 0).map(c => [c.username, n(c.commission_pct), n(c.hours), n(c.sales), n(c.pay)]),
-    ["Total", "", "", "", n(C.totals.chatters)], [],
-    ["DÉTAIL"], ["Chatter", "Créatrice", "Heures", "Calcul auto", "Montant retenu", "Taux %", "Commission"],
-    ...C.lines.map(l => [l.username, l.model_name, n(l.hours), n(l.auto), n(l.sales), n(l.pct), n(l.pay)]), [],
-    ["RÉSUMÉ"], ["Marge de l'agence", n(C.totals.margin)], [`Commission calculée sur le CA ${C.base}`], [C.mode === "ventes" ? "Ventes attribuées : ventes validées (captures)" : "Ventes attribuées : au prorata des heures"]];
-  const csv = "﻿" + rows.map(r => r.map(q).join(";")).join("\r\n");
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-  a.download = `stellads-compta-${C.period.key}.csv`; document.body.appendChild(a); a.click(); a.remove();
-};
-
-(async () => {
-  $("kpis").innerHTML = SK.kpis(5).replace(/^<div class="sk-kpis">|<\/div>$/g, "");
-  ["modelsTable", "chattersTable", "linesTable"].forEach(id => $(id).innerHTML = [1, 2, 3].map(() => `<div class="sk-row">${SK.line("25%", 12, 0)}${SK.line("35%", 12, 0)}${SK.line("15%", 12, 0)}</div>`).join(""));
-  const me = await api("/api/me");
-  if (me.role !== "admin") { location.href = "/home"; return; }
-  renderShell("compta", me);
-  await load();
-})();
-</script>
+<script src="/compta-ui.js"></script>
 </body>
 </html>
