@@ -173,10 +173,9 @@ function tfiche(c) {
     <div class="rdy${tr.ready ? "" : " no"}"><span class="ic">${tr.ready ? "✓" : tr.done}</span><span>${tr.ready ? `Les ${tr.total} critères sont remplis. ${esc(c.username)} peut passer chatter.` : `${tr.done} critère${tr.done > 1 ? "s" : ""} sur ${tr.total} rempli${tr.done > 1 ? "s" : ""}.`}</span></div>
     <div class="sec"><span class="lab">CRITÈRES</span>${tr.criteria.map(k => `<div class="tck${k.ok ? " ok" : ""}"><span class="bx">${k.ok ? CK : ""}</span><div>${esc(k.label)}${k.sub ? `<small>${esc(k.sub)}</small>` : ""}</div><span class="v${k.ok ? "" : " no"}">${k.test ? '<span class="ttest">test</span>' : ""}${esc(k.value)}</span></div>`).join("")}</div>
     ${dlSec(c)}${ivSum(c)}
-    ${(() => { const iv = tr.interview || {}; const lock = !iv.done || iv.decision === "refused";
-      return `<button class="valid${tr.ready ? "" : " soft"}${lock ? " lock" : ""}" data-a="promote" style="margin-top:12px">${!tr.ready && !iv.done ? `Valider la formation · ${tr.total - tr.done} critère${tr.total - tr.done > 1 ? "s" : ""} à remplir` : !iv.done ? "Valider la formation · entretien à faire" : iv.decision === "refused" ? "Entretien refusé" : tr.ready ? "Valider la formation" : "Valider la formation quand même"}</button>`; })()}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><a class="gbtn" href="/app#gestion" style="text-decoration:none">Assigner un entraînement</a><a class="gbtn" href="/app#gestion" style="text-decoration:none">Voir ses sessions →</a></div>
-    <div class="mut" style="margin-top:10px;line-height:1.5">Une fois validée, ${esc(c.username)} voit le planning, les ventes et sa paie. Tu pourras lui ajouter des shifts.</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px"><a class="gbtn" href="/app#gestion" style="text-decoration:none">Assigner un entraînement</a><a class="gbtn" href="/app#gestion" style="text-decoration:none">Voir ses sessions →</a></div>
+
     <div class="sec"><span class="lab">OUTIL DE TEST · VISIBLE PAR TOI SEULEMENT</span><div class="acts">
       <button data-a="tsim"${tr.test ? " disabled" : ""}>Valider le simulateur (test)</button><button data-a="tall"${tr.test === "all" ? " disabled" : ""}>Tout valider (test)</button>
       <button data-a="treset" style="grid-column:span 2">Réinitialiser (test)</button></div>
