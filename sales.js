@@ -60,15 +60,59 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
       setTimeout(step, 30); };
     setTimeout(step, 4000);
   })();
+  // lecture des captures par l'IA : montant et état du média (Accepté / En attente)
+  const AI = require("./ai");
+  for (const [c, t] of [["ai_amount", "REAL"], ["ai_status", "TEXT"], ["ai_sale", "INTEGER"], ["ai_note", "TEXT"], ["ai_at", "INTEGER"]])
+    if (!db.prepare("PRAGMA table_info(sales)").all().some(x => x.name === c)) db.exec(`ALTER TABLE sales ADD COLUMN ${c} ${t}`);
+  const scans = new Map();   // empreinte de l'image → lecture déjà faite pendant que le chatter remplissait le formulaire
+  const shaOf = buf => require("crypto").createHash("sha256").update(buf).digest("hex");
+  async function scan(buf, mime, tag) {
+    const k = shaOf(buf), c = scans.get(k); if (c && Date.now() - c.t < 3600e3) return c.r;
+    if (!AI.saleCanRead(mime)) return null;
+    const r = await AI.readSale(buf, mime, tag); if (r) { scans.set(k, { r, t: Date.now() }); if (scans.size > 500) scans.delete(scans.keys().next().value); }
+    return r;
+  }
+  const saveAi = (id, r) => db.prepare("UPDATE sales SET ai_amount = ?, ai_status = ?, ai_sale = ?, ai_note = ?, ai_at = ? WHERE id = ?")
+    .run(r && typeof r.amount === "number" ? Math.round(r.amount * 100) / 100 : null, r ? r.status : "unread", r ? (r.is_sale ? 1 : 0) : null, r ? String(r.notes || "").slice(0, 200) || null : null, Date.now(), id);
+  async function analyze(id, buf, mime, uid) { try { saveAi(id, await scan(buf, mime, { user: uid })); } catch (e) { console.error("lecture capture", id, e.message); try { saveAi(id, null); } catch (_) {} } }
+  // verdict pour le manager
+  const aiInfo = s => {
+    if (!s.ai_at) return s.status === "pending" && s.image ? { state: "waiting" } : null;
+    if (s.ai_status === "unread" || s.ai_sale === null) return { state: "unread" };
+    const o = { amount: s.ai_amount, status: s.ai_status, note: s.ai_note };
+    if (!s.ai_sale) return { ...o, state: "notsale" };
+    if (s.ai_status === "pending") return { ...o, state: "pending" };
+    if (s.ai_status === "refused") return { ...o, state: "refused" };
+    if (s.ai_amount != null && Math.abs(s.ai_amount - s.declared_amount) > .5) return { ...o, state: "mismatch" };
+    if (s.ai_amount == null) return { ...o, state: "noamount" };
+    return { ...o, state: s.ai_status === "accepted" ? "ok" : "unsure" };
+  };
+  // ventes en attente pas encore lues (après la mise en ligne) : lues tranquillement en arrière-plan
+  setTimeout(async function bf() { try {
+    const r = db.prepare("SELECT id, image, mime, user_id FROM sales WHERE status = 'pending' AND ai_at IS NULL AND image IS NOT NULL ORDER BY id LIMIT 1").get();
+    if (!r) return; const f = path.join(UP, path.basename(r.image));
+    if (fs.existsSync(f)) await analyze(r.id, fs.readFileSync(f), r.mime, r.user_id); else saveAi(r.id, null);
+    setTimeout(bf, 1500); } catch (e) {} }, 8000);
   const dupInfo = s => { if (!s.dup_of) return null; const o = db.prepare("SELECT s.id, s.user_id, s.amount, s.sold_at, s.status, u.username, m.name model_name FROM sales s JOIN users u ON u.id = s.user_id JOIN models m ON m.id = s.model_id WHERE s.id = ?").get(s.dup_of);
     return o ? { kind: s.dup_kind, dist: s.dup_dist, id: o.id, username: o.username, sameUser: o.user_id === s.user_id, amount: o.amount, sold_at: o.sold_at, status: o.status, model_name: o.model_name } : null; };
   const locked = ms => { try { return !!db.prepare("SELECT 1 FROM period_locks WHERE period = ?").get(periodOfDate(parisDate(ms))); } catch (e) { return false; } };
   const num = (v, min, max) => { const n = Number(v); return Number.isFinite(n) && n >= min && n <= max ? n : null; };
   const pub = s => ({ id: s.id, user_id: s.user_id, username: s.username, model_id: s.model_id, model_name: s.model_name,
     amount: s.amount, declared_amount: s.declared_amount, sold_at: s.sold_at, note: s.note, status: s.status, reason: s.reason,
-    reviewer: s.reviewer, reviewed_at: s.reviewed_at, created_at: s.created_at, period: periodOfDate(parisDate(s.sold_at)), dup: dupInfo(s) });
+    reviewer: s.reviewer, reviewed_at: s.reviewed_at, created_at: s.created_at, period: periodOfDate(parisDate(s.sold_at)), dup: dupInfo(s), ai: aiInfo(s) });
   const SELECT = `SELECT s.*, u.username, m.name model_name, r.username reviewer FROM sales s
     JOIN users u ON u.id = s.user_id JOIN models m ON m.id = s.model_id LEFT JOIN users r ON r.id = s.reviewed_by`;
+
+  /* ---------- Lecture de la capture pendant que le chatter remplit le formulaire (pré-remplit le montant) ---------- */
+  const scanHits = new Map();
+  app.post("/api/sales/scan", auth, express.raw({ type: "image/*", limit: "12mb" }), async (req, res) => {
+    const mime = (req.headers["content-type"] || "").split(";")[0];
+    if (!MIME[mime] || !Buffer.isBuffer(req.body) || req.body.length < 100) return res.json({ ok: false });
+    const h = (scanHits.get(req.user.id) || []).filter(t => Date.now() - t < 3600e3); if (h.length >= 40) return res.json({ ok: false });   // garde-fou sur le coût
+    h.push(Date.now()); scanHits.set(req.user.id, h);
+    try { const r = await scan(req.body, mime, { user: req.user.id }); res.json({ ok: !!r, read: r || null }); }
+    catch (e) { res.json({ ok: false }); }
+  });
 
   /* ---------- Déclarer une vente (image envoyée telle quelle dans le corps de la requête) ---------- */
   app.post("/api/sales", auth, express.raw({ type: "image/*", limit: "12mb" }), (req, res) => {
@@ -93,6 +137,7 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     db.prepare("UPDATE sales SET image = ? WHERE id = ?").run(file, info.lastInsertRowid);
     if (fp) { db.prepare("UPDATE sales SET sha = ?, phash = ?, ratio = ? WHERE id = ?").run(fp.sha, fp.phash, fp.ratio, info.lastInsertRowid);
       try { saveDup(info.lastInsertRowid, findDup(info.lastInsertRowid, fp, req.body, mime)); } catch (e) {} }
+    analyze(info.lastInsertRowid, req.body, mime, req.user.id);   // en arrière-plan : ne ralentit pas l'envoi
     res.json({ ok: true, id: info.lastInsertRowid });
   });
 
@@ -137,6 +182,12 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
   });
   app.get("/api/admin/sales/count", auth, admin, (req, res) =>
     res.json({ pending: db.prepare("SELECT COUNT(*) n FROM sales WHERE status = 'pending'").get().n }));
+  app.post("/api/admin/sales/:id/rescan", auth, admin, async (req, res) => {
+    const r = db.prepare("SELECT id, image, mime, user_id FROM sales WHERE id = ?").get(parseInt(req.params.id, 10)); if (!r || !r.image) return res.status(404).json({ error: "Capture introuvable" });
+    const f = path.join(UP, path.basename(r.image)); if (!fs.existsSync(f)) return res.status(404).json({ error: "Capture introuvable" });
+    const buf = fs.readFileSync(f); scans.delete(shaOf(buf)); await analyze(r.id, buf, r.mime, r.user_id);
+    res.json({ ok: true, sale: pub(db.prepare(`${SELECT} WHERE s.id = ?`).get(r.id)) });
+  });
   app.post("/api/admin/sales/:id/review", auth, admin, (req, res) => {
     const s = db.prepare("SELECT * FROM sales WHERE id = ?").get(parseInt(req.params.id, 10));
     if (!s) return res.status(404).json({ error: "Vente introuvable" });

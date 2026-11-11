@@ -81,7 +81,7 @@ module.exports = function mount(app, db, auth, admin, h) {
     const assignments = db.prepare("SELECT a.*, u.username FROM sim_assignments a JOIN users u ON u.id = a.user_id WHERE a.done_at IS NULL OR a.done_at > ? ORDER BY a.done_at IS NOT NULL, a.created_at DESC").all(now - 7 * 864e5)
       .map(a => ({ ...a, persona: persona(a.persona_id).name, label: persona(a.persona_id).label }));
     let ai7 = null;
-    try { const u = db.prepare("SELECT COALESCE(SUM(cost),0) cost, COUNT(DISTINCT sim_id) sims FROM ai_usage WHERE at > ?").get(d7), m = db.prepare("SELECT COALESCE(SUM(cost),0) cost FROM ai_usage WHERE at > ?").get(now - 30 * 864e5);
+    try { const u = db.prepare("SELECT COALESCE(SUM(cost),0) cost, COUNT(DISTINCT sim_id) sims FROM ai_usage WHERE at > ? AND sim_id IS NOT NULL").get(d7), m = db.prepare("SELECT COALESCE(SUM(cost),0) cost FROM ai_usage WHERE at > ? AND sim_id IS NOT NULL").get(now - 30 * 864e5);
       ai7 = { cost: Math.round(u.cost * 100) / 100, perSession: u.sims ? Math.round(u.cost / u.sims * 1000) / 1000 : null, month: Math.round(m.cost * 100) / 100 }; } catch (e) {}
     res.json({
       stats: { ai7, aiLive: Math.round(live.reduce((t, l) => t + (l.aiCost || 0), 0) * 1000) / 1000, live: live.length, sessions7: all7.length, sessionsPrev: allP.length, avg7: avg(all7.map(s => s.score)), avgPrev: avg(allP.map(s => s.score)), best: bestS ? { score: bestS.score, user: bestS.username } : null },

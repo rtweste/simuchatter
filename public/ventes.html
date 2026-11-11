@@ -235,6 +235,26 @@
 .vt-cmp .tag{font-size:12px;font-weight:800;padding:5px 11px;border-radius:999px;background:rgba(224,122,122,.18);color:#f0b3b3}.vt-cmp .tag.close{background:rgba(232,182,92,.16);color:#f0cf91}
 @media(max-width:700px){.vt-cmp .row{flex-direction:column;overflow:auto}.vt-cmp img{max-width:88vw;max-height:36vh}}
 .vt-hdup{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:999px;background:rgba(224,122,122,.16);color:#f0b3b3;vertical-align:1px}.vt-hdup.close{background:rgba(232,182,92,.15);color:#f0cf91}
+
+/* lecture de la capture par l'IA */
+.vt-ai{display:none;margin:10px 0 2px;padding:11px 13px;border-radius:14px;border:1px solid #2a2a2a;background:#121212;font-size:13px;line-height:1.45;align-items:center;gap:10px;position:relative;overflow:hidden}
+.vt-ai.on{display:flex;animation:aiIn .45s cubic-bezier(.34,1.56,.64,1) both}@keyframes aiIn{from{opacity:0;transform:translateY(-4px)}}
+.vt-ai .ic{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(255,255,255,.06);font-size:13px}
+.vt-ai.load{color:#a9a9a9}.vt-ai.load::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(95,211,162,.12),transparent);transform:translateX(-100%);animation:aiScan 1.3s ease-in-out infinite}
+@keyframes aiScan{to{transform:translateX(100%)}}
+.vt-ai.load .ic{animation:aiSpin 1.2s linear infinite}@keyframes aiSpin{to{transform:rotate(1turn)}}
+.vt-ai.ok{border-color:rgba(95,211,162,.45);background:rgba(95,211,162,.08);color:#d9f5ea}.vt-ai.ok .ic{background:rgba(95,211,162,.18);color:#5fd3a2}
+.vt-ai.warn{border-color:rgba(232,182,92,.45);background:rgba(232,182,92,.08);color:#f3e2c1}.vt-ai.warn .ic{background:rgba(232,182,92,.18);color:#e8b65c}
+.vt-ai b{color:#fff}.vt-ai button{margin-left:auto;height:30px;padding:0 10px;border-radius:9px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.3);color:#fff;font-weight:700;font-size:12px;flex-shrink:0}
+.vt-aiq{display:none}
+.vt-aiq.on{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid #2a2a2a;background:#121212;font-size:12.5px;line-height:1.45;color:#cfcfcf;animation:aiIn .45s cubic-bezier(.34,1.56,.64,1) both;position:relative;overflow:hidden}
+.vt-aiq .ic{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(255,255,255,.06);font-weight:800;font-size:11px;letter-spacing:.02em}
+.vt-aiq b{color:#fff}.vt-aiq .t{flex:1;min-width:0}.vt-aiq small{display:block;color:#8f8f8f;font-size:11px;margin-top:1px}
+.vt-aiq.ok{border-color:rgba(95,211,162,.4);background:rgba(95,211,162,.07)}.vt-aiq.ok .ic{background:rgba(95,211,162,.18);color:#5fd3a2}
+.vt-aiq.warn{border-color:rgba(232,182,92,.45);background:rgba(232,182,92,.08)}.vt-aiq.warn .ic{background:rgba(232,182,92,.18);color:#e8b65c}
+.vt-aiq.bad{border-color:rgba(224,122,122,.45);background:rgba(224,122,122,.08)}.vt-aiq.bad .ic{background:rgba(224,122,122,.18);color:#e07a7a}
+.vt-aiq.load::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);transform:translateX(-100%);animation:aiScan 1.3s ease-in-out infinite}
+.vt-aiq button{height:30px;padding:0 10px;border-radius:9px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.3);color:#fff;font-weight:700;font-size:12px;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -291,6 +311,7 @@
         <div class="vt-pan">
           <div class="vt-who" id="qWho"></div>
           <div class="vt-dup" id="qDup"></div>
+          <div class="vt-aiq" id="qAi"></div>
           <div class="vt-note" id="qNote"></div>
           <div><div class="vt-lab" style="margin-bottom:6px">Montant brut</div>
             <div class="vt-am"><button id="amMinus" aria-label="Moins 5 €">−</button><input id="qAmt" inputmode="decimal" aria-label="Montant brut" autocomplete="off"><span class="cur">€</span><button id="amPlus" aria-label="Plus 5 €">+</button></div></div>
@@ -336,6 +357,7 @@
     <div id="dropIn"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M5 20h14"/></svg></span><div style="margin-top:6px">Ajoute la capture de la vente</div><small>Touche pour choisir ou glisse l'image ici</small></div>
     <input type="file" id="fFile" accept="image/*" aria-label="Capture d'écran">
   </div>
+  <div class="vt-ai" id="fAi" aria-live="polite"></div>
   <div class="vt-amt"><input id="fAmount" inputmode="decimal" placeholder="0" aria-label="Montant brut en euros" autocomplete="off"><span>€</span></div>
   <div class="vt-chips" id="amtChips"><button type="button" data-a="10">10</button><button type="button" data-a="15">15</button><button type="button" data-a="25">25</button><button type="button" data-a="40">40</button><button type="button" data-a="60">60</button><button type="button" data-a="80">80</button></div>
   <div class="vt-fl"><span class="vt-lab">Créatrice</span><div class="vt-chips l" id="creaChips"></div></div>
@@ -503,8 +525,33 @@ function setFile(f) {
   FILE = f; $("fErr").textContent = "";
   $("drop").classList.add("has");
   $("dropIn").innerHTML = `<div class="pv"><img src="${URL.createObjectURL(f)}" alt="Aperçu de la capture"></div><span class="ok">✓ Capture ajoutée · touche pour changer</span>`;
-  VS.pick();
+  VS.pick(); readCapture(f);
 }
+// l'IA lit la capture : pré-remplit le montant et prévient si le média est encore « En attente »
+let SCAN = 0;
+async function readCapture(f) {
+  const el = $("fAi"), me = ++SCAN; el.className = "vt-ai on load"; el.innerHTML = `<span class="ic">◌</span><span>Lecture de ta capture…</span>`;
+  let d = null; try { const r = await fetch("/api/sales/scan", { method: "POST", headers: { "Content-Type": f.type }, body: f, credentials: "same-origin" }); d = await r.json(); } catch (e) {}
+  if (me !== SCAN) return;
+  const r = d && d.ok ? d.read : null; LAST_READ = r; if (!r) { el.className = "vt-ai"; el.innerHTML = ""; return; }
+  showRead(r, true);
+}
+let LAST_READ = null;
+function showRead(r, fill) {
+  const el = $("fAi");
+  const am = typeof r.amount === "number" ? r.amount : null, amTxt = am != null ? String(am).replace(".", ",") : null;
+  if (!r.is_sale) { el.className = "vt-ai on warn"; el.innerHTML = `<span class="ic">!</span><span>On ne voit pas de média payant sur cette capture. Vérifie que c'est la bonne.</span>`; VS.tick && VS.tick(); return; }
+  if (r.status === "pending") { el.className = "vt-ai on warn"; el.innerHTML = `<span class="ic">⏳</span><span>Le média est encore <b>« En attente »</b>. Attends qu'il passe en <b>« Accepté »</b>, puis reprends la capture.</span>`; return; }
+  if (r.status === "refused") { el.className = "vt-ai on warn"; el.innerHTML = `<span class="ic">!</span><span>Le média a l'air <b>refusé ou annulé</b> sur cette capture.</span>`; return; }
+  const cur = parseNum($("fAmount").value);
+  if (fill && am != null && !(cur > 0)) { $("fAmount").value = amTxt; syncAmtChips(); }
+  const now = parseNum($("fAmount").value);
+  if (am != null && now > 0 && Math.abs(now - am) > .5) { el.className = "vt-ai on warn"; el.innerHTML = `<span class="ic">!</span><span>La capture montre <b>${amTxt} €</b>, tu as écrit <b>${String(now).replace(".", ",")} €</b>.</span><button type="button" data-use>Mettre ${amTxt} €</button>`;
+    el.querySelector("[data-use]").onclick = () => { $("fAmount").value = amTxt; syncAmtChips(); showRead(r); }; return; }
+  readCaptureOk(am, r.status);
+}
+function readCaptureOk(am, st) { const el = $("fAi"); el.className = "vt-ai on ok";
+  el.innerHTML = `<span class="ic">✓</span><span>${am != null ? `Montant lu sur la capture : <b>${String(am).replace(".", ",")} €</b>` : "Capture lue"}${st === "accepted" || st === undefined ? " · média <b>Accepté</b>" : ""}</span>`; }
 const DROP_EMPTY = $("dropIn").innerHTML;
 $("fFile").onchange = e => setFile(e.target.files[0]);
 ["dragover", "dragenter"].forEach(ev => $("drop").addEventListener(ev, e => { e.preventDefault(); $("drop").classList.add("over"); }));
@@ -512,9 +559,9 @@ $("fFile").onchange = e => setFile(e.target.files[0]);
 $("drop").addEventListener("drop", e => { e.preventDefault(); setFile(e.dataTransfer.files[0]); });
 
 const syncAmtChips = () => { if (typeof fitAmt === "function") fitAmt(); const v = parseNum($("fAmount").value); document.querySelectorAll("#amtChips button").forEach(b => b.classList.toggle("on", +b.dataset.a === v)); };
-document.querySelectorAll("#amtChips button").forEach(b => b.onclick = () => { $("fAmount").value = b.dataset.a; syncAmtChips(); VS.tick(); });
+document.querySelectorAll("#amtChips button").forEach(b => b.onclick = () => { $("fAmount").value = b.dataset.a; syncAmtChips(); VS.tick(); if (LAST_READ) showRead(LAST_READ); });
 const fitAmt = () => { const v = $("fAmount").value || "0"; $("fAmount").style.width = (v.length * .62 + .1) + "em"; };
-$("fAmount").oninput = () => { syncAmtChips(); fitAmt(); };
+$("fAmount").oninput = () => { syncAmtChips(); fitAmt(); if (LAST_READ) showRead(LAST_READ); };
 document.querySelectorAll("#whenChips button").forEach(b => b.onclick = () => {
   WHEN = b.dataset.w; document.querySelectorAll("#whenChips button").forEach(x => x.classList.toggle("on", x === b)); VS.tick();
   $("fDate").classList.toggle("hidden", WHEN !== "pick"); if (WHEN === "pick") { $("fDate").value = $("fDate").value || toLocalInput(Date.now()); $("fDate").max = toLocalInput(Date.now() + 60e3); }
@@ -528,7 +575,7 @@ function renderCrea(sel) {
   document.querySelectorAll("#creaChips button").forEach(b => b.onclick = () => { document.querySelectorAll("#creaChips button").forEach(x => x.classList.toggle("on", x === b)); VS.tick(); });
 }
 function openSheet(again) {
-  FILE = null; $("fFile").value = ""; $("drop").classList.remove("has"); $("dropIn").innerHTML = DROP_EMPTY; $("fErr").textContent = "";
+  FILE = null; $("fFile").value = ""; $("drop").classList.remove("has"); $("dropIn").innerHTML = DROP_EMPTY; $("fErr").textContent = ""; SCAN++; LAST_READ = null; $("fAi").className = "vt-ai"; $("fAi").innerHTML = "";
   $("fAmount").value = again ? String(again.declared_amount).replace(".", ",") : ""; $("fNote").value = again?.note || "";
   WHEN = "now"; document.querySelectorAll("#whenChips button").forEach(x => x.classList.toggle("on", x.dataset.w === "now")); $("fDate").classList.add("hidden");
   if (again) { WHEN = "pick"; document.querySelectorAll("#whenChips button").forEach(x => x.classList.toggle("on", x.dataset.w === "pick")); $("fDate").classList.remove("hidden"); $("fDate").value = toLocalInput(again.sold_at); }
@@ -591,11 +638,28 @@ function qShow() {
   im.classList.remove("ld"); im.onload = () => im.classList.add("ld"); im.src = img(s.id);
   cap.querySelector(".bg").style.backgroundImage = `url("${img(s.id)}")`;
   $("qWho").innerHTML = `<span class="vt-av">${esc((s.username || "?")[0])}</span><div><b>${esc(s.username)}</b><small>${esc(s.model_name)} · ${whenTxt(s.sold_at)}</small></div>`;
-  qDup(s);
+  qDup(s); qAi(s);
   $("qNote").style.display = s.note ? "" : "none"; $("qNote").textContent = s.note ? `« ${s.note} »` : "";
   $("qAmt").value = String(s.amount).replace(".", ",");
   qHint();
   qReasons(false);
+}
+// verdict de l'IA sur la capture
+let AIPOLL = null;
+function qAi(s) {
+  const el = $("qAi"), a = s.ai; clearTimeout(AIPOLL); el.className = "vt-aiq"; el.innerHTML = ""; if (!a) return;
+  const am = v => E(v), set = (cls, ic, html, btn) => { el.className = "vt-aiq on " + cls; el.innerHTML = `<span class="ic">${ic}</span><div class="t">${html}</div>${btn || ""}`; };
+  if (a.state === "waiting") { set("load", "IA", "L'IA lit la capture…<small>quelques secondes</small>");
+    AIPOLL = setTimeout(async () => { try { const d = await api("/api/admin/sales?status=pending"); const n = d.sales.find(x => x.id === s.id); if (n && qCur() && qCur().id === s.id) { s.ai = n.ai; qAi(s); } } catch (e) {} }, 4000); return; }
+  if (a.state === "unread") return set("", "IA", "L'IA n'a pas pu lire cette capture<small>format non pris en charge ou image illisible</small>", `<button data-rs>Relire</button>`), bindRs();
+  if (a.state === "ok") return set("ok", "IA", `Lu sur la capture : <b>${am(a.amount)}</b> · <b>Accepté</b><small>conforme au montant déclaré</small>`);
+  if (a.state === "mismatch") return set("warn", "IA", `La capture montre <b>${am(a.amount)}</b>, le chatter a déclaré <b>${am(s.declared_amount)}</b>${a.note ? `<small>${esc(a.note)}</small>` : ""}`, `<button data-fix>Corriger à ${am(a.amount)}</button>`), bindFix(a.amount);
+  if (a.state === "pending") return set("bad", "IA", `Le média est encore <b>« En attente »</b> sur la capture<small>la vente n'est peut-être pas encore payée</small>`);
+  if (a.state === "refused") return set("bad", "IA", `Le média a l'air <b>refusé ou annulé</b> sur la capture`);
+  if (a.state === "notsale") return set("bad", "IA", `L'IA ne voit pas de média payant sur cette capture${a.note ? `<small>${esc(a.note)}</small>` : ""}`);
+  return set("warn", "IA", `Lecture incertaine${a.amount != null ? ` : <b>${am(a.amount)}</b>` : ""}${a.note ? `<small>${esc(a.note)}</small>` : "<small>vérifie la capture</small>"}`, `<button data-rs>Relire</button>`), bindRs();
+  function bindFix(v) { el.querySelector("[data-fix]").onclick = () => { $("qAmt").value = String(v).replace(".", ","); qHint(); VS.tick(); }; }
+  function bindRs() { const b = el.querySelector("[data-rs]"); if (b) b.onclick = async () => { b.disabled = true; b.textContent = "…"; try { const r = await api(`/api/admin/sales/${s.id}/rescan`, { body: {} }); s.ai = r.sale.ai; if (qCur() && qCur().id === s.id) qAi(s); } catch (e) { b.textContent = "Relire"; b.disabled = false; } }; }
 }
 // alerte « capture déjà utilisée » : identique ou très ressemblante à une autre vente
 const ST_TXT = { validated: "validée", refused: "refusée", pending: "en attente" };

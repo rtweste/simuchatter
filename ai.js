@@ -208,4 +208,26 @@ Donne 2 à 3 réécritures des messages les plus perfectibles (moins si le chatt
   return askJSON(prompt, MODEL_EVAL, 6000, tag);
 }
 
-module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook };
+/* ---------- Lecture d'une capture de vente (Twizz) ---------- */
+const MODEL_VISION = process.env.MODEL_VISION || "claude-haiku-5-5";
+const VISION_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const SALE_TOOL = { name: "lecture_capture", description: "Enregistre ce que montre la capture d'écran de vente.",
+  input_schema: { type: "object", required: ["is_sale", "amount", "status", "notes"], properties: {
+    is_sale: { type: "boolean", description: "true si la capture montre une conversation avec un média payant (PPV) envoyé à un fan" },
+    amount: { type: ["number", "null"], description: "prix du média payant le plus récent, en euros, tel qu'affiché ; null si illisible" },
+    status: { type: "string", enum: ["accepted", "pending", "refused", "unknown"], description: "état de ce média : accepted = acheté / « Accepté », pending = « En attente », refused = refusé / annulé" },
+    other_amounts: { type: "array", items: { type: "number" }, description: "autres prix de médias payants visibles sur la capture, s'il y en a" },
+    notes: { type: "string", description: "une phrase courte en français si quelque chose est ambigu, sinon chaîne vide" } } } };
+const saleCanRead = mime => !MOCK ? VISION_MIME.includes(mime) : true;
+async function readSale(buf, mime, tag) {
+  if (MOCK) return { is_sale: true, amount: 25, status: "accepted", other_amounts: [], notes: "" };
+  if (!VISION_MIME.includes(mime)) return null;
+  const res = await ask([
+    { type: "image", source: { type: "base64", media_type: mime, data: buf.toString("base64") } },
+    { type: "text", text: "Capture d'écran d'une conversation sur la plateforme Twizz, envoyée par un chatter pour prouver une vente. Ne regarde que l'interface (bulles, prix, mentions d'état), pas le contenu des médias. Repère le média payant le plus récent : son prix en euros et son état (« Accepté » = vendu, « En attente », refusé). Réponds avec l'outil lecture_capture." }
+  ], MODEL_VISION, 400, { ...(tag || {}), kind: "sale" }, { tools: [SALE_TOOL], tool_choice: { type: "tool", name: "lecture_capture" } });
+  const tu = res.content.find(c => c.type === "tool_use");
+  return tu && tu.input && typeof tu.input.is_sale === "boolean" ? tu.input : null;
+}
+
+module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead };
