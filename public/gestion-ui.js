@@ -157,6 +157,8 @@ function dlSec(c) {
 // bloc « Entretien manager » de la fiche élève
 function ivSum(c) {
   const iv = c.training.interview; if (!iv) return "";
+  // l'entretien n'apparaît qu'une fois tous les critères verts (sauf s'il a déjà été commencé)
+  if (!c.training.ready && !iv.started) return "";
   const IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1z"/><path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 13l2 2 4-4"/></svg>';
   const when = ms => new Date(ms).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   const sub = iv.done ? `Fait par ${esc(iv.by || "?")} · ${when(iv.doneAt)}` : iv.started ? `Commencé par ${esc(iv.by || "?")} · ${when(iv.startedAt)}` : c.training.ready ? "Ses critères sont verts : c'est le moment" : "Dernière étape avant de passer chatter";
@@ -172,7 +174,7 @@ function tfiche(c) {
     <div class="sec"><span class="lab">CRITÈRES</span>${tr.criteria.map(k => `<div class="tck${k.ok ? " ok" : ""}"><span class="bx">${k.ok ? CK : ""}</span><div>${esc(k.label)}${k.sub ? `<small>${esc(k.sub)}</small>` : ""}</div><span class="v${k.ok ? "" : " no"}">${k.test ? '<span class="ttest">test</span>' : ""}${esc(k.value)}</span></div>`).join("")}</div>
     ${dlSec(c)}${ivSum(c)}
     ${(() => { const iv = tr.interview || {}; const lock = !iv.done || iv.decision === "refused";
-      return `<button class="valid${tr.ready ? "" : " soft"}${lock ? " lock" : ""}" data-a="promote" style="margin-top:12px">${!iv.done ? "Valider la formation · entretien à faire" : iv.decision === "refused" ? "Entretien refusé" : tr.ready ? "Valider la formation" : "Valider la formation quand même"}</button>`; })()}
+      return `<button class="valid${tr.ready ? "" : " soft"}${lock ? " lock" : ""}" data-a="promote" style="margin-top:12px">${!tr.ready && !iv.done ? `Valider la formation · ${tr.total - tr.done} critère${tr.total - tr.done > 1 ? "s" : ""} à remplir` : !iv.done ? "Valider la formation · entretien à faire" : iv.decision === "refused" ? "Entretien refusé" : tr.ready ? "Valider la formation" : "Valider la formation quand même"}</button>`; })()}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><a class="gbtn" href="/app#gestion" style="text-decoration:none">Assigner un entraînement</a><a class="gbtn" href="/app#gestion" style="text-decoration:none">Voir ses sessions →</a></div>
     <div class="mut" style="margin-top:10px;line-height:1.5">Une fois validée, ${esc(c.username)} voit le planning, les ventes et sa paie. Tu pourras lui ajouter des shifts.</div>
     <div class="sec"><span class="lab">OUTIL DE TEST · VISIBLE PAR TOI SEULEMENT</span><div class="acts">

@@ -341,6 +341,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const u = db.prepare("SELECT id, username, role FROM users WHERE id = ?").get(parseInt(req.params.id, 10));
     if (!u || u.role !== "trainee") return res.status(400).json({ error: "Ce compte n'est pas en formation" });
     const b = req.body || {}, now = Date.now(), r = ivRow(u.id), ans = r ? r.answers : {}, slotIds = agency().slots.map(s => s[0]);
+    if (!r && !training(u.id, true).ready) return res.status(400).json({ error: "L'entretien se débloque quand tous ses critères sont verts" });
     for (const q of IV_QUESTIONS) { const a = b.answers && b.answers[q.id]; if (a === undefined) continue;
       if (a === null) { delete ans[q.id]; continue; }
       const note = String(a.note || "").slice(0, 800);
