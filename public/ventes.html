@@ -14,115 +14,315 @@
 
 <link rel="stylesheet" href="/style.css">
 <style>
-.drop{border:1.5px dashed #3a3a3a;border-radius:12px;padding:18px;text-align:center;color:var(--muted);cursor:pointer;transition:.15s;position:relative}
-.drop:hover,.drop.over{border-color:var(--text);color:var(--text)}
-.drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
-.drop img{max-height:220px;max-width:100%;border-radius:8px;display:block;margin:0 auto 8px}
-.st{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
-.st.pending{background:#3d3218;color:var(--warn)}.st.validated{background:#173a2c;color:var(--good)}.st.refused{background:#3d1b21;color:var(--bad)}
-.thumb{width:54px;height:54px;object-fit:cover;border-radius:8px;border:1px solid var(--line);cursor:zoom-in;background:var(--panel2)}
-.queue{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
-.qcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
-.qcard .img{height:260px;background:#000;display:flex;align-items:center;justify-content:center;cursor:zoom-in}
-.qcard .img img{max-width:100%;max-height:100%;object-fit:contain}
-.qcard .body{padding:14px;display:flex;flex-direction:column;gap:8px;flex:1}
-.qcard .meta{font-size:13px;color:var(--muted);line-height:1.5}
-.qcard .amount{display:flex;align-items:center;gap:8px}
-.qcard .amount input{width:130px;font-size:18px;font-weight:700;text-align:right;padding:8px 10px}
-.qcard .actions{display:flex;gap:8px;margin-top:auto}
-.qcard .actions .btn{flex:1}
-.btn.ok{background:var(--good);color:#06130d}.btn.ok:hover{filter:brightness(1.08)}
-.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
+/* ======================= Ventes (préfixe vt-) ======================= */
+.vt{--g:#5fd3a2;--r:#e07a7a;font-family:Inter,system-ui,sans-serif;color:#f5f5f5}
+.vt *{box-sizing:border-box}.vt button{font-family:inherit;cursor:pointer}
+.vt-hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+.vt-ttl{font-weight:900;letter-spacing:-.045em;font-size:40px;line-height:1.02;margin:6px 0 0}
+.vt-ttl em{font-style:italic;background:linear-gradient(100deg,#fff,#8a8a8a 55%,#e6e6e6);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.08em}
+.vt-wbtn{height:46px;border-radius:14px;border:0;background:#ededed;color:#0a0a0a;font-weight:900;font-size:14px;padding:0 18px;display:inline-flex;align-items:center;gap:8px;box-shadow:0 10px 30px -10px rgba(255,255,255,.35);position:relative;overflow:hidden;transition:transform .2s}
+.vt-wbtn:active{transform:scale(.97)}
+.vt-wbtn::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.9) 50%,transparent 65%);background-size:250% 100%;animation:vtSh 3.2s ease-in-out 1.5s infinite;mix-blend-mode:overlay;pointer-events:none}
+@keyframes vtSh{0%{background-position:130% 0}40%,100%{background-position:-30% 0}}
+.vt-card{background:#111;border:1px solid #1f1f1f;border-radius:20px;padding:18px;position:relative;animation:vtUp .6s cubic-bezier(.2,.8,.2,1) var(--d,0s) both;min-width:0}
+@keyframes vtUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.vt-card h3{margin:0;font-size:15px;font-weight:800;letter-spacing:-.02em}.vt-card h3 em{font-style:italic}
+.vt-lab{font-size:10.5px;font-weight:800;letter-spacing:.12em;color:#6a6a6a;text-transform:uppercase}
+.vt-mut{font-size:12px;color:#7a7a7a}
+.vt-pill{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:900;border-radius:20px;padding:3px 9px;white-space:nowrap;letter-spacing:.02em}
+.vt-pill i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.vt-pill.validated{background:rgba(95,211,162,.12);color:var(--g)}.vt-pill.pending{background:rgba(255,255,255,.08);color:#e6e6e6}.vt-pill.pending i{animation:vtBl 1.4s infinite}.vt-pill.refused{background:rgba(224,122,122,.12);color:var(--r)}
+@keyframes vtBl{50%{opacity:.25}}
+.vt-filters{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;max-width:100%}.vt-filters::-webkit-scrollbar{display:none}.vt-filters button{flex-shrink:0}
+.vt-filters button{height:30px;border-radius:10px;border:1px solid #222;background:#141414;color:#8f8f8f;font-weight:800;font-size:12px;padding:0 11px;transition:background .25s,color .25s,border-color .25s}
+.vt-filters button.on{background:#ededed;color:#0a0a0a;border-color:#ededed}
+.vt-filters button .n{opacity:.6;margin-left:4px}
+
+/* ----- héros (chatter) ----- */
+.vt-hero{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;margin-bottom:14px}
+.vt-big{font-weight:900;letter-spacing:-.06em;font-size:64px;line-height:.95;margin-top:10px;font-variant-numeric:tabular-nums}
+.vt-big small{font-size:20px;color:#6f6f6f;letter-spacing:0;margin-left:4px}
+.vt-tier{margin-top:16px}
+.vt-track{position:relative;height:10px;border-radius:6px;background:#1c1c1c;margin-top:8px}
+.vt-track .fill{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:linear-gradient(90deg,#3a8f6c,#5fd3a2);box-shadow:0 0 16px rgba(95,211,162,.5);width:0;transition:width 1.6s cubic-bezier(.2,.8,.2,1) .25s}
+.vt-track .fill::after{content:"";position:absolute;right:-1px;top:50%;width:14px;height:14px;border-radius:50%;background:#fff;transform:translate(50%,-50%);box-shadow:0 0 0 4px rgba(95,211,162,.25),0 0 18px rgba(95,211,162,.8)}
+.vt-track .mk{position:absolute;top:-4px;bottom:-4px;width:2px;background:#333;border-radius:1px;transition:background .4s}
+.vt-track .mk span{position:absolute;top:18px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;color:#6a6a6a;white-space:nowrap}
+.vt-track .mk.on{background:#5fd3a2}.vt-track .mk.on span{color:#5fd3a2}
+.vt-track .mk.last span{transform:translateX(-100%)}
+.vt-nxt{margin-top:30px;font-size:13px;color:#bdbdbd;font-weight:700}.vt-nxt b{color:#fff;font-weight:900}
+.vt-side{display:grid;grid-template-rows:1fr 1fr 1fr;gap:10px}
+.vt-mini{background:#111;border:1px solid #1f1f1f;border-radius:16px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;animation:vtUp .6s cubic-bezier(.2,.8,.2,1) both}
+.vt-mini small{display:block;font-size:10.5px;color:#7a7a7a;font-weight:700}.vt-mini b{display:block;font-weight:900;font-size:22px;letter-spacing:-.04em;margin-top:2px;font-variant-numeric:tabular-nums}
+.vt-mini .ic{width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900}
+
+/* ----- liste des ventes ----- */
+.vt-list{margin-top:10px}
+.vt-day{font-size:11px;font-weight:800;letter-spacing:.12em;color:#5f5f5f;margin:16px 0 8px}
+.vt-day:first-child{margin-top:4px}
+.vt-rw{display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center;padding:10px;border-radius:14px;background:#141414;border:1px solid #1f1f1f;margin-bottom:6px;animation:vtUp .5s cubic-bezier(.2,.8,.2,1) both;transition:border-color .25s,transform .25s,box-shadow .4s}
+.vt-rw:hover{border-color:#2c2c2c;transform:translateX(2px)}
+.vt-th{width:52px;height:52px;border-radius:11px;border:1px solid #232323;background:#0c0c0c;padding:0;overflow:hidden;cursor:zoom-in}
+.vt-th img{width:100%;height:100%;object-fit:cover;object-position:top;display:block;opacity:0;transition:opacity .4s}
+.vt-th img.ld{opacity:1}
+.vt-rm{min-width:0}
+.vt-a{font-weight:900;font-size:19px;letter-spacing:-.03em}.vt-a s{font-size:12px;color:#6a6a6a;font-weight:700;margin-right:6px;letter-spacing:0}
+.vt-rm small{display:block;font-size:12px;color:#8a8a8a;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vt-why{font-size:12px;color:#e0a3a3;margin-top:4px}
+.vt-rr{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.vt-sb{height:28px;border-radius:9px;border:1px solid #2a2a2a;background:#181818;color:#e6e6e6;font-weight:800;font-size:11.5px;padding:0 10px;white-space:nowrap}
+.vt-sb.del{color:#9a9a9a}.vt-sb.del.sure{color:#e07a7a;border-color:rgba(224,122,122,.45)}
+.vt-rw.new{border-color:rgba(255,255,255,.3);animation:vtIn .7s cubic-bezier(.3,1.4,.5,1) both}
+.vt-rw.flip-v{border-color:rgba(95,211,162,.55);box-shadow:0 0 0 3px rgba(95,211,162,.12),0 0 30px -6px rgba(95,211,162,.5)}
+.vt-rw.flip-r{border-color:rgba(224,122,122,.5);box-shadow:0 0 0 3px rgba(224,122,122,.1)}
+.vt-rw.out{transition:opacity .35s,transform .35s;opacity:0;transform:translateX(30px)}
+@keyframes vtIn{from{opacity:0;transform:translateY(-14px) scale(.96)}to{opacity:1;transform:none}}
+.vt-empty{color:#7a7a7a;font-size:13px;padding:18px 4px;text-align:center}
+.vt-more{display:block;margin:10px auto 0;height:34px;border-radius:11px;border:1px solid #262626;background:#151515;color:#cfcfcf;font-weight:800;font-size:12.5px;padding:0 14px}
+
+/* ----- feuille « déclarer » ----- */
+.vt-scrim{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:90;opacity:0;pointer-events:none;transition:opacity .35s;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.vt-scrim.on{opacity:1;pointer-events:auto}
+.vt-sheet{position:fixed;z-index:91;left:50%;top:50%;width:520px;max-width:calc(100vw - 24px);max-height:92vh;max-height:92dvh;overflow:auto;transform:translate(-50%,-46%) scale(.96);opacity:0;pointer-events:none;transition:transform .45s cubic-bezier(.3,1.3,.4,1),opacity .3s;background:#111;border:1px solid #262626;border-radius:24px;padding:20px;box-shadow:0 30px 80px rgba(0,0,0,.7);overscroll-behavior:contain}
+.vt-sheet.on{transform:translate(-50%,-50%);opacity:1;pointer-events:auto}
+.vt-shd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.vt-shd b{font-weight:900;font-size:19px;letter-spacing:-.03em}.vt-shd b em{font-style:italic}
+.vt-x{width:32px;height:32px;border-radius:10px;border:1px solid #262626;background:#161616;color:#bdbdbd;font-size:14px}
+.vt-drop{position:relative;border:1.5px dashed #333;border-radius:16px;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;color:#9a9a9a;font-size:13px;font-weight:700;cursor:pointer;transition:border-color .25s,background .25s,color .25s;overflow:hidden}
+.vt-drop:hover,.vt-drop.over{border-color:#5fd3a2;background:rgba(95,211,162,.04);color:#fff}
+.vt-drop input{position:absolute;inset:0;opacity:0;cursor:pointer;z-index:3}
+.vt-drop .ico{width:44px;height:44px;border-radius:14px;background:#181818;border:1px solid #2a2a2a;display:flex;align-items:center;justify-content:center}
+.vt-drop small{font-size:11.5px;color:#6a6a6a;font-weight:600}
+.vt-drop.has{border-style:solid;border-color:#2a2a2a;min-height:190px}
+.vt-drop .pv{position:absolute;inset:0;background:#0c0c0c}
+.vt-drop .pv img{width:100%;height:100%;object-fit:contain;display:block;animation:vtPv .5s cubic-bezier(.2,.8,.2,1) both}
+@keyframes vtPv{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:none}}
+.vt-drop .ok{position:absolute;right:10px;bottom:10px;z-index:2;font-size:11px;font-weight:900;background:rgba(10,10,10,.8);border:1px solid rgba(95,211,162,.4);color:#5fd3a2;border-radius:9px;padding:4px 8px}
+.vt-amt{display:flex;align-items:baseline;justify-content:center;gap:6px;margin:14px 0 8px}
+.vt-amt input{width:1.3em;max-width:80%;transition:width .2s;background:transparent;border:0;outline:none;color:#fff;font:inherit;font-weight:900;font-size:56px;letter-spacing:-.05em;text-align:right;padding:0;min-height:0}
+.vt-amt input::placeholder{color:#333}
+.vt-amt span{font-size:26px;font-weight:900;color:#6f6f6f}
+.vt-chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.vt-chips button{height:34px;border-radius:11px;border:1px solid #262626;background:#151515;color:#cfcfcf;font-weight:800;font-size:13px;padding:0 13px;transition:background .2s,color .2s,border-color .2s,transform .2s}
+.vt-chips button:active{transform:scale(.95)}
+.vt-chips button.on{background:#ededed;color:#0a0a0a;border-color:#ededed}
+.vt-chips.l{justify-content:flex-start}
+.vt-fl{margin-top:14px}.vt-fl .vt-lab{margin-bottom:7px;display:block}
+.vt-fi{width:100%;height:44px;border-radius:13px;border:1px solid #262626;background:#151515;color:#f5f5f5;font:inherit;font-size:13.5px;padding:0 13px;outline:none;margin:0}
+.vt-fi:focus{border-color:#444}
+.vt-fi.dt{margin-top:8px;color-scheme:dark}
+.vt-send{width:100%;height:52px;border-radius:15px;border:0;background:#ededed;color:#0a0a0a;font-weight:900;font-size:15px;margin-top:16px;transition:opacity .2s,transform .2s}
+.vt-send:active{transform:scale(.98)}.vt-send:disabled{opacity:.55}
+.vt-err{color:#e07a7a;font-size:12.5px;font-weight:700;margin-top:10px;min-height:1px;text-align:center}
+
+/* ----- manager : onglets ----- */
+.vt-tabs{display:flex;gap:6px}
+.vt-tabs button{height:36px;border-radius:11px;border:1px solid #222;background:#141414;color:#8f8f8f;font-weight:800;font-size:12.5px;padding:0 13px;transition:background .25s,color .25s,border-color .25s}
+.vt-tabs button.on{background:#ededed;color:#0a0a0a;border-color:#ededed}
+
+/* ----- manager : file focus ----- */
+.vt-top{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.vt-dots{display:flex;gap:5px}.vt-dots i{width:22px;height:5px;border-radius:3px;background:#262626;transition:background .3s}.vt-dots i.cur{background:#ededed}
+.vt-kbd{margin-left:auto;font-size:11.5px;color:#6a6a6a;font-weight:700;display:flex;gap:12px}.vt-kbd b{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:6px;border:1px solid #333;background:#151515;color:#cfcfcf;font-size:11px;margin-right:4px;padding:0 4px}
+.vt-stage{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;position:relative}
+.vt-cap{border-radius:20px;background:#0c0c0c;border:1px solid #1f1f1f;height:500px;position:relative;overflow:hidden;cursor:zoom-in;transition:transform .45s cubic-bezier(.6,0,.3,1),opacity .4s}
+.vt-cap .bg{position:absolute;inset:-30px;background-size:cover;background-position:center;filter:blur(28px) brightness(.45);opacity:.8}
+.vt-cap img.main{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .4s}
+.vt-cap img.main.ld{opacity:1}
+.vt-cap .zoom{position:absolute;right:12px;bottom:12px;z-index:2;height:32px;border-radius:10px;border:1px solid #333;background:rgba(10,10,10,.8);color:#cfcfcf;font-size:12px;font-weight:800;padding:0 10px;pointer-events:none}
+.vt-cap .flash{position:absolute;inset:0;pointer-events:none;opacity:0;z-index:3}
+.vt-cap .flash.v{background:radial-gradient(circle at 50% 50%,rgba(95,211,162,.4),transparent 62%);animation:vtFl .7s ease}
+.vt-cap .flash.r{background:radial-gradient(circle at 50% 50%,rgba(224,122,122,.35),transparent 62%);animation:vtFl .7s ease}
+@keyframes vtFl{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
+.vt-pan{min-width:0;display:flex;flex-direction:column;gap:12px;transition:transform .45s cubic-bezier(.6,0,.3,1),opacity .4s}
+.vt-who{display:flex;align-items:center;gap:12px}
+.vt-av{width:46px;height:46px;border-radius:15px;background:linear-gradient(135deg,#2c2c2c,#161616);border:1px solid #333;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;flex-shrink:0;text-transform:uppercase}
+.vt-who b{display:block;font-weight:900;font-size:18px;letter-spacing:-.02em}.vt-who small{font-size:12.5px;color:#8a8a8a}
+.vt-note{font-size:13px;color:#cfcfcf;background:#141414;border:1px solid #1f1f1f;border-radius:13px;padding:10px 12px;font-style:italic;overflow-wrap:anywhere}
+.vt-am{display:flex;align-items:center;gap:10px;background:#141414;border:1px solid #1f1f1f;border-radius:18px;padding:12px;transition:border-color .25s}
+.vt-am:focus-within{border-color:#3a3a3a}
+.vt-am button{width:44px;height:44px;border-radius:13px;border:1px solid #2a2a2a;background:#1a1a1a;color:#e6e6e6;font-size:20px;font-weight:900;flex-shrink:0}
+.vt-am button:active{transform:scale(.94)}
+.vt-am input{flex:1;min-width:0;width:0;background:transparent;border:0;outline:none;color:#fff;font:inherit;font-weight:900;font-size:44px;letter-spacing:-.05em;text-align:center;padding:0;margin:0;min-height:0}
+.vt-am .cur{font-size:22px;font-weight:900;color:#6f6f6f}
+.vt-hint{font-size:11.5px;color:#7a7a7a;text-align:center;margin-top:-4px}
+.vt-hint b{color:#e6e6e6}
+.vt-reasons{display:none;flex-direction:column;gap:8px;animation:vtUp .35s both}.vt-reasons.on{display:flex}
+.vt-reasons .rs{display:flex;flex-wrap:wrap;gap:6px}
+.vt-reasons .rs button{height:32px;border-radius:10px;border:1px solid rgba(224,122,122,.3);background:rgba(224,122,122,.06);color:#e6c3c3;font-weight:700;font-size:12px;padding:0 10px}
+.vt-reasons .rs button.on{background:rgba(224,122,122,.2);color:#fff;border-color:#e07a7a}
+.vt-reasons .vt-fi{height:40px;font-size:13px}
+.vt-acts{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:auto}
+.vt-acts button{height:54px;border-radius:16px;font-weight:900;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;transition:filter .2s,transform .2s,background .2s}
+.vt-acts button:active{transform:scale(.97)}.vt-acts button:disabled{opacity:.5}
+.vt-ref{border:1.5px solid rgba(224,122,122,.5);background:transparent;color:#e07a7a}.vt-ref:hover{background:rgba(224,122,122,.08)}
+.vt-val{border:0;background:#5fd3a2;color:#06130d;box-shadow:0 12px 30px -10px rgba(95,211,162,.6)}.vt-val:hover{filter:brightness(1.06)}
+.vt-navs{display:flex;justify-content:space-between;gap:8px}
+.vt-navs button{height:30px;border-radius:9px;border:1px solid #222;background:transparent;color:#7a7a7a;font-weight:800;font-size:12px;padding:0 10px}
+.vt-navs button:disabled{opacity:.3}
+.vt-stage.out-v .vt-cap,.vt-stage.out-v .vt-pan{transform:translateX(60px);opacity:0}
+.vt-stage.out-r .vt-cap,.vt-stage.out-r .vt-pan{transform:translateX(-60px);opacity:0}
+.vt-stage.in .vt-cap,.vt-stage.in .vt-pan{animation:vtSlide .55s cubic-bezier(.2,.8,.2,1) both}
+.vt-stage.in-b .vt-cap,.vt-stage.in-b .vt-pan{animation:vtSlideB .55s cubic-bezier(.2,.8,.2,1) both}
+.vt-stage.in .vt-pan,.vt-stage.in-b .vt-pan{animation-delay:.05s}
+@keyframes vtSlide{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes vtSlideB{from{transform:translateX(-40px);opacity:0}to{transform:none;opacity:1}}
+.vt-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.vt-stats div{background:#111;border:1px solid #1f1f1f;border-radius:16px;padding:12px 14px;position:relative}
+.vt-stats small{display:block;font-size:10.5px;color:#7a7a7a;font-weight:700}.vt-stats b{display:block;font-weight:900;font-size:24px;letter-spacing:-.04em;margin-top:3px;font-variant-numeric:tabular-nums}
+.vt-stats .hit{animation:vtHit .6s ease}
+.vt-stats .hit-r{animation:vtHitR .6s ease}
+@keyframes vtHit{40%{box-shadow:0 0 0 3px rgba(95,211,162,.5),0 0 30px rgba(95,211,162,.4)}}
+@keyframes vtHitR{40%{box-shadow:0 0 0 3px rgba(224,122,122,.4)}}
+.vt-done{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:420px;text-align:center;gap:8px}
+.vt-done.on{display:flex}.vt-done b{font-weight:900;font-size:30px;letter-spacing:-.04em}.vt-done b em{font-style:italic}
+.vt-done .ck{width:64px;height:64px;border-radius:50%;background:rgba(95,211,162,.12);color:#5fd3a2;display:flex;align-items:center;justify-content:center;animation:vtIn .6s both;box-shadow:0 0 0 0 rgba(95,211,162,.4);animation:vtIn .6s both,vtRing 2.4s ease-out .6s infinite}
+@keyframes vtRing{0%{box-shadow:0 0 0 0 rgba(95,211,162,.35)}100%{box-shadow:0 0 0 22px rgba(95,211,162,0)}}
+.vt-flyamt{position:fixed;z-index:120;left:0;top:0;font-family:Inter,sans-serif;font-weight:900;font-size:36px;letter-spacing:-.04em;color:#fff;text-shadow:0 0 18px rgba(95,211,162,.85);pointer-events:none;white-space:nowrap;will-change:transform,opacity}
+.vt-load{display:flex;align-items:center;justify-content:center;min-height:420px;color:#6a6a6a;font-size:13px}
+
+/* ----- manager : historique ----- */
+.vt-hf{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.vt-hf select{height:36px;border-radius:11px;border:1px solid #262626;background:#151515;color:#e6e6e6;font:inherit;font-size:12.5px;font-weight:700;padding:0 10px;max-width:200px;width:auto;margin:0}
+.vt-hsum{display:flex;gap:18px;flex-wrap:wrap;margin:14px 0 4px;font-size:12.5px;color:#8a8a8a;font-weight:700}.vt-hsum b{color:#fff;font-weight:900}
+.vt-hrw{grid-template-columns:52px 1fr auto}
+.vt-hrw .who{font-weight:800;font-size:13px;color:#e6e6e6}
+
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:150;display:flex;align-items:center;justify-content:center;padding:16px;cursor:zoom-out;animation:vtFade .25s both}
 .lightbox img{max-width:100%;max-height:100%;border-radius:8px}
-.mine li{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
-.mine{list-style:none;margin:0;padding:0}
-.mine .grow{flex:1;min-width:0;font-size:13px;line-height:1.5}
-.mine .grow b{font-size:14px}
-.strike{text-decoration:line-through;color:var(--muted);font-weight:400;margin-right:6px}
-/* ===== Mes ventes en cartes ===== */
-.seg{display:flex;background:#141414;border:1px solid #222;border-radius:12px;padding:3px;gap:2px;margin-bottom:14px}
-.seg button{flex:1;height:32px;border:0;border-radius:9px;background:transparent;color:#8f8f8f;font:inherit;font-size:12.5px;font-weight:600;padding:0 6px;white-space:nowrap;transition:background .3s,color .3s}
-.seg button.on{background:#ededed;color:#0a0a0a}
-.vg{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
-.vc{position:relative;background:#111;border:1px solid #1f1f1f;border-radius:16px;overflow:hidden;animation:fadeUp .5s cubic-bezier(.2,.75,.2,1) both;transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s}
-.vc:hover{transform:translateY(-2px);border-color:#2e2e2e}
-.vc .shot{height:150px;background:#161616;position:relative;cursor:zoom-in;overflow:hidden}
-.vc .shot img{width:100%;height:100%;object-fit:cover;object-position:top;display:block;opacity:0;transition:opacity .4s}
-.vc .shot img.ld{opacity:1}
-.vc .shot::after{content:"";position:absolute;left:0;right:0;bottom:0;height:44px;background:linear-gradient(transparent,#111);pointer-events:none}
-.vc .meta{padding:9px 12px 12px}
-.vc .amt{font-family:Outfit,Inter,sans-serif;font-size:21px;font-weight:400}
-.vc .amt .strike{font-size:13px}
-.vc small{display:block;color:#8f8f8f;font-size:11.5px;margin-top:2px;line-height:1.4}
-.vc .why{font-size:11.5px;color:#d99a9a;margin-top:6px;line-height:1.4}
-.bd{position:absolute;top:8px;left:8px;z-index:2;display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;border-radius:20px;padding:4px 9px;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-.bd i{width:6px;height:6px;border-radius:50%;background:currentColor}
-.bd.validated{color:#5fd3a2;background:rgba(18,38,30,.88)}
-.bd.pending{color:#e0b060;background:rgba(40,32,16,.88)}
-.bd.pending i{animation:blink 1.4s ease-in-out infinite}
-.bd.refused{color:#e0a3a3;background:rgba(40,20,20,.88)}
-@keyframes blink{50%{opacity:.25}}
-.vc .del{position:absolute;top:6px;right:6px;z-index:3;width:30px;height:30px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#ddd;display:flex;align-items:center;justify-content:center;padding:0}
-.emptyv{color:var(--muted);font-size:13px;padding:10px 2px}
-.qcard{position:relative;transition:border-color .3s}
-@media(max-width:600px){.vg{grid-template-columns:1fr 1fr;gap:10px}.vc .shot{height:130px}.seg button{font-size:11.5px;padding:0 3px}}
+@keyframes vtFade{from{opacity:0}}
+
+@media(max-width:860px){
+  .vt-ttl{font-size:32px}
+  .vt-hdr{flex-direction:column;align-items:stretch;gap:12px}
+  .vt-hdr .vt-wbtn{justify-content:center}
+  .vt-hero,.vt-stage{grid-template-columns:1fr}
+  .vt-big{font-size:52px}
+  .vt-side{grid-template-rows:none;grid-template-columns:1fr 1fr 1fr}
+  .vt-mini{flex-direction:column;align-items:flex-start;gap:6px;padding:10px}.vt-mini b{font-size:17px}.vt-mini .ic{display:none}
+  .vt-sheet{left:0;right:0;top:auto;bottom:0;width:auto;max-width:none;transform:translateY(100%);border-radius:24px 24px 0 0;max-height:90vh;max-height:90dvh;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+  .vt-sheet.on{transform:none}
+  .vt-cap{height:44vh;max-height:360px;min-height:240px}
+  .vt-kbd{display:none}
+  .vt-am input{font-size:38px}
+  .vt-stats b{font-size:18px}
+  .vt-done{min-height:300px}
+  .vt-rw{grid-template-columns:46px 1fr auto;gap:10px;padding:9px}
+  .vt-th{width:46px;height:46px}
+  .main-area{padding-bottom:96px}
+}
+@media(max-width:400px){.vt-filters button{padding:0 8px;font-size:11.5px}.vt-big{font-size:46px}}
+@media (prefers-reduced-motion:reduce){.vt *,.vt-sheet{animation-duration:.01s!important;transition-duration:.01s!important}}
 </style>
 </head>
 <body>
 <div class="shell">
 <aside class="sidebar" id="sidebar"></aside>
 <main class="main-area">
-<div class="wrap">
-  <div class="pagehead"><div><div class="eyebrow">Organisation</div><h1>Ventes</h1></div></div>
+<div class="wrap vt">
 
   <!-- ============ CHATTER ============ -->
   <div id="chatterView" class="hidden">
-    <div class="grid">
-      <form class="card" id="saleForm">
-        <h2>Déclarer une vente</h2>
-        <label for="fModel">Créatrice</label><select id="fModel" required></select>
-        <label for="fAmount">Montant brut de la vente (€)</label>
-        <input id="fAmount" inputmode="decimal" placeholder="ex. 25" required autocomplete="off">
-        <label for="fDate">Date et heure de la vente</label><input id="fDate" type="datetime-local" required>
-        <label>Capture d'écran de la vente</label>
-        <div class="drop" id="drop"><div id="dropTxt">📎 Touchez pour choisir la capture<br><small>ou glissez-la ici</small></div>
-          <input type="file" id="fFile" accept="image/*" aria-label="Capture d'écran"></div>
-        <label for="fNote">Note (optionnel)</label><input id="fNote" maxlength="300" placeholder="ex. vidéo personnalisée pour Marc">
-        <button class="btn" id="fBtn" style="width:100%;margin-top:16px">Envoyer pour validation</button>
-        <div class="err" id="fErr"></div>
-      </form>
-      <div>
-        <div class="eyebrow" id="myPeriod" style="margin:0 0 8px"></div>
-        <div class="grid3" id="myKpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px"></div>
-        <div class="card"><h2>Mes ventes</h2>
-          <div class="seg" id="mySeg" role="group" aria-label="Filtrer"><button data-f="" class="on">Toutes</button><button data-f="pending">En attente</button><button data-f="validated">Validées</button><button data-f="refused">Refusées</button></div>
-          <div class="vg" id="myList"></div></div>
+    <div class="vt-hdr">
+      <div><div class="eyebrow">Organisation</div><h1 class="vt-ttl">Mes <em>ventes.</em></h1></div>
+      <button class="vt-wbtn" id="openSheet"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Déclarer une vente</button>
+    </div>
+    <div class="vt-hero">
+      <div class="vt-card">
+        <div class="vt-lab" id="hLab">Validé</div>
+        <div class="vt-big"><span id="hBig" data-v="0">0</span><small>€</small></div>
+        <div class="vt-tier" id="hTier"></div>
       </div>
+      <div class="vt-side">
+        <div class="vt-mini" style="animation-delay:.05s"><div><small>En attente</small><b id="kPend">—</b></div><span class="ic" style="background:rgba(255,255,255,.06);color:#e6e6e6">⏳</span></div>
+        <div class="vt-mini" style="animation-delay:.1s"><div><small>Commission estimée</small><b id="kCom" style="color:#5fd3a2">—</b></div><span class="ic" style="background:rgba(95,211,162,.1);color:#5fd3a2">€</span></div>
+        <div class="vt-mini" style="animation-delay:.15s"><div><small>Refusées</small><b id="kRef">—</b></div><span class="ic" style="background:rgba(224,122,122,.1);color:#e07a7a">✕</span></div>
+      </div>
+    </div>
+    <div class="vt-card" style="--d:.12s">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <h3>Mes <em>ventes</em></h3>
+        <div class="vt-filters" id="mySeg" role="group" aria-label="Filtrer">
+          <button data-f="" class="on">Toutes</button><button data-f="pending">En attente</button><button data-f="validated">Validées</button><button data-f="refused">Refusées</button>
+        </div>
+      </div>
+      <div class="vt-list" id="myList"></div>
     </div>
   </div>
 
   <!-- ============ MANAGER ============ -->
   <div id="adminView" class="hidden">
-    <div class="tabs">
-      <button data-t="queue" class="on" id="tabQueue">À valider</button>
-      <button data-t="hist">Historique</button>
+    <div class="vt-hdr">
+      <div><div class="eyebrow">Manager</div><h1 class="vt-ttl">Ventes <em>à valider.</em></h1></div>
+      <div class="vt-tabs" role="tablist"><button data-t="queue" class="on" id="tabQueue">À valider</button><button data-t="hist" id="tabHist">Historique</button></div>
     </div>
-    <section id="t-queue"><div class="queue" id="queue"></div></section>
-    <section id="t-hist" class="hidden">
-      <div class="card">
-        <div class="row" style="flex-wrap:wrap;margin-bottom:14px">
-          <select id="hStatus" style="max-width:180px" aria-label="Statut"><option value="">Tous les statuts</option><option value="validated">Validées</option><option value="refused">Refusées</option><option value="pending">En attente</option></select>
-          <select id="hUser" style="max-width:180px" aria-label="Chatter"></select>
-          <select id="hPeriod" style="max-width:200px" aria-label="Période"></select>
+
+    <section id="t-queue">
+      <div class="vt-top" id="qTop">
+        <div class="vt-dots" id="qDots"></div>
+        <b id="qPos" style="font-size:13px"></b><span class="vt-mut" id="qSum"></span>
+        <span class="vt-kbd"><span><b>V</b>valider</span><span><b>R</b>refuser</span><span><b>←</b><b>→</b>naviguer</span></span>
+      </div>
+      <div class="vt-load" id="qLoad">Chargement…</div>
+      <div class="vt-stage hidden" id="qStage">
+        <div class="vt-cap" id="qCap" role="button" aria-label="Agrandir la capture"><div class="bg"></div><img class="main" alt="Capture de la vente"><span class="zoom">⤢ Agrandir</span><span class="flash"></span></div>
+        <div class="vt-pan">
+          <div class="vt-who" id="qWho"></div>
+          <div class="vt-note" id="qNote"></div>
+          <div><div class="vt-lab" style="margin-bottom:6px">Montant brut</div>
+            <div class="vt-am"><button id="amMinus" aria-label="Moins 5 €">−</button><input id="qAmt" inputmode="decimal" aria-label="Montant brut" autocomplete="off"><span class="cur">€</span><button id="amPlus" aria-label="Plus 5 €">+</button></div></div>
+          <div class="vt-hint" id="qHint">Corrige le montant si la capture ne correspond pas</div>
+          <div class="vt-reasons" id="qReasons">
+            <div class="vt-lab">Motif du refus</div>
+            <div class="rs"><button>Capture illisible</button><button>Montant incorrect</button><button>Doublon</button><button>Pas une vente</button></div>
+            <input class="vt-fi" id="qOther" maxlength="200" placeholder="Autre motif (facultatif)">
+          </div>
+          <div class="vt-acts"><button class="vt-ref" id="qRef">Refuser</button><button class="vt-val" id="qVal">✓ Valider</button></div>
+          <div class="vt-navs"><button id="qPrev">← Précédente</button><button id="qNext">Suivante →</button></div>
         </div>
-        <div id="histSum" style="margin-bottom:10px;color:var(--muted);font-size:13px"></div>
-        <div class="tablewrap" id="hist"></div>
+      </div>
+      <div class="vt-done" id="qDone"><span class="ck"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 10 17.5 19 7"/></svg></span><b>Tout est <em>à jour.</em></b><span class="vt-mut">Plus aucune vente à valider. Les chatters voient tes décisions tout de suite.</span></div>
+      <div class="vt-stats">
+        <div id="sValBox"><small>Validé aujourd'hui</small><b id="sVal" style="color:#5fd3a2">0 €</b></div>
+        <div id="sNvBox"><small>Validées aujourd'hui</small><b id="sNv">0</b></div>
+        <div id="sNrBox"><small>Refusées aujourd'hui</small><b id="sNr">0</b></div>
+      </div>
+    </section>
+
+    <section id="t-hist" class="hidden">
+      <div class="vt-card">
+        <div class="vt-hf">
+          <select id="hStatus" aria-label="Statut"><option value="">Tous les statuts</option><option value="validated">Validées</option><option value="refused">Refusées</option><option value="pending">En attente</option></select>
+          <select id="hUser" aria-label="Chatter"></select>
+          <select id="hPeriod" aria-label="Période"></select>
+        </div>
+        <div class="vt-hsum" id="histSum"></div>
+        <div class="vt-list" id="hist"></div>
       </div>
     </section>
   </div>
 </div>
 </main>
 </div>
+
+<!-- feuille « déclarer une vente » -->
+<div class="vt-scrim" id="scrim"></div>
+<form class="vt-sheet vt" id="sheet" role="dialog" aria-modal="true" aria-labelledby="shTitle" novalidate>
+  <div class="vt-shd"><b id="shTitle">Déclarer une <em>vente</em></b><button type="button" class="vt-x" id="shClose" aria-label="Fermer">✕</button></div>
+  <div class="vt-drop" id="drop">
+    <div id="dropIn"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M5 20h14"/></svg></span><div style="margin-top:6px">Ajoute la capture de la vente</div><small>Touche pour choisir ou glisse l'image ici</small></div>
+    <input type="file" id="fFile" accept="image/*" aria-label="Capture d'écran">
+  </div>
+  <div class="vt-amt"><input id="fAmount" inputmode="decimal" placeholder="0" aria-label="Montant brut en euros" autocomplete="off"><span>€</span></div>
+  <div class="vt-chips" id="amtChips"><button type="button" data-a="10">10</button><button type="button" data-a="15">15</button><button type="button" data-a="25">25</button><button type="button" data-a="40">40</button><button type="button" data-a="60">60</button><button type="button" data-a="80">80</button></div>
+  <div class="vt-fl"><span class="vt-lab">Créatrice</span><div class="vt-chips l" id="creaChips"></div></div>
+  <div class="vt-fl"><span class="vt-lab">Quand</span>
+    <div class="vt-chips l" id="whenChips"><button type="button" data-w="now" class="on">Maintenant</button><button type="button" data-w="1h">Il y a 1 h</button><button type="button" data-w="pick">Choisir…</button></div>
+    <input class="vt-fi dt hidden" id="fDate" type="datetime-local" aria-label="Date et heure de la vente"></div>
+  <div class="vt-fl"><span class="vt-lab">Note (facultatif)</span><input class="vt-fi" id="fNote" maxlength="300" placeholder="ex. vidéo personnalisée pour Marc"></div>
+  <button class="vt-send" id="fBtn" type="submit">Envoyer pour validation</button>
+  <div class="vt-err" id="fErr" role="alert"></div>
+</form>
+
 <div class="lightbox hidden" id="lb"><img id="lbImg" alt="Capture d'écran de la vente"></div>
 
 <script src="/common.js"></script>
@@ -130,135 +330,342 @@
 const STATUS = { pending: "En attente", validated: "Validée", refused: "Refusée" };
 const pad = n => String(n).padStart(2, "0");
 const toLocalInput = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
-const fmtDT = ms => new Date(ms).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const hm = ms => new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 const img = id => `/api/sales/${id}/image`;
 const parseNum = v => Number(String(v).replace(/\s/g, "").replace(",", "."));
-function zoom(src) { $("lbImg").src = src; $("lb").classList.remove("hidden"); }
-$("lb").onclick = () => $("lb").classList.add("hidden");
+const E = n => (Math.round(n * 100) / 100).toLocaleString("fr-FR", { maximumFractionDigits: 2 }) + " €";
+const N = n => Math.round(n).toLocaleString("fr-FR");
+const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
+const dayLabel = ms => { const t = Date.now(); if (sameDay(ms, t)) return "AUJOURD'HUI"; if (sameDay(ms, t - 864e5)) return "HIER";
+  return new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }).toUpperCase(); };
+const whenTxt = ms => { const t = Date.now(); return (sameDay(ms, t) ? "aujourd'hui" : sameDay(ms, t - 864e5) ? "hier" : new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })) + " " + hm(ms); };
 const periodKey = ms => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${d.getDate() <= 15 ? "A" : "B"}`; };
 const MONTHS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 const periodLabel = k => { const [y, m, h] = k.split("-"); const last = new Date(+y, +m, 0).getDate(); return h === "A" ? `1 – 15 ${MONTHS[m - 1]} ${y}` : `16 – ${last} ${MONTHS[m - 1]} ${y}`; };
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/* ---------- Réduction de la capture avant envoi (plus rapide, moins lourd) ---------- */
+function zoom(src) { $("lbImg").src = src; $("lb").classList.remove("hidden"); }
+$("lb").onclick = () => $("lb").classList.add("hidden");
+
+// compteur animé (le nombre défile jusqu'à sa nouvelle valeur)
+function countTo(el, to, fmt = N, dur = 1000) {
+  const from = +el.dataset.v || 0; el.dataset.v = to;
+  if (REDUCED || from === to) { el.textContent = fmt(to); return; }
+  const t0 = performance.now();
+  const step = t => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = k < 1 ? fmt(from + (to - from) * e) : fmt(to); if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+
+/* ---------------- Sons discrets (cristal) ---------------- */
+const VS = (() => {
+  let c = null, o = null;
+  const on = () => { try { return localStorage.getItem("stSound") !== "0"; } catch (e) { return true; } };
+  function ac() {
+    if (!on()) return null;
+    try { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
+      if (!c) { c = new C(); o = c.createGain(); o.gain.value = .16; o.connect(c.destination); if (window.stAudio) stAudio.add(c); }
+      if (c.state !== "running") c.resume().catch(() => {}); return c; } catch (e) { return null; }
+  }
+  const tone = (f, at, len, peak, type, glide) => {
+    const os = c.createOscillator(), g = c.createGain(); os.type = type || "sine"; os.frequency.setValueAtTime(f, at);
+    if (glide) os.frequency.exponentialRampToValueAtTime(glide, at + len * .9);
+    g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(peak, at + Math.min(.02, len / 4)); g.gain.exponentialRampToValueAtTime(.0001, at + len);
+    os.connect(g); g.connect(o); os.start(at); os.stop(at + len + .05);
+  };
+  const air = (at, len, f0, f1, peak) => {
+    const n = Math.floor(c.sampleRate * len), b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / n);
+    const s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = b; bp.type = "bandpass"; bp.Q.value = 1.4; bp.frequency.setValueAtTime(f0, at); bp.frequency.exponentialRampToValueAtTime(f1, at + len);
+    g.gain.value = peak; s.connect(bp); bp.connect(g); g.connect(o); s.start(at);
+  };
+  const run = f => { const x = ac(); if (x) try { f(x.currentTime + .02); } catch (e) {} };
+  return {
+    open: () => run(t => { air(t, .35, 900, 2600, .18); tone(1975.5, t + .12, .25, .035); }),
+    tick: () => run(t => tone(2637, t, .06, .03, "triangle")),
+    pick: () => run(t => { tone(1568, t, .18, .05); tone(2349, t + .05, .25, .035); }),
+    send: () => run(t => { air(t, .5, 600, 4200, .3); [1318.5, 1760, 2637].forEach((f, i) => tone(f, t + .18 + i * .07, .5, .06)); }),
+    ok: () => run(t => { [1318.5, 1975.5, 2637, 3951].forEach((f, i) => tone(f, t + i * .06, .9 - i * .15, .12 - i * .025)); air(t + .05, .7, 2000, 7000, .14); }),
+    ko: () => run(t => { tone(392, t, .32, .09, "triangle", 330); tone(523.3, t + .02, .25, .03); })
+  };
+})();
+
+/* ---------------- Réduction de la capture avant envoi ---------------- */
 async function compress(file) {
   try {
     const bmp = await createImageBitmap(file);
     const max = 1800, k = Math.min(1, max / Math.max(bmp.width, bmp.height));
-    const c = document.createElement("canvas"); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
-    const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.85));
+    const cv = document.createElement("canvas"); cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k);
+    cv.getContext("2d").drawImage(bmp, 0, 0, cv.width, cv.height);
+    const blob = await new Promise(r => cv.toBlob(r, "image/jpeg", 0.85));
     return blob && blob.size < file.size ? blob : file;
   } catch (e) { return file; }   // format non lisible par le navigateur : envoi tel quel
 }
 
-/* ================= CHATTER ================= */
-let FILE = null;
-function setFile(f) {
-  if (!f || !f.type.startsWith("image/")) { $("fErr").textContent = "Choisissez une image (capture d'écran)."; return; }
-  FILE = f; $("fErr").textContent = "";
-  const url = URL.createObjectURL(f);
-  $("dropTxt").innerHTML = `<img src="${url}" alt="Aperçu"><small>${esc(f.name)} · toucher pour changer</small>`;
+/* ======================================================================
+   CHATTER : tableau de bord + feuille « déclarer une vente »
+   ====================================================================== */
+let MINE = [], MODELS = [], FILTER = "", SHOWN = 40, FILE = null, WHEN = "now", FRESH = null;
+const thumb = s => `<button class="vt-th" data-z="${s.id}" aria-label="Voir la capture"><img src="${img(s.id)}" alt="" loading="lazy" onload="this.classList.add('ld')"></button>`;
+const amtHtml = s => `${s.amount !== s.declared_amount ? `<s>${E(s.declared_amount)}</s>` : ""}${E(s.amount)}`;
+
+function renderMine() {
+  const list = MINE.filter(s => !FILTER || s.status === FILTER);
+  document.querySelectorAll("#mySeg button").forEach(b => { const f = b.dataset.f, n = f ? MINE.filter(s => s.status === f).length : MINE.length;
+    b.innerHTML = b.textContent.replace(/\s*\d+$/, "") + (n && f ? `<span class="n">${n}</span>` : ""); });
+  if (!list.length) { $("myList").innerHTML = `<div class="vt-empty">${MINE.length ? "Aucune vente dans ce filtre." : "Aucune vente déclarée pour l'instant.<br>Touche « Déclarer une vente » après ta première vente."}</div>`; return; }
+  let html = "", last = null;
+  list.slice(0, SHOWN).forEach((s, i) => {
+    const d = dayLabel(s.sold_at); if (d !== last) { html += `<div class="vt-day">${d}</div>`; last = d; }
+    html += `<div class="vt-rw${s.id === FRESH ? " new" : ""}" data-id="${s.id}" style="animation-delay:${Math.min(i, 12) * .04}s">${thumb(s)}
+      <div class="vt-rm"><div class="vt-a">${amtHtml(s)}</div><small>${esc(s.model_name)} · ${hm(s.sold_at)}${s.note ? " · " + esc(s.note) : ""}</small>
+        ${s.status === "refused" && s.reason ? `<div class="vt-why">${esc(s.reason)}</div>` : ""}</div>
+      <div class="vt-rr"><span class="vt-pill ${s.status}"><i></i>${STATUS[s.status]}</span>
+        ${s.status === "pending" ? `<button class="vt-sb del" data-del="${s.id}">Retirer</button>` : ""}
+        ${s.status === "refused" ? `<button class="vt-sb" data-again="${s.id}">Renvoyer</button>` : ""}</div></div>`;
+  });
+  if (list.length > SHOWN) html += `<button class="vt-more" id="moreBtn">Voir plus (${list.length - SHOWN})</button>`;
+  $("myList").innerHTML = html; FRESH = null;
+  document.querySelectorAll("#myList [data-z]").forEach(b => b.onclick = () => zoom(img(b.dataset.z)));
+  document.querySelectorAll("#myList [data-again]").forEach(b => b.onclick = () => openSheet(MINE.find(s => s.id === +b.dataset.again)));
+  document.querySelectorAll("#myList [data-del]").forEach(b => b.onclick = async () => {
+    if (!b.classList.contains("sure")) { b.classList.add("sure"); b.textContent = "Sûr ?"; setTimeout(() => { if (b.isConnected) { b.classList.remove("sure"); b.textContent = "Retirer"; } }, 3000); return; }
+    const row = b.closest(".vt-rw"); b.disabled = true;
+    try { await api(`/api/sales/${b.dataset.del}`, { method: "DELETE" }); row.classList.add("out"); await sleep(350); notify("Vente retirée", "", "info"); loadMine(); }
+    catch (e) { notify("Impossible de retirer", e.message, "err"); b.disabled = false; }
+  });
+  const mb = $("moreBtn"); if (mb) mb.onclick = () => { SHOWN += 40; renderMine(); };
 }
+document.querySelectorAll("#mySeg button").forEach(b => b.onclick = () => { FILTER = b.dataset.f; SHOWN = 40; document.querySelectorAll("#mySeg button").forEach(x => x.classList.toggle("on", x === b)); renderMine(); });
+
+function renderHero(h) {
+  const t = h.tiers, k = t.k || 1, cur = periodKey(Date.now());
+  $("hLab").textContent = `Validé · ${periodLabel(h.period?.key || cur).replace(/ \d{4}$/, "")}`;
+  countTo($("hBig"), h.sales.validated, N, 1200);
+  countTo($("kPend"), h.sales.pending, E, 800);
+  countTo($("kCom"), t.total, E, 1000);
+  countTo($("kRef"), h.sales.refused, N, 600);
+  // barre de palier, en montant brut validé
+  const L = t.list, brut = h.sales.validated, nx = L[t.tier + 1], nx2 = L[t.tier + 2];
+  if (!nx) { $("hTier").innerHTML = `<div class="vt-nxt">Palier maximum atteint : <b>${t.rate} %</b>${t.prime ? ` + <b>${E(t.prime)}</b> de prime` : ""}. Bravo.</div>`; return; }
+  const max = (nx2 ? nx2.from : nx.from * 1.4) / k;
+  const lbl = x => x.prime ? `+${x.prime} € prime` : `${x.rate} %`;
+  const marks = L.filter(x => x.from > 0 && x.from / k <= max + 1).map((x, i, a) => { const show = x === nx || x === L[t.tier]; return `<span class="mk${brut >= x.from / k ? " on" : ""}${x.from / k >= max * .8 ? " last" : ""}" style="left:${Math.min(100, x.from / k / max * 100)}%">${show ? `<span>${N(x.from / k)} € · ${lbl(x)}</span>` : ""}</span>`; }).join("");
+  const gap = Math.max(0, nx.from / k - brut);
+  const old = $("hTier").querySelector(".fill"), w = Math.min(100, brut / max * 100);
+  $("hTier").innerHTML = `<div class="vt-track"><span class="fill" style="width:${old ? old.style.width : "0%"}"></span>${marks}</div>
+    <div class="vt-nxt">Plus que <b>${E(Math.ceil(gap))}</b> ${nx.prime && nx.rate === t.rate ? `pour débloquer <b>${E(nx.prime)}</b> de prime` : `pour passer à <b>${nx.rate} %</b> de commission`}</div>`;
+  requestAnimationFrame(() => requestAnimationFrame(() => { const f = $("hTier").querySelector(".fill"); if (f) f.style.width = w + "%"; }));
+}
+
+async function loadMine(opts = {}) {
+  if (!MINE.length && !$("myList").children.length) $("myList").innerHTML = SK.line("100%", 64, 8).repeat(4);
+  const [d, h] = await Promise.all([api("/api/sales/mine"), api("/api/home").catch(() => null)]);
+  if (opts.watch) {   // décisions du manager arrivées depuis le dernier passage
+    const before = new Map(MINE.map(s => [s.id, s.status]));
+    const changed = d.sales.filter(s => before.get(s.id) === "pending" && s.status !== "pending");
+    changed.forEach(s => s.status === "validated" ? notify("Vente validée", `${E(s.amount)} · ${s.model_name}`, "ok") : notify("Vente refusée", s.reason || `${E(s.amount)} · ${s.model_name}`, "err"));
+    if (changed.some(s => s.status === "validated")) VS.ok(); else if (changed.length) VS.ko();
+    MINE = d.sales; MODELS = d.models; if (h) renderHero(h);
+    if (changed.length) { renderMine(); changed.forEach(s => { const r = document.querySelector(`#myList [data-id="${s.id}"]`); if (r) { r.classList.add(s.status === "validated" ? "flip-v" : "flip-r"); setTimeout(() => r.classList.remove("flip-v", "flip-r"), 2600); } }); }
+    return;
+  }
+  MINE = d.sales; MODELS = d.models; renderMine(); if (h) renderHero(h);
+}
+
+/* ----- feuille ----- */
+function setFile(f) {
+  if (!f || !f.type.startsWith("image/")) { $("fErr").textContent = "Choisis une image (capture d'écran)."; return; }
+  FILE = f; $("fErr").textContent = "";
+  $("drop").classList.add("has");
+  $("dropIn").innerHTML = `<div class="pv"><img src="${URL.createObjectURL(f)}" alt="Aperçu de la capture"></div><span class="ok">✓ Capture ajoutée · touche pour changer</span>`;
+  VS.pick();
+}
+const DROP_EMPTY = $("dropIn").innerHTML;
 $("fFile").onchange = e => setFile(e.target.files[0]);
 ["dragover", "dragenter"].forEach(ev => $("drop").addEventListener(ev, e => { e.preventDefault(); $("drop").classList.add("over"); }));
 ["dragleave", "drop"].forEach(ev => $("drop").addEventListener(ev, () => $("drop").classList.remove("over")));
 $("drop").addEventListener("drop", e => { e.preventDefault(); setFile(e.dataTransfer.files[0]); });
 
-$("saleForm").onsubmit = async e => {
+const syncAmtChips = () => { if (typeof fitAmt === "function") fitAmt(); const v = parseNum($("fAmount").value); document.querySelectorAll("#amtChips button").forEach(b => b.classList.toggle("on", +b.dataset.a === v)); };
+document.querySelectorAll("#amtChips button").forEach(b => b.onclick = () => { $("fAmount").value = b.dataset.a; syncAmtChips(); VS.tick(); });
+const fitAmt = () => { const v = $("fAmount").value || "0"; $("fAmount").style.width = (v.length * .62 + .1) + "em"; };
+$("fAmount").oninput = () => { syncAmtChips(); fitAmt(); };
+document.querySelectorAll("#whenChips button").forEach(b => b.onclick = () => {
+  WHEN = b.dataset.w; document.querySelectorAll("#whenChips button").forEach(x => x.classList.toggle("on", x === b)); VS.tick();
+  $("fDate").classList.toggle("hidden", WHEN !== "pick"); if (WHEN === "pick") { $("fDate").value = $("fDate").value || toLocalInput(Date.now()); $("fDate").max = toLocalInput(Date.now() + 60e3); }
+});
+function renderCrea(sel) {
+  let last = sel; try { last = last || +localStorage.getItem("stLastModel"); } catch (e) {}
+  if (!MODELS.some(m => m.id === last)) last = MODELS[0]?.id;
+  $("creaChips").innerHTML = MODELS.map(m => `<button type="button" data-m="${m.id}" class="${m.id === last ? "on" : ""}">${esc(m.name)}</button>`).join("") || `<span class="vt-mut">Aucune créatrice : demande au manager d'en ajouter.</span>`;
+  document.querySelectorAll("#creaChips button").forEach(b => b.onclick = () => { document.querySelectorAll("#creaChips button").forEach(x => x.classList.toggle("on", x === b)); VS.tick(); });
+}
+function openSheet(again) {
+  FILE = null; $("fFile").value = ""; $("drop").classList.remove("has"); $("dropIn").innerHTML = DROP_EMPTY; $("fErr").textContent = "";
+  $("fAmount").value = again ? String(again.declared_amount).replace(".", ",") : ""; $("fNote").value = again?.note || "";
+  WHEN = "now"; document.querySelectorAll("#whenChips button").forEach(x => x.classList.toggle("on", x.dataset.w === "now")); $("fDate").classList.add("hidden");
+  if (again) { WHEN = "pick"; document.querySelectorAll("#whenChips button").forEach(x => x.classList.toggle("on", x.dataset.w === "pick")); $("fDate").classList.remove("hidden"); $("fDate").value = toLocalInput(again.sold_at); }
+  $("shTitle").innerHTML = again ? "Renvoyer la <em>vente</em>" : "Déclarer une <em>vente</em>";
+  renderCrea(again?.model_id); syncAmtChips();
+  $("scrim").classList.add("on"); $("sheet").classList.add("on"); document.body.style.overflow = "hidden"; VS.open();
+}
+function closeSheet() { $("scrim").classList.remove("on"); $("sheet").classList.remove("on"); document.body.style.overflow = ""; }
+$("openSheet").onclick = () => openSheet();
+$("scrim").onclick = closeSheet; $("shClose").onclick = closeSheet;
+addEventListener("keydown", e => { if (e.key === "Escape") { if (!$("lb").classList.contains("hidden")) $("lb").classList.add("hidden"); else if ($("sheet").classList.contains("on")) closeSheet(); } });
+
+$("sheet").onsubmit = async e => {
   e.preventDefault(); $("fErr").textContent = "";
-  const amount = parseNum($("fAmount").value);
-  if (!(amount > 0)) { $("fErr").textContent = "Indiquez le montant brut de la vente."; return; }
-  if (!FILE) { $("fErr").textContent = "Ajoutez la capture d'écran de la vente."; return; }
+  const amount = parseNum($("fAmount").value), model = +document.querySelector("#creaChips button.on")?.dataset.m;
+  if (!FILE) { $("fErr").textContent = "Ajoute la capture d'écran de la vente."; return; }
+  if (!(amount > 0)) { $("fErr").textContent = "Indique le montant brut de la vente."; $("fAmount").focus(); return; }
+  if (!model) { $("fErr").textContent = "Choisis la créatrice."; return; }
+  const sold = WHEN === "now" ? Date.now() : WHEN === "1h" ? Date.now() - 3600e3 : new Date($("fDate").value).getTime();
+  if (!sold || isNaN(sold)) { $("fErr").textContent = "Choisis la date et l'heure de la vente."; return; }
+  if (sold > Date.now() + 5 * 60e3) { $("fErr").textContent = "La date de vente est dans le futur."; return; }
   $("fBtn").disabled = true; $("fBtn").textContent = "Envoi…";
   try {
     const blob = await compress(FILE);
-    const q = new URLSearchParams({ model_id: $("fModel").value, amount, sold_at: new Date($("fDate").value).getTime(), note: $("fNote").value });
+    const q = new URLSearchParams({ model_id: model, amount, sold_at: sold, note: $("fNote").value });
     const r = await fetch("/api/sales?" + q, { method: "POST", headers: { "Content-Type": blob.type || "image/jpeg" }, body: blob, credentials: "same-origin" });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || "Erreur " + r.status);
-    FILE = null; $("fFile").value = ""; $("fAmount").value = ""; $("fNote").value = "";
-    $("dropTxt").innerHTML = "Vente envoyée pour validation<br><small>Touchez pour ajouter la suivante</small>";
-    notify("Vente envoyée", `${eur(amount)} · en attente de validation par le manager`, "ok");
-    $("fDate").value = toLocalInput(Date.now());
-    loadMine();
+    try { localStorage.setItem("stLastModel", model); } catch (e) {}
+    closeSheet(); VS.send();
+    notify("Vente envoyée", `${E(amount)} · en attente de validation`, "ok");
+    FRESH = d.id; if (FILTER && FILTER !== "pending") { FILTER = ""; document.querySelectorAll("#mySeg button").forEach(x => x.classList.toggle("on", !x.dataset.f)); }
+    await loadMine();
   } catch (err) { $("fErr").textContent = err.message; }
   $("fBtn").disabled = false; $("fBtn").textContent = "Envoyer pour validation";
 };
 
-async function loadMine() {
-  if (!MINE.length && !$("myList").children.length) $("myList").innerHTML = SK.tiles(4, 200).replace('class="sk-tiles"', 'class="sk-tiles" style="grid-column:1/-1"');
-  const d = await api("/api/sales/mine");
-  if (!$("fModel").options.length) $("fModel").innerHTML = d.models.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join("");
-  const cur = periodKey(Date.now()), inP = d.sales.filter(s => s.period === cur);
-  const sum = st => inP.filter(s => s.status === st).reduce((t, s) => t + s.amount, 0);
-  $("myKpis").innerHTML = [["Validé", eur(sum("validated")), "var(--good)"], ["En attente", eur(sum("pending")), "var(--warn)"], ["Refusées", inP.filter(s => s.status === "refused").length, ""]]
-    .map(([l, v, c]) => `<div class="card kpi" style="padding:14px"><small>${l}</small><b style="font-size:18px;${c ? "color:" + c : ""}">${v}</b></div>`).join("");
-  $("myPeriod").textContent = `Période du ${periodLabel(cur)}`;
-  MINE = d.sales; renderMine();
-}
-let MINE = [], FILTER = "";
-document.querySelectorAll("#mySeg button").forEach(b => b.onclick = () => { FILTER = b.dataset.f; document.querySelectorAll("#mySeg button").forEach(x => x.classList.toggle("on", x === b)); renderMine(); });
-function renderMine() {
-  const list = MINE.filter(s => !FILTER || s.status === FILTER);
-  $("myList").innerHTML = !list.length ? `<div class="emptyv">${MINE.length ? "Aucune vente dans ce filtre." : "Aucune vente déclarée pour l'instant."}</div>` :
-    list.map((s, i) => `<div class="vc" style="animation-delay:${Math.min(i, 10) * 0.05}s">
-      <span class="bd ${s.status}"><i></i>${STATUS[s.status]}</span>
-      ${s.status === "pending" ? `<button class="del" data-del="${s.id}" aria-label="Supprimer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>` : ""}
-      <div class="shot" data-z="${s.id}"><img src="${img(s.id)}" alt="Capture de la vente" loading="lazy" onload="this.classList.add('ld')"></div>
-      <div class="meta"><div class="amt">${s.amount !== s.declared_amount ? `<span class="strike">${eur(s.declared_amount)}</span>` : ""}${eur(s.amount)}</div>
-        <small>${esc(s.model_name)} · ${fmtDT(s.sold_at)}${s.note ? "<br>" + esc(s.note) : ""}</small>
-        ${s.status === "refused" && s.reason ? `<div class="why">${esc(s.reason)}</div>` : ""}</div></div>`).join("");
-  document.querySelectorAll("#myList [data-z]").forEach(i => i.onclick = () => zoom(img(i.dataset.z)));
-  document.querySelectorAll("#myList [data-del]").forEach(b => b.onclick = async e => {
-    e.stopPropagation(); const card = b.closest(".vc");
-    await api(`/api/sales/${b.dataset.del}`, { method: "DELETE" }); await slideAway(card);
-    notify("Vente supprimée", "", "info"); loadMine();
-  });
-}
+/* ======================================================================
+   MANAGER : file focus (une vente à la fois) + historique
+   ====================================================================== */
+const Q = { list: [], i: 0, busy: false, val: 0, nv: 0, nr: 0, loaded: false };
+const qCur = () => Q.list[Q.i];
 
-/* ================= MANAGER ================= */
-document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
-  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
-  $("t-queue").classList.toggle("hidden", b.dataset.t !== "queue"); $("t-hist").classList.toggle("hidden", b.dataset.t !== "hist");
-  b.dataset.t === "queue" ? loadQueue() : loadHist();
+function qMeta() {
+  const n = Q.list.length;
+  $("tabQueue").textContent = n ? `À valider · ${n}` : "À valider";
+  updateBadge(n);
+  $("qTop").style.visibility = n ? "" : "hidden";
+  $("qDots").innerHTML = n <= 14 ? Q.list.map((_, j) => `<i class="${j === Q.i ? "cur" : ""}"></i>`).join("") : "";
+  $("qPos").textContent = n ? `Vente ${Q.i + 1} sur ${n}` : "";
+  $("qSum").textContent = n ? `· ${E(Q.list.reduce((t, s) => t + s.amount, 0))} en attente` : "";
+  $("qPrev").disabled = Q.i <= 0; $("qNext").disabled = Q.i >= n - 1;
+}
+function qShow() {
+  $("qLoad").classList.add("hidden");
+  const s = qCur(); qMeta();
+  $("qStage").classList.toggle("hidden", !s); $("qDone").classList.toggle("on", !s);
+  if (!s) return;
+  const cap = $("qCap"), im = cap.querySelector("img.main");
+  im.classList.remove("ld"); im.onload = () => im.classList.add("ld"); im.src = img(s.id);
+  cap.querySelector(".bg").style.backgroundImage = `url("${img(s.id)}")`;
+  $("qWho").innerHTML = `<span class="vt-av">${esc((s.username || "?")[0])}</span><div><b>${esc(s.username)}</b><small>${esc(s.model_name)} · ${whenTxt(s.sold_at)}</small></div>`;
+  $("qNote").style.display = s.note ? "" : "none"; $("qNote").textContent = s.note ? `« ${s.note} »` : "";
+  $("qAmt").value = String(s.amount).replace(".", ",");
+  qHint();
+  qReasons(false);
+}
+function qHint() { const s = qCur(); if (!s) return; const v = parseNum($("qAmt").value);
+  $("qHint").innerHTML = v > 0 && v !== s.declared_amount ? `Déclarée à <b>${E(s.declared_amount)}</b> · tu la corriges à <b>${E(v)}</b>` : "Corrige le montant si la capture ne correspond pas"; }
+function qReasons(on) {
+  $("qReasons").classList.toggle("on", on); $("qRef").textContent = on ? "Confirmer le refus" : "Refuser";
+  if (!on) { document.querySelectorAll("#qReasons .rs button").forEach(b => b.classList.remove("on")); $("qOther").value = ""; }
+}
+async function qSlide(cls, back) {
+  const st = $("qStage");
+  if (cls && !REDUCED) { st.classList.add(cls); await sleep(420); st.classList.remove(cls); }
+  st.classList.remove("in", "in-b"); void st.offsetWidth; st.classList.add(back ? "in-b" : "in");
+}
+async function qGo(d) { const j = Q.i + d; if (Q.busy || j < 0 || j >= Q.list.length) return; Q.i = j; VS.tick(); await qSlide(null, d < 0); qShow(); }
+
+// le montant validé s'envole de la capture jusqu'au compteur « Validé aujourd'hui »
+function flyAmount(text) {
+  if (REDUCED) return Promise.resolve();
+  const a = $("qCap").getBoundingClientRect(), b = $("sValBox").getBoundingClientRect();
+  const f = document.createElement("div"); f.className = "vt-flyamt"; f.textContent = text; document.body.appendChild(f);
+  const w = f.offsetWidth, h = f.offsetHeight, x0 = a.left + a.width / 2 - w / 2, y0 = a.top + a.height / 2 - h / 2, x1 = b.left + b.width / 2 - w / 2, y1 = b.top + b.height / 2 - h / 2;
+  const anim = f.animate([
+    { transform: `translate(${x0}px,${y0 + 14}px) scale(.6)`, opacity: 0 },
+    { transform: `translate(${x0}px,${y0 - 16}px) scale(1.15)`, opacity: 1, offset: .22 },
+    { transform: `translate(${(x0 + x1) / 2}px,${Math.min(y0, y1) - 60}px) scale(.9)`, opacity: 1, offset: .6 },
+    { transform: `translate(${x1}px,${y1}px) scale(.45)`, opacity: 0 }
+  ], { duration: 1150, easing: "cubic-bezier(.45,0,.25,1)" });
+  return anim.finished.then(() => f.remove()).catch(() => f.remove());
+}
+const hit = (id, cls) => { const el = $(id); el.classList.remove("hit", "hit-r"); void el.offsetWidth; el.classList.add(cls); };
+
+async function decide(decision) {
+  const s = qCur(); if (!s || Q.busy) return;
+  const amount = parseNum($("qAmt").value);
+  if (decision === "validated" && !(amount > 0)) { notify("Montant invalide", "Indique un montant supérieur à 0 €", "err"); $("qAmt").focus(); return; }
+  const reason = [...document.querySelectorAll("#qReasons .rs button.on")].map(b => b.textContent).concat($("qOther").value.trim() ? [$("qOther").value.trim()] : []).join(" · ");
+  Q.busy = true; $("qVal").disabled = $("qRef").disabled = true;
+  try {
+    await api(`/api/admin/sales/${s.id}/review`, { body: { decision, amount: amount > 0 ? amount : "", reason } });
+    const fl = $("qCap").querySelector(".flash"); fl.className = "flash"; void fl.offsetWidth; fl.className = "flash " + (decision === "validated" ? "v" : "r");
+    if (decision === "validated") {
+      VS.ok(); flyAmount("+" + E(amount)).then(() => { Q.val += amount; countTo($("sVal"), Q.val, E, 600); hit("sValBox", "hit"); });
+      Q.nv++; countTo($("sNv"), Q.nv, N, 400); hit("sNvBox", "hit");
+      notify("Vente validée", `${E(amount)} ajoutés à la compta de ${s.username}`, "ok");
+    } else {
+      VS.ko(); Q.nr++; countTo($("sNr"), Q.nr, N, 400); hit("sNrBox", "hit-r");
+      notify("Vente refusée", `${s.username} est prévenu${reason ? " · " + reason : ""}`, "info");
+    }
+    Q.list.splice(Q.i, 1); if (Q.i >= Q.list.length) Q.i = Math.max(0, Q.list.length - 1);
+    await qSlide(decision === "validated" ? "out-v" : "out-r"); qShow();
+  } catch (e) { notify("Erreur", e.message, "err"); }
+  Q.busy = false; $("qVal").disabled = $("qRef").disabled = false;
+}
+$("qVal").onclick = () => decide("validated");
+$("qRef").onclick = () => { if (!$("qReasons").classList.contains("on")) { qReasons(true); return; } decide("refused"); };
+document.querySelectorAll("#qReasons .rs button").forEach(b => b.onclick = () => { b.classList.toggle("on"); VS.tick(); });
+$("qCap").onclick = () => { const s = qCur(); if (s) zoom(img(s.id)); };
+$("qPrev").onclick = () => qGo(-1); $("qNext").onclick = () => qGo(1);
+const bump = d => { const v = parseNum($("qAmt").value) || 0; $("qAmt").value = String(Math.max(1, Math.round((v + d) * 100) / 100)).replace(".", ","); qHint(); VS.tick(); };
+$("amMinus").onclick = () => bump(-5); $("amPlus").onclick = () => bump(5);
+$("qAmt").oninput = qHint;
+$("qAmt").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); decide("validated"); } if (e.key === "ArrowUp") { e.preventDefault(); bump(1); } if (e.key === "ArrowDown") { e.preventDefault(); bump(-1); } });
+addEventListener("keydown", e => {
+  if ($("adminView").classList.contains("hidden") || $("t-queue").classList.contains("hidden") || !$("lb").classList.contains("hidden")) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const typing = e.target.matches("input,textarea,select");
+  if (e.key === "Escape" && $("qReasons").classList.contains("on")) { qReasons(false); return; }
+  if (typing) return;
+  const k = e.key.toLowerCase();
+  if (k === "v") { e.preventDefault(); decide("validated"); }
+  else if (k === "r") { e.preventDefault(); $("qRef").click(); }
+  else if (e.key === "ArrowRight") qGo(1); else if (e.key === "ArrowLeft") qGo(-1);
 });
 
 async function loadQueue() {
-  if (!$("queue").children.length) $("queue").innerHTML = SK.tiles(3, 380).replace('class="sk-tiles"', 'class="sk-tiles" style="grid-column:1/-1;grid-template-columns:repeat(auto-fill,minmax(270px,1fr))"');
-  const d = await api("/api/admin/sales?status=pending");
-  $("tabQueue").textContent = `À valider (${d.pending})`;
-  updateBadge(d.pending);
-  $("queue").innerHTML = !d.sales.length ? "<div class='card fade-in' style='color:var(--muted)'>Aucune vente en attente : tout est à jour.</div>" :
-    d.sales.map((s, i) => `<div class="qcard fade-in" id="q${s.id}" style="animation-delay:${Math.min(i, 8) * 0.05}s">
-      <div class="img" data-z="${s.id}"><img src="${img(s.id)}" alt="Capture de la vente" loading="lazy"></div>
-      <div class="body">
-        <div><b>${esc(s.username)}</b> · ${esc(s.model_name)}</div>
-        <div class="meta">${fmtDT(s.sold_at)}${s.note ? "<br>« " + esc(s.note) + " »" : ""}</div>
-        <div class="amount"><input inputmode="decimal" value="${String(s.amount).replace(".", ",")}" data-amt="${s.id}" aria-label="Montant brut"> <span>€ brut</span></div>
-        <input placeholder="Motif si refus (optionnel)" data-reason="${s.id}" maxlength="300">
-        <div class="actions"><button class="btn danger small" data-ref="${s.id}">Refuser</button><button class="btn ok small" data-val="${s.id}">Valider</button></div>
-        <div class="err" id="qe${s.id}"></div>
-      </div></div>`).join("");
-  document.querySelectorAll("[data-z]").forEach(i => i.onclick = () => zoom(img(i.dataset.z)));
-  const review = async (id, decision) => {
-    const amount = document.querySelector(`[data-amt="${id}"]`).value, reason = document.querySelector(`[data-reason="${id}"]`).value;
-    try {
-      const card = $("q" + id), who = card.querySelector(".body b").textContent;
-      card.querySelectorAll("button").forEach(x => x.disabled = true);
-      await api(`/api/admin/sales/${id}/review`, { body: { decision, amount, reason } });
-      await stamp(card, decision === "validated" ? "ok" : "ko");
-      notify(decision === "validated" ? "Vente validée" : "Vente refusée",
-        decision === "validated" ? `${eur(parseNum(amount))} ajoutés à la compta de ${who}` : `${who} sera prévenu${reason ? " · " + reason : ""}`, decision === "validated" ? "ok" : "info");
-      await slideAway(card); loadQueue();
-    } catch (e) { $("qe" + id).textContent = e.message; $("q" + id).querySelectorAll("button").forEach(x => x.disabled = false); }
-  };
-  document.querySelectorAll("[data-val]").forEach(b => b.onclick = () => review(b.dataset.val, "validated"));
-  document.querySelectorAll("[data-ref]").forEach(b => b.onclick = () => review(b.dataset.ref, "refused"));
+  const [p, all] = await Promise.all([api("/api/admin/sales?status=pending"), Q.loaded ? null : api("/api/admin/sales").catch(() => null)]);
+  if (all) {   // décisions déjà prises aujourd'hui
+    const today = all.sales.filter(s => s.reviewed_at && sameDay(s.reviewed_at, Date.now()));
+    Q.val = today.filter(s => s.status === "validated").reduce((t, s) => t + s.amount, 0);
+    Q.nv = today.filter(s => s.status === "validated").length; Q.nr = today.filter(s => s.status === "refused").length;
+    countTo($("sVal"), Q.val, E, 900); countTo($("sNv"), Q.nv); countTo($("sNr"), Q.nr);
+  }
+  const ids = new Set(p.sales.map(s => s.id)), cur = qCur();
+  if (!Q.loaded) { Q.list = p.sales; Q.loaded = true; qShow(); $("qStage").classList.add("in"); return; }
+  // rafraîchissement : nouvelles ventes à la fin, ventes traitées ailleurs retirées
+  const known = new Set(Q.list.map(s => s.id)), added = p.sales.filter(s => !known.has(s.id));
+  const wasEmpty = !Q.list.length;
+  Q.list = Q.list.filter(s => ids.has(s.id)).concat(added);
+  if (added.length) notify(added.length > 1 ? `${added.length} nouvelles ventes` : "Nouvelle vente à valider", added.map(s => `${s.username} · ${E(s.amount)}`).join(" · "), "info");
+  const still = cur && Q.list.findIndex(s => s.id === cur.id);
+  if (cur && still >= 0) { Q.i = still; qMeta(); }
+  else { Q.i = Math.min(Q.i, Math.max(0, Q.list.length - 1)); if (Q.list.length || !wasEmpty) { if (Q.list.length && !Q.busy) await qSlide(null); qShow(); } }
 }
 
+/* ----- historique ----- */
 let HP = null;
 async function loadHist() {
-  if (!$("hist").children.length) $("hist").innerHTML = SK.table(6);
+  if (!$("hist").children.length) $("hist").innerHTML = SK.line("100%", 64, 8).repeat(5);
   const q = new URLSearchParams();
   if ($("hStatus").value) q.set("status", $("hStatus").value);
   if ($("hUser").value) q.set("user", $("hUser").value);
@@ -273,31 +680,45 @@ async function loadHist() {
     $("hPeriod").value = keys[0];
     return loadHist();
   }
-  const val = d.sales.filter(s => s.status === "validated");
-  $("histSum").textContent = `${d.sales.length} vente(s) · validé : ${eur(val.reduce((t, s) => t + s.amount, 0))} brut`;
-  $("hist").innerHTML = !d.sales.length ? "<div style='color:var(--muted)'>Aucune vente.</div>" :
-    `<table><tr><th></th><th>Date</th><th>Chatter</th><th>Créatrice</th><th style="text-align:right">Montant brut</th><th>Statut</th><th></th></tr>` +
-    d.sales.map(s => `<tr><td><img class="thumb" src="${img(s.id)}" alt="Capture" loading="lazy" data-z="${s.id}"></td>
-      <td style="white-space:nowrap">${fmtDT(s.sold_at)}</td><td><b>${esc(s.username)}</b></td><td>${esc(s.model_name)}</td>
-      <td style="text-align:right;white-space:nowrap">${s.amount !== s.declared_amount ? `<span class="strike">${eur(s.declared_amount)}</span>` : ""}<b>${eur(s.amount)}</b></td>
-      <td><span class="st ${s.status}">${STATUS[s.status]}</span>${s.reviewer ? `<br><small style="color:var(--muted)">par ${esc(s.reviewer)}</small>` : ""}${s.reason ? `<br><small style="color:var(--bad)">${esc(s.reason)}</small>` : ""}</td>
-      <td style="text-align:right;white-space:nowrap">${s.status !== "pending" ? `<button class="btn ghost small" data-back="${s.id}">Remettre en attente</button>` : ""} <button class="btn danger small" data-hdel="${s.id}" aria-label="Supprimer">✕</button></td></tr>`).join("") + "</table>";
-  document.querySelectorAll("#hist [data-z]").forEach(i => i.onclick = () => zoom(img(i.dataset.z)));
-  document.querySelectorAll("[data-back]").forEach(b => b.onclick = async () => { await api(`/api/admin/sales/${b.dataset.back}/review`, { body: { decision: "pending" } }); loadHist(); refreshCount(); });
-  document.querySelectorAll("[data-hdel]").forEach(b => b.onclick = async () => {
-    if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Confirmer ?"; return; }
-    await api(`/api/sales/${b.dataset.hdel}`, { method: "DELETE" }); loadHist(); refreshCount();
+  const by = st => d.sales.filter(s => s.status === st);
+  $("histSum").innerHTML = `<span><b>${d.sales.length}</b> vente${d.sales.length > 1 ? "s" : ""}</span><span>Validé <b style="color:#5fd3a2">${E(by("validated").reduce((t, s) => t + s.amount, 0))}</b></span><span>En attente <b>${by("pending").length}</b></span><span>Refusées <b style="color:#e07a7a">${by("refused").length}</b></span>`;
+  if (!d.sales.length) { $("hist").innerHTML = `<div class="vt-empty">Aucune vente pour ces filtres.</div>`; return; }
+  let html = "", last = null;
+  d.sales.forEach((s, i) => {
+    const dl = dayLabel(s.sold_at); if (dl !== last) { html += `<div class="vt-day">${dl}</div>`; last = dl; }
+    html += `<div class="vt-rw vt-hrw" style="animation-delay:${Math.min(i, 12) * .03}s">${thumb(s)}
+      <div class="vt-rm"><div class="vt-a">${amtHtml(s)}</div><small><span class="who">${esc(s.username)}</span> · ${esc(s.model_name)} · ${hm(s.sold_at)}${s.note ? " · " + esc(s.note) : ""}</small>
+        ${s.reviewer ? `<small>par ${esc(s.reviewer)}</small>` : ""}${s.status === "refused" && s.reason ? `<div class="vt-why">${esc(s.reason)}</div>` : ""}</div>
+      <div class="vt-rr"><span class="vt-pill ${s.status}"><i></i>${STATUS[s.status]}</span>
+        <div style="display:flex;gap:6px">${s.status !== "pending" ? `<button class="vt-sb" data-back="${s.id}">Remettre en attente</button>` : ""}<button class="vt-sb del" data-hdel="${s.id}" aria-label="Supprimer">✕</button></div></div></div>`;
+  });
+  $("hist").innerHTML = html;
+  document.querySelectorAll("#hist [data-z]").forEach(b => b.onclick = () => zoom(img(b.dataset.z)));
+  document.querySelectorAll("#hist [data-back]").forEach(b => b.onclick = async () => { b.disabled = true; await api(`/api/admin/sales/${b.dataset.back}/review`, { body: { decision: "pending" } }); notify("Vente remise en attente", "", "info"); loadHist(); loadQueue(); });
+  document.querySelectorAll("#hist [data-hdel]").forEach(b => b.onclick = async () => {
+    if (!b.classList.contains("sure")) { b.classList.add("sure"); b.textContent = "Supprimer ?"; return; }
+    await api(`/api/sales/${b.dataset.hdel}`, { method: "DELETE" }); loadHist(); loadQueue();
   });
 }
 ["hStatus", "hUser", "hPeriod"].forEach(id => $(id).onchange = loadHist);
-async function refreshCount() { try { const c = await api("/api/admin/sales/count"); $("tabQueue").textContent = `À valider (${c.pending})`; updateBadge(c.pending); } catch (e) {} }
+document.querySelectorAll(".vt-tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".vt-tabs button").forEach(x => x.classList.toggle("on", x === b));
+  $("t-queue").classList.toggle("hidden", b.dataset.t !== "queue"); $("t-hist").classList.toggle("hidden", b.dataset.t !== "hist");
+  if (b.dataset.t === "hist") loadHist(); else loadQueue();
+});
 
 /* ---------- Démarrage ---------- */
 (async () => {
   const me = await api("/api/me");
   renderShell("ventes", me);
-  if (me.role === "admin") { $("adminView").classList.remove("hidden"); loadQueue(); }
-  else { $("chatterView").classList.remove("hidden"); $("fDate").value = toLocalInput(Date.now()); loadMine(); }
+  if (me.role === "admin") {
+    $("adminView").classList.remove("hidden"); loadQueue();
+    setInterval(() => { if (!document.hidden && !$("t-queue").classList.contains("hidden")) loadQueue().catch(() => {}); }, 20000);
+  } else {
+    $("chatterView").classList.remove("hidden"); await loadMine();
+    if (new URLSearchParams(location.search).has("declarer")) openSheet();
+    setInterval(() => { if (!document.hidden && !$("sheet").classList.contains("on")) loadMine({ watch: true }).catch(() => {}); }, 20000);
+  }
 })();
 </script>
 </body>
