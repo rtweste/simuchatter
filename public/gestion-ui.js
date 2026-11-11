@@ -188,7 +188,10 @@ function tfiche(c) {
   dr.querySelectorAll("[data-a]").forEach(b => b.onclick = async () => {
     const a = b.dataset.a;
     try {
-      if (a === "iv") { S.open(); ENTRETIEN.open(c, b, async (sum, fin) => { tr.interview = sum;
+      if (a === "iv") { S.open(); ENTRETIEN.open(c, b, async (sum, fin, outcome) => { tr.interview = sum;
+          if (fin && outcome) { setTimeout(() => { close(); loadTeam(true); }, 1700);
+            if (outcome === "hired") toast(`${esc(c.username)} est recruté : il est maintenant chatter · il apparaît dans le planning et la paie`, true);
+            else toast(`Candidature de ${esc(c.username)} refusée · compte désactivé`); return; }
           if (!fin) { const blk = dr.querySelector("[data-ivs]"); if (blk) { const h = b.onclick; blk.outerHTML = ivSum(c); const nb = dr.querySelector('[data-ivs] [data-a="iv"]'); if (nb) { nb.onclick = h; b = nb; } } }
           if (fin) { toast(`Entretien de ${esc(c.username)} enregistré · ${esc(sum.decisionLabel)}`, sum.decision !== "refused"); const f = await api("/api/admin/team/" + c.id).catch(() => null); if (f) setTimeout(() => tfiche({ ...c, ...f, training: f.training || c.training }), 650); loadTeam(true); } });
         return; }

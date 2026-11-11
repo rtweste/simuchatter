@@ -304,7 +304,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
         courseList().forEach(v => ins.run(u.id, v.id, 0, null, now, now));
         const A = { _test: true }; IV_QUESTIONS.forEach(q => A[q.id] = q.type === "slots" ? { v: agency().slots.slice(0, 2).map(x => x[0]), note: "" } : q.type === "rating" ? { v: 4, note: "" } : { v: "ok", note: "" });
         db.prepare("INSERT INTO interviews (user_id, by_id, started_at, updated_at, done_at, decision, answers) VALUES (?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET answers = excluded.answers, done_at = excluded.done_at, decision = excluded.decision, updated_at = excluded.updated_at")
-          .run(u.id, req.user.id, now, now, now, "recommended", JSON.stringify(A)); }
+          .run(u.id, req.user.id, now, now, now, "review", JSON.stringify(A)); }
       log(req.user.id, "a", `Test : ${mode === "all" ? "toute la formation validée" : "critères du simulateur validés"} pour **${u.username}**`, "Outil de test du manager");
     }
     res.json({ ok: true, training: training(u.id) });
@@ -319,13 +319,15 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     { id: "situ", cat: "Mise en situation", type: "choice", q: "« Un fan te dit qu'il n'a plus d'argent ce mois-ci mais il veut absolument la vidéo. Tu fais quoi ? »", hint: "Bonne réponse : il respecte le refus, ne met pas de pression et garde le lien pour plus tard.", options: OK3("Respecte les règles", "Partiellement", "Met la pression") },
     { id: "rules", cat: "Règles de l'agence", type: "choice", q: "Que fais-tu quand un média payant passe de « En attente » à « Accepté » ?", hint: "Bonne réponse : il prend une capture d'écran de la vente et la dépose sur le dashboard StellADS, dans « Mes ventes ».", options: OK3("Bonne réponse", "Hésitant", "Ne sait pas") },
     { id: "feel", cat: "Ton ressenti", type: "rating", q: "Note globale de l'entretien", hint: "Ton impression générale : sérieux, ponctualité, façon de parler." }];
-  const IV_DECISIONS = { recommended: "Recommandé", review: "À revoir", refused: "Refusé" };
+  // boutons de décision (verbe) et libellé une fois l'entretien terminé
+  const IV_DECISIONS = { hire: "Recruter", review: "À revoir", refused: "Refuser" };
+  const IV_DONE_LBL = { hire: "Recruté", review: "À revoir", refused: "Refusé", recommended: "Recommandé" };
   const ivRow = uid => { const r = db.prepare("SELECT * FROM interviews WHERE user_id = ?").get(uid); if (r) r.answers = J(r.answers) || {}; return r; };
   const ivAnswered = (q, a) => !!a && (q.type === "slots" ? Array.isArray(a.v) && a.v.length > 0 : q.type === "rating" ? a.v >= 1 && a.v <= 5 : !!q.options.find(o => o.v === a.v));
   function interview(uid) {
     const r = ivRow(uid), ans = r ? r.answers : {}, by = r && r.by_id ? db.prepare("SELECT username FROM users WHERE id = ?").get(r.by_id) : null;
     const answered = IV_QUESTIONS.filter(q => ivAnswered(q, ans[q.id])).length;
-    return { started: !!r, done: !!(r && r.done_at), answered, total: IV_QUESTIONS.length, decision: r ? r.decision : null, decisionLabel: r && r.decision ? IV_DECISIONS[r.decision] : null,
+    return { started: !!r, done: !!(r && r.done_at), answered, total: IV_QUESTIONS.length, decision: r ? r.decision : null, decisionLabel: r && r.decision ? IV_DONE_LBL[r.decision] : null,
       by: by ? by.username : null, startedAt: r ? r.started_at : null, updatedAt: r ? r.updated_at : null, doneAt: r ? r.done_at : null, test: !!(ans._test) };
   }
   app.get("/api/admin/users/:id/interview", auth, admin, (req, res) => {
@@ -355,9 +357,18 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     }
     if (r) db.prepare("UPDATE interviews SET answers = ?, decision = ?, updated_at = ?, done_at = ? WHERE user_id = ?").run(JSON.stringify(ans), decision, now, doneAt, u.id);
     else db.prepare("INSERT INTO interviews (user_id, by_id, started_at, updated_at, done_at, decision, answers) VALUES (?,?,?,?,?,?,?)").run(u.id, req.user.id, now, now, doneAt, decision, JSON.stringify(ans));
-    if (b.done) { const d = ans.dispo ? ans.dispo.v.join(", ") : "";
-      log(req.user.id, "a", `a fait passer l'entretien de **${u.username}** · ${IV_DECISIONS[decision]}`, `Note ${ans.feel ? ans.feel.v : "?"} / 5${d ? " · dispo : " + d : ""}`); }
-    res.json({ ok: true, summary: interview(u.id) });
+    let outcome = null;
+    if (b.done) { const d = ans.dispo ? ans.dispo.v.join(", ") : "", sub = `Note ${ans.feel ? ans.feel.v : "?"} / 5${d ? " · dispo : " + d : ""}`;
+      if (decision === "hire") {          // Recruter : il devient chatter tout de suite
+        db.prepare("UPDATE users SET role = 'chatter' WHERE id = ?").run(u.id); db.prepare("DELETE FROM training_ready WHERE user_id = ?").run(u.id);
+        db.prepare("DELETE FROM tokens WHERE user_id = ?").run(u.id);   // il se reconnecte avec son nouvel accès
+        outcome = "hired"; log(req.user.id, "a", `a recruté **${u.username}** après l'entretien`, sub + " · il est maintenant chatter");
+      } else if (decision === "refused") { // Refuser : compte désactivé tout de suite
+        db.prepare("UPDATE users SET active = 0 WHERE id = ?").run(u.id); db.prepare("DELETE FROM tokens WHERE user_id = ?").run(u.id);
+        outcome = "refused"; log(req.user.id, "a", `a refusé la candidature de **${u.username}** après l'entretien`, sub + " · compte désactivé");
+      } else log(req.user.id, "a", `a fait passer l'entretien de **${u.username}** · à revoir`, sub);
+    }
+    res.json({ ok: true, outcome, summary: interview(u.id) });
   });
   // rouvrir un entretien terminé pour le modifier
   app.post("/api/admin/users/:id/interview/reopen", auth, admin, (req, res) => {
@@ -531,6 +542,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   };
 
   // lecture du délai : si l'heure est passée, le refus est appliqué tout de suite (sans attendre le balayage de la minute)
+  const refusedByInterview = uid => { const r = db.prepare("SELECT decision, done_at FROM interviews WHERE user_id = ?").get(uid); return !!(r && r.done_at && r.decision === "refused"); };
   const deadline = uid => { let r = dlRow(uid); if (r && !r.met_at && !r.rejected_at && r.deadline_at <= Date.now()) { rejectExpired(); r = dlRow(uid); } return dlView(r); };
-  return { middleware, log, agency, startDeadline, deadline };
+  return { middleware, log, agency, startDeadline, deadline, refusedByInterview };
 };

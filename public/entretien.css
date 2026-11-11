@@ -114,7 +114,7 @@
 .iv-dec button.sel{color:#0a0a0a}
 .iv-dthumb{position:absolute;top:6px;bottom:6px;left:6px;border-radius:13px;transition:transform .55s var(--sp),background .35s,opacity .3s;opacity:0}
 .iv-dthumb.on{opacity:1}
-.iv-dthumb.recommended{background:var(--g);box-shadow:0 8px 30px rgba(95,211,162,.35)}.iv-dthumb.review{background:var(--a);box-shadow:0 8px 30px rgba(232,182,92,.3)}.iv-dthumb.refused{background:var(--r);box-shadow:0 8px 30px rgba(224,122,122,.3)}
+.iv-dthumb.hire{background:var(--g);box-shadow:0 8px 30px rgba(95,211,162,.35)}.iv-dthumb.review{background:var(--a);box-shadow:0 8px 30px rgba(232,182,92,.3)}.iv-dthumb.refused{background:var(--r);box-shadow:0 8px 30px rgba(224,122,122,.3)}
 .iv-warn{margin-top:12px;font-size:12.5px;color:var(--a);min-height:18px}
 /* pied */
 .iv-ft{display:flex;align-items:center;gap:10px;padding:14px 22px;border-top:1px solid #1d1d1d;background:rgba(10,10,10,.6)}
@@ -130,7 +130,7 @@
 .iv-btn.w.busy{min-width:44px;width:44px;padding:0;border-radius:22px;color:transparent;transition:width .4s var(--sp),border-radius .4s,min-width .4s}
 .iv-btn.w.busy::before{content:"";position:absolute;width:18px;height:18px;border-radius:50%;border:2.5px solid #0a0a0a;border-right-color:transparent;animation:ivSpin .7s linear infinite}
 @keyframes ivSpin{to{transform:rotate(1turn)}}
-.iv-btn.w.done{background:var(--g);border-color:var(--g)}
+.iv-btn.w.done{background:var(--g);border-color:var(--g)}.iv-btn.w.done.rf{background:var(--r);border-color:var(--r)}
 .iv-btn.w.done::before{content:"✓";border:0;animation:none;color:#0a0a0a;font-size:20px;width:auto;height:auto}
 .iv-handle{display:none}
 /* mobile : feuille qui monte du bas */
@@ -163,6 +163,6 @@
 .ivs .go{margin-top:12px;width:100%;height:42px;border-radius:12px;background:#f5f5f5;color:#0a0a0a;font-weight:700;font-size:13.5px;border:0;cursor:pointer;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
 .ivs .go:active{transform:scale(.97)}.ivs .go.gh{background:transparent;color:#d0d0d0;border:1px solid #2a2a2a}
 .ivs .dec{margin-left:auto;padding:5px 10px;border-radius:999px;font-size:11.5px;font-weight:700}
-.ivs .dec.recommended{background:rgba(95,211,162,.14);color:#5fd3a2}.ivs .dec.review{background:rgba(232,182,92,.14);color:#e8b65c}.ivs .dec.refused{background:rgba(224,122,122,.14);color:#e07a7a}
+.ivs .dec.hire,.ivs .dec.recommended{background:rgba(95,211,162,.14);color:#5fd3a2}.ivs .dec.review{background:rgba(232,182,92,.14);color:#e8b65c}.ivs .dec.refused{background:rgba(224,122,122,.14);color:#e07a7a}
 .ivs .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:12px}.ivs .chips span{padding:4px 9px;border-radius:999px;border:1px solid #2a2a2a;font-size:11.5px;color:#cfcfcf}
 .valid.lock{opacity:.45;pointer-events:none}

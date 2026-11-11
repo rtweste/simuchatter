@@ -214,8 +214,10 @@ app.post("/api/login", (req, res) => {
   const { username, password } = req.body || {};
   let u = db.prepare("SELECT * FROM users WHERE username = ?").get(String(username || "").trim());
   if (u && u.role === "trainee" && GEST) { GEST.deadline(u.id); u = db.prepare("SELECT * FROM users WHERE id = ?").get(u.id); }
-  if (u && !u.active && u.role === "trainee" && GEST && GEST.deadline(u.id).state === "rejected" && bcrypt.compareSync(String(password || ""), u.pass_hash))
-    return res.status(403).json({ error: "Le délai de 24 h pour terminer ta formation est dépassé : ta candidature n'a pas été retenue." });
+  if (u && !u.active && u.role === "trainee" && GEST && bcrypt.compareSync(String(password || ""), u.pass_hash)) {
+    if (GEST.refusedByInterview(u.id)) return res.status(403).json({ error: "Merci pour ton entretien : ta candidature n'a pas été retenue." });
+    if (GEST.deadline(u.id).state === "rejected") return res.status(403).json({ error: "Le délai de 24 h pour terminer ta formation est dépassé : ta candidature n'a pas été retenue." });
+  }
   if (!u || !u.active || !bcrypt.compareSync(String(password || ""), u.pass_hash)) {
     a.n++; attempts.set(ip, a);
     return res.status(401).json({ error: "Identifiant ou mot de passe incorrect" });

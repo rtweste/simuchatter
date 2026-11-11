@@ -156,7 +156,9 @@ const ENTRETIEN = window.ENTRETIEN = (() => {
       const nx = root.querySelector("[data-next]");
       if (cur === N()) { const miss = N() - n; nx.textContent = miss ? `Encore ${miss} question${miss > 1 ? "s" : ""}` : !decision ? "Choisis une décision" : "Terminer l'entretien";
         nx.disabled = !!miss || !decision; nx.classList.toggle("ready", !miss && !!decision);
-        const w = root.querySelector(".iv-warn"); if (w) w.textContent = decision === "refused" ? "« Refusé » : il ne pourra pas passer chatter. Son compte reste actif, tu pourras le désactiver depuis sa fiche." : decision === "review" ? "« À revoir » : tu pourras refaire l'entretien plus tard avant de le valider." : ""; }
+        if (!miss && decision) nx.textContent = decision === "hire" ? `Recruter ${user.username}` : decision === "refused" ? "Refuser et désactiver" : "Enregistrer l'entretien";
+        const w = root.querySelector(".iv-warn"); if (w) { w.style.color = decision === "hire" ? "var(--g)" : decision === "refused" ? "var(--r)" : "";
+          w.textContent = decision === "hire" ? `${user.username} devient chatter tout de suite : il aura accès au planning, aux ventes et à sa paie.` : decision === "refused" ? `Son compte est désactivé tout de suite et sa candidature refusée. Tu pourras le réactiver depuis l'onglet « Désactivés ».` : decision === "review" ? "Il reste en formation : tu pourras refaire l'entretien plus tard." : ""; } }
       else { nx.disabled = false; nx.textContent = cur === N() - 1 ? "Voir le récap →" : "Suivant →"; nx.classList.toggle("ready", answered(Q()[cur])); }
     }
 
@@ -172,7 +174,7 @@ const ENTRETIEN = window.ENTRETIEN = (() => {
       const btn = root.querySelector("[data-next]"); btn.classList.remove("ready"); btn.classList.add("busy"); clearTimeout(saving);
       try { const body = { answers: {}, decision, done: true }; Q().forEach(q => body.answers[q.id] = ans[q.id] || null);
         const r = await api(`/api/admin/users/${user.id}/interview`, { method: "PUT", body });
-        btn.classList.add("done"); done(); confetti(); onChange && onChange(r.summary, true);
+        btn.classList.add("done"); btn.classList.toggle("rf", decision === "refused"); if (decision === "refused") snd([660, 523], .3, .04, "triangle"); else { done(); if (decision === "hire") confetti(); } onChange && onChange(r.summary, true, r.outcome);
         setTimeout(() => close(true), 1500);
       } catch (e) { btn.classList.remove("busy"); const w = root.querySelector(".iv-warn"); if (w) w.textContent = e.message; }
     }
