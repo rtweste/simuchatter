@@ -5,6 +5,16 @@ const periodOfDate = d => { const [y, m, day] = d.split("-"); return `${y}-${m}-
 const dShort = ms => new Date(ms).toLocaleDateString("fr-FR", { timeZone: TZ, day: "numeric", month: "short" });
 const hm = ms => new Date(ms).toLocaleTimeString("fr-FR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
 const E = n => (Math.round(n * 100) / 100).toLocaleString("fr-FR", { maximumFractionDigits: 2 }) + " €";
+// Formation Twizz : vidéos à regarder dans l'ordre, débloquées quand les critères du simulateur sont verts
+const COURSE = [
+  { id: "tw1", title: "Créer ton compte et rejoindre l'agence", file: "twizz-01-compte.mp4" },
+  { id: "tw2", title: "Envoyer un média payant", file: "twizz-02-media-payant.mp4" },
+  { id: "tw3", title: "Les prix et la négo", file: "twizz-03-prix-nego.mp4" },
+  { id: "tw4", title: "Connaître son fan", file: "twizz-04-connaitre-son-fan.mp4" },
+  { id: "tw5", title: "Les outils pour répondre vite", file: "twizz-05-outils.mp4" },
+  { id: "tw6", title: "S'organiser pendant le shift", file: "twizz-06-shift.mp4" }];
+const COURSE_DIR = require("path").join(__dirname, "public", "video", "twizz");
+const courseList = () => COURSE.filter(v => { try { return require("fs").existsSync(require("path").join(COURSE_DIR, v.file)); } catch (e) { return false; } });
 const SRC_LBL = { abo: "Abonnements", live: "Live", coll: "Collections", push: "Média push" };
 
 const DEFAULT_RULES = [
@@ -192,6 +202,15 @@ module.exports = function mount(app, db, auth, admin, ctx) {
 
   /* =================== FORMATION (rôle « En formation ») =================== */
   db.exec("CREATE TABLE IF NOT EXISTS training_ready (user_id INTEGER PRIMARY KEY, at INTEGER NOT NULL)");
+  db.exec("CREATE TABLE IF NOT EXISTS course_progress (user_id INTEGER NOT NULL, video_id TEXT NOT NULL, max_pos REAL NOT NULL DEFAULT 0, dur REAL, upd INTEGER, done_at INTEGER, PRIMARY KEY (user_id, video_id))");
+  function course(uid, unlocked) {
+    const rows = {}; db.prepare("SELECT video_id, max_pos, dur, done_at FROM course_progress WHERE user_id = ?").all(uid).forEach(r => rows[r.video_id] = r);
+    let prevDone = true;
+    const videos = courseList().map((v, i) => { const r = rows[v.id] || {}, done = !!r.done_at, locked = !unlocked || !prevDone; prevDone = prevDone && done;
+      return { id: v.id, n: i + 1, title: v.title, src: "/video/twizz/" + v.file, done, locked, pos: done ? 0 : Math.max(0, r.max_pos || 0), dur: r.dur || null }; });
+    const done = videos.filter(v => v.done).length;
+    return { unlocked, videos, done, total: videos.length, complete: videos.length > 0 && done === videos.length, next: videos.find(v => !v.done && !v.locked) || null };
+  }
   const PERS = ctx.PERSONAS || [];
   const mean = a => a.reduce((t, x) => t + x, 0) / a.length;
   const J = s => { try { return JSON.parse(s || "null"); } catch (e) { return null; } };
@@ -211,31 +230,51 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       { key: "fans", label: `${pl(c.fans.v, "profil")} de fans réussi${c.fans.v > 1 ? "s" : ""}`, sub: "score de 70 ou plus", value: `${fansOk.size} / ${c.fans.v}`, ok: fansOk.size >= c.fans.v, pct: fansOk.size / c.fans.v },
       { key: "ethics", label: "Aucune alerte éthique", sub: `sur les ${c.ethics.v} dernières sessions`, value: !n ? "—" : eth ? pl(eth, "alerte") : "✓", ok: n > 0 && eth === 0, pct: n && !eth ? 1 : 0 },
       { key: "rt", label: `Réponse moyenne < ${c.rt.v} s`, sub: "sur les 5 dernières sessions", value: rt == null ? "—" : `${rt} s`, ok: rt != null && rt < c.rt.v, pct: rt ? Math.min(1, c.rt.v / rt) : 0 }];
-    const criteria = all.filter(x => c[x.key].on).map(x => ({ ...x, pct: Math.max(0, Math.min(1, x.pct)) }));
+    const simCrit = all.filter(x => c[x.key].on).map(x => ({ ...x, pct: Math.max(0, Math.min(1, x.pct)) }));
+    const simReady = simCrit.every(x => x.ok), co = course(uid, simReady);
+    const criteria = co.total ? [...simCrit, { key: "course", label: "Formation Twizz terminée", sub: simReady ? `${co.total} vidéos à regarder jusqu'au bout` : "se débloque quand les critères du simulateur sont verts", value: `${co.done} / ${co.total}`, ok: co.complete, pct: co.done / co.total }] : simCrit;
     const done = criteria.filter(x => x.ok).length, total = criteria.length, ready = total > 0 && done === total;
     const fans = PERS.map(p => ({ id: p.id, name: p.name, label: p.label, ok: fansOk.has(p.id) }));
-    const miss = criteria.find(x => !x.ok), notFan = fans.find(f => !f.ok);
+    const miss = simCrit.find(x => !x.ok) || criteria.find(x => !x.ok), notFan = fans.find(f => !f.ok);
     const tip = !miss ? "Tous tes critères sont verts : ton manager peut valider ta formation." :
       miss.key === "sessions" ? `Encore ${c.sessions.v - n} session${c.sessions.v - n > 1 ? "s" : ""} à terminer pour valider le premier critère.` :
       miss.key === "avg" ? `Ta moyenne est à ${avg5} : vise ${c.avg.v} ou plus sur tes prochaines sessions.` :
       miss.key === "hard" ? `Tente une session <b>difficile</b>${notFan ? ` contre <b>${notFan.label}</b>` : ""} : il t'en manque ${c.hard.v - hardOk}.` :
       miss.key === "fans" ? `Essaie un nouveau profil${notFan ? ` : <b>${notFan.label}</b>` : ""}. Il te faut ${c.fans.v} profils réussis.` :
       miss.key === "ethics" ? "Reste dans les règles sur tes prochaines sessions : une alerte éthique bloque la validation." :
+      miss.key === "course" ? `Ton simulateur est validé : la <b>formation Twizz</b> est débloquée. Regarde ${co.next ? `la vidéo <b>${co.next.n}</b>` : "les vidéos"} jusqu'au bout.` :
       `Réponds plus vite : ta moyenne est de ${rt} s, l'objectif est sous ${c.rt.v} s.`;
     const u = db.prepare("SELECT username, role, created_at FROM users WHERE id = ?").get(uid);
     if (u && u.role === "trainee" && ready && c.notify && !db.prepare("SELECT 1 FROM training_ready WHERE user_id = ?").get(uid)) {
       db.prepare("INSERT OR IGNORE INTO training_ready (user_id, at) VALUES (?, ?)").run(uid, Date.now());
       log(uid, "a", `**${u.username}** a rempli tous les critères de formation`, "Prêt : sa formation peut être validée");
     }
-    return { criteria, done, total, ready, tip, fans,
+    return { criteria, done, total, ready, tip, fans, simReady, course: co,
       day: u ? Math.floor((Date.now() - u.created_at) / 864e5) + 1 : 1,
       stats: { avg5, best: n ? Math.max(...sims.map(s => s.score)) : null, sessions: n, rt, hard: hardOk, trend: sims.slice(0, 8).map(s => s.score).reverse() } };
   }
   app.get("/api/training", auth, (req, res) => res.json(training(req.user.id)));
+  // Avancement d'une vidéo : on ne peut pas sauter de passage (la position ne peut avancer que du temps réellement écoulé)
+  app.post("/api/course/:id/progress", auth, (req, res) => {
+    const uid = req.user.id, T = training(uid), v = T.course.videos.find(x => x.id === req.params.id);
+    if (!v) return res.status(404).json({ error: "Vidéo introuvable" });
+    if (v.locked) return res.status(403).json({ error: "Cette vidéo n'est pas encore débloquée" });
+    if (v.done) return res.json({ ok: true, done: true, training: T });
+    const pos = Number(req.body.pos), dur = Number(req.body.dur);
+    if (!isFinite(pos) || pos < 0 || !isFinite(dur) || dur <= 0 || dur > 3600) return res.status(400).json({ error: "Position invalide" });
+    const now = Date.now(), r = db.prepare("SELECT max_pos, upd FROM course_progress WHERE user_id = ? AND video_id = ?").get(uid, v.id);
+    const prev = r ? r.max_pos : 0, el = r && r.upd ? (now - r.upd) / 1000 : 0;
+    const max = Math.max(prev, Math.min(pos, prev + el * 1.25 + 6, dur));
+    const done = max >= dur - 1.5;
+    db.prepare("INSERT INTO course_progress (user_id, video_id, max_pos, dur, upd, done_at) VALUES (?,?,?,?,?,?) ON CONFLICT(user_id, video_id) DO UPDATE SET max_pos = excluded.max_pos, dur = excluded.dur, upd = excluded.upd, done_at = COALESCE(course_progress.done_at, excluded.done_at)")
+      .run(uid, v.id, max, dur, now, done ? now : null);
+    if (done) { const u = db.prepare("SELECT username FROM users WHERE id = ?").get(uid); log(uid, "a", `**${u ? u.username : "?"}** a terminé la vidéo ${v.n} de la formation Twizz`, v.title); }
+    res.json({ ok: true, done, max, training: done ? training(uid) : undefined });
+  });
   app.post("/api/admin/users/:id/promote", auth, admin, (req, res) => {
     const u = db.prepare("SELECT id, role FROM users WHERE id = ?").get(parseInt(req.params.id, 10));
     if (!u || u.role !== "trainee") return res.status(400).json({ error: "Ce compte n'est pas en formation" });
-    db.prepare("UPDATE users SET role = 'chatter', intro_seen = 0 WHERE id = ?").run(u.id); db.prepare("DELETE FROM training_ready WHERE user_id = ?").run(u.id);
+    db.prepare("UPDATE users SET role = 'chatter' WHERE id = ?").run(u.id); db.prepare("DELETE FROM training_ready WHERE user_id = ?").run(u.id);
     res.json({ ok: true });
   });
 
