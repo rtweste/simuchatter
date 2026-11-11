@@ -51,6 +51,7 @@ module.exports = function mount(app, db, auth, admin, h) {
   });
 
   /* ---------- côté manager ---------- */
+  const aiCost = id => { try { return Math.round(db.prepare("SELECT COALESCE(SUM(cost),0) c FROM ai_usage WHERE sim_id = ?").get(id).c * 10000) / 10000; } catch (e) { return 0; } };
   const liveList = () => {
     const now = Date.now();
     return db.prepare("SELECT s.*, u.username FROM sims s JOIN users u ON u.id = s.user_id WHERE s.status = 'active' AND s.started_at > ? ORDER BY s.started_at DESC").all(now - 6 * 3600e3)
@@ -59,7 +60,7 @@ module.exports = function mount(app, db, auth, admin, h) {
         return { id: s.id, user: s.username, userId: s.user_id, persona: p.name, label: p.label, difficulty: s.difficulty, creator: s.creator_name, started_at: s.started_at,
           msgs: log.filter(l => l.who === "chatter" || l.who === "ppv").length, revenue: s.revenue, interest: s.interest,
           last: last ? { who: last.who, text: last.who === "ppv" ? `PPV · ${last.desc} · ${last.price} €` : last.text } : null,
-          draft: d && now - d.at < 15000 ? d.text : "", fanTyping: busy.has(s.id), watchers: watching(s.id) }; });
+          draft: d && now - d.at < 15000 ? d.text : "", fanTyping: busy.has(s.id), watchers: watching(s.id), aiCost: aiCost(s.id) }; });
   };
   app.get("/api/admin/sim/live", auth, admin, (req, res) => res.json(liveList()));
 
@@ -83,7 +84,7 @@ module.exports = function mount(app, db, auth, admin, h) {
     try { const u = db.prepare("SELECT COALESCE(SUM(cost),0) cost, COUNT(DISTINCT sim_id) sims FROM ai_usage WHERE at > ?").get(d7), m = db.prepare("SELECT COALESCE(SUM(cost),0) cost FROM ai_usage WHERE at > ?").get(now - 30 * 864e5);
       ai7 = { cost: Math.round(u.cost * 100) / 100, perSession: u.sims ? Math.round(u.cost / u.sims * 1000) / 1000 : null, month: Math.round(m.cost * 100) / 100 }; } catch (e) {}
     res.json({
-      stats: { ai7, live: live.length, sessions7: all7.length, sessionsPrev: allP.length, avg7: avg(all7.map(s => s.score)), avgPrev: avg(allP.map(s => s.score)), best: bestS ? { score: bestS.score, user: bestS.username } : null },
+      stats: { ai7, aiLive: Math.round(live.reduce((t, l) => t + (l.aiCost || 0), 0) * 1000) / 1000, live: live.length, sessions7: all7.length, sessionsPrev: allP.length, avg7: avg(all7.map(s => s.score)), avgPrev: avg(allP.map(s => s.score)), best: bestS ? { score: bestS.score, user: bestS.username } : null },
       live, shifts, team, settings: getSet(), assignments, chatters,
       recent: done.slice(0, 8).map(s => ({ id: s.id, user: s.username, persona: persona(s.persona_id).name, label: persona(s.persona_id).label, difficulty: s.difficulty, score: s.score, at: s.started_at })),
       personas: PERSONAS.map(p => ({ id: p.id, name: p.name, label: p.label }))
@@ -103,7 +104,7 @@ module.exports = function mount(app, db, auth, admin, h) {
     watchers.get(s.id).set(req.user.id, { name: req.user.username, at: Date.now() });
     const d = draft.get(s.id), now = Date.now(), set = getSet();
     const done = db.prepare("SELECT score FROM sims WHERE user_id = ? AND status = 'done'").all(s.user_id).map(r => r.score);
-    res.json({ ...publicSim(s), username: uname(s.user_id), userId: s.user_id,
+    res.json({ ...publicSim(s), username: uname(s.user_id), userId: s.user_id, aiCost: aiCost(s.id),
       draft: set.draft && d && now - d.at < 15000 && s.status === "active" ? d.text : "", fanTyping: busy.has(s.id),
       online: now - (seen.get(s.id) || 0) < 20000, settings: set,
       chatterStats: { sessions: done.length, avg: done.length ? Math.round(done.reduce((a, b) => a + b, 0) / done.length) : null },

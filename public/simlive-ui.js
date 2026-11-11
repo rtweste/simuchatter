@@ -37,12 +37,12 @@ const SIMLIVE = window.SIMLIVE = (() => {
       <div class="gx-stt"><small>Sessions · 7 jours</small><b>${s.sessions7}${d(s.sessions7, s.sessionsPrev)}</b></div>
       <div class="gx-stt"><small>Score moyen équipe</small><b>${s.avg7 ?? "—"}${s.avg7 != null ? "<span>/100</span>" : ""}${d(s.avg7, s.avgPrev)}</b></div>
       <div class="gx-stt"><small>Meilleur score · 7 jours</small><b>${s.best ? `${s.best.score}<span> · ${esc(s.best.user)}</span>` : "—"}</b></div>
-      ${s.ai7 ? `<div class="gx-stt" title="Coût de l'IA (fan, coach, évaluation) facturé par Anthropic, en dollars"><small>Coût IA · 7 jours</small><b>$${s.ai7.cost.toFixed(2)}</b><em class="gx-aim">${s.ai7.perSession != null ? `~$${s.ai7.perSession.toFixed(3)} / session · ` : ""}30 j : $${s.ai7.month.toFixed(2)}</em></div>` : ""}`; };
+      ${s.ai7 ? `<div class="gx-stt" title="Coût de l'IA (fan, coach, évaluation) facturé par Anthropic, en dollars"><small>Coût IA · 7 jours</small><b>$${s.ai7.cost.toFixed(2)}</b><em class="gx-aim">${s.live ? `<span class="gx-ail">● en cours : $${(s.aiLive || 0).toFixed(3)}</span> · ` : ""}${s.ai7.perSession != null ? `~$${s.ai7.perSession.toFixed(3)} / session · ` : ""}30 j : $${s.ai7.month.toFixed(2)}</em></div>` : ""}`; };
   const livesHTML = () => {
     const cards = OV.live.map(l => {
       const pv = l.draft ? `<div class="gx-prev">✍️ ${esc(l.draft)}<span class="car"></span></div>` : l.fanTyping ? `<div class="gx-prev ty">${esc(l.persona)} écrit…</div>` : `<div class="gx-prev">${l.last ? (l.last.who === "fan" ? "💬 " : "↪ ") + esc(l.last.text) : "La conversation commence…"}</div>`;
       return `<div class="gx-live" data-watch="${l.id}"><div class="gx-lt"><span class="gx-av on">${esc(l.user[0].toUpperCase())}</span><div class="gx-nm"><b>${esc(l.user)}</b><small>avec ${esc(l.persona)} · ${esc(l.label)} · ${esc(DIFF(l.difficulty))}</small></div><span class="gx-tm"><span class="dot"></span><span data-since="${l.started_at}">${dur(l.started_at)}</span></span></div>
-        ${pv}<div class="gx-mm"><span>Msgs <b>${l.msgs}</b></span><span>Revenu <b>${l.revenue} €</b></span><span class="gx-mint">Intérêt<i class="gx-ib"><i style="width:${l.interest}%;background:${iCol(l.interest)}"></i></i></span></div>
+        ${pv}<div class="gx-mm"><span>Msgs <b>${l.msgs}</b></span><span>Revenu <b>${l.revenue} €</b></span><span title="Coût de l'IA pour cette session, en direct">IA <b class="gx-aic">$${(l.aiCost || 0).toFixed(3)}</b></span><span class="gx-mint">Intérêt<i class="gx-ib"><i style="width:${l.interest}%;background:${iCol(l.interest)}"></i></i></span></div>
         <button class="gx-watchb">${EYE}Regarder en direct</button></div>`; });
     const idle = OV.shifts.map(s => `<div class="gx-live idle"><div class="gx-lt"><span class="gx-av">${esc(s.user[0].toUpperCase())}</span><div class="gx-nm"><b>${esc(s.user)}</b><small>en shift sur ${esc(s.model)} · pas en simu</small></div></div>
         <div class="gx-prev dim">${s.lastAt ? `Dernière simu ${ago(s.lastAt)} · ${s.lastScore}/100` : "Aucune simu terminée"}</div><button class="gx-watchb" data-assign="${s.userId}">Lui assigner un entraînement</button></div>`);
@@ -169,7 +169,7 @@ const SIMLIVE = window.SIMLIVE = (() => {
     // tableau de bord
     const v = Math.round(s.interest), c = iCol(v); if (WV.hist[WV.hist.length - 1] !== v) WV.hist.push(v);
     document.querySelectorAll("[data-wint]").forEach(e => { e.textContent = v; e.style.color = c; }); $("wvILab").textContent = iLab(v); $("wvILab").style.color = c;
-    document.querySelectorAll("[data-wrev]").forEach(e => e.textContent = s.revenue + " €"); $("wvHints").innerHTML = `${s.hints}${s.hints ? '<small> · −' + s.hints * 3 + " pts</small>" : ""}`;
+    document.querySelectorAll("[data-wrev]").forEach(e => e.textContent = s.revenue + " €"); $("wvHints").innerHTML = `${s.hints}${s.hints ? '<small> · −' + s.hints * 3 + " pts</small>" : ""}`; const cst = "$" + (s.aiCost || 0).toFixed(3); if ($("wvCost")) $("wvCost").textContent = cst; document.querySelectorAll("[data-wcost]").forEach(e => e.textContent = cst);
     const h = WV.hist.length > 1 ? WV.hist.slice(-12) : [v, v], n = h.length, p = $("wvSpark").querySelector("path");
     p.setAttribute("d", h.map((x, i) => `${i ? "L" : "M"}${(i / (n - 1) * 290).toFixed(1)} ${(44 - x / 100 * 42).toFixed(1)}`).join(" ")); p.style.stroke = c;
     const lastFan = [...s.log].reverse().find(l => l.who === "fan"), lastAny = log[log.length - 1];

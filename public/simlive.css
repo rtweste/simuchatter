@@ -191,3 +191,5 @@ body:has(#watchScreen:not(.hidden)) .dock{display:none}
 .gx-all{max-height:560px;overflow:auto;padding-right:2px}
 .gx-row.eth{border-color:rgba(224,122,122,.25)}
 .gx-row.eth .gx-av{width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-weight:900}
+.gx-aic{color:#5fd3a2;font-variant-numeric:tabular-nums}
+.gx-ail{color:#5fd3a2}
