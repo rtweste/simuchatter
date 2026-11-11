@@ -54,6 +54,19 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   if (!cols("clocks").includes("reinforce")) db.exec("ALTER TABLE clocks ADD COLUMN reinforce INTEGER NOT NULL DEFAULT 0");
   if (!cols("clocks").includes("parent_id")) db.exec("ALTER TABLE clocks ADD COLUMN parent_id INTEGER");
   if (!cols("clocks").includes("until_at")) db.exec("ALTER TABLE clocks ADD COLUMN until_at INTEGER");
+  // CA par sources : chatting automatique (ventes validées) + entrées manuelles déjà nettes
+  ["abo", "live", "coll", "push"].forEach(c => { if (!cols("revenues").includes(c)) db.exec(`ALTER TABLE revenues ADD COLUMN ${c} REAL`); });
+  if (!cols("revenues").includes("v2")) db.exec("ALTER TABLE revenues ADD COLUMN v2 INTEGER NOT NULL DEFAULT 0");
+  db.exec(`
+  CREATE TABLE IF NOT EXISTS payouts (period TEXT NOT NULL, user_id INTEGER NOT NULL, amount REAL NOT NULL, paid_at INTEGER NOT NULL, paid_by INTEGER, PRIMARY KEY (period, user_id));
+  CREATE TABLE IF NOT EXISTS pay_adjust (id INTEGER PRIMARY KEY, period TEXT NOT NULL, user_id INTEGER NOT NULL, amount REAL NOT NULL, reason TEXT, created_at INTEGER NOT NULL, created_by INTEGER);
+  CREATE TABLE IF NOT EXISTS creator_paid (period TEXT NOT NULL, model_id INTEGER NOT NULL, amount REAL NOT NULL, paid_at INTEGER NOT NULL, PRIMARY KEY (period, model_id));
+  CREATE TABLE IF NOT EXISTS period_locks (period TEXT PRIMARY KEY, closed_at INTEGER NOT NULL, closed_by INTEGER, snapshot TEXT);
+  `);
+  const SRC = ["abo", "live", "coll", "push"];
+  const lockOf = pkey => db.prepare("SELECT l.*, u.username closed_name FROM period_locks l LEFT JOIN users u ON u.id = l.closed_by WHERE l.period = ?").get(pkey);
+  const isLocked = pkey => !!db.prepare("SELECT 1 FROM period_locks WHERE period = ?").get(pkey);
+  const lockedMsg = { error: "Cette période est clôturée : rouvre-la dans la Compta pour la modifier" };
   const getSetting = (k, d) => db.prepare("SELECT value FROM settings WHERE key = ?").get(k)?.value ?? d;
 
   const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s || "");
@@ -156,12 +169,15 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   }
   app.post("/api/admin/clocks", auth, admin, (req, res) => {
     const c = clockBody(req.body || {}); if (c.error) return res.status(400).json(c);
+    if (isLocked(periodOfDate(parisDate(c.start_at)))) return res.status(400).json(lockedMsg);
     if (c.end_at === null) return res.status(400).json({ error: "Indiquez l'heure de fin" });
     db.prepare("INSERT INTO clocks (user_id, model_id, start_at, end_at, edited) VALUES (?,?,?,?,1)").run(c.user_id, c.model_id, c.start_at, c.end_at);
     res.json({ ok: true });
   });
   app.put("/api/admin/clocks/:id", auth, admin, (req, res) => {
     const c = clockBody(req.body || {}); if (c.error) return res.status(400).json(c);
+    const old = db.prepare("SELECT start_at FROM clocks WHERE id = ?").get(parseInt(req.params.id, 10));
+    if (isLocked(periodOfDate(parisDate(c.start_at))) || (old && isLocked(periodOfDate(parisDate(old.start_at))))) return res.status(400).json(lockedMsg);
     db.prepare("UPDATE clocks SET user_id=?, model_id=?, start_at=?, end_at=?, edited=1 WHERE id=?")
       .run(c.user_id, c.model_id, c.start_at, c.end_at, parseInt(req.params.id, 10));
     res.json({ ok: true });
@@ -177,8 +193,15 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     const mode = getSetting("attribution_mode", "ventes"); // "ventes" (ventes validées) ou "heures"
     const fee = Number(getSetting("platform_fee", "25"));
     const validated = validatedByPeriod ? validatedByPeriod(p.key) : {};
-    const models = db.prepare(`SELECT m.id, m.name, m.creator_pct, r.brut, r.net FROM models m
+    const models = db.prepare(`SELECT m.id, m.name, m.creator_pct, r.brut, r.net, r.abo, r.live, r.coll, r.push, r.v2 FROM models m
       LEFT JOIN revenues r ON r.model_id = m.id AND r.period = ? ORDER BY m.name`).all(p.key);
+    // chatting = ventes validées sur la créatrice (déclarées en brut)
+    const chatBy = {}, chatN = {};
+    Object.entries(validated).forEach(([k, v]) => { const mid = +k.split(":")[1]; chatBy[mid] = (chatBy[mid] || 0) + v; });
+    db.prepare("SELECT model_id, sold_at FROM sales WHERE status = 'validated'").all().filter(x => periodOfDate(parisDate(x.sold_at)) === p.key)
+      .forEach(x => chatN[x.model_id] = (chatN[x.model_id] || 0) + 1);
+    const paidC = {}; db.prepare("SELECT model_id, amount, paid_at FROM creator_paid WHERE period = ?").all(p.key).forEach(x => paidC[x.model_id] = x);
+    const keep = fee < 100 ? 1 - fee / 100 : 1;
     const users = db.prepare("SELECT id, username, role, active, commission_pct FROM users ORDER BY username").all();
     // heures pointées par chatter et par créatrice (shifts terminés, rattachés à la période de leur début)
     const hours = {};
@@ -189,11 +212,18 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     db.prepare("SELECT user_id, model_id, amount FROM attributions WHERE period = ?").all(p.key)
       .forEach(a => overrides[a.user_id + ":" + a.model_id] = a.amount);
 
+    const r2 = x => Math.round(x * 100) / 100;
     const modelRows = models.map(m => {
       const totalH = users.reduce((t, u) => t + (hours[u.id + ":" + m.id] || 0), 0);
-      const net = m.net || 0, brut = m.brut || 0;
-      const creatorPay = net * m.creator_pct / 100;
-      return { ...m, brut: m.brut, net: m.net, totalHours: totalH, creatorPay, agencyShare: net - creatorPay,
+      const chatBrut = r2(chatBy[m.id] || 0), chatNet = r2(chatBrut * keep);
+      const legacy = !m.v2 && m.brut != null;   // CA saisi d'un bloc avant les sources
+      const manual = SRC.reduce((t, k) => t + (m[k] || 0), 0);
+      const net = legacy ? (m.net || 0) : r2(chatNet + manual), brut = legacy ? m.brut : chatBrut + manual / keep;
+      const missing = legacy ? [] : SRC.filter(k => m[k] == null);
+      const creatorPay = r2(net * m.creator_pct / 100), cp = paidC[m.id];
+      return { id: m.id, name: m.name, creator_pct: m.creator_pct, brut, net, legacy, chatBrut, chatNet, chatCount: chatN[m.id] || 0,
+        sources: { abo: m.abo, live: m.live, coll: m.coll, push: m.push }, missing,
+        totalHours: totalH, creatorPay, creatorPaid: cp ? cp.amount : 0, creatorPaidAt: cp ? cp.paid_at : null, agencyShare: net - creatorPay,
         commissionBase: base === "brut" ? brut : net };
     });
     const lines = [];
@@ -208,12 +238,22 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
         validatedBrut: v, auto, override: ov ?? null, sales, pct: u.commission_pct, pay: sales * u.commission_pct / 100 });
     }));
     modelRows.forEach(m => { m.attributed = lines.filter(l => l.model_id === m.id).reduce((t, l) => t + l.sales, 0); });
-    const chatters = users.filter(u => u.role === "chatter" || lines.some(l => l.user_id === u.id)).map(u => {
+    const adjs = db.prepare("SELECT a.*, u.username by_name FROM pay_adjust a LEFT JOIN users u ON u.id = a.created_by WHERE a.period = ? ORDER BY a.created_at").all(p.key);
+    const pays = {}; db.prepare("SELECT * FROM payouts WHERE period = ?").all(p.key).forEach(x => pays[x.user_id] = x);
+    const rfH = {}; db.prepare("SELECT user_id, start_at, end_at FROM clocks WHERE reinforce = 1 AND end_at IS NOT NULL").all()
+      .filter(c => periodOfDate(parisDate(c.start_at)) === p.key).forEach(c => rfH[c.user_id] = (rfH[c.user_id] || 0) + (c.end_at - c.start_at) / 3.6e6);
+    const nSales = {}; db.prepare("SELECT user_id, sold_at FROM sales WHERE status = 'validated'").all().filter(x => periodOfDate(parisDate(x.sold_at)) === p.key).forEach(x => nSales[x.user_id] = (nSales[x.user_id] || 0) + 1);
+    const chatters = users.filter(u => u.role === "chatter" || lines.some(l => l.user_id === u.id) || adjs.some(a => a.user_id === u.id)).map(u => {
       const ls = lines.filter(l => l.user_id === u.id), sales = ls.reduce((t, l) => t + l.sales, 0), tp = tierPay(sales);
       // la commission par paliers est répartie sur chaque créatrice au prorata des ventes
       ls.forEach(l => { l.pay = sales > 0 ? tp.total * l.sales / sales : 0; l.pct = tp.rate; });
-      return { id: u.id, username: u.username, active: u.active, commission_pct: tp.rate, rate: tp.rate, prime: tp.prime, commission: tp.commission,
-        hours: ls.reduce((t, l) => t + l.hours, 0), sales, pay: tp.total };
+      const adj = adjs.filter(a => a.user_id === u.id), adjT = adj.reduce((t, a) => t + a.amount, 0), pay = r2(tp.total + adjT);
+      // heures : les renforts sont comptés à part (ils ne doublent pas le temps de travail)
+      const hRf = rfH[u.id] || 0, hAll = ls.reduce((t, l) => t + l.hours, 0);
+      return { id: u.id, username: u.username, active: u.active, commission_pct: tp.rate, rate: tp.rate, tier: tp.tier, prime: tp.prime, commission: tp.commission,
+        hours: hAll - hRf, renfortHours: hRf, sales, salesCount: nSales[u.id] || 0, salesBrut: ls.reduce((t, l) => t + l.validatedBrut, 0),
+        adjustments: adj.map(a => ({ id: a.id, amount: a.amount, reason: a.reason, at: a.created_at, by: a.by_name })), adjTotal: adjT, pay,
+        paid: pays[u.id] ? { amount: pays[u.id].amount, at: pays[u.id].paid_at } : null };
     });
     const sum = (arr, f) => arr.reduce((t, x) => t + (f(x) || 0), 0);
     const unattributed = mode === "ventes" ? [] : modelRows.filter(m => m.commissionBase > 0 && m.totalHours === 0 &&
@@ -221,12 +261,106 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     const totals = { brut: sum(modelRows, m => m.brut), net: sum(modelRows, m => m.net), creators: sum(modelRows, m => m.creatorPay),
       agencyShare: sum(modelRows, m => m.agencyShare), chatters: sum(chatters, c => c.pay) };
     totals.margin = totals.agencyShare - totals.chatters;
+    totals.brut = r2(totals.brut); totals.platform = r2(totals.brut - totals.net);
+    totals.sources = { chat: sum(modelRows, m => m.legacy ? 0 : m.chatNet), legacy: sum(modelRows, m => m.legacy ? m.net : 0) };
+    SRC.forEach(k => totals.sources[k] = sum(modelRows, m => m.legacy ? 0 : m.sources[k]));
     return { period: p, base, mode, fee, models: modelRows, lines, chatters, totals, unattributed };
   }
 
+  // compta d'une période : figée telle qu'au moment de la clôture, paiements toujours à jour
+  function comptaOf(pkey) {
+    const lk = lockOf(pkey);
+    let c = null; if (lk && lk.snapshot) { try { c = JSON.parse(lk.snapshot); } catch (e) {} }
+    if (!c) c = computeCompta(pkey);
+    if (lk) {
+      const pays = {}; db.prepare("SELECT * FROM payouts WHERE period = ?").all(pkey).forEach(x => pays[x.user_id] = x);
+      c.chatters.forEach(ch => ch.paid = pays[ch.id] ? { amount: pays[ch.id].amount, at: pays[ch.id].paid_at } : null);
+      const pc = {}; db.prepare("SELECT * FROM creator_paid WHERE period = ?").all(pkey).forEach(x => pc[x.model_id] = x);
+      c.models.forEach(m => { m.creatorPaid = pc[m.id] ? pc[m.id].amount : 0; m.creatorPaidAt = pc[m.id] ? pc[m.id].paid_at : null; });
+    }
+    c.locked = lk ? { at: lk.closed_at, by: lk.closed_name } : null;
+    return c;
+  }
   app.get("/api/admin/compta", auth, admin, (req, res) => {
-    res.json({ ...computeCompta(periodInfo(req.query.period) ? req.query.period : currentPeriod()),
+    const key = periodInfo(req.query.period) ? req.query.period : currentPeriod(), c = comptaOf(key), p = c.period;
+    const today = parisDate(Date.now());
+    const pend = db.prepare("SELECT amount, sold_at FROM sales WHERE status = 'pending'").all().filter(x => periodOfDate(parisDate(x.sold_at)) === key);
+    const prev = computeCompta(p.prev).totals;
+    const running = today >= p.from && today <= p.to, el = running ? periodElapsed(p, today) : 1;
+    res.json({ ...c, pending: { n: pend.length, total: pend.reduce((t, x) => t + x.amount, 0) }, prev: { brut: prev.brut, net: prev.net, margin: prev.margin },
+      running, elapsed: el, dayOf: running ? +today.slice(8) - +p.from.slice(8) + 1 : null, nDays: +p.to.slice(8) - +p.from.slice(8) + 1,
+      projection: running ? Math.round(c.totals.brut / el) : null,
       goals: { ca: Number(getSetting("goal_ca", "20000")), chatter: Number(getSetting("goal_chatter", "300")) } });
+  });
+  // récap d'un mois entier : les deux quinzaines additionnées
+  app.get("/api/admin/compta/month", auth, admin, (req, res) => {
+    const m = /^\d{4}-\d{2}$/.test(req.query.month || "") ? req.query.month : currentPeriod().slice(0, 7);
+    const [y, mo] = m.split("-").map(Number);
+    const halves = ["A", "B"].map(h => comptaOf(`${m}-${h}`));
+    const tot = {}; ["brut", "net", "creators", "chatters", "margin", "platform"].forEach(k => tot[k] = halves.reduce((t, c) => t + (c.totals[k] || 0), 0));
+    tot.sources = {}; ["chat", "legacy", ...SRC].forEach(k => tot.sources[k] = halves.reduce((t, c) => t + (c.totals.sources?.[k] || 0), 0));
+    const ch = {}; halves.forEach((c, i) => c.chatters.forEach(x => { const o = ch[x.id] = ch[x.id] || { id: x.id, username: x.username, pay: 0, sales: 0, halves: [null, null], paidAll: true };
+      o.pay += x.pay; o.sales += x.sales; o.halves[i] = { pay: x.pay, paid: !!x.paid }; if (x.pay > 0 && !x.paid) o.paidAll = false; }));
+    const md = {}; halves.forEach(c => c.models.forEach(x => { const o = md[x.id] = md[x.id] || { id: x.id, name: x.name, net: 0, brut: 0, creatorPay: 0, creatorPaid: 0 };
+      o.net += x.net; o.brut += x.brut; o.creatorPay += x.creatorPay; o.creatorPaid += x.creatorPaid; }));
+    const pm = mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, "0")}`, nm = mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, "0")}`;
+    const prevM = ["A", "B"].reduce((t, h) => t + computeCompta(`${pm}-${h}`).totals.brut, 0);
+    res.json({ month: m, label: new Date(Date.UTC(y, mo - 1, 15)).toLocaleDateString("fr-FR", { month: "long", year: "numeric", timeZone: "UTC" }), prev: pm, next: nm,
+      halves: halves.map(c => ({ key: c.period.key, label: c.period.label, totals: c.totals, locked: c.locked, paid: c.chatters.filter(x => x.paid).length, payable: c.chatters.filter(x => x.pay > 0).length })),
+      totals: tot, prevBrut: prevM, chatters: Object.values(ch).filter(x => x.pay || x.sales).sort((a, b) => b.pay - a.pay), models: Object.values(md) });
+  });
+  /* ----- paie : paiements, primes / retenues ----- */
+  app.post("/api/admin/payouts", auth, admin, (req, res) => {
+    const { period } = req.body || {}, user_id = parseInt(req.body?.user_id, 10);
+    if (!periodInfo(period) || !userExists(user_id)) return res.status(400).json({ error: "Données invalides" });
+    if (req.body.paid === false) db.prepare("DELETE FROM payouts WHERE period = ? AND user_id = ?").run(period, user_id);
+    else { const c = comptaOf(period).chatters.find(x => x.id === user_id); if (!c) return res.status(400).json({ error: "Rien à payer" });
+      db.prepare(`INSERT INTO payouts (period, user_id, amount, paid_at, paid_by) VALUES (?,?,?,?,?) ON CONFLICT(period, user_id) DO UPDATE SET amount = excluded.amount, paid_at = excluded.paid_at, paid_by = excluded.paid_by`)
+        .run(period, user_id, c.pay, Date.now(), req.user.id); }
+    res.json({ ok: true });
+  });
+  app.post("/api/admin/adjustments", auth, admin, (req, res) => {
+    const { period } = req.body || {}, user_id = parseInt(req.body?.user_id, 10), amount = num(req.body?.amount, -100000, 100000);
+    if (!periodInfo(period) || !userExists(user_id) || !amount) return res.status(400).json({ error: "Montant invalide" });
+    if (isLocked(period)) return res.status(400).json(lockedMsg);
+    db.prepare("INSERT INTO pay_adjust (period, user_id, amount, reason, created_at, created_by) VALUES (?,?,?,?,?,?)").run(period, user_id, amount, String(req.body.reason || "").slice(0, 160), Date.now(), req.user.id);
+    res.json({ ok: true });
+  });
+  app.delete("/api/admin/adjustments/:id", auth, admin, (req, res) => {
+    const a = db.prepare("SELECT * FROM pay_adjust WHERE id = ?").get(parseInt(req.params.id, 10)); if (!a) return res.status(404).json({ error: "Introuvable" });
+    if (isLocked(a.period)) return res.status(400).json(lockedMsg);
+    db.prepare("DELETE FROM pay_adjust WHERE id = ?").run(a.id); res.json({ ok: true });
+  });
+  app.post("/api/admin/creator-paid", auth, admin, (req, res) => {
+    const { period } = req.body || {}, model_id = parseInt(req.body?.model_id, 10);
+    if (!periodInfo(period) || !modelExists(model_id)) return res.status(400).json({ error: "Données invalides" });
+    if (req.body.paid === false) db.prepare("DELETE FROM creator_paid WHERE period = ? AND model_id = ?").run(period, model_id);
+    else { const m = comptaOf(period).models.find(x => x.id === model_id);
+      db.prepare(`INSERT INTO creator_paid (period, model_id, amount, paid_at) VALUES (?,?,?,?) ON CONFLICT(period, model_id) DO UPDATE SET amount = excluded.amount, paid_at = excluded.paid_at`).run(period, model_id, m ? m.creatorPay : 0, Date.now()); }
+    res.json({ ok: true });
+  });
+  /* ----- clôture d'une période ----- */
+  app.post("/api/admin/periods/:key/close", auth, admin, (req, res) => {
+    const key = req.params.key; if (!periodInfo(key)) return res.status(400).json({ error: "Période invalide" });
+    if (isLocked(key)) return res.json({ ok: true });
+    db.prepare("INSERT INTO period_locks (period, closed_at, closed_by, snapshot) VALUES (?,?,?,?)").run(key, Date.now(), req.user.id, JSON.stringify(computeCompta(key)));
+    res.json({ ok: true });
+  });
+  app.post("/api/admin/periods/:key/reopen", auth, admin, (req, res) => {
+    db.prepare("DELETE FROM period_locks WHERE period = ?").run(req.params.key); res.json({ ok: true });
+  });
+  /* ----- chatter : ma paie ----- */
+  app.get("/api/my-pay", auth, (req, res) => {
+    const key = periodInfo(req.query.period) ? req.query.period : currentPeriod(), c = comptaOf(key), p = c.period;
+    const me = c.chatters.find(x => x.id === req.user.id) || { pay: 0, sales: 0, salesCount: 0, rate: 10, tier: 0, prime: 0, commission: 0, adjustments: [], adjTotal: 0, hours: 0, renfortHours: 0, paid: null };
+    const pend = db.prepare("SELECT amount, sold_at FROM sales WHERE user_id = ? AND status = 'pending'").all(req.user.id).filter(x => periodOfDate(parisDate(x.sold_at)) === key);
+    const hist = []; let k = p.prev;
+    for (let i = 0; i < 6; i++) { const pi = periodInfo(k), cc = comptaOf(k), x = cc.chatters.find(y => y.id === req.user.id);
+      if (x && (x.pay || x.paid)) hist.push({ key: k, label: pi.label, pay: x.pay, paid: x.paid }); k = pi.prev; }
+    const nx = TIERS[me.tier + 1] || null;
+    res.json({ period: p, locked: c.locked, base: c.base, fee: c.fee, me: { ...me, next: nx ? { ...nx, gap: Math.max(0, Math.round((nx.from - me.sales) * 100) / 100) } : null },
+      tiers: TIERS, bands: BANDS.map(([a, b, r]) => ({ from: a, to: b === Infinity ? null : b, rate: r, amount: Math.max(0, Math.min(me.sales, b) - a) * r / 100 })),
+      pending: { n: pend.length, total: pend.reduce((t, x) => t + x.amount, 0) }, history: hist });
   });
   // Historique pour les graphiques : totaux des N dernières périodes jusqu'à la période demandée
   app.get("/api/admin/compta/history", auth, admin, (req, res) => {
@@ -239,9 +373,21 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     }
     res.json({ periods: out });
   });
+  // une entrée manuelle (montant net) : abonnements, live, collections ou média push
+  app.put("/api/admin/revenue-source", auth, admin, (req, res) => {
+    const { period, source } = req.body || {}; const model_id = parseInt(req.body?.model_id, 10);
+    if (!periodInfo(period) || !modelExists(model_id) || !SRC.includes(source)) return res.status(400).json({ error: "Données invalides" });
+    if (isLocked(period)) return res.status(400).json(lockedMsg);
+    const empty = req.body.amount === "" || req.body.amount == null, v = empty ? null : num(String(req.body.amount).replace(",", "."), 0, 1e9);
+    if (!empty && v === null) return res.status(400).json({ error: "Montant invalide" });
+    db.prepare(`INSERT INTO revenues (period, model_id, v2, ${source}) VALUES (?,?,1,?) ON CONFLICT(period, model_id) DO UPDATE SET v2 = 1, ${source} = excluded.${source}`).run(period, model_id, v);
+    snapCA(period);
+    res.json({ ok: true });
+  });
   app.put("/api/admin/revenue", auth, admin, (req, res) => {
     const { period } = req.body || {}; const model_id = parseInt(req.body?.model_id, 10);
     if (!periodInfo(period) || !modelExists(model_id)) return res.status(400).json({ error: "Données invalides" });
+    if (isLocked(period)) return res.status(400).json(lockedMsg);
     const empty = req.body.brut === "" || req.body.brut == null;
     const brut = empty ? null : num(req.body.brut, 0, 1e9);
     if (!empty && brut === null) return res.status(400).json({ error: "Montant invalide" });
@@ -264,6 +410,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   app.put("/api/admin/attribution", auth, admin, (req, res) => {
     const { period } = req.body || {}; const user_id = parseInt(req.body?.user_id, 10), model_id = parseInt(req.body?.model_id, 10);
     if (!periodInfo(period) || !userExists(user_id) || !modelExists(model_id)) return res.status(400).json({ error: "Données invalides" });
+    if (isLocked(period)) return res.status(400).json(lockedMsg);
     if (req.body.amount === null || req.body.amount === "") {
       db.prepare("DELETE FROM attributions WHERE period=? AND user_id=? AND model_id=?").run(period, user_id, model_id);
     } else {
@@ -306,7 +453,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   function snapCA(pkey) {
     const p = periodInfo(pkey); if (!p) return;
     const today = parisDate(Date.now()), date = today > p.to ? p.to : today < p.from ? p.from : today;
-    const brut = db.prepare("SELECT COALESCE(SUM(brut),0) t FROM revenues WHERE period = ?").get(pkey).t;
+    const brut = computeCompta(pkey).totals.brut;
     db.prepare(`INSERT INTO ca_snaps (period, date, brut) VALUES (?,?,?) ON CONFLICT(period, date) DO UPDATE SET brut = excluded.brut`).run(pkey, date, brut);
   }
   const lastDays = (n, now) => Array.from({ length: n }, (_, i) => parisDate(now - (n - 1 - i) * 864e5));
@@ -436,11 +583,11 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       JOIN models m ON m.id = s.model_id WHERE s.date > ? OR (s.date = ? AND s.start > ?) ORDER BY s.date, s.start LIMIT 1`).get(today, today, hm) || null;
     res.json({ role: "admin", today, nDays, caPts, marginHist, nextShift, days, period: p, totals: c.totals, series, goal, elapsed, projection: Math.round(c.totals.brut / elapsed), prevMargin,
       marginTrend: pctTrend(c.totals.margin, prevMargin), feed, activeChatters,
-      missingRevenue: c.models.filter(m => m.brut == null).map(m => m.name),
+      missingRevenue: c.models.filter(m => m.missing && m.missing.length).map(m => m.name),
       pendingSales, live, todayShifts,
       leaderboard: board.slice(0, 5).map(b => ({ username: b.username, total: b.total })),
       simu: { week: sims.length, avg: sims.length ? Math.round(sims.reduce((t, x) => t + x.score, 0) / sims.length) : null } });
   });
 
-  return { periodInfo, periodOfDate, computeCompta, tierPay, TIERS };
+  return { periodInfo, periodOfDate, computeCompta, tierPay, TIERS, isLocked };
 };

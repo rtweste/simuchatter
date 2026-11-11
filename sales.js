@@ -20,6 +20,7 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
   CREATE INDEX IF NOT EXISTS sales_status ON sales(status, created_at);
   CREATE INDEX IF NOT EXISTS sales_user ON sales(user_id, sold_at);
   `);
+  const locked = ms => { try { return !!db.prepare("SELECT 1 FROM period_locks WHERE period = ?").get(periodOfDate(parisDate(ms))); } catch (e) { return false; } };
   const num = (v, min, max) => { const n = Number(v); return Number.isFinite(n) && n >= min && n <= max ? n : null; };
   const pub = s => ({ id: s.id, user_id: s.user_id, username: s.username, model_id: s.model_id, model_name: s.model_name,
     amount: s.amount, declared_amount: s.declared_amount, sold_at: s.sold_at, note: s.note, status: s.status, reason: s.reason,
@@ -37,6 +38,7 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     if (!db.prepare("SELECT 1 FROM models WHERE id = ?").get(model_id)) return res.status(400).json({ error: "Choisissez une créatrice" });
     if (amount === null) return res.status(400).json({ error: "Montant invalide" });
     if (sold_at > Date.now() + 5 * 60e3) return res.status(400).json({ error: "La date de vente est dans le futur" });
+    if (locked(sold_at)) return res.status(400).json({ error: "Cette quinzaine est clôturée : la vente ne peut plus être ajoutée" });
     if (!MIME[mime] || !Buffer.isBuffer(req.body) || req.body.length < 100) return res.status(400).json({ error: "Ajoutez une capture d'écran (image)" });
     const info = db.prepare(`INSERT INTO sales (user_id, model_id, amount, declared_amount, sold_at, note, mime, created_at)
       VALUES (?,?,?,?,?,?,?,?)`).run(req.user.id, model_id, amount, amount, sold_at, note, mime, Date.now());
@@ -57,6 +59,7 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
   app.delete("/api/sales/:id", auth, (req, res) => {
     const s = db.prepare("SELECT * FROM sales WHERE id = ?").get(parseInt(req.params.id, 10));
     if (!s) return res.status(404).json({ error: "Vente introuvable" });
+    if (locked(s.sold_at)) return res.status(400).json({ error: "Cette quinzaine est clôturée : la vente ne peut plus être supprimée" });
     const isAdmin = req.user.role === "admin";
     if (!isAdmin && (s.user_id !== req.user.id || s.status !== "pending")) return res.status(403).json({ error: "Seules vos ventes en attente peuvent être supprimées" });
     if (s.image) fs.rm(path.join(UP, s.image), { force: true }, () => {});
@@ -89,6 +92,7 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
   app.post("/api/admin/sales/:id/review", auth, admin, (req, res) => {
     const s = db.prepare("SELECT * FROM sales WHERE id = ?").get(parseInt(req.params.id, 10));
     if (!s) return res.status(404).json({ error: "Vente introuvable" });
+    if (locked(s.sold_at)) return res.status(400).json({ error: "Cette quinzaine est clôturée : rouvre-la dans la Compta pour modifier cette vente" });
     const decision = req.body?.decision;
     if (!["validated", "refused", "pending"].includes(decision)) return res.status(400).json({ error: "Décision invalide" });
     let amount = s.amount;
