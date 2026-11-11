@@ -36,7 +36,8 @@ const SIMLIVE = window.SIMLIVE = (() => {
     return `<div class="gx-stt"><small><span class="dot ${s.live ? "" : "off"}"></span>En simu maintenant</small><b>${s.live}</b></div>
       <div class="gx-stt"><small>Sessions · 7 jours</small><b>${s.sessions7}${d(s.sessions7, s.sessionsPrev)}</b></div>
       <div class="gx-stt"><small>Score moyen équipe</small><b>${s.avg7 ?? "—"}${s.avg7 != null ? "<span>/100</span>" : ""}${d(s.avg7, s.avgPrev)}</b></div>
-      <div class="gx-stt"><small>Meilleur score · 7 jours</small><b>${s.best ? `${s.best.score}<span> · ${esc(s.best.user)}</span>` : "—"}</b></div>`; };
+      <div class="gx-stt"><small>Meilleur score · 7 jours</small><b>${s.best ? `${s.best.score}<span> · ${esc(s.best.user)}</span>` : "—"}</b></div>
+      ${s.ai7 ? `<div class="gx-stt" title="Coût de l'IA (fan, coach, évaluation) facturé par Anthropic, en dollars"><small>Coût IA · 7 jours</small><b>$${s.ai7.cost.toFixed(2)}</b><em class="gx-aim">${s.ai7.perSession != null ? `~$${s.ai7.perSession.toFixed(3)} / session · ` : ""}30 j : $${s.ai7.month.toFixed(2)}</em></div>` : ""}`; };
   const livesHTML = () => {
     const cards = OV.live.map(l => {
       const pv = l.draft ? `<div class="gx-prev">✍️ ${esc(l.draft)}<span class="car"></span></div>` : l.fanTyping ? `<div class="gx-prev ty">${esc(l.persona)} écrit…</div>` : `<div class="gx-prev">${l.last ? (l.last.who === "fan" ? "💬 " : "↪ ") + esc(l.last.text) : "La conversation commence…"}</div>`;

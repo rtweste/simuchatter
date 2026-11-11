@@ -8,6 +8,9 @@ const MODEL_EVAL = process.env.MODEL_EVAL || "claude-sonnet-5-5";
 const MODEL_HINT = process.env.MODEL_HINT || "claude-haiku-5-5";
 
 const client = MOCK ? null : new Anthropic(); // lit ANTHROPIC_API_KEY
+// Suivi de la consommation : le serveur branche ici l'enregistrement de chaque appel
+let usageHook = null;
+const setUsageHook = f => { usageHook = f; };
 
 // Répare les défauts courants d'un JSON écrit par l'IA : retours à la ligne dans les textes, virgules en trop
 function repairJSON(t) {
@@ -34,7 +37,7 @@ function extractJSON(text) {
 }
 
 // Appel à l'IA, avec nouvelles tentatives si elle est momentanément surchargée
-async function ask(prompt, model, maxTokens) {
+async function ask(prompt, model, maxTokens, tag) {
   for (let attempt = 1; ; attempt++) {
     try {
       const res = await client.messages.create({
@@ -42,6 +45,7 @@ async function ask(prompt, model, maxTokens) {
         messages: [{ role: "user", content: prompt }]
       });
       if (res.stop_reason === "max_tokens") console.warn(`Réponse IA coupée (max_tokens=${maxTokens})`);
+      try { if (usageHook && res.usage) usageHook(tag || {}, model, res.usage); } catch (e) {}
       return res.content.filter(c => c.type === "text").map(c => c.text).join("");
     } catch (e) {
       const st = e.status || 0, retry = !st || st === 429 || st >= 500;
@@ -52,12 +56,12 @@ async function ask(prompt, model, maxTokens) {
   }
 }
 
-async function askJSON(prompt, model, maxTokens) {
-  let text = await ask(prompt, model, maxTokens);
+async function askJSON(prompt, model, maxTokens, tag) {
+  let text = await ask(prompt, model, maxTokens, tag);
   try { return extractJSON(text); }
   catch (e) {
     console.error("JSON illisible, nouvel essai :", e.message);
-    text = await ask(prompt + "\n\nIMPORTANT : réponds uniquement avec un objet JSON valide, sans texte autour, même si la conversation est très courte. Dans les textes, utilise « » au lieu des guillemets droits.", model, maxTokens);
+    text = await ask(prompt + "\n\nIMPORTANT : réponds uniquement avec un objet JSON valide, sans texte autour, même si la conversation est très courte. Dans les textes, utilise « » au lieu des guillemets droits.", model, maxTokens, tag);
     return extractJSON(text);
   }
 }
@@ -118,7 +122,7 @@ ${transcript(sim.log) || "(aucun message — tu ouvres la conversation)"}
       left: false
     };
   }
-  return askJSON(prompt, MODEL_FAN, 600);
+  return askJSON(prompt, MODEL_FAN, 600, { sim: sim.id, user: sim.user_id, kind: "fan" });
 }
 
 /* ---------- Conseil du coach ---------- */
@@ -129,7 +133,7 @@ ${transcript(sim.log) || "(vide)"}
 
 Donne UN conseil concret et court (3 phrases max) pour le prochain message, en français, avec éventuellement un exemple de formulation. Reste éthique : pas de pression sur un fan vulnérable, pas de fausses promesses (rencontres, exclusivité mensongère).`;
   if (MOCK) return "Pose-lui une question sur lui avant de proposer quoi que ce soit. Ex : « et toi tu fais quoi dans la vie ? »";
-  return (await ask(prompt, MODEL_HINT, 300)).trim();
+  return (await ask(prompt, MODEL_HINT, 300, { sim: sim.id, user: sim.user_id, kind: "hint" })).trim();
 }
 
 /* ---------- Évaluation ---------- */
@@ -171,7 +175,7 @@ Donne 2 à 3 réécritures des messages les plus perfectibles (moins si le chatt
       ethics_flag: null
     };
   }
-  return askJSON(prompt, MODEL_EVAL, 3500);
+  return askJSON(prompt, MODEL_EVAL, 3500, { sim: sim.id, user: sim.user_id, kind: "eval" });
 }
 
-module.exports = { fanTurn, hint, evaluate, transcript, MOCK };
+module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook };

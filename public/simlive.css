@@ -17,7 +17,8 @@
 .gx-tabs button:not(.on) .lv{color:#5fd3a2}
 .gx-tabs .lv.hidden{display:none}
 /* chiffres */
-.gx-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.gx-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.gx-aim{display:block;font-style:normal;font-size:10.5px;color:#6f6f6f;font-weight:700;margin-top:2px}
 .gx-stt{background:#111;border:1px solid #1f1f1f;border-radius:16px;padding:12px 14px;animation:gxUp .5s both}
 .gx-stt small{display:flex;align-items:center;gap:6px;font-size:10.5px;color:#7a7a7a;font-weight:700}
 .gx-stt b{display:block;font-weight:900;letter-spacing:-.04em;font-size:26px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gx-stt b span{font-size:13px;color:#6f6f6f;letter-spacing:0}
