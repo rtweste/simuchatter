@@ -484,6 +484,7 @@ details.dcard[open] summary{margin-bottom:12px}
 @media (prefers-reduced-motion:reduce){.s-card,.s-fan,.s-row,.s-chart .cl,.s-chart .pt,.s-chart .ar{animation:none!important;opacity:1;stroke-dashoffset:0}.s-fan.on::before,.s-go::after{animation:none}}
 
 </style>
+<link rel="stylesheet" href="/eval-fx.css">
 </head>
 <body>
 <div class="shell">
@@ -580,6 +581,7 @@ details.dcard[open] summary{margin-bottom:12px}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/common.js"></script>
 <script src="/simu-fx.js"></script>
+<script src="/eval-fx.js"></script>
 <script>
 let PERSONAS = [], MODELS = [], selPersona = null, SIM = null, busy = false, chatterCount = 0;
 
@@ -662,20 +664,22 @@ async function loadHistory() {
   document.querySelectorAll("#history .s-row").forEach(tr => tr.onclick = async () => showReport(await api("/api/sims/" + tr.dataset.id), false));
 }
 
-$("startBtn").onclick = async () => {
+$("startBtn").onclick = () => startSim();
+async function startSim(fromReport) {
   FX.unlock();
   $("startBtn").disabled = true; $("startErr").textContent = "";
   $("startLbl").textContent = "Démarrage…";
   try {
     const r = await api("/api/sims", { body: { personaId: selPersona, difficulty: $("difficulty").value, modelId: $("model").value } });
-    $("homeScreen").classList.add("leaving"); await sleep(260); $("homeScreen").classList.remove("leaving");
+    if (!fromReport) { $("homeScreen").classList.add("leaving"); await sleep(260); $("homeScreen").classList.remove("leaving"); }
+    $("reportScreen").classList.add("hidden");
     openChat(r.sim);
     if (r.turn) await showTurn(r.turn);
     else sys("Le fan est inactif depuis 3 semaines. À vous d'ouvrir la conversation.");
     setBusy(false); $("input").focus();
-  } catch (e) { $("startErr").textContent = e.message; }
+  } catch (e) { $("startErr").textContent = e.message; if (fromReport) { notify("Impossible de relancer", e.message, "err"); newSession(); } }
   $("startBtn").disabled = false; $("startLbl").textContent = "Lancer la simulation";
-};
+}
 
 /* ---------- Chat ---------- */
 function openChat(sim) {
@@ -835,22 +839,40 @@ $("hintBtn").onclick = async () => {
 
 $("endBtn").onclick = async () => {
   if (busy) return;
-  FX.unlock();
-  setBusy(true); $("endBtn").disabled = true; sys("Évaluation en cours… (environ 20 secondes)");
-  try { showReport(await api(`/api/sims/${SIM.id}/end`, { body: {} }), true); }
-  catch (e) { sys("⚠️ " + e.message); }
+  FX.unlock(); EVAL.unlock();
+  setBusy(true); $("endBtn").disabled = true;
+  const id = SIM.id, opts = evalOpts();
+  const endP = api(`/api/sims/${id}/end`, { body: {} });
+  endP.catch(() => {});
+  let s0 = SIM; try { s0 = await api("/api/sims/" + id); } catch (e) {}
+  $("chatScreen").classList.add("hidden"); $("reportScreen").classList.remove("hidden"); window.scrollTo(0, 0);
+  const ctl = EVAL.intro($("repBody"), s0, opts);
+  try {
+    const [full, prev] = await Promise.all([endP, api("/api/my-sims").catch(() => [])]);
+    opts.prev = prev; ctl.done(full);
+  } catch (e) {
+    ctl.fail(e.message); await sleep(1600);
+    $("reportScreen").classList.add("hidden"); $("chatScreen").classList.remove("hidden"); sys("⚠️ " + e.message);
+  }
   setBusy(false); $("endBtn").disabled = false;
 };
 
 /* ---------- Rapport ---------- */
-async function showReport(sim, animate) {
-  // score de la simulation précédente (pour « +12 vs dernière simu »)
-  let prevScore = null;
-  try { const h = await api("/api/my-sims"); const prev = h.filter(x => x.id !== sim.id && x.started_at < sim.started_at && x.score != null)[0]; prevScore = prev ? prev.score : null; } catch (e) {}
+function evalOpts() {
+  return { prev: [], onBack: newSession, onReplay: s => {
+    const m = MODELS.find(x => x.name === s.creator_name);
+    selPersona = s.persona.id; if (m) $("model").value = m.id;
+    $("difficulty").value = s.difficulty || "normal";
+    startSim(true);
+  } };
+}
+async function showReport(sim) {
+  const opts = evalOpts();
+  try { opts.prev = await api("/api/my-sims"); } catch (e) {}
   ["homeScreen", "chatScreen"].forEach(id => $(id).classList.add("hidden"));
   $("reportScreen").classList.remove("hidden");
   window.scrollTo(0, 0);
-  FX.report($("repBody"), sim, { animate, prevScore, onNew: newSession });
+  EVAL.page($("repBody"), sim, opts);
 }
 function newSession() { $("reportScreen").classList.add("hidden"); $("homeScreen").classList.remove("hidden"); lastPPV = null; window.scrollTo(0, 0); init(); }
 
