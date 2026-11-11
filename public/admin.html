@@ -11,245 +11,116 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="StellADS">
-
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/gestion-ui.css">
 </head>
 <body>
 <div class="shell">
 <aside class="sidebar" id="sidebar"></aside>
 <main class="main-area">
-<div class="wrap">
-  <div class="pagehead"><div><div class="eyebrow">Manager</div><h1>Gestion</h1></div></div>
-  <div class="tabs">
-    <button data-t="overview" class="on">Vue d'ensemble</button>
-    <button data-t="sessions">Sessions</button>
-    <button data-t="team">Chatters</button>
-    <button data-t="models">Créatrices</button>
+<div class="wrap ge sa" id="root">
+  <div class="hdr"><div><div class="eb">MANAGER</div><h1 class="ttl">La <em>gestion.</em></h1></div></div>
+  <div class="tabs" role="tablist">
+    <button class="on" data-t="team">Équipe<b id="nTeam"></b></button>
+    <button data-t="crea">Créatrices<b id="nCrea"></b></button>
+    <button data-t="reg">Réglages</button>
+    <button data-t="jour">Journal</button>
+    <button data-t="sanc">Sanctions<b id="nTodo"></b></button>
   </div>
 
-  <!-- Vue d'ensemble -->
-  <section id="t-overview">
-    <div class="grid3" id="kpis"></div>
-    <div class="card" style="margin-top:20px">
-      <h2>Classement des chatters</h2>
-      <div id="board"></div>
-    </div>
-    <div class="card" style="margin-top:20px">
-      <h2>Alertes éthiques récentes</h2>
-      <div id="alerts"></div>
-    </div>
+  <!-- ============ ÉQUIPE ============ -->
+  <section class="pane on" data-p="team">
+    <div class="kpis" id="teamKpis"></div>
+    <div class="bar"><div class="seg" id="teamSeg"><button class="on" data-v="all">Tous</button><button data-v="live">En shift</button><button data-v="warn">À surveiller</button><button data-v="off">Désactivés</button></div>
+      <button class="wbtn" id="addBtn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Ajouter un chatter</button></div>
+    <div class="grid" id="teamGrid"><div class="ld">Chargement…</div></div>
   </section>
 
-  <!-- Sessions -->
-  <section id="t-sessions" class="hidden">
-    <div class="card">
-      <div class="row" style="flex-wrap:wrap">
-        <select id="fUser" style="max-width:220px"></select>
-        <select id="fPersona" style="max-width:220px"></select>
+  <!-- ============ CRÉATRICES ============ -->
+  <section class="pane" data-p="crea">
+    <div class="bar"><span class="mut">Touche une créatrice pour ouvrir sa fiche</span>
+      <button class="wbtn" id="addCrea"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Ajouter une créatrice</button></div>
+    <div class="cg" id="creaGrid"><div class="ld">Chargement…</div></div>
+  </section>
+
+  <!-- ============ RÉGLAGES ============ -->
+  <section class="pane" data-p="reg">
+    <div class="sg">
+      <div class="scol">
+        <div class="card"><div class="ch"><h3>Paliers de <em>commission</em></h3><span class="mut">Sur les ventes nettes de la quinzaine</span></div>
+          <div class="thd"><span></span><span>À PARTIR DE</span><span>TAUX OU PRIME</span><span></span></div>
+          <div class="tiers" id="tiers"></div>
+          <button class="sb" id="addTier" style="margin-top:10px">+ Ajouter un palier</button>
+          <div class="try"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="lab">TESTER</span><input id="tryInp" value="1 500" inputmode="decimal" aria-label="Ventes nettes"><span class="mut">€ de ventes nettes</span><div class="res"><b id="tryRes"></b><small id="tryDet"></small></div></div><div class="tstk" id="tryStk"></div></div>
+          <div class="mut" style="margin-top:10px">Chaque taux ne s'applique qu'à sa tranche. Les primes s'ajoutent une fois le montant atteint. Touche « TAUX » ou « PRIME » pour changer le type d'un palier.</div></div>
+        <div class="card" style="--d:.06s"><div class="ch"><h3>Créneaux <em>du planning</em></h3><span class="mut">Proposés quand tu ajoutes un shift</span></div>
+          <div class="slots" id="slots"></div>
+          <div class="slotadd" id="slotAdd"><input id="slName" placeholder="ex. 22–4" maxlength="12" aria-label="Nom du créneau"><input type="time" id="slA" value="22:00" aria-label="Début"><input type="time" id="slB" value="04:00" aria-label="Fin"><button class="sb w" id="slOk">Ajouter</button><button class="sb" id="slNo">Annuler</button></div></div>
       </div>
-      <div id="sessions" style="margin-top:14px"></div>
+      <div class="scol">
+        <div class="card" style="--d:.04s"><div class="ch"><h3>Compta</h3></div>
+          <div class="set"><span>Commission de la plateforme<small>Retirée du chatting (ventes déclarées en brut)</small></span><div class="unit"><input data-s="fee" inputmode="decimal">%</div></div>
+          <div class="set"><span>Part des créatrices par défaut<small>Pour les nouvelles créatrices · modifiable sur chaque fiche</small></span><div class="unit"><input data-s="creatorPct" inputmode="decimal">%</div></div>
+          <div class="set"><span>Objectif de CA brut<small>Par quinzaine · accueil et compta</small></span><div class="unit"><input data-s="goalCa" inputmode="decimal">€</div></div>
+          <div class="set"><span>Objectif par chatter<small>Ventes nettes par quinzaine</small></span><div class="unit"><input data-s="goalChatter" inputmode="decimal">€</div></div></div>
+        <div class="card" style="--d:.08s"><div class="ch"><h3>Planning</h3></div>
+          <div class="set"><span>Tolérance de retard<small>Au-delà, le pointage compte comme un retard</small></span><div class="unit"><input data-s="tolerance" inputmode="decimal">min</div></div>
+          <div class="set"><span>Alerte « pas pointé »<small>Le manager est prévenu après</small></span><div class="unit"><input data-s="missedAlert" inputmode="decimal">min</div></div>
+          <div class="set"><span>Rappel avant le shift<small>Envoyé aux chatters</small></span><div class="unit"><input data-s="reminder" inputmode="decimal">min</div></div></div>
+      </div>
+    </div>
+    <div class="savebar" id="regBar"><b>Modifications non enregistrées</b><div style="display:flex;gap:8px"><button class="sb" id="regCancel">Annuler</button><button class="sb w" id="regSave">Enregistrer</button></div></div>
+  </section>
+
+  <!-- ============ JOURNAL ============ -->
+  <section class="pane" data-p="jour">
+    <div class="bar"><div class="seg" id="jourSeg"><button class="on" data-v="all">Tout</button><button data-v="v">Ventes</button><button data-v="p">Paie</button><button data-v="c">Compta</button><button data-v="pl">Planning</button><button data-v="a">Comptes</button><button data-v="s">Réglages</button><button data-v="x">Sanctions</button></div>
+      <input class="search" id="jourQ" placeholder="Rechercher un nom, un montant…" aria-label="Rechercher"></div>
+    <div class="jg"><div class="tl" id="jourList"><div class="ld">Chargement…</div></div>
+      <div class="card" style="--d:.06s"><div class="ch"><h3>Cette <em>semaine</em></h3></div><div class="jsum" id="jourSum"></div></div></div>
+  </section>
+
+  <!-- ============ SANCTIONS ============ -->
+  <section class="pane" data-p="sanc">
+    <div class="kp4" id="sKpis"></div>
+    <div class="bar" style="justify-content:flex-end;margin-top:-4px"><button class="wbtn" id="manualBtn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Sanction manuelle</button></div>
+    <div class="g2">
+      <div class="col">
+        <div class="card"><div class="ch"><h3>À <em>traiter</em></h3><span class="mut">Détecté automatiquement · rien ne part sans toi</span></div><div id="props"></div><div class="empty" id="propsEmpty"><div class="ck">✓</div>Tout est traité.</div></div>
+        <div class="card" style="--d:.12s"><div class="ch"><h3>Le <em>barème</em></h3><span class="mut">Visible par les chatters</span></div>
+          <div class="bar2 bhd"><span style="font-size:10px;color:#5a5a5a">FAUTE</span><span style="font-size:10px;color:#5a5a5a">SANCTION</span><span style="font-size:10px;color:#5a5a5a;text-align:right">€</span><span style="font-size:10px;color:#5a5a5a;text-align:right">POINTS</span></div>
+          <div id="bareme"></div>
+          <div class="seuils"><div><small>Statut « à surveiller » à partir de</small><label><input data-th="warnAt" inputmode="numeric"> points</label></div><div><small>Suspension des shifts à partir de</small><label><input data-th="suspendAt" inputmode="numeric"> points</label></div>
+            <div><small>Durée de la suspension</small><label><input data-th="suspendDays" inputmode="numeric"> jours</label></div><div><small>Un point s'efface après</small><label><input data-th="windowDays" inputmode="numeric"> jours</label></div></div>
+          <div class="savebar" id="barBar"><b>Modifications non enregistrées</b><div style="display:flex;gap:8px"><button class="sb" id="barCancel">Annuler</button><button class="sb w" id="barSave">Enregistrer</button></div></div></div>
+      </div>
+      <div class="col">
+        <div class="card" style="--d:.06s" id="explCard"><div class="ch"><h3>Explications <em>reçues</em></h3></div><div id="expl"></div></div>
+        <div class="card" style="--d:.1s"><div class="ch"><h3>Points <em>par chatter</em></h3><span class="mut" id="ptsWin"></span></div><div class="pbars" id="pbars"></div><div class="leg" id="pleg"></div><div id="susps"></div></div>
+        <div class="card" style="--d:.16s"><div class="ch"><h3>Dernières <em>sanctions</em></h3></div><div class="hist" id="hist"></div></div>
+      </div>
     </div>
   </section>
 
-  <!-- Chatters -->
-  <section id="t-team" class="hidden">
-    <div class="grid">
-      <div class="card"><h2>Équipe</h2><div id="team"></div></div>
-      <form class="card" id="newUser">
-        <h2>Ajouter un compte</h2>
-        <label>Identifiant</label><input id="nuName" placeholder="ex. karim" required>
-        <label>Mot de passe (8 caractères min.)</label><input id="nuPass" required minlength="8">
-        <label>Rôle</label>
-        <select id="nuRole"><option value="chatter">Chatter</option><option value="admin">Manager</option></select>
-        <button class="btn" style="width:100%;margin-top:16px">Créer le compte</button>
-        <div class="err" id="nuErr"></div>
-        <div class="notice">Transmettez l'adresse du site, l'identifiant et le mot de passe au chatter. Il pourra se connecter immédiatement.</div>
-      </form>
-    </div>
-  </section>
-
-  <!-- Créatrices -->
-  <section id="t-models" class="hidden">
-    <div class="grid">
-      <div class="card"><h2>Profils de créatrices</h2><div id="models"></div></div>
-      <form class="card" id="modelForm">
-        <h2 id="mfTitle">Ajouter une créatrice</h2>
-        <input type="hidden" id="mfId">
-        <label>Nom affiché</label><input id="mfName" required>
-        <label>Personnalité & style d'écriture</label><textarea id="mfStyle" rows="4" required placeholder="Âge, centres d'intérêt, ton, emojis utilisés, tics d'écriture…"></textarea>
-        <label>Grille de prix</label><input id="mfPrices" required placeholder="Photos : 8–15 € · Vidéo : 20–40 €">
-        <div class="row" style="margin-top:16px"><button class="btn" style="flex:1">Enregistrer</button><button type="button" class="btn ghost" id="mfReset">Annuler</button></div>
-        <div class="err" id="mfErr"></div>
-        <div class="notice">Ces profils apparaissent dans la liste des chatters. Le fan simulé se base dessus et l'évaluation vérifie que le chatter respecte ce style.</div>
-      </form>
-    </div>
-  </section>
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Fiche"></aside>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Ajouter un chatter">
+    <div class="form"><div class="shd"><b>Ajouter un <em>chatter</em></b><button class="x" data-x aria-label="Fermer">✕</button></div>
+      <div class="fl"><span class="lab">IDENTIFIANT</span><input class="fi" id="nuName" placeholder="ex. lucas" autocomplete="off" autocapitalize="off"></div>
+      <div class="fl"><span class="lab">MOT DE PASSE · GÉNÉRÉ AUTOMATIQUEMENT</span><div class="gen"><code id="nuPw"></code><button class="sb" id="nuRe">↻ Autre</button><button class="sb" id="nuCp">Copier</button></div></div>
+      <div class="fl"><span class="lab">RÔLE</span><div class="pick" id="nuRole"><button class="on" data-v="chatter">Chatter</button><button data-v="admin">Manager</button></div></div>
+      <div class="fl"><span class="lab">CRÉATRICES HABITUELLES</span><div class="pick" id="nuModels"></div></div>
+      <div class="mut" style="margin-top:12px">Tu pourras lui ajouter des shifts depuis le Planning.</div>
+      <div class="err" id="nuErr"></div>
+      <button class="send" id="nuCreate">Créer le compte</button></div>
+    <div class="done"><div class="ck">✓</div><b style="font-weight:900;font-size:20px;letter-spacing:-.03em">Compte créé</b><div class="mut" style="margin-top:4px">Envoie-lui ses accès. Il pourra changer son mot de passe ensuite.</div>
+      <div class="cred" id="nuCred"></div><div style="display:flex;gap:8px;margin-top:14px"><button class="gbtn" id="nuCredCp" style="flex:1">Copier les accès</button><button class="wbtn" id="nuFin" style="flex:1">Terminé</button></div></div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>
-
 </main>
 </div>
-
-<!-- Détail session -->
-<div class="modal hidden" id="detail">
-  <div class="card wide">
-    <div class="row"><h2 style="margin:0" id="dTitle"></h2><div class="spacer"></div><button class="btn ghost small" onclick="$('detail').classList.add('hidden')">Fermer</button></div>
-    <div id="dBody" style="margin-top:16px"></div>
-  </div>
-</div>
-
-<!-- Mot de passe -->
-<div class="modal hidden" id="pwModal">
-  <form class="card" id="pwForm">
-    <h2>Nouveau mot de passe pour <span id="pwUser"></span></h2>
-    <input id="pwVal" minlength="8" required placeholder="8 caractères minimum">
-    <div class="row" style="margin-top:16px;justify-content:flex-end">
-      <button type="button" class="btn ghost small" onclick="$('pwModal').classList.add('hidden')">Annuler</button>
-      <button class="btn small">Enregistrer</button>
-    </div>
-    <div class="err" id="pwErr"></div>
-  </form>
-</div>
-
 <script src="/common.js"></script>
-<script>
-let USERS = [], SIMS = [], MODELS = [], PERSONAS = [];
-
-document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
-  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
-  document.querySelectorAll("section").forEach(s => s.classList.toggle("hidden", s.id !== "t-" + b.dataset.t));
-});
-
-async function init() {
-  const skRows = n => Array.from({ length: n }, () => `<div class="sk-row">${SK.line("25%", 12, 0)}${SK.line("35%", 12, 0)}${SK.line("15%", 12, 0)}</div>`).join("");
-  ["team", "models", "board", "sessions"].forEach(id => $(id) && ($(id).innerHTML = skRows(3)));
-  if ($("kpis")) $("kpis").innerHTML = SK.kpis(4).replace(/^<div class="sk-kpis">|<\/div>$/g, "");
-  const me = await api("/api/me");
-  if (me.role !== "admin") { location.href = "/app"; return; }
-  renderShell("admin", me);
-  PERSONAS = await api("/api/personas");
-  await Promise.all([loadUsers(), loadSims(), loadModels()]);
-  $("fPersona").innerHTML = `<option value="">Tous les profils</option>` + PERSONAS.map(p => `<option value="${p.id}">${esc(p.name)} · ${esc(p.label)}</option>`).join("");
-}
-
-/* ---------- Vue d'ensemble ---------- */
-function renderOverview() {
-  const week = Date.now() - 7 * 864e5;
-  const w = SIMS.filter(s => s.started_at >= week);
-  const avgOf = (arr, k) => arr.length ? Math.round(arr.reduce((t, x) => t + (x[k] || 0), 0) / arr.length) : "—";
-  const rts = w.map(s => s.avgRt).filter(x => x !== null);
-  $("kpis").innerHTML = [
-    ["Sessions (7 j)", w.length],
-    ["Score moyen (7 j)", avgOf(w, "score")],
-    ["Revenu moyen / session (7 j)", w.length ? avgOf(w, "revenue") + " €" : "—"],
-    ["Tps de réponse moyen (7 j)", rts.length ? Math.round(rts.reduce((a, b) => a + b, 0) / rts.length) + " s" : "—"]
-  ].map(([l, v]) => `<div class="card kpi"><small>${l}</small><b>${v}</b></div>`).join("");
-
-  const chatters = USERS.filter(u => u.role === "chatter").map(u => {
-    const mine = SIMS.filter(s => s.user_id === u.id);
-    const last5 = mine.slice(0, 5), prev5 = mine.slice(5, 10);
-    const a = arr => arr.length ? arr.reduce((t, x) => t + x.score, 0) / arr.length : null;
-    const trend = a(last5) !== null && a(prev5) !== null ? Math.round(a(last5) - a(prev5)) : null;
-    return { ...u, trend };
-  }).sort((x, y) => (y.avgScore || 0) - (x.avgScore || 0));
-  $("board").innerHTML = !chatters.length ? "<div style='color:var(--muted)'>Aucun chatter. Ajoutez-en dans l'onglet « Chatters ».</div>" :
-    `<div class="tablewrap"><table><tr><th>#</th><th>Chatter</th><th>Sessions</th><th>Score moyen</th><th>Tendance</th><th>Revenu moyen</th><th>Dernière session</th></tr>` +
-    chatters.map((u, i) => `<tr class="click" data-u="${u.id}"><td>${i + 1}</td><td><b>${esc(u.username)}</b>${u.active ? "" : " <span class='tag t3'>désactivé</span>"}</td><td>${u.sessions}</td>
-      <td>${u.avgScore !== null ? `<b style="color:${scoreColor(u.avgScore)}">${u.avgScore}</b>/100` : "—"}</td>
-      <td>${u.trend === null ? "—" : u.trend > 0 ? `<span style="color:var(--good)">▲ +${u.trend}</span>` : u.trend < 0 ? `<span style="color:var(--bad)">▼ ${u.trend}</span>` : "="}</td>
-      <td>${u.avgRevenue !== null ? u.avgRevenue + " €" : "—"}</td><td>${u.lastAt ? fmtDate(u.lastAt) : "—"}</td></tr>`).join("") + "</table></div>";
-  document.querySelectorAll("#board tr.click").forEach(tr => tr.onclick = () => {
-    $("fUser").value = tr.dataset.u; document.querySelector('[data-t="sessions"]').click(); loadSims();
-  });
-
-  const flagged = SIMS.filter(s => s.ethics).slice(0, 10);
-  $("alerts").innerHTML = !flagged.length ? "<div style='color:var(--muted)'>Aucune alerte. 👍</div>" :
-    `<div class="tablewrap"><table>${flagged.map(s => `<tr class="click" data-id="${s.id}"><td style="white-space:nowrap">${fmtDate(s.started_at)}</td><td><b>${esc(s.username)}</b></td><td>${esc(s.persona)}</td><td style="color:#ffb3bd">${esc(s.ethics)}</td></tr>`).join("")}</table></div>`;
-  document.querySelectorAll("#alerts tr.click").forEach(tr => tr.onclick = () => openDetail(tr.dataset.id));
-}
-
-/* ---------- Sessions ---------- */
-async function loadSims() {
-  const q = new URLSearchParams();
-  if ($("fUser").value) q.set("user", $("fUser").value);
-  if ($("fPersona").value) q.set("persona", $("fPersona").value);
-  const list = await api("/api/admin/sims?" + q);
-  if (!q.toString()) { SIMS = list; renderOverview(); }
-  $("sessions").innerHTML = !list.length ? "<div style='color:var(--muted)'>Aucune session.</div>" :
-    `<div class="tablewrap"><table><tr><th>Date</th><th>Chatter</th><th>Fan</th><th>Créatrice</th><th>Diff.</th><th>Score</th><th>Revenu</th><th>Tps rép.</th><th>Synthèse</th></tr>` +
-    list.map(s => `<tr class="click" data-id="${s.id}"><td style="white-space:nowrap">${fmtDate(s.started_at)}</td><td><b>${esc(s.username)}</b></td><td>${esc(s.persona)}</td><td>${esc(s.creator_name)}</td><td>${esc(s.difficulty)}</td>
-      <td><b style="color:${scoreColor(s.score)}">${s.score}</b>${s.ethics ? " ⚠️" : ""}</td><td>${s.revenue} €</td><td>${s.avgRt !== null ? s.avgRt + " s" : "—"}</td><td style="color:var(--muted)">${esc(s.verdict)}</td></tr>`).join("") + "</table></div>";
-  document.querySelectorAll("#sessions tr.click").forEach(tr => tr.onclick = () => openDetail(tr.dataset.id));
-}
-$("fUser").onchange = loadSims; $("fPersona").onchange = loadSims;
-
-async function openDetail(id) {
-  const s = await api("/api/sims/" + id);
-  $("dTitle").textContent = `${s.username} · ${s.persona.name} (${s.persona.label}) · ${fmtDate(s.started_at)}`;
-  $("dBody").innerHTML = renderReport(s);
-  $("detail").classList.remove("hidden");
-}
-
-/* ---------- Équipe ---------- */
-async function loadUsers() {
-  USERS = await api("/api/admin/users");
-  $("fUser").innerHTML = `<option value="">Tous les chatters</option>` + USERS.map(u => `<option value="${u.id}">${esc(u.username)}</option>`).join("");
-  $("team").innerHTML = `<div class="tablewrap"><table><tr><th>Identifiant</th><th>Rôle</th><th>Sessions</th><th></th></tr>` +
-    USERS.map(u => `<tr><td><b>${esc(u.username)}</b>${u.active ? "" : " <span class='tag t3'>désactivé</span>"}</td><td>${u.role === "admin" ? "Manager" : "Chatter"}</td><td>${u.sessions}</td>
-      <td style="text-align:right;white-space:nowrap"><button class="btn ghost small" data-pw="${u.id}" data-n="${esc(u.username)}">Mot de passe</button>
-      <button class="btn ${u.active ? "danger" : "ghost"} small" data-act="${u.id}" data-v="${u.active ? 0 : 1}">${u.active ? "Désactiver" : "Réactiver"}</button></td></tr>`).join("") + "</table></div>";
-  document.querySelectorAll("[data-pw]").forEach(b => b.onclick = () => { pwTarget = b.dataset.pw; $("pwUser").textContent = b.dataset.n; $("pwVal").value = ""; $("pwErr").textContent = ""; $("pwModal").classList.remove("hidden"); });
-  document.querySelectorAll("[data-act]").forEach(b => b.onclick = async () => {
-    try { await api("/api/admin/users/" + b.dataset.act, { method: "PATCH", body: { active: b.dataset.v === "1" } }); loadUsers();
-      notify(b.dataset.v === "1" ? "Compte réactivé" : "Compte désactivé", "", "info"); }
-    catch (e) { alertBox(e.message); }
-  });
-  if (SIMS.length || USERS.length) renderOverview();
-}
-function alertBox(m) { $("nuErr").textContent = m; }
-let pwTarget = null;
-$("pwForm").onsubmit = async e => {
-  e.preventDefault();
-  try { await api("/api/admin/users/" + pwTarget, { method: "PATCH", body: { password: $("pwVal").value } }); $("pwModal").classList.add("hidden"); notify("Mot de passe modifié", $("pwUser").textContent, "ok"); }
-  catch (err) { $("pwErr").textContent = err.message; }
-};
-$("newUser").onsubmit = async e => {
-  e.preventDefault(); $("nuErr").textContent = "";
-  try {
-    await api("/api/admin/users", { body: { username: $("nuName").value, password: $("nuPass").value, role: $("nuRole").value } });
-    notify("Compte créé", `${$("nuName").value} peut maintenant se connecter`, "ok");
-    $("nuName").value = ""; $("nuPass").value = ""; loadUsers();
-  } catch (err) { $("nuErr").textContent = err.message; }
-};
-
-/* ---------- Créatrices ---------- */
-async function loadModels() {
-  MODELS = await api("/api/models");
-  $("models").innerHTML = MODELS.map(m => `<div style="border-bottom:1px solid var(--line);padding:12px 0">
-    <div class="row"><b>${esc(m.name)}</b><div class="spacer"></div><button class="btn ghost small" data-edit="${m.id}">Modifier</button><button class="btn danger small" data-del="${m.id}">Supprimer</button></div>
-    <div style="color:var(--muted);font-size:13px;margin-top:6px;line-height:1.5">${esc(m.style)}<br><b>Prix :</b> ${esc(m.prices)}</div></div>`).join("");
-  document.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => {
-    const m = MODELS.find(x => x.id == b.dataset.edit);
-    $("mfId").value = m.id; $("mfName").value = m.name; $("mfStyle").value = m.style; $("mfPrices").value = m.prices;
-    $("mfTitle").textContent = "Modifier " + m.name;
-  });
-  document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
-    try { await api("/api/admin/models/" + b.dataset.del, { method: "DELETE" }); loadModels(); notify("Créatrice supprimée", "", "info"); }
-    catch (e) { $("mfErr").textContent = e.message; }
-  });
-}
-function resetModelForm() { $("mfId").value = ""; $("mfName").value = ""; $("mfStyle").value = ""; $("mfPrices").value = ""; $("mfTitle").textContent = "Ajouter une créatrice"; $("mfErr").textContent = ""; }
-$("mfReset").onclick = resetModelForm;
-$("modelForm").onsubmit = async e => {
-  e.preventDefault();
-  try {
-    const edit = !!$("mfId").value, nm = $("mfName").value;
-    await api("/api/admin/models", { body: { id: $("mfId").value || undefined, name: $("mfName").value, style: $("mfStyle").value, prices: $("mfPrices").value } });
-    notify(edit ? "Créatrice modifiée" : "Créatrice ajoutée", nm, "ok");
-    resetModelForm(); loadModels();
-  } catch (err) { $("mfErr").textContent = err.message; }
-};
-
-init().catch(e => console.error(e));
-</script>
+<script src="/gestion-ui.js"></script>
 </body>
 </html>

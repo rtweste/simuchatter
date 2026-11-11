@@ -302,7 +302,7 @@ const PLANREM = (() => {
     let d; try { d = await api("/api/planning/ping"); } catch (e) { return; }
     if (!d || !d.prefs) return;
     const now = Date.now(), n = d.next;
-    if (n && d.prefs.before && n.state === "future" && n.start_ms - now <= 30 * 60000 && n.start_ms - now > 0 && !seen("b" + n.id + n.start_ms))
+    if (n && d.prefs.before && n.state === "future" && n.start_ms - now <= (d.remind || 30) * 60000 && n.start_ms - now > 0 && !seen("b" + n.id + n.start_ms))
       push("Ton shift commence bientôt", `${n.model_name} · ${n.start} → ${n.end} · dans ${Math.max(1, Math.round((n.start_ms - now) / 60000))} min`);
     if (n && d.prefs.missed && n.state === "missing" && now - n.start_ms >= 5 * 60000 && !seen("m" + n.id + n.start_ms))
       push("Tu n'as pas encore pointé", `Ton shift sur ${n.model_name} a commencé à ${hm(n.start_ms)}`);

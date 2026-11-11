@@ -131,8 +131,9 @@ function renderFiche(c, refresh) {
   const d = $("drawer"), keepAdd = refresh && d.querySelector(".c-addf.on");
   d.classList.toggle("paid", !!c.paid); if (c.paid) d.classList.add("static");
   const max = Math.max(c.sales, 2000);
-  const tiers = BANDS.map(([a, b, r], k) => { const part = Math.max(0, Math.min(c.sales, b) - a), span = Math.min(b, max) - a;
-    return `<div class="c-trr"><span>${r} %${b === Infinity ? " et +" : ""}</span><span class="t"><i data-w="${part && span > 0 ? Math.max(4, Math.min(100, part / span * 100)) : 0}" style="background:${k === 3 ? "#5fd3a2" : "#bdbdbd"}"></i></span><span>${part ? E(part * r / 100) : "—"}</span></div>`; }).join("");
+  const BD = C.bands ? C.bands.map(([a, b, r]) => [a, b == null ? Infinity : b, r]) : BANDS;
+  const tiers = BD.map(([a, b, r], k) => { const part = Math.max(0, Math.min(c.sales, b) - a), span = Math.min(b, max) - a;
+    return `<div class="c-trr"><span>${r} %${b === Infinity ? " et +" : ""}</span><span class="t"><i data-w="${part && span > 0 ? Math.max(4, Math.min(100, part / span * 100)) : 0}" style="background:${k === BD.length - 1 ? "#5fd3a2" : "#bdbdbd"}"></i></span><span>${part ? E(part * r / 100) : "—"}</span></div>`; }).join("");
   d.innerHTML = `<span class="c-stamp">PAYÉ</span><div class="c-dh"><span class="c-av">${esc(c.username[0])}</span><div><b>${esc(c.username)}</b><small>Fiche de paie · ${esc(C.period.label)}</small></div><button class="c-x" aria-label="Fermer">✕</button></div>
     <div class="c-dtot"><small>TOTAL ${c.paid ? "PAYÉ" : "À PAYER"}</small><span id="dTot">${E(c.pay)}</span></div>
     <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><span class="c-tag ${c.rate >= 15 ? "v" : "w"}"><i></i>Palier ${c.rate} %${c.prime ? ` + prime ${c.prime} €` : ""}</span><span class="c-tag w"><i></i>${hrs(c.hours)} pointées${c.renfortHours ? ` · ${hrs(c.renfortHours)} de renfort` : ""}</span></div>

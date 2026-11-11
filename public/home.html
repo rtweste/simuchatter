@@ -442,6 +442,105 @@
 
 @media (prefers-reduced-motion:reduce){.open .cl,.open .ca,.open .cp,.open .today,.open .tick.lit,.open .pace,.open .br,.open .avs .a{animation:none!important;opacity:1;transform:none;stroke-dashoffset:0}}
 @media (prefers-reduced-motion:reduce){.open .b,.quick .b,.open .spl,.open .pc .bar,.open .pc .pa{animation:none!important;opacity:1;transform:none;stroke-dashoffset:0}.fx{display:none}}
+
+/* ===== Dossier (sanctions et risques) : pastille dans l'accueil + panneau ===== */
+.act.dz{gap:7px;padding:0 11px 0 6px;cursor:pointer;font-family:inherit}
+.act.dz .dg{width:22px;height:22px;flex-shrink:0;display:block}
+.act.dz .dg circle{fill:none;stroke-width:3.2}
+.act.dz b{font-weight:900;color:#fff}
+.act.dz.ok{border-color:rgba(95,211,162,.3)}.act.dz.warn{border-color:rgba(255,255,255,.35)}
+.act.dz.risk{border-color:rgba(224,122,122,.55);background:rgba(224,122,122,.1);color:#f3c4c4;animation:dzP 1.6s ease-out infinite}
+.act.dz .cdx{font-style:normal;font-weight:900;color:#fff;font-variant-numeric:tabular-nums}
+@keyframes dzP{0%{box-shadow:0 0 0 0 rgba(224,122,122,.45)}70%{box-shadow:0 0 0 8px rgba(224,122,122,0)}}
+@media(max-width:999px){.acts{flex-wrap:wrap}.act.dz{flex:1 1 100%;justify-content:flex-start}.act.dz .dg{display:block!important}}
+.dz-scrim{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:90;opacity:0;pointer-events:none;transition:opacity .35s;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.dz-scrim.on{opacity:1;pointer-events:auto}
+.dz-pan{position:fixed;z-index:91;top:0;right:0;bottom:0;width:460px;max-width:100%;background:#0f0f0f;border-left:1px solid #262626;padding:22px;overflow:auto;transform:translateX(105%);transition:transform .5s cubic-bezier(.3,1.1,.4,1);box-shadow:-30px 0 80px rgba(0,0,0,.6);font-family:Inter,system-ui,sans-serif;color:#f5f5f5;box-sizing:border-box;overscroll-behavior:contain}
+.dz-pan *{box-sizing:border-box}.dz-pan.on{transform:none}
+.dz-pan h4{margin:0;font-weight:900;font-size:21px;letter-spacing:-.03em}.dz-pan h4 em{font-style:italic}
+.dz-hd{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.dz-x{width:32px;height:32px;border-radius:10px;border:1px solid #262626;background:#161616;color:#bdbdbd;cursor:pointer}
+.dz-lab{display:block;font-size:10.5px;font-weight:800;letter-spacing:.12em;color:#6a6a6a;margin:20px 0 8px}
+.dz-gw{display:flex;align-items:center;gap:16px;margin-top:14px}
+.dz-g{position:relative;width:180px;height:146px;flex-shrink:0}
+.dz-g .nd{transform-origin:90px 92px;transition:transform 1.5s cubic-bezier(.3,1.3,.5,1);transform:rotate(-90deg)}
+.dz-g .vl{position:absolute;left:0;right:0;bottom:0;text-align:center}.dz-g .vl b{display:block;font-weight:900;font-size:28px;letter-spacing:-.05em;line-height:1}.dz-g .vl small{font-size:9.5px;font-weight:800;letter-spacing:.12em;color:#7a7a7a}
+.dz-st b{display:block;font-weight:900;font-size:16px;letter-spacing:-.02em}.dz-st p{margin:6px 0 0;font-size:12.5px;color:#9a9a9a;line-height:1.5;font-weight:600}.dz-st p strong{color:#fff}
+.dz-tag{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:900;border-radius:20px;padding:3px 9px;white-space:nowrap}
+.dz-tag i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.dz-tag.v{background:rgba(95,211,162,.12);color:#5fd3a2}.dz-tag.r{background:rgba(224,122,122,.12);color:#e07a7a}.dz-tag.w{background:rgba(255,255,255,.08);color:#e6e6e6}
+.dz-exp{display:flex;align-items:center;gap:10px;margin-top:14px;padding:10px 12px;border-radius:13px;background:#141414;border:1px solid #1f1f1f;font-size:12.5px;font-weight:700;color:#bdbdbd}
+.dz-exp .pg{flex:1;height:6px;border-radius:4px;background:#222;overflow:hidden}.dz-exp .pg i{display:block;height:100%;background:#5fd3a2;border-radius:4px;width:0;transition:width 1.4s cubic-bezier(.2,.8,.2,1)}
+.dz-risk{display:flex;gap:11px;align-items:flex-start;padding:12px;border-radius:15px;background:#141414;border:1px solid #1f1f1f;margin-top:8px}
+.dz-risk .i{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;flex-shrink:0;font-size:13px}
+.dz-risk>div{flex:1;min-width:0}.dz-risk b{display:block;font-weight:900;font-size:13.5px}.dz-risk small{display:block;font-size:12px;color:#8a8a8a;margin-top:2px;line-height:1.45;font-weight:600}.dz-risk small strong{color:#fff}
+.dz-risk .cd{text-align:right;font-weight:900;font-size:17px;letter-spacing:-.03em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dz-risk .cd small{font-size:9.5px;letter-spacing:.08em;color:#6a6a6a;margin:0}
+.dz-risk.hot{border-color:rgba(224,122,122,.45);background:linear-gradient(135deg,rgba(224,122,122,.1),#141414 70%)}.dz-risk.hot .i{background:rgba(224,122,122,.16);color:#e07a7a}
+.dz-risk.ok .i{background:rgba(95,211,162,.12);color:#5fd3a2}.dz-risk.mid .i{background:rgba(255,255,255,.07);color:#e6e6e6}
+.dz-sl{border-radius:15px;background:#141414;border:1px solid #1f1f1f;padding:12px;margin-top:8px}
+.dz-sl .r1{display:flex;align-items:center;gap:10px}.dz-sl .r1>div{flex:1;min-width:0}
+.dz-sl b{display:block;font-weight:900;font-size:13px}.dz-sl small{display:block;font-size:11.5px;color:#7a7a7a;font-weight:700;margin-top:1px}
+.dz-pts{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:24px;border-radius:8px;font-size:11px;font-weight:900;background:rgba(224,122,122,.12);color:#e07a7a;padding:0 7px;flex-shrink:0}.dz-pts.w{background:rgba(255,255,255,.08);color:#e6e6e6}
+.dz-amt{color:#e07a7a;font-weight:900;font-size:14px;white-space:nowrap}
+.dz-sb{height:30px;border-radius:10px;border:1px solid #2a2a2a;background:#181818;color:#e6e6e6;font-weight:800;font-size:12px;padding:0 11px;margin-top:10px;cursor:pointer;font-family:inherit}
+.dz-sb.w{background:#ededed;color:#0a0a0a;border-color:#ededed}
+.dz-exf{display:none;margin-top:10px}.dz-exf.on{display:block}
+.dz-exf textarea{width:100%;min-height:70px;border-radius:12px;border:1px solid #262626;background:#101010;color:#fff;font:inherit;font-size:13px;padding:10px;outline:none;resize:vertical;margin:0}
+.dz-sent{margin-top:10px;font-size:12px;color:#e6e6e6;font-weight:700;padding:9px 11px;border-radius:11px;background:#101010;border:1px solid #262626}.dz-sent i{display:block;font-style:italic;color:#9a9a9a;margin-top:3px;font-weight:600}
+.dz-rules div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed #222;font-size:12.5px;color:#bdbdbd;font-weight:700}.dz-rules div:last-child{border-bottom:0}.dz-rules b{color:#fff;font-weight:900;white-space:nowrap}
+.dz-empty{color:#7a7a7a;font-size:13px;padding:10px 2px}
+@media(max-width:860px){.dz-pan{top:auto;left:0;width:auto;max-height:90vh;max-height:90dvh;border-left:0;border-top:1px solid #262626;border-radius:24px 24px 0 0;transform:translateY(105%);padding-bottom:calc(22px + env(safe-area-inset-bottom))}.dz-pan.on{transform:none}}
+
+/* ----- Dossier : motion design ----- */
+.act.dz .dg .rg{stroke-dashoffset:var(--c);animation:dzRing 1.2s cubic-bezier(.2,.8,.2,1) .6s forwards}
+@keyframes dzRing{to{stroke-dashoffset:0}}
+.act.dz{position:relative;overflow:hidden}
+.act.dz::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.18) 50%,transparent 60%);background-size:250% 100%;background-position:130% 0;animation:dzSh 1.4s ease .9s 1;pointer-events:none}
+.act.dz.risk::after{animation:dzSh 2.6s ease-in-out infinite}
+@keyframes dzSh{to{background-position:-30% 0}}
+.dz-pan{transition:transform .65s cubic-bezier(.22,1.2,.36,1)}
+.dz-pan .m{opacity:0;transform:translateY(14px);filter:blur(6px)}
+.dz-pan.on .m{animation:dzIn .7s cubic-bezier(.2,.9,.25,1) var(--t,0s) forwards}
+@keyframes dzIn{to{opacity:1;transform:none;filter:none}}
+.dz-pan.on .dz-hd h4{animation:dzTitle .8s cubic-bezier(.2,.9,.25,1) .05s both}
+@keyframes dzTitle{from{opacity:0;letter-spacing:.08em;filter:blur(8px)}to{opacity:1;letter-spacing:-.03em;filter:none}}
+.dz-g .halo{position:absolute;left:50%;top:44%;width:150px;height:150px;border-radius:50%;transform:translate(-50%,-50%) scale(.6);opacity:0;background:radial-gradient(circle,var(--hc,rgba(95,211,162,.35)),transparent 65%);filter:blur(6px);transition:opacity 1s .9s,transform 1.4s cubic-bezier(.2,.8,.2,1) .9s}
+.dz-pan.on .dz-g .halo{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.dz-g .trk{stroke-dasharray:1;stroke-dashoffset:1}
+.dz-pan.on .dz-g .trk{animation:dzDraw .9s cubic-bezier(.6,0,.2,1) .25s forwards}
+.dz-g .zn{stroke-dasharray:1;stroke-dashoffset:1}
+.dz-pan.on .dz-g .zn{animation:dzDraw .55s cubic-bezier(.4,0,.2,1) var(--t) forwards}
+@keyframes dzDraw{to{stroke-dashoffset:0}}
+.dz-g .tk{opacity:0}.dz-pan.on .dz-g .tk{animation:dzFade .3s ease var(--t) forwards}
+@keyframes dzFade{to{opacity:1}}
+.dz-g .nd{transition:none;transform:rotate(-90deg)}
+.dz-g .hub{transform-origin:90px 92px;transform:scale(0)}.dz-pan.on .dz-g .hub{animation:dzPop .5s cubic-bezier(.3,1.8,.5,1) .55s forwards}
+@keyframes dzPop{to{transform:scale(1)}}
+.dz-g .vl b{display:block;width:max-content;margin:0 auto}
+.dz-g .vl.hit b{animation:dzBump .55s cubic-bezier(.3,1.6,.5,1)}
+@keyframes dzBump{40%{transform:scale(1.18)}}
+.dz-st .ln{display:block;overflow:hidden}
+.dz-st .ln>span{display:block;transform:translateY(105%);transition:transform .7s cubic-bezier(.2,.9,.25,1) var(--t)}
+.dz-pan.on .dz-st .ln>span{transform:none}
+.dz-pan.on .dz-tag{animation:dzPop2 .5s cubic-bezier(.3,1.7,.5,1) .5s both}
+@keyframes dzPop2{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+.dz-risk.hot{position:relative;overflow:hidden}
+.dz-risk.hot::before{content:"";position:absolute;inset:-1px;border-radius:15px;padding:1px;background:conic-gradient(from var(--ang,0deg),transparent 0 70%,rgba(224,122,122,.9) 85%,transparent 100%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:dzSpin 3s linear infinite;pointer-events:none}
+@property --ang{syntax:"<angle>";inherits:false;initial-value:0deg}
+@keyframes dzSpin{to{--ang:360deg}}
+.dz-risk.hot .i{animation:dzBeat 1.2s ease-in-out infinite}
+@keyframes dzBeat{0%,100%{transform:scale(1)}15%{transform:scale(1.15)}30%{transform:scale(1)}45%{transform:scale(1.1)}}
+.dz-risk .cd [data-dzcd]{display:inline-block}
+.dz-risk .cd .tickk{animation:dzTick .35s cubic-bezier(.3,1.4,.5,1)}
+@keyframes dzTick{from{transform:translateY(-35%);opacity:.3}to{transform:none;opacity:1}}
+.dz-pan.on .dz-pts{animation:dzPop2 .45s cubic-bezier(.3,1.7,.5,1) var(--t) both}
+.dz-exp .pg i{transition:width 1.4s cubic-bezier(.2,.8,.2,1) 1.1s}
+.dz-sweep{position:absolute;left:0;right:0;top:0;height:120px;background:linear-gradient(180deg,rgba(255,255,255,.05),transparent);transform:translateY(-120%);pointer-events:none}
+.dz-pan.on .dz-sweep{animation:dzSweep 1.1s cubic-bezier(.4,0,.2,1) .15s}
+@keyframes dzSweep{to{transform:translateY(600%)}}
+@media (prefers-reduced-motion:reduce){.dz-pan .m,.dz-g .trk,.dz-g .zn,.dz-g .tk,.dz-g .hub,.dz-st .ln>span{animation:none!important;transition:none!important;opacity:1!important;transform:none!important;filter:none!important;stroke-dashoffset:0!important}}
+.shV .roll.late{color:#e07a7a}.shV .k.late{color:#e07a7a;animation:dzLateK 1.6s ease-in-out infinite}@keyframes dzLateK{50%{opacity:.55}}
 </style>
 </head>
 <body>
@@ -548,7 +647,7 @@ function renderChatter() {
     : `<span><b>Palier maximum atteint</b> : 15 % + 40 € de prime. Bravo !</span>`;
   const h = new Date().getHours(), hello = h < 5 ? "Bonne nuit" : h < 18 ? "Bonjour" : "Bonsoir";
   const date = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
-  const chips = `<a class="act hot" href="/ventes">${icon("receipt")}<span>Déclarer<span class="lx"> une vente</span></span></a><a class="act" href="/planning">${icon("calendar")}Planning</a><a class="act" href="/app">${icon("chat")}Simulateur</a>`;
+  const chips = `<a class="act hot" href="/ventes">${icon("receipt")}<span>Déclarer<span class="lx"> une vente</span></span></a><a class="act" href="/planning">${icon("calendar")}Planning</a><a class="act" href="/app">${icon("chat")}Simulateur</a>${DZ.chip()}`;
   const goal = nx ? nx.from : Math.max(T.net * 1.2, 1), ahead = T.projNet >= goal;
   const hero = `<div class="b hero a-hero" style="${wv("hero")}"><div class="stars">${stars()}</div><span class="glow"></span>
     <div class="hero2"><div class="hl"><div class="eyebrow" style="position:relative;margin:0">${esc(date)}<span class="hp"> · période du ${esc(D.period.label.replace(/ \d{4}$/, ""))}</span></div>
@@ -564,7 +663,7 @@ function renderChatter() {
     + `<div class="b a-feed" style="${wv("feed")}"><div class="fxroot" id="fxroot"></div></div>`
     + (D.leaderboard.length ? podB(D.leaderboard, note).replace('<h3>Classement de la période</h3>', '<h3>Classement <em>de la période</em></h3>') : podAdm([]));
   FX = FeedFX($("fxroot"), D.feed, D.live);
-  bindShiftV3();
+  bindShiftV3(); DZ.bind();
 }
 // paliers personnels : colonne liquide + échelle des paliers
 function palB() {
@@ -592,7 +691,7 @@ function shiftV3() {
       ${ls ? `<div class="st"><div><b>${ls.count}</b><small>vente${ls.count > 1 ? "s" : ""}</small></div><div><b>+${esc(eur0(Math.round(ls.net)))}</b><small>net</small></div></div>` : `<div class="st1">Lance-toi : chaque vente compte pour tes paliers.</div>`}</div>`
     : `<div class="crea"><div class="st1">Aucun créneau prévu : tu peux quand même pointer sur une créatrice.</div></div>`;
   return `<div class="b a-shift shV" style="${wv("shift")}"><div class="shd"><h3>${op ? "Mon <em>shift en cours</em>" : "Mon <em>prochain shift</em>"}</h3><span class="mut">${op ? `sur <b>${esc(op.model_name)}</b>` : when}</span></div>
-    <div class="g3"><div class="cdw"><span class="k">${op ? "EN SHIFT DEPUIS" : nx ? "COMMENCE DANS" : "PRÊT QUAND TU L'ES"}</span><div class="roll" id="roll"></div>
+    <div class="g3"><div class="cdw"><span class="k" id="rollK">${op ? "EN SHIFT DEPUIS" : nx ? "COMMENCE DANS" : "PRÊT QUAND TU L'ES"}</span><div class="roll" id="roll"></div>
       <div class="mut" style="margin-top:8px">${wk}${nx && !op ? `<b>${String(dur).replace(".", ",")} h</b>` : op ? `depuis ${new Date(op.start_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}` : ""}</div></div>${crea}</div>
     ${op ? `<div class="liveb"><span class="dot"></span><span class="mut">Bon shift sur <b>${esc(op.model_name)}</b> !</span><button class="btn ghost small stop" id="outBtn">Terminer</button></div>`
       : `<div class="slrow"><button class="slide" id="slide" aria-label="Glisser pour commencer mon shift"><span class="fill" id="sFill"></span><span class="lbl">Glisser pour commencer</span><span class="knob" id="sKnob"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
@@ -610,7 +709,11 @@ function bindShiftV3() {
   const roll = $("roll"), nx = D.upcoming[0], op = D.open;
   const startAt = nx ? new Date(`${nx.date}T${nx.start}:00`).getTime() : null;
   const upd = () => { if (!roll || !roll.isConnected) return clearInterval(tick);
-    let t; if (op) t = Math.floor((Date.now() - op.start_at) / 1000); else if (startAt) t = Math.max(0, Math.floor((startAt - Date.now()) / 1000)); else { roll.innerHTML = '<span class="rs" style="opacity:1">—</span>'; return; }
+    let t; if (op) t = Math.floor((Date.now() - op.start_at) / 1000);
+    else if (startAt) { const d = Math.floor((startAt - Date.now()) / 1000), late = d <= 0, k = $("rollK");
+      // le shift a commencé sans pointage : on affiche le retard qui s'écoule
+      t = Math.abs(d); roll.classList.toggle("late", late); if (k) { k.textContent = late ? "EN RETARD DE" : "COMMENCE DANS"; k.classList.toggle("late", late); } }
+    else { roll.innerHTML = '<span class="rs" style="opacity:1">—</span>'; return; }
     rollSet(roll, `${pad(Math.floor(t / 3600))}:${pad(Math.floor(t % 3600 / 60))}:${pad(t % 60)}`); };
   upd(); tick = setInterval(upd, 1000);
   if (op) { $("outBtn").onclick = async () => { $("outBtn").disabled = true; const dur = (Date.now() - op.start_at) / 3.6e6;
@@ -779,6 +882,111 @@ function afterRender() {
 }
 
 /* ---------------- Chargement ---------------- */
+
+/* ===== Dossier : sanctions, points et risques en direct ===== */
+// sons discrets du dossier (cristal) : ouverture, tics de l'aiguille, stabilisation, alerte douce
+const DZS = (() => {
+  let c = null, o = null;
+  const on = () => { try { return localStorage.getItem("stSound") !== "0"; } catch (e) { return true; } };
+  function ac() { if (!on()) return null; try { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
+    if (!c) { c = new C(); o = c.createGain(); o.gain.value = .15; o.connect(c.destination); if (window.stAudio) stAudio.add(c); }
+    if (c.state !== "running") c.resume().catch(() => {}); return c; } catch (e) { return null; } }
+  const tone = (f, at, len, peak, type, glide) => { const os = c.createOscillator(), g = c.createGain(); os.type = type || "sine"; os.frequency.setValueAtTime(f, at);
+    if (glide) os.frequency.exponentialRampToValueAtTime(glide, at + len * .9);
+    g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(peak, at + Math.min(.02, len / 4)); g.gain.exponentialRampToValueAtTime(.0001, at + len);
+    os.connect(g); g.connect(o); os.start(at); os.stop(at + len + .05); };
+  const air = (at, len, f0, f1, peak) => { const n = Math.floor(c.sampleRate * len), b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / n);
+    const s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain(); s.buffer = b; bp.type = "bandpass"; bp.Q.value = 1.3;
+    bp.frequency.setValueAtTime(f0, at); bp.frequency.exponentialRampToValueAtTime(f1, at + len); g.gain.value = peak; s.connect(bp); bp.connect(g); g.connect(o); s.start(at); };
+  const run = f => { const x = ac(); if (x) try { f(x.currentTime + .02); } catch (e) {} };
+  return {
+    open: () => run(t => { air(t, .55, 500, 3600, .22); tone(1318.5, t + .3, .5, .03); tone(1975.5, t + .38, .6, .02); }),
+    tick: n => run(t => tone(1760 + n * 160, t, .07, .045, "triangle")),
+    settle: z => run(t => { const f = z === "r" ? [523.3, 659.3] : z === "w" ? [1174.7, 1568] : [1318.5, 1975.5, 2637]; f.forEach((x, i) => tone(x, t + i * .06, .7, .06 - i * .012)); }),
+    alert: () => run(t => { tone(440, t, .22, .05, "triangle", 392); tone(440, t + .28, .22, .04, "triangle", 392); })
+  };
+})();
+const DZ = (() => {
+  const pad = n => String(n).padStart(2, "0");
+  const fmt = s => { s = Math.max(0, Math.floor(s)); return s >= 86400 ? `${Math.floor(s / 86400)} j ${Math.floor(s / 3600) % 24} h` : s >= 3600 ? `${Math.floor(s / 3600)} h ${pad(Math.floor(s / 60) % 60)}` : `${pad(Math.floor(s / 60))}:${pad(s % 60)}`; };
+  const data = () => D.discipline || null;
+  const ring = (p, max, col) => { const r = 9, c = 2 * Math.PI * r, f = Math.min(1, p / max);
+    return `<svg class="dg" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="${r}" stroke="#2a2a2a"/><circle class="rg" cx="11" cy="11" r="${r}" stroke="${col}" style="--c:${(c * f).toFixed(1)}" stroke-dasharray="${(c * f).toFixed(1)} ${c.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 11 11)"/></svg>`; };
+  const hotRisk = d => d.risks.find(r => r.level === "hot" && (!r.until || r.until > Date.now()));
+  function chip() {
+    const d = data(); if (!d) return "";
+    const st = d.points >= d.warnAt ? "warn" : "ok", hot = hotRisk(d), col = d.points >= d.suspendAt ? "#e07a7a" : st === "warn" ? "#e6e6e6" : "#5fd3a2";
+    if (hot) return `<button class="act dz risk" id="dzBtn" type="button">${ring(d.points, d.suspendAt, "#e07a7a")}<span>${esc(hot.short)}${hot.until ? ` · <em class="cdx" data-dzcd="${hot.until}">${fmt((hot.until - Date.now()) / 1000)}</em>` : ""}</span></button>`;
+    return `<button class="act dz ${st}" id="dzBtn" type="button">${ring(d.points, d.suspendAt, col)}<span>${st === "warn" ? "À surveiller" : "Dossier"} · <b>${d.points} pt${d.points > 1 ? "s" : ""}</b></span></button>`;
+  }
+  function gauge(p, max) {
+    const R = 72, cx = 90, cy = 92, pt = (v, r = R) => [cx + r * Math.cos(Math.PI - v / max * Math.PI), cy - r * Math.sin(Math.PI - v / max * Math.PI)];
+    const arc = (a, b) => { const [x0, y0] = pt(a), [x1, y1] = pt(b); return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${R} ${R} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
+    const d = data(), w = d.warnAt, s = d.suspendAt, zc = p >= s ? "rgba(224,122,122,.4)" : p >= w ? "rgba(255,255,255,.22)" : "rgba(95,211,162,.35)";
+    const ticks = Array.from({ length: max + 1 }, (_, i) => { const [x0, y0] = pt(i, R - 13), [x1, y1] = pt(i, R - 19); return `<line class="tk" style="--t:${(.35 + i * .07).toFixed(2)}s" x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="#3a3a3a" stroke-width="2" stroke-linecap="round"/>`; }).join("");
+    return `<div class="dz-g" style="--hc:${zc}"><span class="halo"></span><svg width="180" height="104" viewBox="0 0 180 104" style="position:relative">
+      <path class="trk" pathLength="1" d="${arc(0, max)}" stroke="#1c1c1c" stroke-width="14" fill="none" stroke-linecap="round"/>
+      <path class="zn" pathLength="1" style="--t:.45s" d="${arc(.05, w - .05)}" stroke="#5fd3a2" stroke-width="14" fill="none" stroke-linecap="round" opacity=".85"/>
+      <path class="zn" pathLength="1" style="--t:.75s" d="${arc(w + .05, s - .05)}" stroke="#e6e6e6" stroke-width="14" fill="none" opacity=".9"/>
+      <path class="zn" pathLength="1" style="--t:.95s" d="${arc(s + .05, max - .05)}" stroke="#e07a7a" stroke-width="14" fill="none" stroke-linecap="round"/>${ticks}
+      <g class="nd" id="dzNd"><line x1="90" y1="92" x2="90" y2="40" stroke="#fff" stroke-width="3" stroke-linecap="round"/><line x1="90" y1="92" x2="90" y2="40" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".12"/></g>
+      <g class="hub"><circle cx="90" cy="92" r="7" fill="#fff"/><circle cx="90" cy="92" r="2.5" fill="#0f0f0f"/></g></svg>
+      <div class="vl" id="dzVl"><b id="dzPts">0 pt</b><small>SUR ${d.windowDays} JOURS</small></div></div>`;
+  }
+  // aiguille : ressort amorti (dépasse puis se stabilise), compteur synchronisé, petits « tics » sonores
+  function sweep(p, max) {
+    const nd = $("dzNd"), out = $("dzPts"), vl = $("dzVl"); if (!nd) return;
+    const target = Math.min(p, max) / max * 180, reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const lbl = v => `${v} pt${v > 1 ? "s" : ""}`;
+    if (reduced) { nd.style.transform = `rotate(${-90 + target}deg)`; out.textContent = lbl(p); return; }
+    let x = 0, v = 0, last = 0, t0 = null, shown = -1; const k = 90, damp = 9;
+    const step = t => { if (!$("dzPan")?.classList.contains("on")) return; if (t0 === null) { t0 = t; last = t; }
+      const dt = Math.min(.032, (t - last) / 1000); last = t;
+      if (t - t0 > 650) { const a = k * (target - x) - damp * v; v += a * dt; x += v * dt; }
+      nd.style.transform = `rotate(${-90 + x}deg)`;
+      const cur = Math.max(0, Math.min(p, Math.round(x / 180 * max)));
+      if (cur !== shown && t - t0 > 650) { shown = cur; out.textContent = lbl(cur); if (cur) DZS.tick(cur); }
+      if (Math.abs(target - x) < .05 && Math.abs(v) < .05 && t - t0 > 900) { nd.style.transform = `rotate(${-90 + target}deg)`; out.textContent = lbl(p); vl.classList.add("hit"); DZS.settle(p >= data().suspendAt ? "r" : p >= data().warnAt ? "w" : "g"); return; }
+      requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
+  function open() {
+    const d = data(); if (!d) return;
+    let pan = $("dzPan"); if (!pan) { document.body.insertAdjacentHTML("beforeend", `<div class="dz-scrim" id="dzScrim"></div><aside class="dz-pan" id="dzPan" role="dialog" aria-modal="true" aria-label="Mon dossier"></aside>`); pan = $("dzPan"); $("dzScrim").onclick = close; }
+    const max = d.suspendAt + 1, left = d.suspendAt - d.points;
+    const tag = d.points >= d.suspendAt ? '<span class="dz-tag r"><i></i>Shifts suspendus</span>' : d.points >= d.warnAt ? '<span class="dz-tag w"><i></i>À surveiller</span>' : '<span class="dz-tag v"><i></i>Tout va bien</span>';
+    const stTxt = d.points >= d.suspendAt ? `<b>Tes shifts sont suspendus</b><p>Jusqu'au <strong>${esc(d.suspendedUntil || "")}</strong>. Parles-en avec ton manager.</p>`
+      : left === 1 ? `<b>Encore 1 point avant la suspension</b><p>À <strong>${d.suspendAt} points</strong>, tes shifts sont suspendus <strong>${d.suspendDays} jours</strong>. Chaque point s'efface après ${d.windowDays} jours.</p>`
+      : `<b>${d.points ? `${d.points} point${d.points > 1 ? "s" : ""} sur ${d.suspendAt}` : "Aucun point"}</b><p>Les points s'effacent après <strong>${d.windowDays} jours</strong>. À ${d.suspendAt} points, tes shifts sont suspendus ${d.suspendDays} jours.</p>`;
+    const risks = d.risks.map((r, i) => `<div class="dz-risk ${r.level} m" style="--t:${(1.1 + i * .1).toFixed(2)}s"><span class="i">${r.level === "hot" ? "!" : r.level === "ok" ? "✓" : "⇄"}</span><div><b>${esc(r.title)}</b><small>${r.text}</small></div>${r.until ? `<span class="cd"><span data-dzcd="${r.until}">${fmt((r.until - Date.now()) / 1000)}</span><small>${esc(r.cdLabel || "RESTANT")}</small></span>` : ""}</div>`).join("");
+    const sl = d.sanctions.length ? d.sanctions.map((x, i) => `<div class="dz-sl m" style="--t:${(1.4 + i * .09).toFixed(2)}s" data-sid="${x.id}"><div class="r1"><span class="dz-pts ${x.amount ? "" : "w"}" style="--t:${(1.6 + i * .09).toFixed(2)}s">+${x.points} pt${x.points > 1 ? "s" : ""}</span><div><b>${esc(x.label)}</b><small>${esc(x.when)} · s'efface ${esc(x.expires)}</small></div>${x.amount ? `<span class="dz-amt">−${eur(x.amount)}</span>` : ""}</div>
+      ${x.explanation ? `<div class="dz-sent">Explication envoyée · ${x.status === "pending" ? "en attente du manager" : esc(x.status)}<i>« ${esc(x.explanation)} »</i></div>`
+        : `<button class="dz-sb" data-dzex>Donner une explication</button><div class="dz-exf"><textarea placeholder="Explique ce qui s'est passé : le manager peut annuler la sanction"></textarea><button class="dz-sb w" data-dzsend style="width:100%;height:36px">Envoyer au manager</button></div>`}</div>`).join("")
+      : `<div class="dz-empty m" style="--t:1.4s">Aucune sanction sur les ${d.windowDays} derniers jours. Continue comme ça !</div>`;
+    const stLines = stTxt.replace(/^<b>(.*?)<\/b><p>(.*)<\/p>$/s, (m, b, pp) => `<b class="ln"><span style="--t:.55s">${b}</span></b><p class="ln" style="margin-top:6px"><span style="--t:.68s">${pp}</span></p>`);
+    pan.innerHTML = `<span class="dz-sweep"></span><div class="dz-hd"><h4>Mon <em>dossier</em></h4><div style="display:flex;gap:8px;align-items:center">${tag}<button class="dz-x" id="dzX" aria-label="Fermer">✕</button></div></div>
+      <div class="dz-gw">${gauge(d.points, max)}<div class="dz-st">${stLines}</div></div>
+      ${d.nextExpiry ? `<div class="dz-exp m" style="--t:.95s"><span>Prochain point effacé dans <b style="color:#fff">${esc(d.nextExpiry.inTxt)}</b></span><span class="pg"><i data-w="${d.nextExpiry.pct}"></i></span><span>→ ${d.points - d.nextExpiry.points} pt${d.points - d.nextExpiry.points > 1 ? "s" : ""}</span></div>` : ""}
+      <span class="dz-lab m" style="--t:1.05s">RISQUES EN DIRECT</span>${risks || '<div class="dz-empty">Aucun risque en ce moment.</div>'}
+      <span class="dz-lab m" style="--t:1.35s">MES SANCTIONS</span>${sl}
+      <span class="dz-lab m" style="--t:1.7s">LE BARÈME</span><div class="dz-rules m" style="--t:1.75s">${d.rules.map(r => `<div><span>${esc(r.label)}</span><b>${esc(r.sanction)}</b></div>`).join("")}</div>`;
+    $("dzX").onclick = close;
+    pan.querySelectorAll("[data-dzex]").forEach(b => b.onclick = () => b.nextElementSibling.classList.toggle("on"));
+    pan.querySelectorAll("[data-dzsend]").forEach(b => b.onclick = () => { const box = b.closest(".dz-sl"), t = box.querySelector("textarea").value.trim(); if (!t) return;
+      const x = d.sanctions.find(y => String(y.id) === box.dataset.sid); b.disabled = true;
+      api(`/api/my-sanctions/${x.id}/explain`, { body: { text: t } }).then(() => { x.explanation = t; x.status = "pending"; notify("Explication envoyée", "Le manager peut annuler la sanction", "ok"); open(); })
+        .catch(e => { b.disabled = false; notify("Explication non envoyée", e.message, "err"); }); });
+    pan.classList.remove("on"); void pan.offsetWidth;
+    $("dzScrim").classList.add("on"); pan.classList.add("on"); DZS.open(); if (hotRisk(d)) setTimeout(() => DZS.alert(), 1250);
+    requestAnimationFrame(() => requestAnimationFrame(() => { sweep(d.points, max); pan.querySelectorAll("[data-w]").forEach(i => i.style.width = i.dataset.w + "%"); }));
+  }
+  function close() { $("dzPan")?.classList.remove("on"); $("dzScrim")?.classList.remove("on"); }
+  addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+  setInterval(() => document.querySelectorAll("[data-dzcd]").forEach(e => { const t = fmt((+e.dataset.dzcd - Date.now()) / 1000); if (t === e.textContent) return; e.textContent = t;
+    if (e.closest(".dz-risk")) { e.classList.remove("tickk"); void e.offsetWidth; e.classList.add("tickk"); } }), 1000);
+  return { chip, bind() { const b = $("dzBtn"); if (b) b.onclick = open; }, open };
+})();
 async function load() {
   D = await api("/api/home");
   D.role === "admin" ? renderAdmin() : renderChatter();
