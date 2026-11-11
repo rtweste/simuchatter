@@ -209,6 +209,21 @@ const SK = {
 /* ===== Appli installable (écran d'accueil iPhone / installation sur ordinateur) ===== */
 if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
 
+/* ---------------- Déblocage du son (Safari / Chrome sur Mac) ----------------
+   Les navigateurs ne laissent démarrer le son qu'après un geste (clic, touche).
+   Safari peut aussi mettre le son en pause (« interrupted ») après une veille ou un changement de sortie audio.
+   À chaque geste, on relance tous les moteurs de son de la page. */
+const stAudio = window.stAudio = (() => {
+  const list = [];
+  const wake = () => list.forEach(c => { try {
+    if (c.state !== "running") c.resume().catch(() => {});
+    const b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0);   // WebKit : un son joué pendant le geste
+  } catch (e) {} });
+  ["pointerdown", "keydown", "touchend", "click"].forEach(ev => addEventListener(ev, wake, { capture: true, passive: true }));
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) list.forEach(c => { try { if (c.state !== "running") c.resume().catch(() => {}); } catch (e) {} }); });
+  return { add: c => { if (c && !list.includes(c)) list.push(c); }, wake };
+})();
+
 /* ---------------- Sons (discrets : air et cristal) ---------------- */
 const SND = window.SND = (() => {
   let ctx = null, out = null;
@@ -217,8 +232,8 @@ const SND = window.SND = (() => {
     if (!on()) return null;
     try { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
       try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
-      if (!ctx) { ctx = new C(); out = ctx.createGain(); out.gain.value = 0.16; out.connect(ctx.destination); }
-      if (ctx.state === "suspended") ctx.resume(); return ctx; } catch (e) { return null; }
+      if (!ctx) { ctx = new C(); out = ctx.createGain(); out.gain.value = 0.16; out.connect(ctx.destination); stAudio.add(ctx); }
+      if (ctx.state !== "running") ctx.resume().catch(() => {}); return ctx; } catch (e) { return null; }
   }
   let tone = function (f, at, len, peak, type, glide) {
     const o = ctx.createOscillator(), g = ctx.createGain();

@@ -28,7 +28,7 @@ const EVAL = (() => {
   /* ================= sons (synthèse Web Audio, aucun fichier) ================= */
   const A = { ctx: null, run: null };
   function ensure() {
-    if (A.ctx) { if (A.ctx.state === "suspended") A.ctx.resume(); return A.ctx; }
+    if (A.ctx) { if (A.ctx.state !== "running") A.ctx.resume().catch(() => {}); return A.ctx; }
     const K = window.AudioContext || window.webkitAudioContext; if (!K) return null;
     try { if (navigator.audioSession && navigator.audioSession.type !== "playback") navigator.audioSession.type = "playback"; } catch (e) {}
     const C = new K(); A.ctx = C;
@@ -39,7 +39,8 @@ const EVAL = (() => {
     for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
     A.verb = C.createConvolver(); A.verb.buffer = ir; const wet = C.createGain(); wet.gain.value = .32; A.verb.connect(wet); wet.connect(A.master);
     A.nbuf = C.createBuffer(1, C.sampleRate * 2, C.sampleRate); const nd = A.nbuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-    if (C.state === "suspended") C.resume();
+    window.stAudio && stAudio.add(C);
+    if (C.state !== "running") C.resume().catch(() => {});
     return C;
   }
   const live = () => soundPref() && A.ctx && A.ctx.state === "running" && A.run;
@@ -174,10 +175,11 @@ const EVAL = (() => {
     const box = q(".ev-intro"), ib = q(".ev-ib"), roll = q(".ev-roll"), chat = q(".ev-chat"), scan = q(".ev-scan"), ms = qa(".ev-roll .m"), cks = qa(".ev-ck"), pc = q(".pc b"), pb = q(".ev-pb i"), dots = q(".ev-ih .t span"), flash = q(".ev-flash"), wait = q(".ev-wait"), sndB = q("[data-snd]"), skipB = q("[data-skip]");
     const t0 = performance.now(); let full = null, FS = null, RT = null, SHOW = null, dead = false, pct = 0, nok = 0, nextBeat = 250, pad = null, taggedAt = null;
     const hitSet = new Set();
-    if (soundPref()) { ensure(); if (!A.run) newRun(); pad = S.padStart(); }
+    if (soundPref() && ensure()) { if (!A.run) newRun(); const go = () => { if (!dead && FS == null && !pad) pad = S.padStart(); };
+      if (A.ctx.state === "running") go(); else A.ctx.resume().then(go).catch(() => {}); }
     const needBtn = () => soundPref() && !(A.ctx && A.ctx.state === "running");
-    if (needBtn()) sndB.hidden = false;
-    sndB.onclick = () => { unlock(); if (A.ctx) A.ctx.resume().then(() => { sndB.hidden = true; newRun(); if (!FS) pad = S.padStart(); }); };
+    setTimeout(() => { if (!dead && needBtn()) sndB.hidden = false; }, 700);
+    sndB.onclick = () => { unlock(); if (A.ctx) A.ctx.resume().then(() => { sndB.hidden = true; if (!A.run) newRun(); if (FS == null && !pad) pad = S.padStart(); }); };
     const finalize = t => {   // le résultat est arrivé : dernière ligne droite
       FS = Math.max(t, 2600); RT = FS + 1300; SHOW = RT + 450;
       wait.textContent = "Analyse terminée"; skipB.hidden = false;
