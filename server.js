@@ -450,7 +450,7 @@ const COMPTA = require("./compta")(app, db, auth, admin, validatedByPeriod);
 const PLAN = require("./planning")(app, db, auth, admin);
 /* ----- Gestion : équipe, créatrices, réglages, journal, sanctions ----- */
 GEST = require("./gestion")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, PERSONAS });
-require("./candidatures")(app, db, auth, admin, { bcrypt, gest: GEST });   // page publique /postuler
+require("./candidatures")(app, db, auth, admin, { bcrypt, gest: GEST, ai });   // page publique /postuler
 HAND = require("./handover")(app, db, auth, admin, { planning: PLAN, gest: GEST });   // passation de shift
 require("./teamfx")(app, db, auth, admin, { planning: PLAN, gest: GEST, PERSONAS });   // salle de contrôle, radar, mur des ventes
 require("./extras")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, gest: GEST, ai });   // assistant, Wrapped, team leaders

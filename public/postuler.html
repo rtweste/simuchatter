@@ -72,6 +72,34 @@ textarea.f{height:auto;min-height:96px;padding:13px 15px;line-height:1.5;resize:
 .opt i::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--g);transform:scale(0);transition:transform .35s var(--sp)}
 .opt.on{border-color:rgba(95,211,162,.55);background:rgba(95,211,162,.08);color:#fff}.opt.on i{border-color:var(--g)}.opt.on i::after{transform:none}.opt:active{transform:scale(.98)}
 /* petit test */
+.cti{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.cti>div{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:16px;background:#0f0f0f;border:1px solid #222}
+.cti .n{width:22px;height:22px;border-radius:7px;background:#1d1d1d;display:grid;place-items:center;font:900 11px Inter;color:#999}
+.cti b,.ctd b{display:block;font-size:14px}.cti small,.ctd small{display:block;font-size:12px;color:#888;margin-top:1px}
+.av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font:900 14px Inter;color:#0a0a0a;background:linear-gradient(135deg,#9be8c6,#5fd3a2);flex-shrink:0;position:relative}
+.ctr{display:flex;gap:10px;align-items:center;margin-top:12px;font-size:12.5px;color:#aaa;line-height:1.45;padding:10px 12px;border-radius:14px;background:rgba(95,211,162,.06);border:1px solid rgba(95,211,162,.18)}
+.ctgo{margin-top:14px;width:100%;height:52px;border-radius:16px;border:0;background:var(--g);color:#06261a;font:900 15px Inter;cursor:pointer;box-shadow:0 10px 30px rgba(95,211,162,.25)}
+.ctp{border-radius:22px;background:#0a0a0a;border:1px solid #222;overflow:hidden}
+.ctp .hd{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #1c1c1c;background:#0e0e0e}
+.ctp .hd .av i{position:absolute;right:0;bottom:0;width:10px;height:10px;border-radius:50%;background:var(--g);border:2px solid #0e0e0e}
+.ctp .hd b{display:block;font-size:14px}.ctp .hd small{display:block;font-size:11.5px;color:var(--g)}
+.ctp .cpg{display:flex;gap:4px;margin-left:auto}.ctp .cpg i{width:18px;height:4px;border-radius:2px;background:#262626;transition:background .4s,width .4s var(--sp)}.ctp .cpg i.on{background:#f5f5f5;width:26px}.ctp .cpg i.ok{background:var(--g)}
+.ctp .tm{position:relative;width:38px;height:38px;flex-shrink:0}.ctp .tm svg{width:100%;height:100%;transform:rotate(-90deg)}.ctp .tm circle{fill:none;stroke-width:3}.ctp .tm .b{stroke:#222}.ctp .tm .f{stroke:var(--g);stroke-linecap:round;transition:stroke-dashoffset .25s linear,stroke .3s}.ctp .tm .f.late{stroke:#e0a35f}
+.ctp .tm span{position:absolute;inset:0;display:grid;place-items:center;font:800 9.5px Inter;font-variant-numeric:tabular-nums}
+.ctp .th{height:230px;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:6px;scroll-behavior:smooth}
+.ctp .bb{align-self:flex-start;max-width:82%;padding:10px 14px;border-radius:18px 18px 18px 5px;background:#1f1f1f;font-size:14px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
+.ctp .bb.me{align-self:flex-end;border-radius:18px 18px 5px 18px;background:#f5f5f5;color:#0a0a0a}
+.ctp .typing{align-self:flex-start}
+.ctp .vu{align-self:flex-end;font-size:11px;color:var(--g);animation:in .4s var(--ez) both}
+.ctp .cp{display:flex;align-items:flex-end;gap:8px;padding:10px;border-top:1px solid #1c1c1c;background:#0e0e0e}
+.ctp .cp textarea{flex:1;min-height:42px;max-height:140px;border-radius:14px;background:#161616;border:1px solid #262626;color:#f5f5f5;font:14px/1.45 Inter;padding:10px 12px;resize:none;outline:none;box-sizing:border-box}
+.ctp .cp textarea:focus{border-color:#3a3a3a}.ctp .cp textarea:disabled{opacity:.5}
+.ctp .cp button{width:42px;height:42px;border-radius:14px;border:0;background:#262626;color:#777;display:grid;place-items:center;cursor:pointer;flex-shrink:0;transition:background .25s,color .25s,transform .35s var(--sp)}
+.ctp .cp button.on{background:var(--g);color:#06261a;transform:rotate(-8deg) scale(1.05)}
+.ctd{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.ctd>div{display:flex;gap:12px;align-items:flex-start;padding:11px 13px;border-radius:16px;background:#0f0f0f;border:1px solid #222}
+.ctd b{font-weight:600;font-size:13.5px;line-height:1.45;color:#ddd;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ctre{margin-top:12px;background:none;border:0;color:#999;font:700 13px Inter;cursor:pointer;padding:6px}
 .chat{padding:16px;border-radius:18px;background:#0a0a0a;border:1px solid #222}
 .bub{display:inline-block;max-width:80%;padding:10px 14px;border-radius:18px 18px 18px 5px;background:#1f1f1f;font-size:14px;line-height:1.45}
 .who{font-size:11px;color:#777;margin:0 0 6px 4px}
@@ -162,7 +190,7 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
   [["far", 90, 1.2, .5], ["near", 35, 2, .9]].forEach(([id, n, sz, op]) => { const el = $(id); for (let i = 0; i < n; i++) { const s = document.createElement("span"); s.className = "st"; const z = Math.random() * sz + .4;
     s.style.cssText = `left:${Math.random() * 100}%;top:${Math.random() * 110}%;width:${z}px;height:${z}px;--o:${(Math.random() * op + .1).toFixed(2)};animation-duration:${3 + Math.random() * 5}s;animation-delay:${-Math.random() * 5}s`; el.appendChild(s); } });
   const P = new URLSearchParams(location.search), SRC = P.get("src") || P.get("utm_source") || P.get("ref") || "";
-  const A = { firstName: "", age: "", contactType: "whatsapp", contact: "", slots: [], exp: "", motivation: "", testReply: "", consent: false };
+  const A = { firstName: "", age: "", contactType: "whatsapp", contact: "", slots: [], exp: "", motivation: "", answers: [], testOn: false, consent: false };
   let C = null, cur = 0;
   const STEPS = [
     { name: "Toi", html: () => `<h2 class="r" style="--d:0">Faisons <em>connaissance</em></h2><p class="hint r" style="--d:1">Ça prend 2 minutes. On te recontacte par le moyen de ton choix.</p>
@@ -185,18 +213,65 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
       <label class="l r" style="--d:5" for="mo">POURQUOI TU VEUX NOUS REJOINDRE ?</label><textarea class="f r" style="--d:6" id="mo" maxlength="800" placeholder="Quelques phrases suffisent">${esc(A.motivation)}</textarea>`,
       wire: s => { s.querySelectorAll("[data-e]").forEach(b => b.onclick = () => { A.exp = b.dataset.e; s.querySelectorAll("[data-e]").forEach(x => x.classList.toggle("on", x === b)); }); const mo = s.querySelector("#mo"), fit = () => { mo.style.height = "auto"; mo.style.height = Math.max(96, Math.min(200, mo.scrollHeight + 2)) + "px"; }; fit(); mo.oninput = e => { A.motivation = e.target.value; fit(); }; },
       check: () => !A.exp ? "Indique ton expérience" : A.motivation.trim().length < 15 ? "Dis-nous en quelques mots pourquoi tu veux nous rejoindre" : "" },
-    { name: "Petit test", html: () => `<h2 class="r" style="--d:0">À toi de <em>répondre</em></h2><p class="hint r" style="--d:1">Un fan écrit à la créatrice. Réponds à sa place : naturel, chaleureux, sans fautes. Il n'y a pas de piège.</p>
-      <div class="chat r" style="--d:2"><div class="who">Thomas · nouvel abonné</div><div id="tw"><span class="typing"><i></i><i></i><i></i></span></div>
-        <div class="me"><textarea id="tr" maxlength="600" placeholder="Écris ta réponse…">${esc(A.testReply)}</textarea></div></div>`,
-      wire: s => { const tw = s.querySelector("#tw"); setTimeout(() => { tw.innerHTML = `<div class="bub">salut 😊 ça va ? je viens de m'abonner, tu fais quoi ce soir ?</div>`; if (!reduce && tw.animate) tw.animate([{ opacity: 0, transform: "translateY(6px) scale(.96)" }, { opacity: 1, transform: "none" }], { duration: 400, easing: "cubic-bezier(.34,1.56,.64,1)" }); }, A.testReply ? 0 : 1100);
-        const tr = s.querySelector("#tr"), fit = () => { tr.style.height = "auto"; tr.style.height = Math.min(180, tr.scrollHeight + 2) + "px"; }; fit(); tr.oninput = e => { A.testReply = e.target.value; fit(); }; },
-      check: () => A.testReply.trim().length < 5 ? "Réponds au message du fan" : "" },
+    { name: "Test de chatting", html: () => `<div id="ctW"></div>`, wire: s => ctMount(s.querySelector("#ctW")),
+      check: () => A.answers.length < C.scenarios.length ? (A.testOn ? "Réponds aux 3 fans pour terminer le test" : "Lance le test de chatting") : "" },
     { name: "Envoi", html: () => `<h2 class="r" style="--d:0">On <em>vérifie</em> et on envoie</h2><p class="hint r" style="--d:1">Tu peux revenir en arrière pour modifier.</p>
       <div class="recap">${[["Prénom", `${esc(A.firstName)}, ${esc(A.age)} ans`], [C.contact[A.contactType], esc(A.contact)], ["Shifts", A.slots.map(esc).join(" · ")], ["Expérience", esc(C.exp[A.exp] || "")]].map((x, i) => `<div class="r" style="--d:${i + 2}"><small>${x[0]}</small><b>${x[1]}</b></div>`).join("")}</div>
       <div class="cons r${A.consent ? " on" : ""}" style="--d:6" id="cs" role="checkbox" aria-checked="${A.consent}" tabindex="0"><span class="bx"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>J'ai 18 ans ou plus et j'accepte que StellADS garde ces informations pour étudier ma candidature. Je peux demander leur suppression à tout moment.</span></div>`,
       wire: s => { const c = s.querySelector("#cs"); c.onclick = c.onkeydown = e => { if (e.type === "keydown" && e.key !== " " && e.key !== "Enter") return; e.preventDefault(); A.consent = !A.consent; c.classList.toggle("on", A.consent); c.setAttribute("aria-checked", A.consent); paintBtn(); }; },
       check: () => A.consent ? "" : "Coche la case d'accord pour envoyer ta candidature" }];
 
+  /* ---------- test de chatting : 3 fans, réponses chronométrées ---------- */
+  const SEND = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>';
+  const fmtT = ms => { const s2 = Math.round(ms / 1000); return `${Math.floor(s2 / 60)}:${String(s2 % 60).padStart(2, "0")}`; };
+  let ctTimer = null;
+  function ctMount(w) {
+    clearInterval(ctTimer); const SC = C.scenarios;
+    if (A.answers.length >= SC.length) {   // test terminé : récap
+      w.innerHTML = `<h2 class="r" style="--d:0">Test <em>terminé</em> ✓</h2><p class="hint r" style="--d:1">Bravo ! Tes réponses sont prêtes à être envoyées avec ta candidature.</p>
+        <div class="ctd">${SC.map((sc, i) => { const a = A.answers.find(x => x.id === sc.id) || {}; return `<div class="r" style="--d:${i + 2}"><span class="av">${esc(sc.who[0])}</span><div><small>${esc(sc.who)} · ${fmtT(a.ms || 0)}</small><b>${esc(a.text || "")}</b></div></div>`; }).join("")}</div>
+        <button type="button" class="ctre r" style="--d:6" id="ctRe">↺ Refaire le test</button>`;
+      w.querySelector("#ctRe").onclick = () => { A.answers = []; A.testOn = false; ctMount(w); requestAnimationFrame(() => w.closest(".sec").classList.add("show")); }; return; }
+    if (!A.testOn) {   // présentation
+      w.innerHTML = `<h2 class="r" style="--d:0">Le test de <em>chatting</em></h2><p class="hint r" style="--d:1">3 fans vont écrire à la créatrice. Réponds à sa place, comme sur la vraie messagerie : naturel, chaleureux, sans fautes.</p>
+        <div class="cti">${SC.map((sc, i) => `<div class="r" style="--d:${i + 2}"><span class="n">${i + 1}</span><span class="av">${esc(sc.who[0])}</span><div><b>${esc(sc.who.split(" · ")[0])}</b><small>${esc(sc.who.split(" · ")[1] || "")}</small></div></div>`).join("")}</div>
+        <div class="ctr r" style="--d:6"><span>⏱</span>Chaque réponse est chronométrée. Prends le temps de bien écrire, mais réponds comme en vrai.</div>
+        <button type="button" class="ctgo r" style="--d:7" id="ctGo">Commencer le test</button>`;
+      w.querySelector("#ctGo").onclick = () => { A.testOn = true; A.answers = []; ctScene(w, 0); }; return; }
+    ctScene(w, A.answers.length);
+  }
+  function ctScene(w, k) {
+    clearInterval(ctTimer); const SC = C.scenarios, sc = SC[k]; let t0 = 0, paste = false, sent = false;
+    const old = w.querySelector(".ctp");
+    const p = document.createElement("div"); p.className = "ctp";
+    p.innerHTML = `<div class="hd"><span class="av">${esc(sc.who[0])}<i></i></span><div><b>${esc(sc.who.split(" · ")[0])}</b><small id="ctSt">en train d'écrire…</small></div>
+        <div class="cpg">${SC.map((_, i) => `<i class="${i < k ? "ok" : i === k ? "on" : ""}"></i>`).join("")}</div><div class="tm"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" class="b"/><circle cx="18" cy="18" r="15" class="f" id="ctF"/></svg><span id="ctT">0:00</span></div></div>
+      <div class="th" id="ctTh"></div>
+      <div class="cp"><textarea id="ctIn" rows="1" maxlength="600" placeholder="Écris ta réponse…" disabled></textarea><button type="button" id="ctSend" disabled aria-label="Envoyer">${SEND}</button></div>`;
+    if (old) { w.style.position = "relative"; Object.assign(old.style, { position: "absolute", left: 0, right: 0, top: 0, pointerEvents: "none" }); if (!reduce && old.animate) { old.animate([{ opacity: 1, transform: "none", filter: "blur(0)" }, { opacity: 0, transform: "translateX(-60px) scale(.96)", filter: "blur(6px)" }], { duration: 380, easing: "cubic-bezier(.6,0,.4,1)", fill: "forwards" }).onfinish = () => old.remove(); } else old.remove(); w.appendChild(p);
+      if (!reduce && p.animate) p.animate([{ opacity: 0, transform: "translateX(70px) scale(.96)", filter: "blur(6px)" }, { opacity: 1, transform: "none", filter: "blur(0)" }], { duration: 560, delay: 160, easing: "cubic-bezier(.2,1,.3,1)", fill: "backwards" }); }
+    else { w.innerHTML = ""; w.appendChild(p); if (!reduce && p.animate) p.animate([{ opacity: 0, transform: "translateY(20px) scale(.97)" }, { opacity: 1, transform: "none" }], { duration: 520, easing: "cubic-bezier(.2,1,.3,1)" }); }
+    const th = p.querySelector("#ctTh"), inp = p.querySelector("#ctIn"), btn = p.querySelector("#ctSend"), C2 = 2 * Math.PI * 15;
+    // la conversation occupe toute la hauteur disponible : en-tête et zone de réponse restent visibles
+    const sec = w.closest(".sec"), fitTh = () => { if (!sec) return; const extra = Math.max(0, (inp.offsetHeight || 42) - 42); th.style.height = Math.max(110, Math.min(340, sec.clientHeight - 44 - 132 - extra)) + "px"; sec.scrollTop = 0; th.scrollTop = th.scrollHeight; }; fitTh();
+    const bubble = (txt, me) => { const b = document.createElement("div"); b.className = "bb" + (me ? " me" : ""); b.textContent = txt; th.appendChild(b);
+      if (!reduce && b.animate) b.animate([{ opacity: 0, transform: `translateY(10px) scale(.85)`, transformOrigin: me ? "right bottom" : "left bottom" }, { opacity: 1, transform: "none" }], { duration: 420, easing: "cubic-bezier(.34,1.56,.64,1)" }); th.scrollTop = th.scrollHeight; return b; };
+    const typing = () => { const t = document.createElement("div"); t.className = "typing"; t.innerHTML = "<i></i><i></i><i></i>"; th.appendChild(t); return t; };
+    // les messages du fan arrivent un par un
+    (async () => { for (let i = 0; i < sc.fan.length; i++) { const t = typing(); await new Promise(r2 => setTimeout(r2, reduce ? 0 : 650 + sc.fan[i].length * 22)); t.remove(); bubble(sc.fan[i]); await new Promise(r2 => setTimeout(r2, 250)); }
+      p.querySelector("#ctSt").textContent = "en ligne"; inp.disabled = false; inp.focus({ preventScroll: true }); if (sec) sec.scrollTop = 0; t0 = performance.now();
+      ctTimer = setInterval(() => { const ms = performance.now() - t0; p.querySelector("#ctT").textContent = fmtT(ms); const f = p.querySelector("#ctF"); f.style.strokeDashoffset = C2 * (1 - Math.min(1, ms / 120000)); f.classList.toggle("late", ms > 120000); }, 250); })();
+    p.querySelector("#ctF").style.strokeDasharray = C2; p.querySelector("#ctF").style.strokeDashoffset = C2;
+    const fit = () => { inp.style.height = "auto"; inp.style.height = Math.min(140, inp.scrollHeight) + "px"; fitTh(); };
+    inp.oninput = () => { fit(); btn.disabled = inp.value.trim().length < 5; btn.classList.toggle("on", !btn.disabled); };
+    inp.addEventListener("paste", () => paste = true);
+    inp.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && innerWidth > 900) { e.preventDefault(); btn.click(); } });
+    btn.onclick = () => { if (sent || inp.value.trim().length < 5) return; sent = true; clearInterval(ctTimer);
+      const txt = inp.value.trim(), ms = Math.round(performance.now() - t0); A.answers.push({ id: sc.id, text: txt, ms, paste }); inp.value = ""; inp.disabled = true; btn.disabled = true; btn.classList.remove("on"); fit();
+      const b = bubble(txt, true); const v = document.createElement("div"); v.className = "vu"; v.textContent = "Vu ✓"; th.appendChild(v);
+      p.querySelector(".cpg i.on")?.classList.replace("on", "ok");
+      setTimeout(() => { if (A.answers.length >= SC.length) { ctMount(w); requestAnimationFrame(() => w.closest(".sec").classList.add("show")); } else ctScene(w, A.answers.length); }, reduce ? 300 : 1300); };
+  }
   function bars() { $("bars").innerHTML = STEPS.map((_, i) => `<i class="${i <= cur ? "on" : ""}"></i>`).join(""); $("stepName").textContent = STEPS[cur].name.toUpperCase(); $("stepNum").textContent = `${cur + 1} / ${STEPS.length}`; }
   function paintBtn() { const last = cur === STEPS.length - 1; $("next").textContent = last ? "Envoyer ma candidature" : "Continuer"; $("next").classList.toggle("go", last && A.consent); $("prev").hidden = cur === 0; }
   function go(i, first) {

@@ -505,7 +505,7 @@ async function tlLoad(c) {
 }
 
 /* =================== CANDIDATURES (page publique /postuler) =================== */
-let K = null, KF = "new";
+let K = null, KF = "new", KS = "date";
 const ago = ms => { const m = Math.round((Date.now() - ms) / 6e4); return m < 1 ? "à l'instant" : m < 60 ? `il y a ${m} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : `il y a ${Math.round(m / 1440)} j`; };
 const waNum = c => { let d = String(c).replace(/[^\d+]/g, ""); if (d.startsWith("+")) return d.slice(1); if (d.startsWith("00")) return d.slice(2); if (d.startsWith("0")) return "33" + d.slice(1); return d; };
 const contactUrl = (a, msg) => a.contactType === "whatsapp" ? `https://wa.me/${waNum(a.contact)}${msg ? "?text=" + encodeURIComponent(msg) : ""}` : a.contactType === "telegram" ? `https://t.me/${a.contact.replace(/^@/, "")}` : `mailto:${a.contact}${msg ? "?subject=" + encodeURIComponent("Ta candidature StellADS") + "&body=" + encodeURIComponent(msg) : ""}`;
@@ -519,15 +519,35 @@ function renderCand() {
     ${K.sources.length ? `<div class="csrc"><small>D'OÙ VIENNENT LES CANDIDATS · 30 JOURS</small>${K.sources.map(x => { const mx = Math.max(...K.sources.map(y => y.n)); return `<div><span>${esc(x.source)}</span><i><em style="width:${x.n / mx * 100}%"></em></i><b>${x.n}</b><small>${x.hired} recruté${x.hired > 1 ? "s" : ""}</small></div>`; }).join("")}</div>` : ""}`;
   q("#candTop [data-cl]").onclick = async () => { await copy(link + "?src=tiktok"); toast("Lien copié", true); S.tick(); };
   qa("#candSeg button").forEach(b => b.classList.toggle("on", b.dataset.v === KF));
-  const L = K.items.filter(a => KF === "all" || a.status === ({ new: "new", ok: "accepted", no: "refused" })[KF]);
+  qa("#candSort button").forEach(b => b.classList.toggle("on", b.dataset.s === KS));
+  const L = K.items.filter(a => KF === "all" || a.status === ({ new: "new", ok: "accepted", no: "refused" })[KF]).sort((x, y) => KS === "score" ? (y.score ?? -1) - (x.score ?? -1) : 0);
   q("#candList").innerHTML = L.length ? L.map((a, i) => `<div class="cc${a.status === "new" && !a.seen ? " nw" : ""} ${a.status}" data-id="${a.id}" tabindex="0" role="button" style="animation-delay:${.03 + i * .03}s">
       <div class="r1">${avatar(a.firstName)}<div><b>${esc(a.firstName)} <span class="age">${a.age} ans</span></b><small>${ago(a.at)}${a.source ? ` · <span class="src">${esc(a.source)}</span>` : ""}</small></div>
-        ${a.status === "accepted" ? '<span class="tag v">Compte créé</span>' : a.status === "refused" ? '<span class="tag w">Refusée</span>' : !a.seen ? '<span class="tag v"><i></i>Nouvelle</span>' : ""}</div>
+        ${scoreBadge(a)}</div>
       <div class="cmeta"><span>${cic(a.contactType)}${esc(a.contact)}</span><span>${esc(a.expLabel || "")}</span></div>
       <div class="chips">${a.slots.map(x => `<span>${esc(x)}</span>`).join("")}</div>
-      <p class="ctest">« ${esc(a.testReply)} »</p></div>`).join("")
+      <div class="cflags">${a.status === "accepted" ? '<span class="tag v">Compte créé</span>' : a.status === "refused" ? '<span class="tag w">Refusée</span>' : !a.seen ? '<span class="tag v"><i></i>Nouvelle</span>' : ""}${a.grade && a.grade.regles_ok === false ? '<span class="tag r">⚠ Règles</span>' : ""}${a.test.some(t => t.paste) ? '<span class="tag w">📋 Collé</span>' : ""}${a.grade && a.grade.style_ia ? '<span class="tag w">🤖 Style IA</span>' : ""}</div>
+      <p class="ctest">${a.grade ? esc(a.grade.verdict) : `« ${esc(a.testReply || "")} »`}</p></div>`).join("")
     : `<div class="ld">${KF === "new" ? "Aucune nouvelle candidature. Partage le lien dans tes pubs 🙂" : "Rien ici pour l'instant."}</div>`;
   qa("#candList .cc").forEach(c => { c.onclick = () => candFiche(K.items.find(a => a.id === +c.dataset.id)); c.onkeydown = e => { if (e.key === "Enter") c.click(); }; });
+}
+const scColor = v => v >= 75 ? "#5fd3a2" : v >= 55 ? "#ffd23f" : "#e07a7a";
+function scoreBadge(a) {
+  if (a.score != null) { const C = 2 * Math.PI * 17; return `<span class="csc" style="--c:${scColor(a.score)}" title="Note du test de chatting"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" class="b"/><circle cx="20" cy="20" r="17" class="f" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - a.score / 100)}"/></svg><b>${a.score}</b></span>`; }
+  if (a.gradePending) return `<span class="csc pend" title="Correction en cours"><i></i><i></i><i></i></span>`;
+  return "";
+}
+const fmtMs = ms => { const s2 = Math.round((ms || 0) / 1000); return s2 < 60 ? `${s2} s` : `${Math.floor(s2 / 60)} min ${String(s2 % 60).padStart(2, "0")}`; };
+function candTest(a) {
+  if (!a.test.length) return `<div class="cchat"><div class="fan">salut 😊 ça va ? je viens de m'abonner, tu fais quoi ce soir ?</div><div class="me">${esc(a.testReply || "")}</div></div>`;
+  const g = a.grade, CR = [["ecriture", "Écriture"], ["chaleur", "Chaleur & lien"], ["vente", "Vente"], ["regles", "Règles"]];
+  const head = g ? `<div class="cgr"><div class="cgs" style="--c:${scColor(a.score)}"><b data-cnt="${a.score}">0</b><small>/ 100</small></div><div class="cgc">${CR.map(([k, l]) => `<div><span>${l}</span><i><em style="--w:${(g.criteres?.[k] ?? 0) * 10}%;background:${scColor((g.criteres?.[k] ?? 0) * 10)}"></em></i><b>${g.criteres?.[k] ?? "—"}</b></div>`).join("")}</div></div>
+      <div class="cvd ${g.regles_ok === false ? "bad" : ""}">${g.regles_ok === false ? "⚠ " : ""}${esc(g.verdict || "")}</div>
+      ${(g.points_forts || []).length || (g.a_ameliorer || []).length ? `<div class="cpm">${(g.points_forts || []).map(x => `<span class="p">+ ${esc(x)}</span>`).join("")}${(g.a_ameliorer || []).map(x => `<span class="m">− ${esc(x)}</span>`).join("")}</div>` : ""}`
+    : a.gradePending ? `<div class="cvd">⏳ Correction en cours par l'IA… (quelques secondes)</div>` : `<div class="cvd">${a.gradeErr ? "La correction n'a pas pu se faire." : "Pas encore corrigé."} <button class="gbtn" data-a="rg" style="margin-left:6px">Corriger maintenant</button></div>`;
+  return head + a.test.map(t => { const pr = g && (g.par_reponse || []).find(x => x.id === t.id);
+    return `<div class="cchat" style="margin-top:10px"><div class="cwho">${esc(t.who || t.id)}<span>${esc(t.goal || "")}</span></div>${(t.fan || []).map(m => `<div class="fan">${esc(m)}</div>`).join("")}<div class="me">${esc(t.text)}</div>
+      <div class="cmt">⏱ ${fmtMs(t.ms)}${t.paste ? ' · <b style="color:#ffd23f">📋 réponse collée</b>' : ""}${pr ? ` · <b style="color:${scColor(pr.note * 10)}">${pr.note}/10</b> · ${esc(pr.commentaire)}` : ""}</div></div>`; }).join("");
 }
 function candFiche(a) {
   if (!a.seen) { a.seen = true; api(`/api/admin/applications/${a.id}/seen`, { body: {} }).catch(() => {}); }
@@ -538,12 +558,16 @@ function candFiche(a) {
     ${sec("DISPONIBILITÉS", `<div class="chips">${a.slots.map(x => `<span>${esc(x)}</span>`).join("")}</div>`)}
     ${sec("EXPÉRIENCE", `<div class="ctx">${esc(a.expLabel || "—")}</div>`)}
     ${sec("MOTIVATION", `<div class="ctx">${esc(a.motivation || "")}</div>`)}
-    ${sec("PETIT TEST · RÉPONSE AU FAN", `<div class="cchat"><div class="fan">salut 😊 ça va ? je viens de m'abonner, tu fais quoi ce soir ?</div><div class="me">${esc(a.testReply || "")}</div></div>`)}
+    ${sec(a.test.length ? "TEST DE CHATTING" : "PETIT TEST · RÉPONSE AU FAN", candTest(a))}
     <div data-acc>${a.status === "accepted" ? `<div class="cdone">✓ Compte élève créé${a.user ? ` : <b>${esc(a.user.username)}</b>` : ""}. Il apparaît dans Équipe → En formation.</div>`
       : `<div class="acts" style="margin-top:16px"><button class="valid" data-a="acc" style="grid-column:span 2">Créer son compte élève</button>${a.status === "refused" ? `<button data-a="re" style="grid-column:span 2">Remettre en « Nouvelles »</button>` : `<button data-a="no" class="r" style="grid-column:span 2">Refuser la candidature</button>`}</div>`}</div>
     <div class="sec"><div class="acts"><button data-a="del" class="r" style="grid-column:span 2">Supprimer ses données</button></div><div class="mut" style="margin-top:8px;line-height:1.5">À faire si la personne te demande d'effacer sa candidature.</div></div>`);
+  dr.querySelectorAll(".cgs b[data-cnt]").forEach(el => { const to = +el.dataset.cnt, s0 = performance.now(); (function f(t) { const k = Math.min(1, (t - s0) / 1100); el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(f); })(s0); });
+  requestAnimationFrame(() => requestAnimationFrame(() => dr.querySelectorAll(".cgc em").forEach(e => e.classList.add("on"))));
+  if (a.gradePending) setTimeout(async () => { if (!dr.classList.contains("on")) return; K = await api("/api/admin/applications"); const n = K.items.find(x => x.id === a.id); if (n && !n.gradePending) { renderCand(); candFiche(n); } }, 4000);
   dr.querySelectorAll("[data-a]").forEach(b => b.onclick = async () => { const x = b.dataset.a;
     try {
+      if (x === "rg") { b.disabled = true; b.textContent = "Correction…"; const r = await api(`/api/admin/applications/${a.id}/regrade`, { body: {} }); K = null; await loadCand(true); candFiche(r.item); return; }
       if (x === "acc") { b.disabled = true; b.textContent = "Création…";
         const r = await api(`/api/admin/applications/${a.id}/accept`, { body: {} }); S.ok(); burst(b);
         const msg = `Salut ${a.firstName} ! Ta candidature chez StellADS est acceptée 🎉\nTa formation commence sur notre site :\n\nSite : ${location.origin}\nIdentifiant : ${r.username}\nMot de passe : ${r.password}\n\nAttention : à ta première connexion, tu as 24 h pour terminer ta formation.`;
@@ -559,6 +583,7 @@ function candFiche(a) {
     } catch (e) { fail(e); b.disabled = false; } });
 }
 qa("#candSeg button").forEach(b => b.addEventListener("click", () => { KF = b.dataset.v; S.tick(); renderCand(); }));
+qa("#candSort button").forEach(b => b.addEventListener("click", () => { KS = b.dataset.s; S.tick(); renderCand(); }));
 setInterval(() => document.querySelectorAll("[data-dlend]").forEach(e => { const l = +e.dataset.dlend - Date.now(); e.textContent = (e.classList.contains("dlt") ? "⏳ " : "") + dlLeft(l); }), 30e3);
 
 return { tab, loadSanc };

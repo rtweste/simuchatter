@@ -241,4 +241,38 @@ async function assistant(system, history, tag) {
   return res.content.filter(c => c.type === "text").map(c => c.text).join("").trim();
 }
 
-module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead, assistant };
+/* ---------- Candidatures : correction du test de chatting ---------- */
+const APPLY_TOOL = { name: "note_candidat", description: "Enregistre la note du test de chatting d'un candidat.",
+  input_schema: { type: "object", required: ["score", "criteres", "regles_ok", "verdict", "par_reponse"], properties: {
+    score: { type: "integer", minimum: 0, maximum: 100 },
+    criteres: { type: "object", required: ["ecriture", "chaleur", "vente", "regles"], properties: {
+      ecriture: { type: "integer", minimum: 0, maximum: 10 }, chaleur: { type: "integer", minimum: 0, maximum: 10 }, vente: { type: "integer", minimum: 0, maximum: 10 }, regles: { type: "integer", minimum: 0, maximum: 10 } } },
+    regles_ok: { type: "boolean" }, style_ia: { type: "boolean" },
+    verdict: { type: "string" }, points_forts: { type: "array", items: { type: "string" } }, a_ameliorer: { type: "array", items: { type: "string" } },
+    par_reponse: { type: "array", items: { type: "object", required: ["id", "note", "commentaire"], properties: { id: { type: "string" }, note: { type: "integer", minimum: 0, maximum: 10 }, commentaire: { type: "string" } } } } } } };
+async function gradeApplicant(items, tag) {
+  if (MOCK) { const len = items.reduce((t, x) => t + x.text.length, 0), irl = items.find(x => x.id === "irl"), refuse = irl && /(pas possible|peux pas|ne peux|jamais|ici|reste|pas de rencontre|virtuel|en ligne)/i.test(irl.text);
+    const sc = Math.max(20, Math.min(92, Math.round(35 + len / 9 + (refuse ? 15 : -20))));
+    return { score: sc, criteres: { ecriture: 7, chaleur: Math.min(10, Math.round(len / 40)), vente: 6, regles: refuse ? 9 : 2 }, regles_ok: !!refuse, style_ia: false,
+      verdict: refuse ? "Ton naturel, bonne gestion de la demande de rencontre." : "Accepte implicitement la rencontre en vrai : règle non respectée.", points_forts: ["Ton chaleureux"], a_ameliorer: ["Relancer avec une question"],
+      par_reponse: items.map(x => ({ id: x.id, note: 6, commentaire: "Commentaire de test." })) }; }
+  const conv = items.map((x, i) => `### Situation ${i + 1} (${x.id}) · ${x.who}\nObjectif évalué : ${x.goal}\nLe fan écrit :\n${x.fan.map(m => "« " + m + " »").join("\n")}\nRéponse du candidat${x.paste ? " (texte collé depuis ailleurs)" : ""}, écrite en ${Math.round((x.ms || 0) / 1000)} s :\n« ${x.text} »`).join("\n\n");
+  const prompt = `Tu recrutes des chatters pour une agence française qui gère la messagerie de créatrices de contenu sur une plateforme d'abonnement (Twizz). Le chatter écrit aux fans à la place de la créatrice, à la première personne, pour créer du lien et vendre des contenus (photos, vidéos), sans contenu explicite.
+Règles de l'agence, non négociables : jamais de rencontre en vrai ni d'appel ou d'échange de contacts perso ; jamais de fausse promotion ni de mensonge sur le contenu ; rester respectueux.
+
+Note le test d'un candidat sur 3 situations. Critères (0 à 10) :
+- ecriture : orthographe, clarté, ton naturel à l'écrit (le style SMS léger est accepté, les grosses fautes non) ;
+- chaleur : capacité à créer du lien, personnaliser, relancer avec une question ;
+- vente : gestion de l'objection prix en valorisant le contenu, sans brader ni mentir ;
+- regles : la demande de rencontre en vrai doit être refusée avec douceur tout en gardant le fan. Accepter, proposer un autre moyen de contact ou laisser entendre qu'une rencontre est possible = 0 à 2 et regles_ok = false.
+Score global sur 100 : pondère regles 30 %, chaleur 25 %, vente 25 %, ecriture 20 %. Si regles_ok est faux, le score ne dépasse pas 45.
+style_ia = vrai si les réponses semblent générées par une IA ou copiées (trop parfaites, impersonnelles, longues et structurées).
+Sois exigeant mais juste : une réponse très courte ou à côté du sujet est notée bas. Commentaires courts et concrets, en français, sur un ton neutre.
+
+${conv}`;
+  const res = await ask(prompt, MODEL_HINT, 900, { ...(tag || {}), kind: "apply" }, { tools: [APPLY_TOOL], tool_choice: { type: "tool", name: "note_candidat" } });
+  const tu = res.content.find(c => c.type === "tool_use"); if (!tu || typeof tu.input?.score !== "number") throw new Error("Note du candidat illisible");
+  return tu.input;
+}
+
+module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead, assistant, gradeApplicant };
