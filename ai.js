@@ -15,37 +15,49 @@ const setUsageHook = f => { usageHook = f; };
 // Répare les défauts courants d'un JSON écrit par l'IA : retours à la ligne dans les textes, virgules en trop
 function repairJSON(t) {
   let out = "", inStr = false, esc = false;
-  for (const ch of t) {
+  for (let i = 0; i < t.length; i++) { const ch = t[i];
     if (inStr) {
       if (esc) { out += ch; esc = false; continue; }
       if (ch === "\\") { out += ch; esc = true; continue; }
-      if (ch === '"') { inStr = false; out += ch; continue; }
+      if (ch === '"') {
+        // guillemet droit recopié dans un texte (ex. message du chatter) : on le garde comme texte s'il n'est pas suivi d'un séparateur JSON
+        const rest = t.slice(i + 1).trimStart(), nx = rest[0];
+        if (nx !== undefined && !",}]:".includes(nx)) { out += '\\"'; continue; }
+        inStr = false; out += ch; continue; }
       if (ch === "\n") { out += "\\n"; continue; }
       if (ch === "\r") continue;
       if (ch === "\t") { out += " "; continue; }
       out += ch;
     } else { if (ch === '"') inStr = true; out += ch; }
   }
+  out = out.replace(/,\s*([}\]])/g, "$1");
+  // réponse coupée : on ferme le texte et les accolades restées ouvertes
+  if (inStr) out += '"';
+  const stack = []; let s2 = false, e2 = false;
+  for (const ch of out) { if (s2) { if (e2) e2 = false; else if (ch === "\\") e2 = true; else if (ch === '"') s2 = false; continue; }
+    if (ch === '"') s2 = true; else if (ch === "{" || ch === "[") stack.push(ch); else if (ch === "}" || ch === "]") stack.pop(); }
+  if (stack.length) out = out.replace(/[,:]\s*$/, "").replace(/,\s*"[^"]*"\s*$/, "") + stack.reverse().map(c => c === "{" ? "}" : "]").join("");
   return out.replace(/,\s*([}\]])/g, "$1");
 }
 function extractJSON(text) {
   const clean = String(text || "").replace(/```(?:json)?/gi, "");
   const a = clean.indexOf("{"), b = clean.lastIndexOf("}");
-  if (a === -1 || b === -1) throw new Error("Réponse IA sans JSON : " + clean.slice(0, 200));
-  const raw = clean.slice(a, b + 1);
+  if (a === -1) throw new Error("Réponse IA sans JSON : " + clean.slice(0, 200));
+  const raw = clean.slice(a, b > a ? b + 1 : undefined);
   try { return JSON.parse(raw); } catch (e) { return JSON.parse(repairJSON(raw)); }
 }
 
 // Appel à l'IA, avec nouvelles tentatives si elle est momentanément surchargée
-async function ask(prompt, model, maxTokens, tag) {
+async function ask(prompt, model, maxTokens, tag, extra) {
   for (let attempt = 1; ; attempt++) {
     try {
       const res = await client.messages.create({
         model, max_tokens: maxTokens,
-        messages: [{ role: "user", content: prompt }]
+        messages: [{ role: "user", content: prompt }], ...(extra || {})
       });
       if (res.stop_reason === "max_tokens") console.warn(`Réponse IA coupée (max_tokens=${maxTokens})`);
       try { if (usageHook && res.usage) usageHook(tag || {}, model, res.usage); } catch (e) {}
+      if (extra && extra.tools) return res;
       return res.content.filter(c => c.type === "text").map(c => c.text).join("");
     } catch (e) {
       const st = e.status || 0, retry = !st || st === 429 || st >= 500;
@@ -137,6 +149,16 @@ Donne UN conseil concret et court (3 phrases max) pour le prochain message, en f
 }
 
 /* ---------- Évaluation ---------- */
+// Format imposé de l'évaluation : l'API renvoie directement un objet valide (plus d'erreur « réponse illisible »)
+const STR = { type: "string" };
+const EVAL_TOOL = { name: "evaluation", description: "Enregistre l'évaluation de la session du chatter.",
+  input_schema: { type: "object", required: ["score", "verdict", "criteria", "strengths", "improvements", "rewrites", "best", "ethics_flag"], properties: {
+    score: { type: "integer", minimum: 0, maximum: 100 }, verdict: STR,
+    criteria: { type: "array", items: { type: "object", required: ["name", "score", "comment"], properties: { name: STR, score: { type: "integer", minimum: 0, maximum: 10 }, comment: STR } } },
+    strengths: { type: "array", items: STR }, improvements: { type: "array", items: STR },
+    rewrites: { type: "array", items: { type: "object", required: ["original", "better", "why"], properties: { original: STR, better: STR, why: STR } } },
+    best: { type: "object", required: ["message", "why"], properties: { message: STR, why: STR } },
+    ethics_flag: { type: ["string", "null"], description: "null si rien à signaler, sinon la description du problème" } } } };
 async function evaluate(sim, persona, stats) {
   const prompt = `Tu es responsable formation dans une agence qui gère des créatrices de contenu. Évalue la performance d'un chatter lors d'une simulation d'entraînement. Sois exigeant, précis et constructif, en français.
 
@@ -175,7 +197,15 @@ Donne 2 à 3 réécritures des messages les plus perfectibles (moins si le chatt
       ethics_flag: null
     };
   }
-  return askJSON(prompt, MODEL_EVAL, 3500, { sim: sim.id, user: sim.user_id, kind: "eval" });
+  const tag = { sim: sim.id, user: sim.user_id, kind: "eval" };
+  try {
+    const res = await ask(prompt.replace("RÉPONDS UNIQUEMENT EN JSON :", "Donne ton évaluation avec l'outil « evaluation », en suivant cette structure :"), MODEL_EVAL, 6000, tag,
+      { tools: [EVAL_TOOL], tool_choice: { type: "tool", name: "evaluation" } });
+    const tu = res.content.find(c => c.type === "tool_use");
+    if (tu && tu.input && typeof tu.input.score === "number" && Array.isArray(tu.input.criteria)) return tu.input;
+    console.error("Évaluation par outil incomplète, passage au texte :", res.stop_reason);
+  } catch (e) { if (e.status && e.status !== 400) throw e; console.error("Évaluation par outil échouée, passage au texte :", e.message); }
+  return askJSON(prompt, MODEL_EVAL, 6000, tag);
 }
 
 module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook };
