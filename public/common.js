@@ -371,6 +371,8 @@ const INTRO = window.INTRO = (() => {
     let maxT = 0, started = false;
     const start = () => { box.querySelector("[data-start]").classList.add("off"); box.querySelector("[data-end]").classList.add("off"); started = true; v.play().catch(() => {}); };
     box.querySelector("[data-start]").onclick = start;
+    // lancement automatique quand le navigateur l'autorise (sinon, le bouton reste affiché)
+    if (!opts.replay) v.play().then(() => { box.querySelector("[data-start]").classList.add("off"); started = true; }).catch(() => {});
     v.addEventListener("timeupdate", () => { if (!v.seeking) maxT = Math.max(maxT, v.currentTime); bar.style.width = (v.currentTime / (v.duration || 1) * 100) + "%"; tm.textContent = v.duration ? `${fmt(v.duration - v.currentTime)} restantes` : "—"; });
     // pas d'avance rapide : on revient au plus loin déjà regardé
     v.addEventListener("seeking", () => { if (!opts.replay && v.currentTime > maxT + .5) v.currentTime = maxT; });
@@ -385,5 +387,5 @@ const INTRO = window.INTRO = (() => {
   function key(e) { if (!box) return; const v = box.querySelector("video"); if (e.key === " " && !box.querySelector("[data-start]").classList.contains("off")) return;
     if (e.key === " ") { e.preventDefault(); v.paused ? v.play() : v.pause(); } }
   function close() { if (!box) return; const b = box; b.querySelector("video").pause(); b.classList.remove("on"); setTimeout(() => b.remove(), 500); box = null; document.body.style.overflow = ""; document.removeEventListener("keydown", key); }
-  return { show, check: me => { if (INTRO_ON && me && me.role === "trainee" && !me.introSeen && !EMBED) show(me); } };
+  return { show, check: me => { if (INTRO_ON && me && me.role === "trainee" && !me.introSeen) show(me); } };
 })();
