@@ -101,7 +101,11 @@ ${c}`;
       bestDay: bestDay ? { date: bestDay[0], label: day(Date.parse(bestDay[0] + "T12:00:00Z")), ca: bestDay[1] } : null, fav: fav ? { name: fav[0], ca: fav[1].ca, n: fav[1].n, share: total ? Math.round(fav[1].ca / total * 100) : 0 } : null,
       big: big ? { amount: big.amount, model: big.model, label: day(big.sold_at) } : null, goldHour: total ? goldH : null, hours: Math.round(hours), shifts: clocks.length, punct,
       prevTotal: Math.round(prevTotal), growth: prevTotal ? Math.round((total / prevTotal - 1) * 100) : null, rank, teamSize: team.length, kudos, sims: sims.n, simBest: sims.best,
-      days: Object.keys(byDay).length, teamTotal: Math.round(team.reduce((t, r) => t + r.t, 0)) };
+      days: Object.keys(byDay).length, teamTotal: Math.round(team.reduce((t, r) => t + r.t, 0)),
+      daysIn: new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).getUTCDate(), firstDow: (new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7) - 1, 1)).getUTCDay() + 6) % 7,
+      daily: Object.entries(byDay).map(([d, v]) => [+d.slice(8, 10), Math.round(v)]), byHour: byHour.map(Math.round),
+      models: Object.entries(byModel).sort((x, y) => y[1].ca - x[1].ca).slice(0, 5).map(([n, v]) => ({ name: n, ca: Math.round(v.ca), share: total ? Math.round(v.ca / total * 100) : 0 })),
+      podium: team.slice(0, 3).map(r => { const x = user(r.user_id); return { name: x ? x.username : "?", t: Math.round(r.t), me: r.user_id === uid }; }) };
   }
   app.get("/api/wrapped", auth, (req, res) => {
     const m = /^\d{4}-\d{2}$/.test(req.query.m || "") ? req.query.m : prevMonth(thisMonth());
