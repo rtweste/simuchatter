@@ -1,7 +1,6 @@
 // Planning v2 : créneaux fixes, statut de pointage (à l'heure / retard / absent), échanges de shifts,
 // renforts (2e créatrice pendant un shift), demandes de renfort et rappels.
 const TZ = "Europe/Paris";
-const GRACE = 5;            // minutes de tolérance avant de compter un retard
 const parisDate = ms => new Date(ms).toLocaleDateString("sv-SE", { timeZone: TZ });
 const periodOfDate = d => { const [y, m, day] = d.split("-"); return `${y}-${m}-${Number(day) <= 15 ? "A" : "B"}`; };
 const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s || "");
@@ -27,6 +26,12 @@ module.exports = function mount(app, db, auth, admin) {
   `);
   const getSet = (k, d) => db.prepare("SELECT value FROM settings WHERE key = ?").get(k)?.value ?? d;
   const setSet = (k, v) => db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(k, v);
+  const AG = () => { try { return JSON.parse(getSet("agency", "{}")); } catch (e) { return {}; } };
+  const GRACE = () => { const v = +AG().tolerance; return Number.isFinite(v) && v >= 0 ? v : 5; };   // minutes de tolérance avant un retard
+  const DEFAULT_SLOTS = [["6–9", "06:00", "09:00"], ["6–12", "06:00", "12:00"], ["12–18", "12:00", "18:00"], ["18–2", "18:00", "02:00"], ["18–3", "18:00", "03:00"]];
+  const SLOTS = () => { const s = AG().slots; return Array.isArray(s) && s.length ? s : DEFAULT_SLOTS; };
+  // suspension (sanctions) : plus de reprise de shift ni de renfort
+  const suspended = uid => { try { const r = db.prepare("SELECT until FROM suspensions WHERE user_id = ? AND until > ?").get(uid, Date.now()); return r ? r.until : null; } catch (e) { return null; } };
   const models = () => db.prepare("SELECT id, name FROM models ORDER BY name").all();
   const mainClock = uid => db.prepare(`SELECT c.*, m.name model_name FROM clocks c JOIN models m ON m.id = c.model_id
     WHERE c.user_id = ? AND c.end_at IS NULL AND c.reinforce = 0`).get(uid);
@@ -39,7 +44,7 @@ module.exports = function mount(app, db, auth, admin) {
   function decorate(shifts) {
     if (!shifts.length) return shifts;
     const now = Date.now(), spans = shifts.map(shiftSpan);
-    const lo = Math.min(...spans.map(s => s[0])) - 4 * 3.6e6, hi = Math.max(...spans.map(s => s[1]));
+    const lo = Math.min(...spans.map(s => s[0])) - 4 * 3.6e6, hi = Math.max(...spans.map(s => s[1])), grace = GRACE();
     const clocks = db.prepare("SELECT id, user_id, model_id, start_at, end_at FROM clocks WHERE reinforce = 0 AND start_at BETWEEN ? AND ?").all(lo, hi);
     const swaps = db.prepare(`SELECT w.*, t.username to_name FROM shift_swaps w LEFT JOIN users t ON t.id = w.to_user WHERE w.status IN ('open','requested')`).all();
     return shifts.map((s, i) => {
@@ -47,7 +52,7 @@ module.exports = function mount(app, db, auth, admin) {
       const mine = clocks.filter(c => c.user_id === s.user_id && c.start_at >= a - 3 * 3.6e6 && c.start_at < b);
       const c = mine.find(x => x.model_id === s.model_id) || mine[0];
       let state, late = 0;
-      if (c) { late = Math.max(0, Math.round((c.start_at - a) / 60000)); state = !c.end_at && now < b + 3 * 3.6e6 ? "live" : "done"; if (late <= GRACE) late = 0; }
+      if (c) { late = Math.max(0, Math.round((c.start_at - a) / 60000)); state = !c.end_at && now < b + 3 * 3.6e6 ? "live" : "done"; if (late <= grace) late = 0; }
       else if (now < a) state = "future";
       else if (now < b) { state = "missing"; late = Math.round((now - a) / 60000); }
       else state = "absent";
@@ -118,7 +123,7 @@ module.exports = function mount(app, db, auth, admin) {
     const near = decorate(db.prepare(`${SHIFT_SQL} WHERE s.user_id = ? AND s.date BETWEEN ? AND ? ORDER BY s.date, s.start`).all(uid, addDays(today, -1), addDays(today, 1)));
     const next = near.find(s => s.end_ms > now && s.state !== "done") || null;
     const swaps = activeSwaps().filter(w => w.status === "open" && w.from_user !== uid);
-    res.json({ prefs: prefsOf(uid), next: next && { id: next.id, start_ms: next.start_ms, end_ms: next.end_ms, state: next.state, model_name: next.model_name, start: next.start, end: next.end },
+    res.json({ prefs: prefsOf(uid), remind: +AG().reminder || 30, next: next && { id: next.id, start_ms: next.start_ms, end_ms: next.end_ms, state: next.state, model_name: next.model_name, start: next.start, end: next.end },
       swaps: swaps.map(w => ({ id: w.id, created_at: w.created_at, date: w.date, start: w.start, end: w.end, model_name: w.model_name, from_name: w.from_name })) });
   });
   app.put("/api/planning/prefs", auth, (req, res) => {
@@ -139,6 +144,7 @@ module.exports = function mount(app, db, auth, admin) {
     const w = db.prepare("SELECT * FROM shift_swaps WHERE id = ?").get(parseInt(req.params.id, 10));
     if (!w || w.status !== "open") return res.status(400).json({ error: "Ce shift n'est plus disponible" });
     if (w.from_user === req.user.id) return res.status(400).json({ error: "C'est ton propre shift" });
+    const su = suspended(req.user.id); if (su) return res.status(403).json({ error: `Tes shifts sont suspendus jusqu'au ${new Date(su).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}` });
     db.prepare("UPDATE shift_swaps SET status = 'requested', to_user = ? WHERE id = ?").run(req.user.id, w.id);
     res.json({ ok: true });
   });
@@ -155,6 +161,7 @@ module.exports = function mount(app, db, auth, admin) {
   app.post("/api/reinforce", auth, (req, res) => {
     sweep();
     const main = mainClock(req.user.id); if (!main) return res.status(400).json({ error: "Commence d'abord ton shift" });
+    const su = suspended(req.user.id); if (su) return res.status(403).json({ error: "Tu es suspendu : pas de renfort pour l'instant" });
     const model_id = parseInt(req.body?.model_id, 10);
     if (!db.prepare("SELECT 1 FROM models WHERE id = ?").get(model_id)) return res.status(400).json({ error: "Créatrice invalide" });
     if (model_id === main.model_id) return res.status(400).json({ error: "Tu es déjà sur cette créatrice" });
@@ -193,8 +200,8 @@ module.exports = function mount(app, db, auth, admin) {
     const around = decorate(db.prepare(`${SHIFT_SQL} WHERE s.date BETWEEN ? AND ?`).all(addDays(today, -1), today));
     const people = db.prepare("SELECT id, username, role FROM users WHERE active = 1 ORDER BY role DESC, username").all();
     const pkey = periodOfDate(today);
-    res.json({ now, today, from, to, shifts, people, models: models(),
-      missing: around.filter(s => s.state === "missing"), swaps: activeSwaps(), renforts: renforts(), helps: helps(),
+    res.json({ now, today, from, to, shifts, people, models: models(), slots: SLOTS(),
+      missing: around.filter(s => s.state === "missing" && s.late >= (+AG().missedAlert || 10)), swaps: activeSwaps(), renforts: renforts(), helps: helps(),
       punctuality: people.filter(p => p.role !== "admin").map(p => ({ id: p.id, username: p.username, ...punctuality(p.id, pkey) })).filter(p => p.total) });
   });
   app.post("/api/admin/swaps/:id", auth, admin, (req, res) => {
@@ -220,5 +227,5 @@ module.exports = function mount(app, db, auth, admin) {
   });
 
   // créatrices actives d'un chatter (principale + renforts) pour le formulaire de vente
-  return { activeModels: uid => { sweep(); return db.prepare("SELECT model_id, reinforce FROM clocks WHERE user_id = ? AND end_at IS NULL ORDER BY reinforce, start_at").all(uid); } };
+  return { decorate, punctuality, shiftSpan, suspended, SHIFT_SQL, activeModels: uid => { sweep(); return db.prepare("SELECT model_id, reinforce FROM clocks WHERE user_id = ? AND end_at IS NULL ORDER BY reinforce, start_at").all(uid); } };
 };

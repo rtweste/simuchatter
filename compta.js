@@ -21,13 +21,25 @@ function periodInfo(p) {
 const currentPeriod = () => periodOfDate(parisDate(Date.now()));
 
 // Commission des chatters par paliers (sur le net de la période) : chaque taux ne s'applique qu'à sa tranche, primes cumulées
-const TIERS = [{ from: 0, rate: 10 }, { from: 500, rate: 12 }, { from: 1000, rate: 14 }, { from: 1400, rate: 15 },
+// (modifiables dans Gestion → Réglages : enregistrés dans les réglages de l'agence)
+const DEFAULT_TIERS = [{ from: 0, rate: 10 }, { from: 500, rate: 12 }, { from: 1000, rate: 14 }, { from: 1400, rate: 15 },
   { from: 2000, rate: 15, prime: 10 }, { from: 3000, rate: 15, prime: 20 }, { from: 4000, rate: 15, prime: 40 }];
-const BANDS = [[0, 500, 10], [500, 1000, 12], [1000, 1400, 14], [1400, Infinity, 15]];
+let TIERS = DEFAULT_TIERS, BANDS = [];
+function setTiers(list) {
+  const t = (Array.isArray(list) && list.length ? list : DEFAULT_TIERS).map(x => ({ from: Math.max(0, +x.from || 0), rate: Math.max(0, +x.rate || 0), ...(+x.prime > 0 ? { prime: +x.prime } : {}) }))
+    .sort((a, b) => a.from - b.from);
+  t[0].from = 0;
+  // un palier « prime » garde le taux du palier précédent
+  t.forEach((x, i) => { if (x.prime && i > 0 && !x.rate) x.rate = t[i - 1].rate; });
+  TIERS = t;
+  const rates = []; t.forEach(x => { if (!rates.length || rates[rates.length - 1][2] !== x.rate) rates.push([x.from, 0, x.rate]); });
+  BANDS = rates.map((r, i) => [r[0], i < rates.length - 1 ? rates[i + 1][0] : Infinity, r[2]]);
+}
+setTiers(DEFAULT_TIERS);
 function tierPay(net) {
   net = Math.max(0, net || 0);
   const commission = BANDS.reduce((t, [a, b, r]) => t + Math.max(0, Math.min(net, b) - a) * r / 100, 0);
-  const prime = net >= 4000 ? 40 : net >= 3000 ? 20 : net >= 2000 ? 10 : 0;
+  const prime = TIERS.filter(t => t.prime && net >= t.from).reduce((m, t) => Math.max(m, t.prime), 0);
   const idx = TIERS.reduce((k, t, i) => net >= t.from ? i : k, 0);
   return { net, commission: Math.round(commission * 100) / 100, prime, total: Math.round((commission + prime) * 100) / 100, rate: TIERS[idx].rate, tier: idx };
 }
@@ -68,6 +80,8 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   const isLocked = pkey => !!db.prepare("SELECT 1 FROM period_locks WHERE period = ?").get(pkey);
   const lockedMsg = { error: "Cette période est clôturée : rouvre-la dans la Compta pour la modifier" };
   const getSetting = (k, d) => db.prepare("SELECT value FROM settings WHERE key = ?").get(k)?.value ?? d;
+  try { const ag = JSON.parse(getSetting("agency", "{}")); if (ag.tiers) setTiers(ag.tiers); } catch (e) {}
+  const hooks = {};   // branchés par gestion.js : perte de prime (sanction), dossier du chatter
 
   const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s || "");
   const isTime = s => /^([01]\d|2[0-3]):[0-5]\d$/.test(s || "");
@@ -247,10 +261,12 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       const ls = lines.filter(l => l.user_id === u.id), sales = ls.reduce((t, l) => t + l.sales, 0), tp = tierPay(sales);
       // la commission par paliers est répartie sur chaque créatrice au prorata des ventes
       ls.forEach(l => { l.pay = sales > 0 ? tp.total * l.sales / sales : 0; l.pct = tp.rate; });
+      const lost = tp.prime > 0 && hooks.primeLost && hooks.primeLost(u.id, p.key);
+      if (lost) { tp.total = r2(tp.total - tp.prime); tp.primeLost = tp.prime; tp.prime = 0; }
       const adj = adjs.filter(a => a.user_id === u.id), adjT = adj.reduce((t, a) => t + a.amount, 0), pay = r2(tp.total + adjT);
       // heures : les renforts sont comptés à part (ils ne doublent pas le temps de travail)
       const hRf = rfH[u.id] || 0, hAll = ls.reduce((t, l) => t + l.hours, 0);
-      return { id: u.id, username: u.username, active: u.active, commission_pct: tp.rate, rate: tp.rate, tier: tp.tier, prime: tp.prime, commission: tp.commission,
+      return { id: u.id, username: u.username, active: u.active, commission_pct: tp.rate, rate: tp.rate, tier: tp.tier, prime: tp.prime, primeLost: tp.primeLost || 0, commission: tp.commission,
         hours: hAll - hRf, renfortHours: hRf, sales, salesCount: nSales[u.id] || 0, salesBrut: ls.reduce((t, l) => t + l.validatedBrut, 0),
         adjustments: adj.map(a => ({ id: a.id, amount: a.amount, reason: a.reason, at: a.created_at, by: a.by_name })), adjTotal: adjT, pay,
         paid: pays[u.id] ? { amount: pays[u.id].amount, at: pays[u.id].paid_at } : null };
@@ -290,7 +306,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     res.json({ ...c, pending: { n: pend.length, total: pend.reduce((t, x) => t + x.amount, 0) }, prev: { brut: prev.brut, net: prev.net, margin: prev.margin },
       running, elapsed: el, dayOf: running ? +today.slice(8) - +p.from.slice(8) + 1 : null, nDays: +p.to.slice(8) - +p.from.slice(8) + 1,
       projection: running ? Math.round(c.totals.brut / el) : null,
-      goals: { ca: Number(getSetting("goal_ca", "20000")), chatter: Number(getSetting("goal_chatter", "300")) } });
+      goals: { ca: Number(getSetting("goal_ca", "20000")), chatter: Number(getSetting("goal_chatter", "300")) }, bands: BANDS.map(b => [b[0], b[1] === Infinity ? null : b[1], b[2]]) });
   });
   // récap d'un mois entier : les deux quinzaines additionnées
   app.get("/api/admin/compta/month", auth, admin, (req, res) => {
@@ -548,7 +564,8 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
         models: db.prepare("SELECT id, name FROM models ORDER BY name").all(),
         sales: { validated, pending, count: mine.length, refused: mine.filter(s => s.status === "refused").length,
           commission, pct: tp.rate },
-        hours, simu: { last: last || null, week: my7.length, avg: my7.length ? Math.round(my7.reduce((t, x) => t + x.score, 0) / my7.length) : null } });
+        hours, simu: { last: last || null, week: my7.length, avg: my7.length ? Math.round(my7.reduce((t, x) => t + x.score, 0) / my7.length) : null },
+        discipline: hooks.discipline ? (() => { try { return hooks.discipline(req.user.id); } catch (e) { console.error(e); return null; } })() : null });
     }
     const c = computeCompta(p.key);
     const live = db.prepare(`SELECT c.start_at, u.username, m.name model_name FROM clocks c JOIN users u ON u.id = c.user_id
@@ -589,5 +606,5 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       simu: { week: sims.length, avg: sims.length ? Math.round(sims.reduce((t, x) => t + x.score, 0) / sims.length) : null } });
   });
 
-  return { periodInfo, periodOfDate, computeCompta, tierPay, TIERS, isLocked };
+  return { periodInfo, periodOfDate, computeCompta, tierPay, setTiers, getTiers: () => TIERS, isLocked, hooks, comptaOf, parisDate };
 };

@@ -179,6 +179,9 @@ function auth(req, res, next) {
   req.user = row; next();
 }
 const admin = (req, res, next) => req.user.role === "admin" ? next() : res.status(403).json({ error: "Réservé au manager" });
+// journal d'activité (branché plus bas, une fois la gestion montée)
+let GEST = null;
+app.use((req, res, next) => GEST ? GEST.middleware(req, res, next) : next());
 
 const attempts = new Map();
 app.post("/api/login", (req, res) => {
@@ -342,8 +345,10 @@ app.post("/api/admin/users", auth, admin, (req, res) => {
   if (!/^[\w.\-]{3,30}$/.test(username)) return res.status(400).json({ error: "Identifiant : 3 à 30 caractères (lettres, chiffres, . _ -)" });
   if (password.length < 8) return res.status(400).json({ error: "Mot de passe : 8 caractères minimum" });
   try {
-    db.prepare("INSERT INTO users (username, pass_hash, role, created_at) VALUES (?,?,?,?)").run(username, bcrypt.hashSync(password, 10), role, Date.now());
-    res.json({ ok: true });
+    const uid = db.prepare("INSERT INTO users (username, pass_hash, role, created_at) VALUES (?,?,?,?)").run(username, bcrypt.hashSync(password, 10), role, Date.now()).lastInsertRowid;
+    // créatrices habituelles choisies à la création
+    if (Array.isArray(req.body.models)) req.body.models.forEach(m => { try { db.prepare("INSERT OR IGNORE INTO user_models (user_id, model_id) VALUES (?,?)").run(uid, parseInt(m, 10)); } catch (e) {} });
+    res.json({ ok: true, id: uid });
   } catch (e) { res.status(400).json({ error: "Cet identifiant existe déjà" }); }
 });
 app.patch("/api/admin/users/:id", auth, admin, (req, res) => {
@@ -357,6 +362,12 @@ app.patch("/api/admin/users/:id", auth, admin, (req, res) => {
     if (id === req.user.id) return res.status(400).json({ error: "Vous ne pouvez pas désactiver votre propre compte" });
     db.prepare("UPDATE users SET active = ? WHERE id = ?").run(req.body.active ? 1 : 0, id);
     if (!req.body.active) db.prepare("DELETE FROM tokens WHERE user_id = ?").run(id);
+  }
+  if (req.body?.role !== undefined) {
+    if (id === req.user.id) return res.status(400).json({ error: "Tu ne peux pas changer ton propre rôle" });
+    if (!["admin", "chatter"].includes(req.body.role)) return res.status(400).json({ error: "Rôle invalide" });
+    db.prepare("UPDATE users SET role = ? WHERE id = ?").run(req.body.role, id);
+    db.prepare("DELETE FROM tokens WHERE user_id = ?").run(id);
   }
   res.json({ ok: true });
 });
@@ -377,8 +388,11 @@ app.post("/api/admin/models", auth, admin, (req, res) => {
   const { name, style, prices } = req.body || {};
   if (!name?.trim() || !style?.trim() || !prices?.trim()) return res.status(400).json({ error: "Tous les champs sont requis" });
   if (req.body.id) db.prepare("UPDATE models SET name=?, style=?, prices=? WHERE id=?").run(name.trim(), style.trim(), prices.trim(), req.body.id);
-  else db.prepare("INSERT INTO models (name, style, prices) VALUES (?,?,?)").run(name.trim(), style.trim(), prices.trim());
-  res.json({ ok: true });
+  else {
+    let pct = 50; try { pct = JSON.parse(db.prepare("SELECT value FROM settings WHERE key = 'agency'").get()?.value || "{}").creatorPct ?? 50; } catch (e) {}
+    return res.json({ ok: true, id: db.prepare("INSERT INTO models (name, style, prices, creator_pct) VALUES (?,?,?,?)").run(name.trim(), style.trim(), prices.trim(), pct).lastInsertRowid });
+  }
+  res.json({ ok: true, id: req.body.id });
 });
 app.delete("/api/admin/models/:id", auth, admin, (req, res) => {
   if (db.prepare("SELECT COUNT(*) n FROM models").get().n <= 1) return res.status(400).json({ error: "Gardez au moins une créatrice" });
@@ -388,8 +402,10 @@ app.delete("/api/admin/models/:id", auth, admin, (req, res) => {
 
 /* ----- Planning & compta ----- */
 const validatedByPeriod = require("./sales")(app, db, auth, admin, path.dirname(DB_PATH));
-require("./compta")(app, db, auth, admin, validatedByPeriod);
-require("./planning")(app, db, auth, admin);
+const COMPTA = require("./compta")(app, db, auth, admin, validatedByPeriod);
+const PLAN = require("./planning")(app, db, auth, admin);
+/* ----- Gestion : équipe, créatrices, réglages, journal, sanctions ----- */
+GEST = require("./gestion")(app, db, auth, admin, { compta: COMPTA, planning: PLAN });
 /* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */
 LIVE = require("./simlive")(app, db, auth, admin, { loadSim, publicSim, PERSONAS, busy });
 
