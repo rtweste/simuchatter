@@ -170,3 +170,19 @@
   .toast{top:calc(70px + env(safe-area-inset-top))}
   .jackpot .jc b{font-size:84px}.salebn b{font-size:30px}.salebn{top:12px}
 }
+/* ===== téléphone, clavier ouvert : mode compact ===== */
+@media(max-width:860px){
+  #chatScreen.kb{z-index:60}
+  #chatScreen.kb .cq-mst,#chatScreen.kb .cq-demo,#chatScreen.kb .cq-hintsM,#chatScreen.kb .cq-wban{display:none}
+  #chatScreen.kb .cq-hdr{padding:6px 10px;padding-top:max(6px,env(safe-area-inset-top))}
+  #chatScreen.kb .cq-av{width:32px;height:32px;border-radius:11px;font-size:13px}
+  #chatScreen.kb .cq-who b{font-size:14.5px}
+  #chatScreen.kb .cq-icb{width:34px;height:34px}
+  #chatScreen.kb .cq-end{height:34px;padding:0 11px}
+  #chatScreen.kb .cq-clock{padding:4px 10px;gap:8px;font-size:11.5px;border-radius:12px}
+  #chatScreen.kb .cq-clock .ring,#chatScreen.kb .cq-clock .ring svg{width:18px;height:18px}
+  #chatScreen.kb .cq-clock b{font-size:12.5px}
+  #chatScreen.kb #msgs{padding-top:8px}
+  #chatScreen.kb .composer{padding-bottom:8px!important}
+  #input{transition:border-color .25s,height .15s}
+}

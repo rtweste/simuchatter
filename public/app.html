@@ -702,18 +702,31 @@ function openChat(sim) {
 }
 const scrollDown = () => { const m = $("msgs"); m.scrollTop = m.scrollHeight; };
 // Téléphone : la conversation occupe exactement la zone visible, même quand le clavier est ouvert
-function fitChat() {
-  const cs = $("chatScreen");
-  if (innerWidth > 860 || cs.classList.contains("hidden")) { cs.style.removeProperty("--ch"); cs.style.transform = ""; return; }
-  const vv = window.visualViewport, top = $("sidebar").offsetHeight;
-  const h = (vv ? vv.height : innerHeight) - top + (vv ? 0 : 0);
+// Téléphone : l'écran (conversation ou session regardée) occupe exactement la zone visible, clavier ouvert ou non.
+// Quand le clavier est ouvert, on passe en mode compact (classe « kb ») : la barre du haut de l'appli est recouverte
+// et les blocs secondaires sont masqués pour laisser la place aux messages.
+let vvMax = 0;
+function fitScreen(cs, input, scroller) {
+  if (innerWidth > 860 || cs.classList.contains("hidden")) { cs.style.removeProperty("--ch"); cs.style.removeProperty("--ct"); cs.style.transform = ""; cs.classList.remove("kb"); return; }
+  const vv = window.visualViewport, vh = vv ? vv.height : innerHeight;
+  if (document.activeElement !== input) vvMax = Math.max(vvMax, vh);   // hauteur sans clavier
+  const kb = document.activeElement === input && vh < Math.max(vvMax, innerHeight) - 120;
+  cs.classList.toggle("kb", kb);
+  const top = kb ? 0 : $("sidebar").offsetHeight;
   cs.style.setProperty("--ct", top + "px");
-  cs.style.setProperty("--ch", Math.max(200, h) + "px");
+  cs.style.setProperty("--ch", Math.max(200, vh - top) + "px");
   cs.style.transform = vv && vv.offsetTop ? `translateY(${vv.offsetTop}px)` : "";
   window.scrollTo(0, 0);
+  if (kb && scroller) scroller.scrollTop = scroller.scrollHeight;
 }
+function fitChat() { fitScreen($("chatScreen"), $("input"), $("msgs")); if ($("wvInput")) fitScreen($("watchScreen"), $("wvInput"), $("wvMsgs")); }
 if (window.visualViewport) { visualViewport.addEventListener("resize", () => { fitChat(); scrollDown(); }); visualViewport.addEventListener("scroll", fitChat); }
 addEventListener("resize", fitChat);
+// le clavier met un instant à s'ouvrir ou se fermer : on réajuste plusieurs fois
+["focus", "blur"].forEach(ev => document.addEventListener(ev, e => { if (e.target && (e.target.id === "input" || e.target.id === "wvInput")) [0, 120, 320, 650].forEach(d => setTimeout(fitChat, d)); }, true));
+// la zone de saisie s'agrandit avec le texte (jusqu'à 5 lignes)
+function growInput() { const i = $("input"); i.style.height = "auto"; i.style.height = Math.min(i.scrollHeight + 2, 132) + "px"; }
+$("input").addEventListener("input", growInput);
 function sys(t) { const d = document.createElement("div"); d.className = "sys"; d.textContent = t; $("msgs").appendChild(d); scrollDown(); }
 // accusé de lecture sous le dernier message envoyé : « Envoyé », puis « Vu » quand le fan répond
 function receipt() {
@@ -851,7 +864,7 @@ function send() {
   const text = $("input").value.trim(); if (!text || busy) return;
   FX.unlock();
   CQ.waiting = false;
-  act("message", { text }, () => { $("input").value = ""; bubble("me", text); chatterCount++; updateStats(); });
+  act("message", { text }, () => { $("input").value = ""; growInput(); bubble("me", text); chatterCount++; updateStats(); });
 }
 $("sendBtn").onclick = send;
 $("input").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
