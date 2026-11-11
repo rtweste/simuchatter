@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<title>Chat — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/chat.css">
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area chatm">
+  <div class="ct" id="ct">
+    <section class="ct-rail"><div class="ct-rh"><h1>Le <em>chat.</em></h1><label class="ct-se"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" placeholder="Rechercher un salon, une personne"></label></div>
+      <div class="ct-ls" id="rail"></div><div class="ct-me" id="meBar"></div></section>
+    <section class="ct-main" id="main"><div class="ct-empty"><b>#</b>Choisis un salon</div></section>
+    <section class="ct-thp" id="thp"></section>
+  </div>
+</main>
+</div>
+<div class="ct-scrim" id="scrim"></div><div class="ct-sh" id="sheet" role="dialog" aria-modal="true"></div>
+<canvas class="ct-fx" id="fx"></canvas>
+<script src="/common.js"></script>
+<script>
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches, MOB = () => innerWidth < 900;
+let B = null, CUR = null, MSGS = [], TH = null, THM = [], USERS = {}, PINS = [], NEWAT = 0, TYP = {}, SEEN = 0, LOADING = false;
+const IC = { plus: '<path d="M12 5v14M5 12h14"/>', send: '<path d="M5 12h13M13 6l6 6-6 6"/>', mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>', smile: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/>',
+  reply: '<path d="M10 8 5 12l5 4"/><path d="M5 12h9a5 5 0 0 1 5 5v1"/>', thread: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/><path d="M8 10h8M8 14h5"/>', more: '<circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/>',
+  pin: '<path d="M9 4h6l-1 5 3 3v2H7v-2l3-3z"/><path d="M12 14v6"/>', play: '<path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="none"/>', pause: '<path d="M8 5v14M16 5v14" stroke-width="3"/>', users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/>' };
+const svg = (p, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const hue = s => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+const av = (name, st, cls = "") => `<span class="ct-av ${cls}" style="background:linear-gradient(135deg,hsl(${hue(name)} 70% 72%),hsl(${(hue(name) + 40) % 360} 70% 60%))">${esc((name || "?")[0])}${st ? `<i class="${st}"></i>` : ""}</span>`;
+const tm = t => new Date(t).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+const dayL = t => { const d = new Date(t), td = new Date(); if (d.toDateString() === td.toDateString()) return "Aujourd'hui"; if (d.toDateString() === new Date(Date.now() - 864e5).toDateString()) return "Hier"; return d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }); };
+const ST_LBL = { shift: "en shift", pause: "en pause", online: "en ligne", offline: "hors ligne" };
+function fmt(s) {
+  let h = esc(s);
+  h = h.replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/(^|\s)_([^_]+)_(?=\s|$)/g, "$1<i>$2</i>");
+  h = h.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+  h = h.replace(/@([\wÀ-ÿ.\-]+)/g, (m, n) => { const me = n.toLowerCase() === B.me.username.toLowerCase() || n === "tous" || (n === "shift" && USERS[B.me.id]?.status === "shift"); return `<span class="mn ${me ? "me" : ""}">@${n}</span>`; });
+  return h;
+}
+const onlyEmoji = s => s && s.length <= 12 && /^(\p{Extended_Pictographic}|\p{Emoji_Component}|\s|‍|️)+$/u.test(s);
+
+/* =============== rail =============== */
+function renderRail() {
+  const q = $("q").value.trim().toLowerCase(), C = B.channels.filter(c => !q || c.name.toLowerCase().includes(q));
+  const strip = t => String(t || "").replace(/\*\*|__|`/g, "");
+  const row = c => { const st = c.kind === "dm" && c.other ? USERS[c.other.id]?.status : null;
+    return `<button class="ct-ch ${c.id === CUR ? "on" : ""} ${c.unread ? "un" : ""} ${c.slug === "informations" ? "prio" : ""}" data-c="${c.id}">${c.kind === "dm" ? av(c.name, st) : `<span class="e">${esc(c.emoji || "#")}</span>`}
+      <span class="n">${c.kind === "dm" ? esc(c.name) : esc(c.name)}${c.kind === "dm" ? `<small>${st ? ST_LBL[st] : ""}${c.last ? " · " + esc(strip(c.last.body)) : ""}</small>` : c.last && c.unread ? `<small>${esc(c.last.username || "")}${c.last.username ? " : " : ""}${esc(strip(c.last.body))}</small>` : ""}</span>
+      ${c.mentions ? `<span class="b m">@${c.mentions}</span>` : c.unread ? `<span class="b">${c.unread > 99 ? "99+" : c.unread}</span>` : ""}</button>`; };
+  const pr = C.filter(c => c.slug === "informations"), pub = C.filter(c => c.kind === "public" && c.slug !== "informations"), mo = C.filter(c => c.kind === "model"), dm = C.filter(c => c.kind === "dm").sort((a, b) => (b.last?.at || 0) - (a.last?.at || 0));
+  $("rail").innerHTML = `${pr.length ? `<div class="ct-sec">Prioritaire</div>${pr.map(row).join("")}` : ""}<div class="ct-sec">Salons</div>${pub.map(row).join("")}
+    ${mo.length ? `<div class="ct-sec">Créatrices</div>${mo.map(row).join("")}` : ""}<div class="ct-sec">Messages privés <button id="newDm" aria-label="Nouveau message privé">+</button></div>${dm.map(row).join("") || `<div style="font-size:12.5px;color:#555;padding:4px 10px">Aucune conversation privée</div>`}`;
+  $("rail").querySelectorAll("[data-c]").forEach(b => b.onclick = () => openCh(+b.dataset.c));
+  $("newDm").onclick = dmSheet;
+  updateBadge(B.channels.reduce((t, c) => t + c.unread, 0), "chat");
+}
+const chan = id => B.channels.find(c => c.id === id);
+
+/* =============== salon =============== */
+async function openCh(id, keepThread) {
+  const c = chan(id); if (!c) return; CUR = id; if (!keepThread) closeThread(true);
+  try { history.replaceState(null, "", "/chat?c=" + id); } catch (e) {}
+  NEWAT = c.unread ? -1 : 0; const firstUnread = c.unread;
+  $("ct").classList.add("open"); document.body.classList.add("chat-in");
+  const live = B.users.filter(u => u.status === "shift" || u.status === "pause");
+  $("main").innerHTML = `<header class="ct-hd"><button class="bk" id="bk" aria-label="Retour">‹</button>${c.kind === "dm" ? av(c.name, USERS[c.other?.id]?.status) : `<span class="ct-ch" style="width:auto;padding:0;pointer-events:none"><span class="e">${esc(c.emoji)}</span></span>`}
+      <div class="ti"><b>${c.kind === "dm" ? "" : "#"}${esc(c.name)}${c.readonly ? `<span class="ro">MANAGERS</span>` : ""}</b><small>${c.kind === "dm" ? (ST_LBL[USERS[c.other?.id]?.status] || "") : esc(c.topic || "")}</small></div>
+      ${c.kind !== "dm" && live.length ? `<div class="ct-stk" title="En shift maintenant">${live.slice(0, 5).map(u => av(u.username, u.status)).join("")}${live.length > 5 ? `<span class="more">+${live.length - 5}</span>` : ""}</div>` : ""}
+      <button class="ct-hb" id="pinsB" title="Messages épinglés">${svg(IC.pin)}<em id="pinN" hidden></em></button></header>
+    <div id="pinBox"></div><div class="ct-sc" id="sc"></div><div class="ct-ty" id="ty"></div>${B.me.muted && B.me.muted > Date.now() ? `<div class="ct-mute">🔇 Tu es en sourdine jusqu'à ${tm(B.me.muted)}</div>` : ""}<div id="cpW"></div>`;
+  $("bk").onclick = () => { $("ct").classList.remove("open"); document.body.classList.remove("chat-in"); CUR = null; renderRail(); };
+  $("pinsB").onclick = () => { const p = $("pinBox").firstElementChild; if (p) p.scrollIntoView({ behavior: "smooth" }); else notify("Aucun message épinglé", "", "info"); };
+  $("cpW").innerHTML = c.canWrite ? composerHTML("m") : `<div class="ct-ro">📣 Seuls les managers peuvent écrire dans #${esc(c.name)}</div>`;
+  if (c.canWrite) bindComposer("m");
+  renderRail(); MSGS = []; $("sc").innerHTML = `<div class="ct-empty" style="height:auto;padding:40px"><span class="ct-ty on" style="opacity:1"><i></i><i></i><i></i></span></div>`;
+  const d = await api(`/api/chat/c/${id}/messages`); if (CUR !== id) return; MSGS = d.messages; PINS = d.pins;
+  if (firstUnread) { const idx = MSGS.length - firstUnread; NEWAT = MSGS[idx] ? MSGS[idx].id : 0; }
+  paintPins(); paintMsgs(true, d.more); markRead();
+  if (c.kind === "dm") api(`/api/chat/c/${id}/seen`).then(r => { SEEN = r.last_id || 0; paintSeen(); }).catch(() => {});
+}
+function paintPins() {
+  const c = chan(CUR), box = $("pinBox"); if (!box) return; const p = PINS[0]; $("pinN").hidden = !PINS.length; $("pinN").textContent = PINS.length;
+  if (!p || (c.slug !== "informations" && !p.meta?.announce)) { box.innerHTML = ""; return; }
+  const a = p.acks || { n: 0, of: 1, me: false, who: [] }, C2 = 2 * Math.PI * 10;
+  box.innerHTML = `<div class="ct-pin" data-id="${p.id}"><div class="k">📌 Annonce · ${esc(p.username || "")} · ${dayL(p.created_at).toLowerCase()} ${tm(p.created_at)}</div><div class="tx" id="pinTx">${fmt(p.body)}</div>
+    <div class="ft"><span class="ct-ack" title="${esc(a.who.map(w => w.username).join(", "))}"><svg viewBox="0 0 26 26"><circle class="b" cx="13" cy="13" r="10"/><circle class="f" cx="13" cy="13" r="10" stroke-dasharray="${C2}" stroke-dashoffset="${C2}" data-o="${C2 * (1 - Math.min(1, a.n / Math.max(1, a.of)))}"/></svg>Lu par ${a.n} / ${a.of}</span>
+      ${B.me.role === "admin" ? `<button class="ct-ackb done" id="ackB">Voir qui l'a lu</button>` : `<button class="ct-ackb ${a.me ? "done" : ""}" id="ackB">${a.me ? "✓ Lu" : "J'ai lu"}</button>`}</div></div>`;
+  requestAnimationFrame(() => requestAnimationFrame(() => { const f = box.querySelector(".f"); if (f) f.style.strokeDashoffset = f.dataset.o; }));
+  $("pinTx").onclick = () => $("pinTx").classList.toggle("open");
+  $("ackB").onclick = async () => { if (B.me.role === "admin") return notify(`Lu par ${a.n} / ${a.of}`, a.who.map(w => w.username).join(", ") || "personne pour l'instant", "info"); if (a.me) return; await api(`/api/chat/m/${p.id}/ack`, { body: {} }); burstAt($("ackB"), ["✓", "✨", "👍"]); };
+  if (B.me.role === "admin") $("pinBox").querySelector(".ct-ack").onclick = () => notify(`Lu par ${a.n}`, a.who.map(w => w.username).join(", ") || "personne pour l'instant", "info");
+}
+function paintMsgs(scroll, more) {
+  const sc = $("sc"); if (!sc) return;
+  sc.innerHTML = (more ? `<button class="ct-more" id="moreB">Messages plus anciens</button>` : "") + listHTML(MSGS, false) || `<div class="ct-empty"><b>${esc(chan(CUR).emoji)}</b>Aucun message pour l'instant.<br>Lance la conversation !</div>`;
+  bindMsgs(sc, false);
+  if (more) $("moreB").onclick = async () => { const h = sc.scrollHeight; const d = await api(`/api/chat/c/${CUR}/messages?before=${MSGS[0].id}`); MSGS = d.messages.concat(MSGS); paintMsgs(false, d.more); sc.scrollTop = sc.scrollHeight - h; };
+  if (scroll) { const nw = sc.querySelector(".ct-new"); requestAnimationFrame(() => { sc.scrollTop = nw ? nw.offsetTop - 80 : sc.scrollHeight; }); }
+  paintSeen();
+}
+function listHTML(list, inThread) {
+  let h = "", prev = null, lastDay = "";
+  list.forEach(m => { const d = new Date(m.created_at).toDateString();
+    if (!inThread && d !== lastDay) { h += `<div class="ct-day">${dayL(m.created_at)}</div>`; lastDay = d; prev = null; }
+    if (!inThread && NEWAT && m.id === NEWAT) { h += `<div class="ct-new">NOUVEAUX MESSAGES</div>`; prev = null; }
+    h += msgHTML(m, prev, inThread); prev = m; });
+  return h;
+}
+function msgHTML(m, prev, inThread) {
+  if (m.kind === "system") return `<div class="ct-sys" data-id="${m.id}">${fmt(m.body).replace(/\*\*/g, "")}</div>`;
+  const cont = prev && prev.user_id === m.user_id && m.kind === "text" && prev.kind === "text" && m.created_at - prev.created_at < 5 * 60e3 && !m.reply && !prev.deleted;
+  const mine = m.user_id === B.me.id, ment = (m.meta?.mentions || []).includes(B.me.id), name = m.user_id ? m.username : "StellADS";
+  return `<div class="ct-m ${cont ? "cont" : ""} ${mine ? "mine" : ""} ${ment ? "ment" : ""}" data-id="${m.id}"><div class="gut" data-t="${tm(m.created_at)}">${m.user_id ? av(name, USERS[m.user_id]?.status) : `<span class="ct-av" style="background:linear-gradient(135deg,#5fd3a2,#7dd3fc)">✦</span>`}</div>
+    <div style="min-width:0"><div class="who"><b>${esc(name)}</b>${m.role === "admin" ? `<span class="rl">MANAGER</span>` : ""}<small>${tm(m.created_at)}</small>${m.pinned ? `<small>📌</small>` : ""}${m.hidden ? `<small style="color:#ff8a8a">masqué</small>` : ""}</div>
+      ${m.reply ? `<div class="ct-rq" data-jump="${m.reply.id}"><b>${esc(m.reply.username || "")}</b><span>${esc(m.reply.body)}</span></div>` : ""}
+      ${body(m)}${reacts(m)}${!inThread && m.thread ? `<button class="ct-thl" data-th="${m.id}"><span class="ct-stk">${m.thread.users.map(u => av(USERS[u]?.username || "?")).join("")}</span>${m.thread.n} réponse${m.thread.n > 1 ? "s" : ""}<small>· ${tm(m.thread.last)}</small></button>` : ""}</div>
+    ${m.deleted ? "" : actions(m, inThread)}</div>`;
+}
+function body(m) {
+  if (m.deleted) return `<div class="ct-del">${m.deletedByMod ? "Message supprimé par un manager" : "Message supprimé"}</div>`;
+  if (m.hidden && B.me.role !== "admin") return `<div class="ct-del">Message masqué par un manager</div>`;
+  const tx = m.body ? `<div class="ct-tx ${onlyEmoji(m.body) ? "big" : ""}">${fmt(m.body)}${m.edited_at ? `<span class="ct-ed">(modifié)</span>` : ""}</div>` : "";
+  switch (m.kind) {
+    case "image": return `<a class="ct-img" data-img="/api/chat/file/${encodeURIComponent(m.meta.file)}"><img src="/api/chat/file/${encodeURIComponent(m.meta.file)}" alt="" loading="lazy" ${m.meta.w ? `width="${m.meta.w}" height="${m.meta.h}"` : ""}></a>${tx}`;
+    case "voice": { const w = (m.meta.wave && m.meta.wave.length ? m.meta.wave : Array.from({ length: 36 }, (_, i) => 20 + 50 * Math.abs(Math.sin(i * 1.7))));
+      return `<div class="ct-vo" data-vo="${encodeURIComponent(m.meta.file)}" data-dur="${m.meta.dur || 0}"><button aria-label="Écouter">${svg(IC.play)}</button><div class="wv">${w.map(v => `<i style="height:${Math.max(10, v)}%"></i>`).join("")}</div><small>${fmtS(m.meta.dur || 0)}</small></div>`; }
+    case "sale": { const s = m.meta; return `<div class="ct-card ct-sale ${s.super ? "super" : ""}" data-sale="${s.amount}"><span class="ic">${s.super ? "👑" : "💸"}</span><div><b class="am" data-cnt="${s.amount}">${eur(s.amount)}</b><small><b style="color:#fff">${esc(s.username)}</b> vient de vendre sur ${esc(s.model)}</small></div>${s.super ? `<button class="sx" data-super="${m.id}">💥 Super</button>` : ""}</div>`; }
+    case "poll": { const p = m.poll || { counts: [], mine: [], voters: 0, who: [] }, tot = Math.max(1, p.counts.reduce((a, b) => a + b, 0));
+      return `<div class="ct-card ct-poll"><div class="q">${esc(m.body)}</div>${m.meta.options.map((o, i) => { const pc = Math.round(p.counts[i] / tot * 100); return `<button class="ct-po ${p.mine.includes(i) ? "me" : ""}" data-vote="${m.id}:${i}" title="${esc((p.who[i] || []).join(", "))}"><span class="bar" style="--w:${p.voters ? pc : 0}%"></span><span class="ck"></span><span class="l">${esc(o)}</span><b>${p.voters ? pc + " %" : ""}</b></button>`; }).join("")}
+        <div class="ft">${p.voters} votant${p.voters > 1 ? "s" : ""}${m.meta.multi ? " · plusieurs choix possibles" : ""}</div></div>`; }
+    case "swap": { const s = m.meta, w = m.swap || { status: "open" }, d = new Date(s.start_ms || s.date + "T12:00"), isMine = m.user_id === B.me.id, adm = B.me.role === "admin";
+      const lbl = { open: "Cherche un remplaçant", requested: `Repris par ${w.to_name || "?"} · en attente du manager`, approved: `Remplacé par ${w.to_name || "?"} · planning à jour`, refused: "Refusé par le manager", cancelled: "Annulé" }[w.status];
+      const btns = [w.status === "open" && !isMine ? `<button class="p" data-swap="${m.id}:take">Je prends ce shift</button>` : "", w.status === "requested" && w.to_user === B.me.id ? `<button class="s" data-swap="${m.id}:release">Je me désiste</button>` : "",
+        adm && w.status === "requested" ? `<button class="ok" data-swap="${m.id}:approve">✓ Valider</button><button class="no" data-swap="${m.id}:refuse">Refuser</button>` : "", (isMine || adm) && ["open", "requested"].includes(w.status) ? `<button class="s" data-swap="${m.id}:cancel">Annuler</button>` : ""].join("");
+      return `<div class="ct-card ct-swap"><div class="k">🔁 Remplacement de shift</div><div class="sh"><span class="cal"><span>${d.toLocaleDateString("fr-FR", { month: "short" }).replace(".", "")}</span><b>${d.getDate()}</b></span><div><b class="t">${esc(s.start)} – ${esc(s.end)}</b><small>${d.toLocaleDateString("fr-FR", { weekday: "long" })} · ${esc(s.model)}</small></div></div>
+        ${m.body ? `<div class="why">« ${esc(m.body)} »</div>` : ""}<span class="ct-st ${w.status}"><i></i>${esc(lbl)}</span>${btns ? `<div class="bt">${btns}</div>` : ""}</div>`; }
+    case "sos": return `<div class="ct-card ct-sos"><div class="k"><span>🆘</span>Aide fan${m.meta.model ? " · " + esc(m.meta.model) : ""}</div><div class="fan"><small>Le fan a écrit</small>${esc(m.meta.fan)}</div>${m.body ? `<div class="ct-tx" style="margin-top:8px">${fmt(m.body)}</div>` : ""}
+      ${m.best ? `<div class="best"><small>⭐ Meilleure réponse · ${esc(m.best.username)} · ${m.best.n} vote${m.best.n > 1 ? "s" : ""}</small>${esc(m.best.body)}</div>` : ""}<button class="go" data-th="${m.id}">💡 Proposer une réponse</button></div>`;
+    default: return tx;
+  }
+}
+const fmtS = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+function reacts(m) {
+  const e = Object.entries(m.reactions || {}); if (!e.length || m.deleted) return "";
+  return `<div class="ct-rx">${e.map(([k, v]) => `<button class="${v.me ? "me" : ""}" data-rx="${m.id}" data-e="${esc(k)}"><span class="em">${esc(k)}</span>${v.n}<span class="ct-tip">${esc(v.who.join(", "))}</span></button>`).join("")}<button class="add" data-pick="${m.id}" aria-label="Réagir">${svg(IC.smile, 1.8)}</button></div>`;
+}
+function actions(m, inThread) {
+  return `<div class="ct-act">${B.quick.slice(0, 3).map(e => `<button class="q" data-rx="${m.id}" data-e="${e}" aria-label="${e}">${e}</button>`).join("")}<button data-pick="${m.id}" aria-label="Plus de réactions">${svg(IC.smile, 1.8)}</button>
+    ${chan(CUR)?.canWrite ? `<button data-reply="${m.id}" aria-label="Citer">${svg(IC.reply)}</button>` : ""}${!inThread ? `<button data-th="${m.id}" aria-label="Répondre en fil">${svg(IC.thread, 1.8)}</button>` : ""}<button data-menu="${m.id}" aria-label="Plus">${svg(IC.more)}</button></div>`;
+}
+const findMsg = id => MSGS.find(x => x.id === id) || THM.find(x => x.id === id);
+function bindMsgs(root, inThread) {
+  root.querySelectorAll("[data-rx]").forEach(b => b.onclick = e => { e.stopPropagation(); react(+b.dataset.rx, b.dataset.e, b); });
+  root.querySelectorAll("[data-pick]").forEach(b => b.onclick = e => { e.stopPropagation(); picker(b, +b.dataset.pick); });
+  root.querySelectorAll("[data-reply]").forEach(b => b.onclick = () => setReply(inThread ? "t" : "m", findMsg(+b.dataset.reply)));
+  root.querySelectorAll("[data-th]").forEach(b => b.onclick = () => openThread(+b.dataset.th));
+  root.querySelectorAll("[data-menu]").forEach(b => b.onclick = e => { e.stopPropagation(); menu(b, findMsg(+b.dataset.menu)); });
+  root.querySelectorAll("[data-jump]").forEach(b => b.onclick = () => { const t = root.querySelector(`.ct-m[data-id="${b.dataset.jump}"]`); if (t) { t.scrollIntoView({ behavior: "smooth", block: "center" }); t.classList.remove("hl"); void t.offsetWidth; t.classList.add("hl"); } });
+  root.querySelectorAll("[data-img]").forEach(a => a.onclick = () => { const l = document.createElement("div"); l.className = "ct-lb"; l.innerHTML = `<img src="${a.dataset.img}" alt="">`; l.onclick = () => l.remove(); document.body.appendChild(l); });
+  root.querySelectorAll("[data-vote]").forEach(b => b.onclick = async () => { const [id, o] = b.dataset.vote.split(":"); try { await api(`/api/chat/m/${id}/vote`, { body: { opt: +o } }); } catch (e) { notify("Erreur", e.message, "err"); } });
+  root.querySelectorAll("[data-swap]").forEach(b => b.onclick = async () => { const [id, a] = b.dataset.swap.split(":"); b.disabled = true; try { await api(`/api/chat/m/${id}/swap`, { body: { action: a } }); if (a === "take" || a === "approve") burstAt(b, ["🔁", "✨", "🙌"]); } catch (e) { notify("Impossible", e.message, "err"); b.disabled = false; } });
+  root.querySelectorAll("[data-super]").forEach(b => b.onclick = () => react(+b.dataset.super, "💥", b, true));
+  root.querySelectorAll("[data-vo]").forEach(bindVoice);
+  // appui long sur mobile : réactions rapides
+  root.querySelectorAll(".ct-m").forEach(el => { let t; el.addEventListener("touchstart", () => { t = setTimeout(() => { document.querySelectorAll(".ct-m.act-on").forEach(x => x.classList.remove("act-on")); el.classList.add("act-on"); navigator.vibrate?.(10); }, 420); }, { passive: true });
+    el.addEventListener("touchend", () => clearTimeout(t)); el.addEventListener("touchmove", () => clearTimeout(t), { passive: true }); });
+  root.querySelectorAll(".ct-sale [data-cnt]").forEach(countUp);
+}
+document.addEventListener("click", e => { if (!e.target.closest(".ct-m")) document.querySelectorAll(".ct-m.act-on").forEach(x => x.classList.remove("act-on")); });
+function countUp(el) { if (el.dataset.done || reduce) return; el.dataset.done = 1; const to = +el.dataset.cnt, s = performance.now(); (function f(t) { const p = Math.min(1, (t - s) / 1100); el.textContent = eur(Math.round(to * (1 - Math.pow(1 - p, 3)) * 100) / 100); if (p < 1) requestAnimationFrame(f); else el.textContent = eur(to); })(s); }
+
+/* =============== réactions & effets =============== */
+async function react(id, e, el, sup) { try { const r = await api(`/api/chat/m/${id}/react`, { body: { emoji: e, super: !!sup } }); if (r.on) { burstAt(el, [e]); if (sup) rain(e); } } catch (err) { notify("Erreur", err.message, "err"); } }
+function picker(anchor, id) {
+  document.querySelector(".ct-ep")?.remove(); const p = document.createElement("div"); p.className = "ct-ep"; p.innerHTML = B.quick.map(e => `<button>${e}</button>`).join("");
+  document.body.appendChild(p); const r = anchor.getBoundingClientRect(), w = p.offsetWidth; p.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + "px"; p.style.top = Math.max(8, r.top - 58) + "px";
+  p.querySelectorAll("button").forEach(b => b.onclick = ev => { ev.stopPropagation(); react(id, b.textContent, b); p.remove(); });
+  setTimeout(() => document.addEventListener("click", () => p.remove(), { once: true }), 0);
+}
+const FX = $("fx"), fx = FX.getContext("2d"); let PT = [], fxOn = false;
+function fxLoop() { if (fxOn) return; fxOn = true; const d = devicePixelRatio || 1; FX.width = innerWidth * d; FX.height = innerHeight * d; fx.setTransform(d, 0, 0, d, 0, 0);
+  (function f() { fx.clearRect(0, 0, innerWidth, innerHeight); PT = PT.filter(p => { p.vy += p.g; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.l -= p.d; if (p.l <= 0 || p.y > innerHeight + 60) return false;
+      fx.save(); fx.globalAlpha = Math.min(1, p.l * 1.5); fx.translate(p.x, p.y); fx.rotate(p.r); fx.font = `${p.s}px "Apple Color Emoji","Segoe UI Emoji",sans-serif`; fx.textAlign = "center"; fx.fillText(p.e, 0, 0); fx.restore(); return true; });
+    if (PT.length) requestAnimationFrame(f); else { fx.clearRect(0, 0, innerWidth, innerHeight); fxOn = false; } })(); }
+function burstAt(el, emojis) { if (reduce || !el) return; const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+  for (let i = 0; i < 14; i++) { const a = -Math.PI / 2 + (Math.random() - .5) * 2.2, v = 3 + Math.random() * 5; PT.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: .16, r: 0, vr: (Math.random() - .5) * .2, l: 1, d: .018, s: 16 + Math.random() * 12, e: emojis[i % emojis.length] }); }
+  const b = el.closest(".ct-rx button"); if (b) { b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); } fxLoop(); }
+function rain(e) { if (reduce) return; for (let i = 0; i < 70; i++) PT.push({ x: Math.random() * innerWidth, y: -40 - Math.random() * innerHeight * .6, vx: (Math.random() - .5) * 1.5, vy: 2 + Math.random() * 4, g: .05, r: 0, vr: (Math.random() - .5) * .08, l: 1.6, d: .006, s: 22 + Math.random() * 26, e }); fxLoop(); }
+function saleFx(el, sup) { if (reduce || !el) return; const r = el.getBoundingClientRect(); for (let i = 0; i < (sup ? 60 : 22); i++) { const a = Math.random() * Math.PI * 2, v = 2 + Math.random() * (sup ? 9 : 5); PT.push({ x: r.left + 30, y: r.top + r.height / 2, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, g: .14, r: 0, vr: (Math.random() - .5) * .3, l: 1, d: .014, s: 14 + Math.random() * 12, e: sup ? ["👑", "💸", "✨", "🔥"][i % 4] : ["💸", "✨"][i % 2] }); } fxLoop(); if (sup) rain("💸"); }
+
+/* =============== menu d'un message =============== */
+function menu(anchor, m) {
+  document.querySelector(".ct-mod")?.remove(); const adm = B.me.role === "admin", mine = m.user_id === B.me.id, o = [];
+  if (mine && m.kind === "text") o.push(["✏️ Modifier", () => edit(m)]);
+  if (chan(CUR)?.canWrite) o.push(["↩︎ Citer", () => setReply(TH && THM.includes(m) ? "t" : "m", m)]);
+  if (m.body) o.push(["📋 Copier le texte", () => navigator.clipboard?.writeText(m.body).then(() => notify("Copié", "", "ok"))]);
+  if (m.user_id && !mine) o.push([`💬 Message privé à ${m.username}`, async () => { const r = await api("/api/chat/dm", { body: { user_id: m.user_id } }); await refreshBoot(); openCh(r.id); }]);
+  if (adm) { o.push([m.pinned ? "📌 Désépingler" : "📌 Épingler", () => api(`/api/chat/m/${m.id}/pin`, { body: {} })]); o.push([m.hidden ? "👁️ Rendre visible" : "🙈 Masquer", () => api(`/api/chat/m/${m.id}/hide`, { body: {} })]);
+    if (m.user_id && !mine && USERS[m.user_id]?.role !== "admin") { o.push([`🔇 Sourdine 1 h pour ${m.username}`, () => api("/api/chat/mute", { body: { user_id: m.user_id, minutes: 60 } }).then(() => notify("Sourdine 1 h", m.username, "ok"))]); o.push([`🔈 Lever la sourdine`, () => api("/api/chat/mute", { body: { user_id: m.user_id, minutes: 0 } }).then(() => notify("Sourdine levée", m.username, "ok"))]); } }
+  if (mine || adm) o.push(["🗑️ Supprimer", () => api(`/api/chat/m/${m.id}`, { method: "DELETE" }), "dg"]);
+  const p = document.createElement("div"); p.className = "ct-mod"; p.innerHTML = o.map(([l, , c], i) => `<button class="${c || ""}" data-i="${i}">${esc(l)}</button>`).join(""); document.body.appendChild(p);
+  const r = anchor.getBoundingClientRect(); p.style.left = Math.max(8, Math.min(innerWidth - p.offsetWidth - 8, r.right - p.offsetWidth)) + "px"; p.style.top = (r.bottom + p.offsetHeight + 10 > innerHeight ? r.top - p.offsetHeight - 6 : r.bottom + 6) + "px";
+  p.querySelectorAll("button").forEach(b => b.onclick = async ev => { ev.stopPropagation(); p.remove(); try { await o[+b.dataset.i][1](); } catch (e) { notify("Erreur", e.message, "err"); } });
+  setTimeout(() => document.addEventListener("click", () => p.remove(), { once: true }), 0);
+}
+function edit(m) { const k = TH && THM.includes(m) ? "t" : "m", ta = $("ta" + k); if (!ta) return; ta.value = m.body; ta.dataset.edit = m.id; ta.focus(); autosize(ta); toggleSend(k); setReply(k, null); $("rb" + k).innerHTML = `<div class="ct-rb">✏️ <span>Modification du message</span><button aria-label="Annuler">✕</button></div>`; $("rb" + k).querySelector("button").onclick = () => { delete ta.dataset.edit; ta.value = ""; $("rb" + k).innerHTML = ""; toggleSend(k); }; }
+
+/* =============== composer =============== */
+const REPLY = {};
+function composerHTML(k) {
+  return `<div class="ct-cp" id="cp${k}"><div id="rb${k}"></div><div class="ct-pl" id="pl${k}">
+      <button data-pa="img"><span style="background:rgba(125,211,252,.12)">📷</span><div>Photo ou GIF<small>Une capture, un GIF, une image</small></div></button>
+      <button data-pa="poll"><span style="background:rgba(179,136,255,.14)">📊</span><div>Sondage<small>Les réponses s'affichent en direct</small></div></button>
+      <button data-pa="swap"><span style="background:rgba(95,211,162,.12)">🔁</span><div>Remplacement de shift<small>Un collègue prend ton créneau</small></div></button>
+      <button data-pa="sos"><span style="background:rgba(255,106,61,.14)">🆘</span><div>Aide fan<small>Colle un message de fan difficile</small></div></button></div>
+    <div class="ct-box" id="bx${k}"><button class="ct-ib plus" id="pb${k}" aria-label="Plus">${svg(IC.plus, 2.2)}</button><input type="file" id="fi${k}" accept="image/*" hidden>
+      <textarea id="ta${k}" rows="1" placeholder="${k === "t" ? "Répondre dans le fil…" : `Écrire dans ${chan(CUR).kind === "dm" ? chan(CUR).name : "#" + chan(CUR).name}…`}" enterkeyhint="send"></textarea>
+      <button class="ct-ib" id="em${k}" aria-label="Emoji">${svg(IC.smile, 1.8)}</button><button class="ct-ib ct-mic" id="mi${k}" aria-label="Message vocal">${svg(IC.mic, 1.9)}</button><button class="ct-ib ct-send" id="se${k}" aria-label="Envoyer">${svg(IC.send, 2.4)}</button></div></div>`;
+}
+function autosize(ta) { ta.style.height = "auto"; ta.style.height = Math.min(180, ta.scrollHeight) + "px"; }
+function toggleSend(k) { const on = !!$("ta" + k).value.trim(); $("se" + k).classList.toggle("on", on); $("mi" + k).classList.toggle("on", on); }
+function setReply(k, m) { REPLY[k] = m ? m.id : null; const rb = $("rb" + k); if (!rb) return; rb.innerHTML = m ? `<div class="ct-rb">↩︎ <span>Réponse à <b>${esc(m.username || "")}</b> : ${esc((m.body || (m.kind === "voice" ? "🎤 vocal" : m.kind === "image" ? "📷 photo" : "")).slice(0, 100))}</span><button aria-label="Annuler">✕</button></div>` : "";
+  if (m) { rb.querySelector("button").onclick = () => setReply(k, null); $("ta" + k).focus(); } }
+let typT = 0;
+function bindComposer(k) {
+  const ta = $("ta" + k), pl = $("pl" + k), pb = $("pb" + k);
+  ta.oninput = () => { autosize(ta); toggleSend(k); mentionPop(k); if (Date.now() - typT > 2500) { typT = Date.now(); api("/api/chat/typing", { body: { channel_id: CUR, thread: k === "t" ? TH : null } }).catch(() => {}); } };
+  ta.onkeydown = e => { const mp = $("mp" + k);
+    if (mp) { const bs = [...mp.querySelectorAll("button")], i = bs.findIndex(b => b.classList.contains("on"));
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); bs.forEach(b => b.classList.remove("on")); bs[(i + (e.key === "ArrowDown" ? 1 : -1) + bs.length) % bs.length].classList.add("on"); return; }
+      if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); (bs[i] || bs[0]).click(); return; } if (e.key === "Escape") { mp.remove(); return; } }
+    if (e.key === "Enter" && !e.shiftKey && !MOB()) { e.preventDefault(); sendText(k); } };
+  $("se" + k).onclick = () => sendText(k);
+  pb.onclick = e => { e.stopPropagation(); pl.classList.toggle("on"); pb.classList.toggle("on"); };
+  document.addEventListener("click", e => { if (!e.target.closest("#pl" + k)) { pl.classList.remove("on"); pb.classList.remove("on"); } });
+  pl.querySelectorAll("[data-pa]").forEach(b => b.onclick = () => { pl.classList.remove("on"); pb.classList.remove("on"); const a = b.dataset.pa; if (a === "img") $("fi" + k).click(); if (a === "poll") pollSheet(); if (a === "swap") swapSheet(); if (a === "sos") sosSheet(); });
+  if (k === "t") pl.querySelectorAll('[data-pa="poll"],[data-pa="swap"],[data-pa="sos"]').forEach(b => b.remove());
+  $("fi" + k).onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) uploadImg(k, f); };
+  $("em" + k).onclick = e => { e.stopPropagation(); document.querySelector(".ct-ep")?.remove(); const p = document.createElement("div"); p.className = "ct-ep"; p.innerHTML = ["😂", "🔥", "💸", "👑", "🙏", "😏", "🥲", "💪", "👀", "❤️"].map(x => `<button>${x}</button>`).join(""); document.body.appendChild(p);
+    const r = $("em" + k).getBoundingClientRect(); p.style.left = Math.max(8, Math.min(innerWidth - p.offsetWidth - 8, r.right - p.offsetWidth)) + "px"; p.style.top = (r.top - 58) + "px";
+    p.querySelectorAll("button").forEach(b => b.onclick = ev => { ev.stopPropagation(); ta.setRangeText(b.textContent, ta.selectionStart, ta.selectionEnd, "end"); ta.dispatchEvent(new Event("input")); ta.focus(); }); setTimeout(() => document.addEventListener("click", () => p.remove(), { once: true }), 0); };
+  $("mi" + k).onclick = () => record(k);
+  // coller / glisser une image
+  ta.addEventListener("paste", e => { const f = [...(e.clipboardData?.files || [])][0]; if (f && f.type.startsWith("image/")) { e.preventDefault(); uploadImg(k, f); } });
+  $("bx" + k).addEventListener("dragover", e => e.preventDefault()); $("bx" + k).addEventListener("drop", e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && f.type.startsWith("image/")) uploadImg(k, f); });
+}
+function mentionPop(k) {
+  const ta = $("ta" + k), v = ta.value.slice(0, ta.selectionStart), m = v.match(/@([\wÀ-ÿ.\-]*)$/); $("mp" + k)?.remove(); if (!m) return;
+  const q = m[1].toLowerCase(), opts = [...(B.me.role === "admin" ? [{ username: "tous", sub: "toute l'équipe" }] : []), { username: "shift", sub: "tous ceux en shift" }, ...B.users.filter(u => u.id !== B.me.id).map(u => ({ username: u.username, sub: ST_LBL[u.status], st: u.status }))].filter(o => o.username.toLowerCase().startsWith(q)).slice(0, 7);
+  if (!opts.length) return; const p = document.createElement("div"); p.className = "ct-mp"; p.id = "mp" + k;
+  p.innerHTML = opts.map((o, i) => `<button class="${i ? "" : "on"}" data-u="${esc(o.username)}">${av(o.username, o.st)}@${esc(o.username)}<small>${esc(o.sub || "")}</small></button>`).join(""); $("cp" + k).appendChild(p);
+  p.querySelectorAll("button").forEach(b => b.onmousedown = e => { e.preventDefault(); const s = ta.selectionStart - m[0].length; ta.setRangeText("@" + b.dataset.u + " ", s, ta.selectionStart, "end"); p.remove(); ta.focus(); toggleSend(k); });
+}
+async function sendText(k) {
+  const ta = $("ta" + k), body = ta.value.trim(); if (!body) return; $("mp" + k)?.remove();
+  if (ta.dataset.edit) { try { await api(`/api/chat/m/${ta.dataset.edit}`, { method: "PUT", body: { body } }); delete ta.dataset.edit; ta.value = ""; $("rb" + k).innerHTML = ""; autosize(ta); toggleSend(k); } catch (e) { blocked(k, e); } return; }
+  const save = ta.value; ta.value = ""; autosize(ta); toggleSend(k);
+  try { const r = await api(`/api/chat/c/${CUR}/messages`, { body: { body, reply_to: REPLY[k], thread_root: k === "t" ? TH : null } }); setReply(k, null); insert(r.message, true); try { SND.click?.(); } catch (e) {} }
+  catch (e) { ta.value = save; autosize(ta); toggleSend(k); blocked(k, e); }
+}
+function blocked(k, e) { const bx = $("bx" + k); bx.classList.remove("shake"); void bx.offsetWidth; bx.classList.add("shake"); notify(/bloqué/.test(e.message) ? "Message bloqué 🔒" : "Envoi impossible", e.message, "err"); }
+async function uploadImg(k, f) {
+  let blob = f, w = 0, h = 0;
+  try { const bmp = await createImageBitmap(f); w = bmp.width; h = bmp.height; if (f.type !== "image/gif" && Math.max(w, h) > 1600) { const s = 1600 / Math.max(w, h), c = document.createElement("canvas"); c.width = w * s; c.height = h * s; c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height); blob = await new Promise(r => c.toBlob(r, "image/jpeg", .85)); w = c.width; h = c.height; } } catch (e) {}
+  const q = new URLSearchParams({ w, h, caption: $("ta" + k).value.trim() }); if (k === "t") q.set("thread", TH);
+  try { const r = await fetch(`/api/chat/c/${CUR}/upload?` + q, { method: "POST", headers: { "Content-Type": blob.type || "image/jpeg" }, body: blob, credentials: "same-origin" }); const d = await r.json(); if (!r.ok) throw new Error(d.error);
+    $("ta" + k).value = ""; autosize($("ta" + k)); toggleSend(k); insert(d.message, true); } catch (e) { notify("Envoi de la photo impossible", e.message, "err"); }
+}
+
+/* =============== vocal =============== */
+async function record(k) {
+  let st; try { st = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { notify("Micro inaccessible", "Autorise le micro dans ton navigateur", "err"); return; }
+  const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || "";
+  const rec = new MediaRecorder(st, mime ? { mimeType: mime } : {}), parts = [], ac = new (window.AudioContext || window.webkitAudioContext)(), an = ac.createAnalyser(); an.fftSize = 512; ac.createMediaStreamSource(st).connect(an);
+  const buf = new Uint8Array(an.fftSize), peaks = [], t0 = Date.now(); let raf, cancel = false;
+  const ov = document.createElement("div"); ov.className = "ct-rec"; ov.innerHTML = `<span class="dot"></span><span class="tm">0:00</span><canvas></canvas><button class="x">Annuler</button><button class="ok">Envoyer</button>`; $("bx" + k).appendChild(ov);
+  const cv = ov.querySelector("canvas"), cx = cv.getContext("2d"), d = devicePixelRatio || 1; cv.width = cv.clientWidth * d; cv.height = cv.clientHeight * d;
+  (function draw() { an.getByteTimeDomainData(buf); let pk = 0; for (const v of buf) pk = Math.max(pk, Math.abs(v - 128)); peaks.push(Math.min(100, pk / 128 * 260));
+    ov.querySelector(".tm").textContent = fmtS((Date.now() - t0) / 1000); cx.clearRect(0, 0, cv.width, cv.height); const n = Math.floor(cv.width / (5 * d)), sl = peaks.slice(-n);
+    sl.forEach((v, i) => { const h = Math.max(3 * d, v / 100 * cv.height); cx.fillStyle = `rgba(255,${120 + v},${150},${.5 + v / 200})`; cx.fillRect(i * 5 * d, (cv.height - h) / 2, 3 * d, h); });
+    if (Date.now() - t0 > 300e3) return ov.querySelector(".ok").click(); raf = requestAnimationFrame(draw); })();
+  rec.ondataavailable = e => e.data.size && parts.push(e.data);
+  rec.onstop = async () => { cancelAnimationFrame(raf); st.getTracks().forEach(t => t.stop()); ac.close(); ov.remove(); if (cancel) return; const dur = (Date.now() - t0) / 1000; if (dur < .6) return;
+    const blob = new Blob(parts, { type: (rec.mimeType || "audio/webm").split(";")[0] }), N = 40, wave = Array.from({ length: N }, (_, i) => { const s = peaks.slice(Math.floor(i * peaks.length / N), Math.floor((i + 1) * peaks.length / N)); return Math.round(Math.max(8, ...s.length ? s : [0])); });
+    const q = new URLSearchParams({ dur: dur.toFixed(1), wave: wave.join(",") }); if (k === "t") q.set("thread", TH);
+    try { const r = await fetch(`/api/chat/c/${CUR}/upload?` + q, { method: "POST", headers: { "Content-Type": blob.type }, body: blob, credentials: "same-origin" }); const d2 = await r.json(); if (!r.ok) throw new Error(d2.error); insert(d2.message, true); } catch (e) { notify("Envoi du vocal impossible", e.message, "err"); } };
+  ov.querySelector(".x").onclick = () => { cancel = true; rec.stop(); }; ov.querySelector(".ok").onclick = () => rec.state !== "inactive" && rec.stop(); rec.start(250);
+}
+let AUD = null;
+function bindVoice(el) {
+  const btn = el.querySelector("button"), bars = [...el.querySelectorAll(".wv i")], lab = el.querySelector("small"), dur = +el.dataset.dur;
+  const paint = p => { const n = Math.round(p * bars.length); bars.forEach((b, i) => b.classList.toggle("p", i < n)); };
+  btn.onclick = () => { if (AUD && AUD._el === el) { if (AUD.paused) AUD.play(); else AUD.pause(); return; } if (AUD) { AUD.pause(); AUD._reset(); }
+    const a = new Audio("/api/chat/file/" + el.dataset.vo); a._el = el; AUD = a; a._reset = () => { paint(0); btn.innerHTML = svg(IC.play); lab.textContent = fmtS(dur); };
+    a.onplay = () => btn.innerHTML = svg(IC.pause); a.onpause = () => btn.innerHTML = svg(IC.play); a.onended = () => { a._reset(); AUD = null; };
+    a.ontimeupdate = () => { const D = isFinite(a.duration) ? a.duration : dur; paint(a.currentTime / D); lab.textContent = fmtS(Math.max(0, D - a.currentTime)); }; a.play().catch(() => notify("Lecture impossible", "", "err")); };
+  el.querySelector(".wv").onclick = e => { if (!AUD || AUD._el !== el) return btn.click(); const r = e.currentTarget.getBoundingClientRect(); AUD.currentTime = (e.clientX - r.left) / r.width * (isFinite(AUD.duration) ? AUD.duration : dur); };
+}
+
+/* =============== fil de discussion =============== */
+async function openThread(id) {
+  TH = id; $("ct").classList.add("th"); const root = findMsg(id);
+  $("thp").innerHTML = `<div class="hd"><div><b>Fil</b><small>#${esc(chan(CUR).name)}</small></div><button id="thX" aria-label="Fermer">✕</button></div><div class="ct-sc" id="tsc"></div><div class="ct-ty" id="tty"></div><div id="tcp"></div>`;
+  $("thX").onclick = () => closeThread(); $("tcp").innerHTML = chan(CUR).canWrite || root?.kind === "sos" ? composerHTML("t") : ""; if ($("tat")) bindComposer("t");
+  const d = await api(`/api/chat/c/${CUR}/messages?thread=${id}`); if (TH !== id) return; THM = d.messages; paintThread(true);
+  if (root?.kind === "sos" && $("tat")) $("tat").placeholder = "Propose ta réponse au fan…";
+}
+function paintThread(scroll) {
+  const sc = $("tsc"); if (!sc) return; const [r, ...rest] = THM;
+  sc.innerHTML = (r ? `<div class="root">${msgHTML(r, null, true)}</div>` : "") + `<div class="ct-day" style="margin-top:6px">${rest.length} réponse${rest.length > 1 ? "s" : ""}</div>` + listHTML(rest, true); bindMsgs(sc, true);
+  if (scroll) requestAnimationFrame(() => sc.scrollTop = sc.scrollHeight);
+}
+function closeThread(silent) { TH = null; THM = []; $("ct").classList.remove("th"); if (!silent) setTimeout(() => { if (!TH) $("thp").innerHTML = ""; }, 500); }
+
+/* =============== temps réel =============== */
+function insert(m, mine) {
+  if (!m) return; const inTh = m.thread_root && m.thread_root === TH, inMain = m.channel_id === CUR && !m.thread_root;
+  if (inTh) { if (THM.some(x => x.id === m.id)) return; THM.push(m); const sc = $("tsc"), near = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 200;
+    const prev = THM.length > 2 ? THM[THM.length - 2] : null; sc.insertAdjacentHTML("beforeend", msgHTML(m, prev, true)); const n = sc.lastElementChild; n.classList.add("in"); bindOne(n, true); if (near || mine) sc.scrollTo({ top: sc.scrollHeight, behavior: "smooth" }); }
+  if (inMain) { if (MSGS.some(x => x.id === m.id)) return; MSGS.push(m); const sc = $("sc"); if (!sc) return; const near = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 240;
+    sc.querySelector(".ct-empty")?.remove(); const prev = MSGS[MSGS.length - 2];
+    if (!prev || new Date(prev.created_at).toDateString() !== new Date(m.created_at).toDateString()) sc.insertAdjacentHTML("beforeend", `<div class="ct-day">${dayL(m.created_at)}</div>`);
+    sc.insertAdjacentHTML("beforeend", msgHTML(m, prev, false)); const n = sc.querySelector(`.ct-m[data-id="${m.id}"],.ct-sys[data-id="${m.id}"]`); if (n) { n.classList.add("in"); bindOne(n); }
+    if (near || mine) sc.scrollTo({ top: sc.scrollHeight, behavior: "smooth" }); if (m.kind === "sale") setTimeout(() => saleFx(n?.querySelector(".ct-sale"), m.meta.super), 250);
+    if (!mine) markRead(); paintSeen(); }
+}
+function bindOne(n, inTh) { bindMsgs({ querySelectorAll: s => [...n.querySelectorAll(s), ...(n.matches(s) ? [n] : [])] }, !!inTh); }
+function replace(m) {
+  const swap = (arr, root, inTh) => { const i = arr.findIndex(x => x.id === m.id); if (i < 0) return; arr[i] = m; const el = root?.querySelector(`.ct-m[data-id="${m.id}"]`); if (!el) return;
+    const t = document.createElement("div"); t.innerHTML = msgHTML(m, inTh ? null : arr[i - 1], inTh); const nn = t.firstElementChild; if (el.classList.contains("cont") && !nn.classList.contains("cont") && arr[i - 1] && !inTh) {} el.replaceWith(nn); bindOne(nn, inTh);
+    // les barres des sondages repartent de leur ancienne valeur
+    const ob = [...el.querySelectorAll(".ct-po .bar")].map(b => b.style.getPropertyValue("--w")); nn.querySelectorAll(".ct-po .bar").forEach((b, k) => { const to = b.style.getPropertyValue("--w"); if (ob[k] != null) { b.style.setProperty("--w", ob[k]); requestAnimationFrame(() => requestAnimationFrame(() => b.style.setProperty("--w", to))); } }); };
+  swap(MSGS, $("sc"), false); swap(THM, $("tsc"), true);
+  const pi = PINS.findIndex(x => x.id === m.id); if (m.pinned && (pi < 0)) PINS.unshift(m); else if (!m.pinned && pi >= 0) PINS.splice(pi, 1); else if (pi >= 0) PINS[pi] = m; paintPins();
+}
+function paintSeen() { const c = chan(CUR); if (!c || c.kind !== "dm") return; document.querySelectorAll(".ct-seen").forEach(x => x.remove()); const mine = [...MSGS].reverse().find(x => x.user_id === B.me.id); if (!mine || SEEN < mine.id) return;
+  const el = $("sc")?.querySelector(`.ct-m[data-id="${mine.id}"] > div:last-of-type`); if (el) el.insertAdjacentHTML("beforeend", `<div class="ct-seen" style="font-size:11px;color:#7dd3fc;margin-top:3px">✓✓ Vu</div>`); }
+let rdT = null; function markRead() { clearTimeout(rdT); rdT = setTimeout(() => { if (!CUR || document.hidden) return; api(`/api/chat/c/${CUR}/read`, { body: {} }).catch(() => {}); const c = chan(CUR); if (c) { c.unread = 0; c.mentions = 0; renderRail(); } }, 500); }
+async function refreshBoot() { B = await api("/api/chat/boot"); USERS = Object.fromEntries(B.users.map(u => [u.id, u])); renderRail(); }
+function stream() {
+  const es = new EventSource("/api/chat/stream");
+  es.addEventListener("message", async e => { const d = JSON.parse(e.data), c = chan(d.channel_id); if (!c) { refreshBoot(); return; }
+    const visible = d.channel_id === CUR && !document.hidden;
+    if (d.channel_id === CUR || (d.thread_root && d.thread_root === TH)) { if (MSGS.some(x => x.id === d.id) || THM.some(x => x.id === d.id)) return; const m = await api(`/api/chat/m/${d.id}`); insert(m, d.user_id === B.me.id); }
+    if (d.user_id !== B.me.id && !d.thread_root && !visible) { c.unread++; if ((d.mentions || []).includes(B.me.id)) c.mentions++; const m = await api(`/api/chat/m/${d.id}`).catch(() => null); if (m) c.last = { body: m.kind === "text" ? m.body.slice(0, 80) : m.kind === "voice" ? "🎤 Message vocal" : m.kind === "sale" ? "💸 Nouvelle vente" : "…", at: m.created_at, username: m.username }; renderRail();
+      if ((d.mentions || []).includes(B.me.id) || c.kind === "dm" || c.slug === "informations") { try { SND.notif?.(); } catch (er) {} notify(c.kind === "dm" ? `Message de ${m?.username}` : (d.mentions || []).includes(B.me.id) ? `${m?.username} t'a mentionné` : "📣 Nouvelle annonce", `${c.kind === "dm" ? "" : "#" + c.name + " · "}${(m?.body || "").slice(0, 90)}`, "info"); } }
+    if (d.user_id && TYP[d.user_id]) { delete TYP[d.user_id]; paintTyping(); } });
+  es.addEventListener("update", async e => { const d = JSON.parse(e.data); if (d.channel_id !== CUR) return; if (!MSGS.some(x => x.id === d.id) && !THM.some(x => x.id === d.id)) return; const m = await api(`/api/chat/m/${d.id}`).catch(() => null); if (m) replace(m); });
+  es.addEventListener("react", e => { const d = JSON.parse(e.data); if (d.channel_id && d.channel_id !== CUR) return; if (d.super && d.user_id !== B.me.id && MSGS.some(x => x.id === d.id)) { rain(d.emoji); notify(`💥 ${d.username} envoie une super-réaction`, "", "info"); } });
+  es.addEventListener("typing", e => { const d = JSON.parse(e.data); if (d.user_id === B.me.id || d.channel_id !== CUR) return; TYP[d.user_id] = { name: d.username, at: Date.now(), thread: d.thread }; paintTyping(); });
+  es.addEventListener("presence", e => { const d = JSON.parse(e.data); if (USERS[d.user_id]) { USERS[d.user_id].status = d.status; const u = B.users.find(x => x.id === d.user_id); if (u) u.status = d.status; } document.querySelectorAll(".ct-av").forEach(() => {}); renderRail(); });
+  es.addEventListener("seen", e => { const d = JSON.parse(e.data); if (d.channel_id === CUR && d.user_id !== B.me.id) { SEEN = d.last_id; paintSeen(); } });
+  es.addEventListener("pins", async e => { const d = JSON.parse(e.data); if (d.channel_id !== CUR) return; const r = await api(`/api/chat/c/${CUR}/messages?before=0`).catch(() => null); if (r) { PINS = r.pins; paintPins(); } });
+  es.addEventListener("muted", e => { const d = JSON.parse(e.data); B.me.muted = d.until; notify(d.until ? "🔇 Tu es en sourdine" : "🔈 Sourdine levée", d.until ? "jusqu'à " + tm(d.until) : "", d.until ? "err" : "ok"); });
+  es.onerror = () => {};
+}
+function paintTyping() { const now = Date.now(); Object.keys(TYP).forEach(k => { if (now - TYP[k].at > 5000) delete TYP[k]; });
+  const main = Object.values(TYP).filter(t => !t.thread), th = Object.values(TYP).filter(t => t.thread && t.thread === TH);
+  const txt = a => a.length === 1 ? `<b>${esc(a[0].name)}</b> écrit` : a.length ? `<b>${a.slice(0, 2).map(t => esc(t.name)).join(", ")}</b> écrivent` : "";
+  if ($("ty")) { $("ty").innerHTML = main.length ? `<i></i><i></i><i></i>${txt(main)}…` : ""; $("ty").classList.toggle("on", !!main.length); }
+  if ($("tty")) { $("tty").innerHTML = th.length ? `<i></i><i></i><i></i>${txt(th)}…` : ""; $("tty").classList.toggle("on", !!th.length); } }
+setInterval(paintTyping, 1500);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && CUR) markRead(); });
+
+/* =============== feuilles : sondage, remplacement, aide fan, DM =============== */
+function sheet(html, bind) { $("sheet").innerHTML = html; $("sheet").classList.add("on"); $("scrim").classList.add("on"); bind && bind(); }
+function closeSheet() { $("sheet").classList.remove("on"); $("scrim").classList.remove("on"); }
+$("scrim").onclick = closeSheet;
+function pollSheet() {
+  sheet(`<h3>📊 Nouveau sondage</h3><p>Les votes s'affichent en direct pour toute l'équipe.</p><label>Question</label><input id="pq" maxlength="200" placeholder="ex. Qui peut prendre le shift de 18 h ?"><label>Réponses</label><div id="po"></div><button class="add" id="pa">+ Ajouter une réponse</button>
+    <label class="ct-tg" style="text-transform:none;letter-spacing:0;font:600 13.5px Inter;color:#ccc"><input type="checkbox" id="pm"> Plusieurs choix possibles</label>${B.me.role === "admin" ? `<label class="ct-tg" style="text-transform:none;letter-spacing:0;font:600 13.5px Inter;color:#ccc"><input type="checkbox" id="pan"> Épingler comme annonce</label>` : ""}<button class="go" id="pgo">Publier le sondage</button>`, () => {
+    const add = v => { if ($("po").children.length >= 6) return; $("po").insertAdjacentHTML("beforeend", `<div class="row"><input maxlength="80" placeholder="Réponse ${$("po").children.length + 1}" value="${esc(v || "")}"><button aria-label="Retirer">✕</button></div>`); $("po").lastElementChild.querySelector("button").onclick = e => e.target.parentNode.remove(); };
+    add("Moi 🙋"); add("Pas dispo"); $("pa").onclick = () => add(); $("pq").focus();
+    $("pgo").onclick = async () => { try { const r = await api(`/api/chat/c/${CUR}/messages`, { body: { kind: "poll", body: $("pq").value, options: [...$("po").querySelectorAll("input")].map(i => i.value), multi: $("pm").checked, announce: $("pan")?.checked } }); closeSheet(); insert(r.message, true); } catch (e) { notify("Sondage impossible", e.message, "err"); } }; });
+}
+async function swapSheet() {
+  const d = await api("/api/chat/myshifts"); let sel = null;
+  sheet(`<h3>🔁 Trouver un remplaçant</h3><p>Choisis ton shift : un collègue le prend en un clic, le manager valide et le planning se met à jour.</p><div class="ct-shl" id="shl">${d.shifts.map(s => { const dt = new Date(s.start_ms); return `<button data-s="${s.id}" ${s.busy ? "disabled" : ""}><span class="ct-swap" style="background:none;border:0;padding:0"><span class="cal" style="display:block;width:42px;border-radius:10px;overflow:hidden;background:#fff;color:#111;text-align:center"><span style="display:block;background:#7dd3fc;color:#05202d;font:900 8px/13px Inter;text-transform:uppercase">${dt.toLocaleDateString("fr-FR", { month: "short" }).replace(".", "")}</span><b style="display:block;font:900 18px/26px Inter">${dt.getDate()}</b></span></span><div>${esc(s.start)} – ${esc(s.end)} · ${esc(s.model_name)}<small>${dt.toLocaleDateString("fr-FR", { weekday: "long" })}${s.busy ? " · déjà en échange" : ""}</small></div></button>`; }).join("") || `<div style="color:#777;font-size:13px">Aucun shift à venir dans ton planning.</div>`}</div>
+    <label>Pourquoi ? <span style="text-transform:none;letter-spacing:0;font-weight:600;color:#666">(facultatif)</span></label><input id="sr" maxlength="160" placeholder="ex. rendez-vous médical"><button class="go" id="sgo">Publier dans #${esc(chan(CUR).name)}</button>`, () => {
+    $("shl").querySelectorAll("[data-s]").forEach(b => b.onclick = () => { sel = +b.dataset.s; $("shl").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); });
+    $("sgo").onclick = async () => { if (!sel) return notify("Choisis un shift", "", "info"); try { const r = await api("/api/chat/swap", { body: { channel_id: CUR, shift_id: sel, reason: $("sr").value } }); closeSheet(); insert(r.message, true); } catch (e) { notify("Impossible", e.message, "err"); } }; });
+}
+function sosSheet() {
+  const models = B.channels.filter(c => c.kind === "model").map(c => c.name);
+  sheet(`<h3>🆘 Aide fan</h3><p>Colle le message du fan (sans son pseudo ni infos perso). L'équipe propose des réponses dans le fil, la meilleure gagne ⭐.</p><label>Le message du fan</label><textarea id="sf" rows="4" maxlength="1500" placeholder="ex. « t'es trop chère, sur les autres comptes c'est moitié prix »"></textarea>
+    <label>Créatrice</label><select id="sm"><option value="">—</option>${models.map(m => `<option>${esc(m)}</option>`).join("")}</select><label>Ce que tu veux obtenir <span style="text-transform:none;letter-spacing:0;font-weight:600;color:#666">(facultatif)</span></label><input id="sb" maxlength="300" placeholder="ex. lui vendre la vidéo à 25 € sans baisser le prix"><button class="go" id="sgo" style="background:linear-gradient(120deg,#ff6a3d,#ff2e63);color:#fff">Demander de l'aide</button>`, () => {
+    $("sf").focus(); $("sgo").onclick = async () => { try { const r = await api(`/api/chat/c/${CUR}/messages`, { body: { kind: "sos", fan: $("sf").value, model: $("sm").value, body: $("sb").value } }); closeSheet(); insert(r.message, true); } catch (e) { notify("Impossible", e.message, "err"); } }; });
+}
+function dmSheet() {
+  sheet(`<h3>💬 Nouveau message privé</h3><input id="dq" placeholder="Rechercher quelqu'un"><div class="ct-ul" id="dl"></div>`, () => {
+    const paint = () => { const q = $("dq").value.toLowerCase(); $("dl").innerHTML = B.users.filter(u => u.id !== B.me.id && u.username.toLowerCase().includes(q)).map(u => `<button data-u="${u.id}">${av(u.username, u.status)}${esc(u.username)}${u.role === "admin" ? ` <span class="rl" style="font:800 9.5px Inter;color:#5fd3a2">MANAGER</span>` : ""}<small>${ST_LBL[u.status]}</small></button>`).join("");
+      $("dl").querySelectorAll("[data-u]").forEach(b => b.onclick = async () => { const r = await api("/api/chat/dm", { body: { user_id: +b.dataset.u } }); closeSheet(); await refreshBoot(); openCh(r.id); }); };
+    $("dq").oninput = paint; paint(); $("dq").focus(); });
+}
+
+(async () => {
+  const me = await api("/api/me"); renderShell("chat", me);
+  if (me.role === "trainee") return go("/home");
+  await refreshBoot();
+  $("meBar").innerHTML = `${av(B.me.username, USERS[B.me.id]?.status)}<div><b>${esc(B.me.username)}</b><div style="font-size:11.5px;color:#777">${ST_LBL[USERS[B.me.id]?.status === "offline" ? "online" : USERS[B.me.id]?.status] || "en ligne"}</div></div>`;
+  $("q").oninput = renderRail; stream();
+  const q = +new URLSearchParams(location.search).get("c"); const first = q && chan(q) ? q : (B.channels.find(c => c.slug === "informations" && c.unread) || B.channels.find(c => c.slug === "general") || B.channels[0]).id;
+  if (!MOB() || q) openCh(first);
+})();
+</script>
+</body>
+</html>

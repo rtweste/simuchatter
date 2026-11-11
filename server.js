@@ -205,7 +205,7 @@ const admin = (req, res, next) => req.user.role === "admin" ? next() : res.statu
 let GEST = null;
 app.use((req, res, next) => GEST ? GEST.middleware(req, res, next) : next());
 // passation de shift : à la fin d'un shift, on vérifie que les fans prioritaires reçus ont été suivis
-let HAND = null;
+let HAND = null, STUDIO = null;
 app.use((req, res, next) => {
   if (!HAND || req.method !== "POST" || req.path !== "/api/clock/out" || !req.cookies.tok) return next();
   try { const t = db.prepare("SELECT user_id FROM tokens WHERE token = ?").get(req.cookies.tok), c = t && HAND.openClock(t.user_id);
@@ -454,6 +454,8 @@ require("./candidatures")(app, db, auth, admin, { bcrypt, gest: GEST });   // pa
 HAND = require("./handover")(app, db, auth, admin, { planning: PLAN, gest: GEST });   // passation de shift
 require("./teamfx")(app, db, auth, admin, { planning: PLAN, gest: GEST, PERSONAS });   // salle de contrôle, radar, mur des ventes
 require("./extras")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, gest: GEST, ai });   // assistant, Wrapped, team leaders
+STUDIO = require("./studio")(app, db, auth, admin, { dataDir: path.dirname(DB_PATH), gest: GEST, planning: PLAN });   // contenus perso, fiches créatrices, pauses
+require("./chat")(app, db, auth, admin, { dataDir: path.dirname(DB_PATH), gest: GEST, planning: PLAN });   // chat d'équipe
 /* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */
 LIVE = require("./simlive")(app, db, auth, admin, { loadSim, publicSim, PERSONAS, busy });
 

@@ -66,8 +66,9 @@ const nextTxt = s => { const d = new Date(s.start_ms), today = new Date().toDate
 const hrs = h => { const m = Math.round((h || 0) * 60); return `${Math.floor(m / 60)} h${m % 60 ? " " + String(m % 60).padStart(2, "0") : ""}`; };
 function card(c, i) {
   if (c.role === "trainee") return tcard(c, i);
-  const st = !c.active ? "Compte désactivé" : c.live ? "En shift · " + c.live : c.next[0] ? "Prochain : " + nextTxt(c.next[0]) : "Pas de shift prévu";
-  const tag = !c.active ? '<span class="tag w">Désactivé</span>' : c.suspendedUntil ? '<span class="tag r"><i></i>Suspendu</span>' : warnOf(c) ? '<span class="tag r"><i></i>À surveiller</span>' : c.live ? '<span class="tag v live"><i></i>En shift</span>' : "";
+  const pzm = c.pause ? Math.floor((Date.now() - c.pause) / 60e3) : null;
+  const st = !c.active ? "Compte désactivé" : c.pause ? `En pause depuis ${pzm} min${pzm > c.pauseMax ? " · dépassement" : ""}` : c.live ? "En shift · " + c.live : c.next[0] ? "Prochain : " + nextTxt(c.next[0]) : "Pas de shift prévu";
+  const tag = !c.active ? '<span class="tag w">Désactivé</span>' : c.suspendedUntil ? '<span class="tag r"><i></i>Suspendu</span>' : warnOf(c) ? '<span class="tag r"><i></i>À surveiller</span>' : c.pause ? `<span class="tag ${pzm > c.pauseMax ? "r" : "w"}"><i></i>☕ En pause</span>` : c.live ? '<span class="tag v live"><i></i>En shift</span>' : "";
   const pc = c.punctuality;
   return `<div class="pc${c.active ? "" : " off"}${c.isNew ? " new" : ""}" data-id="${c.id}" tabindex="0" role="button" style="animation-delay:${.04 + i * .04}s"><div class="r1">${avatar(c.username, c.live)}<div><b>${esc(c.username)} ${c.role === "admin" ? '<span class="tier">Manager</span>' : `<span class="tier ${c.rate >= 15 ? "top" : ""}">${c.rate} %</span>`}</b><small>${esc(st)}</small></div>${tag}</div>
     <div class="st"><div><small>VENTES NETTES</small><b>${E(c.sales)}</b></div><div><small>PAIE</small><b>${E(c.pay)}</b></div><div><small>PONCTUALITÉ</small><b style="color:${pc == null ? "#fff" : pc >= 90 ? "#5fd3a2" : pc >= 80 ? "#fff" : "#e07a7a"}">${pc == null ? "—" : pc + " %"}</b></div></div>

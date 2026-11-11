@@ -1,0 +1,58 @@
+/* Pauses pendant le shift : pastille flottante + écran de pause */
+.pz{--p1:#7dd3fc;--p2:#b388ff;--pw:#ffd9a8;font-family:Inter,system-ui,sans-serif;color:#fff}
+.pz.over{--p1:#ff6b6b;--p2:#ff9a5c}
+/* pastille */
+.pz-pill{position:fixed;left:22px;bottom:22px;z-index:119;display:flex;align-items:center;gap:10px;height:52px;padding:0 16px 0 8px;border-radius:99px;border:1px solid rgba(125,211,252,.35);background:radial-gradient(120% 140% at 0 50%,rgba(125,211,252,.18),#0d0d0d 70%);box-shadow:0 14px 40px rgba(0,0,0,.55);cursor:pointer;font:800 13.5px Inter;color:#fff;transform:translateY(120%) scale(.8);opacity:0;transition:transform .6s cubic-bezier(.34,1.56,.64,1),opacity .4s,border-color .4s}
+.pz-pill.on{transform:none;opacity:1}
+.pz.over .pz-pill,.pz-pill.over{border-color:rgba(255,107,107,.6);animation:pzAl 1.2s ease-in-out infinite}
+@keyframes pzAl{50%{box-shadow:0 14px 40px rgba(0,0,0,.55),0 0 0 6px rgba(255,107,107,.18)}}
+.pz-pill svg.r{width:38px;height:38px;transform:rotate(-90deg)}.pz-pill svg.r circle{fill:none;stroke-width:3.5}.pz-pill .b{stroke:rgba(255,255,255,.12)}.pz-pill .f{stroke:var(--p1);stroke-linecap:round;transition:stroke-dashoffset 1s linear,stroke .4s}
+.pz-pill .cup{position:absolute;left:19px;top:50%;width:18px;height:18px;margin-top:-9px}
+.pz-pill small{display:block;font:700 10.5px Inter;color:#9ab;letter-spacing:.04em}
+.pz-pill b{font-variant-numeric:tabular-nums;font-size:15px}
+@media(max-width:899px){.pz-pill{left:14px;bottom:calc(92px + env(safe-area-inset-bottom))}}
+/* écran plein */
+.pz-ov{position:fixed;inset:0;z-index:210;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#05070c;clip-path:circle(0 at var(--ox,50%) var(--oy,50%));transition:clip-path .9s cubic-bezier(.7,0,.2,1);visibility:hidden}
+.pz-ov.on{clip-path:circle(150% at var(--ox,50%) var(--oy,50%));visibility:visible}
+.pz-ov.out{transition-duration:.6s}
+.pz-ov canvas{position:absolute;inset:0;width:100%;height:100%}
+.pz-ov .gr{position:absolute;inset:0;opacity:.14;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.pz-box{position:relative;width:min(400px,calc(100vw - 32px));text-align:center}
+.pz-k{font:800 11px Inter;letter-spacing:.3em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+.pz-k b{color:var(--p1);transition:color .4s}
+.pz-dial{position:relative;width:min(300px,74vw);aspect-ratio:1;margin:18px auto 6px}
+.pz-dial svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
+.pz-dial .tk{stroke:rgba(255,255,255,.14);stroke-width:2}
+.pz-dial .bg{fill:none;stroke:rgba(255,255,255,.07);stroke-width:14}
+.pz-dial .fl{fill:none;stroke:url(#pzG);stroke-width:14;stroke-linecap:round;transition:stroke-dashoffset 1s linear;filter:drop-shadow(0 0 12px var(--p1))}
+.pz-dial .hd{fill:#fff;filter:drop-shadow(0 0 8px #fff)}
+.pz-dial .ct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.pz-cupw{position:relative;width:74px;height:70px;margin-bottom:4px}
+.pz-cupw svg{position:static;transform:none;width:74px;height:70px}
+.pz-cupw .st path{fill:none;stroke:rgba(255,255,255,.55);stroke-width:2.4;stroke-linecap:round;animation:pzSteam 2.6s ease-in-out infinite;stroke-dasharray:30;stroke-dashoffset:30}
+.pz-cupw .st path:nth-child(2){animation-delay:.6s}.pz-cupw .st path:nth-child(3){animation-delay:1.2s}
+@keyframes pzSteam{0%{stroke-dashoffset:30;opacity:0;transform:translateY(6px)}30%{opacity:1}100%{stroke-dashoffset:-30;opacity:0;transform:translateY(-8px)}}
+.pz-cupw .liq{transform-origin:50% 100%;transition:transform 1s linear}
+.pz-cupw .wv{animation:pzWave 2.4s linear infinite}@keyframes pzWave{to{transform:translateX(-24px)}}
+.pz-time{font:900 clamp(50px,15vw,66px)/1 Inter;letter-spacing:-.05em;font-variant-numeric:tabular-nums;display:flex}
+.pz-time .d{display:inline-block;height:1em;overflow:hidden;position:relative;width:.62em}.pz-time .d span{position:absolute;left:0;right:0;text-align:center}
+.pz-time .d span.in{animation:pzIn .45s cubic-bezier(.2,.9,.25,1) both}.pz-time .d span.out{animation:pzOut .45s cubic-bezier(.2,.9,.25,1) both}
+@keyframes pzIn{from{transform:translateY(-100%);opacity:0;filter:blur(3px)}}@keyframes pzOut{to{transform:translateY(100%);opacity:0;filter:blur(3px)}}
+.pz-time .s{width:.3em;text-align:center}.pz-time .pl{width:.62em;text-align:center;font-weight:800}
+.pz-sub{font:700 13px Inter;color:rgba(255,255,255,.65);margin-top:6px}
+.pz.over .pz-sub{color:#ff9a8a}
+.pz-dots{display:flex;justify-content:center;gap:8px;margin-top:14px}
+.pz-dots i{width:34px;height:6px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden;position:relative}
+.pz-dots i.u{background:rgba(255,255,255,.45)}.pz-dots i.c{background:rgba(255,255,255,.14)}.pz-dots i.c::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,var(--p1),var(--p2));transform-origin:left;transform:scaleX(var(--f,0));transition:transform 1s linear}
+.pz-msg{font-size:14px;color:rgba(255,255,255,.75);line-height:1.5;margin-top:14px;min-height:42px}
+.pz-hold{position:relative;width:100%;height:60px;margin-top:18px;border-radius:18px;border:0;background:#fff;color:#0a0a0a;font:900 15px Inter;cursor:pointer;overflow:hidden;isolation:isolate;touch-action:none;user-select:none;-webkit-user-select:none}
+.pz-hold::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,var(--p1),var(--p2));transform-origin:left;transform:scaleX(var(--h,0))}
+.pz-hold small{display:block;font:700 11px Inter;opacity:.6;margin-top:2px}
+.pz-min{margin-top:12px;background:none;border:0;color:rgba(255,255,255,.6);font:700 13px Inter;cursor:pointer;padding:8px}
+.pz-x{position:absolute;right:18px;top:calc(18px + env(safe-area-inset-top));z-index:2;width:42px;height:42px;border-radius:50%;border:0;background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:18px}
+/* bouton pause dans la carte de shift */
+.pz-start{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.pz-start svg{width:15px;height:15px}
+.pz-start em{font-style:normal;opacity:.6;font-weight:700}
+.pz-back{position:fixed;inset:0;z-index:209;pointer-events:none}
+@media(prefers-reduced-motion:reduce){.pz *{animation:none!important}.pz-ov{transition:none}}

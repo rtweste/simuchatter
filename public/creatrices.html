@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Créatrices — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="stylesheet" href="/style.css">
+<style>
+.cr{--a:#b388ff;--a2:#ff7ab6;font-family:Inter,system-ui,sans-serif;color:#f5f5f5;position:relative}
+.cr-amb{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.cr-amb i{position:absolute;width:60vmax;height:60vmax;border-radius:50%;filter:blur(110px);opacity:.22;transition:background 1.2s}
+.cr-amb i:nth-child(1){left:-15vmax;top:-25vmax;background:var(--a);animation:crA 14s ease-in-out infinite alternate}
+.cr-amb i:nth-child(2){right:-20vmax;top:10vmax;background:var(--a2);animation:crA 18s ease-in-out infinite alternate-reverse}
+@keyframes crA{to{transform:translate(8vmax,6vmax) scale(1.15)}}
+.cr>*{position:relative;z-index:1}
+.cr-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.cr-hd h1{font:900 clamp(34px,5vw,52px)/1 Inter;letter-spacing:-.05em;margin:4px 0 0}.cr-hd h1 em{color:var(--a);transition:color 1s}
+.cr-hd p{color:#8a8a8a;font-size:13.5px;margin:6px 0 0}
+.cr-ed{height:40px;border-radius:12px;border:1px solid #2e2e2e;background:#161616;color:#fff;font:800 13px Inter;padding:0 14px;cursor:pointer}
+/* carrousel 3D */
+.cr-car{position:relative;height:440px;margin:18px -20px 6px;perspective:1400px;touch-action:pan-y;user-select:none;-webkit-user-select:none;overflow:hidden}
+@media(max-width:600px){.cr-car{height:400px}}
+.cr-cd{position:absolute;left:50%;top:20px;width:270px;height:380px;margin-left:-135px;border-radius:28px;overflow:hidden;cursor:pointer;transform-style:preserve-3d;will-change:transform;box-shadow:0 30px 70px rgba(0,0,0,.6);transition:box-shadow .5s}
+@media(max-width:600px){.cr-cd{width:240px;height:340px;margin-left:-120px}}
+.cr-cd .ph{position:absolute;inset:-6%;background-size:cover;background-position:center;transform:translate3d(var(--px,0),0,0) scale(1.06);transition:transform .2s}
+.cr-cd .gr{position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(0,0,0,.85))}
+.cr-cd .ini{position:absolute;inset:0;display:grid;place-items:center;font:900 170px/1 Inter;letter-spacing:-.06em;color:rgba(255,255,255,.18)}
+.cr-cd .sh{position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.22) 45%,transparent 60%);transform:translateX(var(--sh,-100%));mix-blend-mode:overlay;pointer-events:none}
+.cr-cd .in{position:absolute;left:20px;right:20px;bottom:20px}
+.cr-cd .in b{display:block;font:900 40px/1 Inter;letter-spacing:-.05em}
+.cr-cd .in small{display:block;font-size:13px;color:#ddd;margin-top:6px;line-height:1.35}
+.cr-cd .lv{position:absolute;left:16px;top:16px;display:flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:99px;background:rgba(0,0,0,.45);backdrop-filter:blur(10px);font:800 11.5px Inter}
+.cr-cd .lv i{width:7px;height:7px;border-radius:50%;background:#5fd3a2;box-shadow:0 0 0 0 rgba(95,211,162,.7);animation:crPing 1.6s infinite}
+@keyframes crPing{70%{box-shadow:0 0 0 8px rgba(95,211,162,0)}100%{box-shadow:0 0 0 0 rgba(95,211,162,0)}}
+.cr-cd.on{box-shadow:0 40px 90px rgba(0,0,0,.7),0 0 0 2px rgba(255,255,255,.18),0 0 80px var(--glow,rgba(179,136,255,.35))}
+.cr-dots{display:flex;justify-content:center;gap:6px;margin-bottom:10px}
+.cr-dots i{width:7px;height:7px;border-radius:4px;background:#333;transition:width .4s cubic-bezier(.34,1.56,.64,1),background .4s}.cr-dots i.on{width:26px;background:var(--a)}
+.cr-nav{position:absolute;top:50%;z-index:5;width:46px;height:46px;margin-top:-23px;border-radius:50%;border:1px solid #333;background:rgba(15,15,15,.7);backdrop-filter:blur(10px);color:#fff;font-size:18px;cursor:pointer}
+.cr-nav.p{left:24px}.cr-nav.n{right:24px}
+@media(max-width:700px){.cr-nav{display:none}}
+/* détail */
+.cr-g{display:grid;grid-template-columns:1.25fr 1fr;gap:12px;margin-top:8px}
+@media(max-width:980px){.cr-g{grid-template-columns:1fr}}
+.cr-col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.cr-b{border-radius:22px;padding:18px;background:rgba(17,17,17,.88);border:1px solid #1f1f1f;backdrop-filter:blur(14px);min-width:0}
+.cr-b h3{margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:8px}.cr-b h3 em{color:var(--a);transition:color 1s}
+.cr-b h3 .ic{width:28px;height:28px;border-radius:9px;background:rgba(255,255,255,.06);display:grid;place-items:center;font-size:14px}
+.cr-rv{animation:crIn .75s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(var(--i,0) * 80ms)}
+@keyframes crIn{from{opacity:0;transform:translateY(24px);filter:blur(8px)}}
+.cr-id{display:flex;gap:16px;align-items:center}
+.cr-id .big{font:900 clamp(40px,6vw,64px)/.95 Inter;letter-spacing:-.06em}
+.cr-id .big span{display:inline-block;animation:crCh .7s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(var(--k) * 35ms)}
+@keyframes crCh{from{opacity:0;transform:translateY(.5em) rotateX(-80deg)}}
+.cr-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.cr-meta span{height:28px;padding:0 11px;border-radius:99px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font:700 12px/26px Inter;color:#ddd}
+.cr-tag{font-size:15px;color:#ddd;line-height:1.5;margin-top:12px;font-weight:600}
+.cr-story{font-size:14px;color:#b5b5b5;line-height:1.6;margin-top:10px;white-space:pre-wrap}
+.cr-tr{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+.cr-tr span{height:32px;padding:0 13px;border-radius:11px;font:800 12.5px/32px Inter;background:linear-gradient(120deg,color-mix(in srgb,var(--a) 22%,transparent),color-mix(in srgb,var(--a2) 14%,transparent));border:1px solid color-mix(in srgb,var(--a) 35%,transparent);animation:crPop .6s cubic-bezier(.34,1.56,.64,1) both;animation-delay:calc(.3s + var(--k) * 60ms)}
+@keyframes crPop{from{opacity:0;transform:scale(.4) rotate(-8deg)}}
+/* téléphone : sa façon d'écrire */
+.cr-ph{border-radius:22px;background:#0b0b0b;border:1px solid #232323;padding:12px;display:flex;flex-direction:column;gap:7px;min-height:150px}
+.cr-ph .top{display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:1px solid #1c1c1c;margin-bottom:4px;font:800 12.5px Inter}
+.cr-ph .top i{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--a),var(--a2));display:grid;place-items:center;font-style:normal;font-size:12px}
+.cr-ph .top small{color:#5fd3a2;font-weight:700;font-size:11px;margin-left:auto}
+.cr-ms{align-self:flex-start;max-width:85%;padding:9px 12px;border-radius:16px 16px 16px 5px;background:#1d1d1d;font-size:13.5px;line-height:1.4;animation:crMsg .5s cubic-bezier(.34,1.56,.64,1) both;transform-origin:left bottom}
+@keyframes crMsg{from{opacity:0;transform:scale(.6) translateY(10px)}}
+.cr-ty{align-self:flex-start;display:flex;gap:4px;padding:11px 13px;border-radius:16px 16px 16px 5px;background:#1d1d1d}
+.cr-ty i{width:6px;height:6px;border-radius:50%;background:#888;animation:crDot 1s infinite}.cr-ty i:nth-child(2){animation-delay:.15s}.cr-ty i:nth-child(3){animation-delay:.3s}
+@keyframes crDot{0%,60%,100%{transform:none;opacity:.5}30%{transform:translateY(-4px);opacity:1}}
+.cr-voice{font-size:13.5px;color:#bbb;line-height:1.55;margin-top:12px;white-space:pre-wrap}
+.cr-emo{display:flex;gap:6px;margin-top:10px;font-size:24px}.cr-emo span{display:inline-block;animation:crFl 2.6s ease-in-out infinite;animation-delay:calc(var(--k) * -.4s)}
+@keyframes crFl{50%{transform:translateY(-6px) rotate(6deg)}}
+/* curseurs */
+.cr-sl{display:flex;flex-direction:column;gap:16px}
+.cr-sl .row{display:grid;grid-template-columns:96px 1fr 96px;align-items:center;gap:10px;font:700 12px Inter;color:#999}
+.cr-sl .row span:last-child{text-align:right}
+.cr-sl .tk{position:relative;height:8px;border-radius:4px;background:#1d1d1d}
+.cr-sl .tk b{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:linear-gradient(90deg,color-mix(in srgb,var(--a) 30%,transparent),var(--a));width:var(--v);transition:width 1.4s cubic-bezier(.2,.9,.25,1)}
+.cr-sl .tk i{position:absolute;top:50%;left:var(--v);width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px color-mix(in srgb,var(--a) 40%,transparent),0 4px 12px rgba(0,0,0,.5);transition:left 1.4s cubic-bezier(.2,.9,.25,1)}
+@media(max-width:500px){.cr-sl .row{grid-template-columns:72px 1fr 72px;font-size:11px}}
+/* listes */
+.cr-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.cr-2{grid-template-columns:1fr}}
+.cr-li{display:flex;flex-direction:column;gap:6px}
+.cr-li div{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;line-height:1.4;color:#ddd;animation:crIn .6s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(.2s + var(--k) * 50ms)}
+.cr-li div i{flex-shrink:0;width:20px;height:20px;border-radius:7px;display:grid;place-items:center;font-style:normal;font-size:11px;font-weight:900;margin-top:-1px}
+.cr-li.ok i{background:rgba(95,211,162,.14);color:#5fd3a2}.cr-li.no i{background:rgba(255,107,107,.14);color:#ff6b6b}.cr-li.lk i{background:color-mix(in srgb,var(--a) 18%,transparent);color:var(--a)}.cr-li.av i{background:rgba(255,210,63,.12);color:#ffd23f}
+.cr-sub{font:800 10.5px Inter;letter-spacing:.12em;color:#6a6a6a;text-transform:uppercase;margin-bottom:9px}
+.cr-none{font-size:13px;color:#666}
+/* catalogue */
+.cr-cat{display:flex;flex-direction:column}
+.cr-cat div{display:flex;align-items:baseline;gap:8px;padding:9px 0;border-bottom:1px solid #1c1c1c;font-size:14px;animation:crIn .6s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(.2s + var(--k) * 50ms)}
+.cr-cat div:last-child{border:0}
+.cr-cat .d{flex:1;border-bottom:1.5px dotted #333;transform:translateY(-4px)}
+.cr-cat b{font-weight:900;color:#fff;white-space:nowrap;font-variant-numeric:tabular-nums}
+/* chiffres */
+.cr-st{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cr-st div{border-radius:15px;background:#151515;border:1px solid #222;padding:12px}
+.cr-st small{display:block;font:800 9.5px Inter;letter-spacing:.12em;color:#777;text-transform:uppercase}.cr-st b{display:block;font:900 22px Inter;letter-spacing:-.03em;margin-top:4px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cr-st .gh{grid-column:1/-1;display:flex;align-items:center;gap:14px}
+.cr-st .gh svg{width:70px;height:70px;flex-shrink:0}
+/* galerie */
+.cr-gal{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -4px;padding:0 4px}
+.cr-gal button{flex:0 0 130px;aspect-ratio:3/4;border-radius:16px;border:0;padding:0;overflow:hidden;cursor:zoom-in;scroll-snap-align:start;background:#151515;animation:crIn .6s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(.2s + var(--k) * 60ms)}
+.cr-gal img{width:100%;height:100%;object-fit:cover;transition:transform .5s}.cr-gal button:hover img{transform:scale(1.07)}
+.cr-lb{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.9);display:grid;place-items:center;cursor:zoom-out;animation:crFade .3s both}
+.cr-lb img{max-width:92vw;max-height:88vh;border-radius:16px;animation:crZoom .5s cubic-bezier(.2,.9,.25,1) both}
+@keyframes crFade{from{opacity:0}}@keyframes crZoom{from{transform:scale(.85);opacity:0}}
+/* éditeur */
+.cr-scrim{position:fixed;inset:0;z-index:150;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .35s}.cr-scrim.on{opacity:1;pointer-events:auto}
+.cr-dw{position:fixed;z-index:151;top:12px;right:12px;bottom:12px;width:min(520px,calc(100vw - 24px));border-radius:26px;background:#0f0f0f;border:1px solid #232323;transform:translateX(calc(100% + 30px));transition:transform .6s cubic-bezier(.2,.9,.25,1);display:flex;flex-direction:column;overflow:hidden}
+.cr-dw.on{transform:none}
+@media(max-width:600px){.cr-dw{top:auto;left:0;right:0;bottom:0;width:auto;height:92dvh;border-radius:26px 26px 0 0;transform:translateY(105%)}}
+.cr-dw .hd{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid #1d1d1d}.cr-dw .hd b{font-size:16px}.cr-dw .hd button{margin-left:auto;width:34px;height:34px;border-radius:50%;border:0;background:#1d1d1d;color:#fff;cursor:pointer}
+.cr-dw .bd{flex:1;overflow:auto;padding:4px 18px 18px;overscroll-behavior:contain}
+.cr-dw .ft{padding:12px 18px calc(12px + env(safe-area-inset-bottom));border-top:1px solid #1d1d1d}.cr-dw .ft button{width:100%;height:48px;border-radius:14px;border:0;background:#ededed;color:#0a0a0a;font:900 14px Inter;cursor:pointer}
+.cr-fl{margin-top:14px}.cr-fl label{display:block;font:800 10.5px Inter;letter-spacing:.12em;color:#777;text-transform:uppercase;margin-bottom:6px}
+.cr-fl label small{text-transform:none;letter-spacing:0;font-weight:600;color:#666}
+.cr-fl input,.cr-fl textarea{width:100%;box-sizing:border-box;border-radius:12px;border:1px solid #262626;background:#151515;color:#eee;font:13.5px/1.5 Inter;padding:10px 12px;outline:none;resize:vertical}
+.cr-fl input{height:42px}.cr-fl input:focus,.cr-fl textarea:focus{border-color:#444}
+.cr-r2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.cr-rg{display:grid;grid-template-columns:90px 1fr 90px;gap:8px;align-items:center;font:700 11.5px Inter;color:#999;margin-top:10px}.cr-rg span:last-child{text-align:right}
+.cr-rg input{accent-color:#b388ff}
+.cr-phs{display:flex;gap:8px;flex-wrap:wrap}
+.cr-phs div{position:relative;width:76px;aspect-ratio:3/4;border-radius:12px;overflow:hidden;background:#151515}
+.cr-phs img{width:100%;height:100%;object-fit:cover}
+.cr-phs div button{position:absolute;width:24px;height:24px;border-radius:8px;border:0;background:rgba(0,0,0,.7);color:#fff;font-size:11px;cursor:pointer}
+.cr-phs .rm{right:4px;top:4px}.cr-phs .cv{left:4px;top:4px}.cr-phs div.c0::after{content:"COUV.";position:absolute;left:4px;bottom:4px;font:900 8.5px Inter;letter-spacing:.1em;background:#fff;color:#000;padding:2px 5px;border-radius:5px}
+.cr-phs label{width:76px;aspect-ratio:3/4;border-radius:12px;border:1.5px dashed #333;display:grid;place-items:center;font-size:22px;color:#777;cursor:pointer;position:relative}
+.cr-phs label input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.cr-ac{display:flex;gap:6px;flex-wrap:wrap}.cr-ac button{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer}.cr-ac button.on{border-color:#fff;box-shadow:0 0 0 2px #000 inset}
+@media(prefers-reduced-motion:reduce){.cr *{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area">
+<div class="wrap cr" id="cr">
+  <div class="cr-amb"><i></i><i></i></div>
+  <div class="cr-hd"><div><div class="eyebrow">Organisation</div><h1>Les <em>créatrices.</em></h1><p>Imprègne-toi de chacune : sa personnalité, sa façon d'écrire, ce qu'elle fait et ne fait pas.</p></div><div id="edW"></div></div>
+  <div class="cr-car" id="car"><button class="cr-nav p" id="prv" aria-label="Précédente">‹</button><button class="cr-nav n" id="nxt" aria-label="Suivante">›</button></div>
+  <div class="cr-dots" id="dots"></div>
+  <div id="det"></div>
+</div>
+</main>
+</div>
+<div class="cr-scrim" id="scrim"></div>
+<aside class="cr-dw" id="dw"></aside>
+<script src="/common.js"></script>
+<script>
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const ACC = [["#b388ff", "#ff7ab6"], ["#ff7ab6", "#ffb86b"], ["#5fd3a2", "#7dd3fc"], ["#7dd3fc", "#b388ff"], ["#ffd23f", "#ff6a3d"], ["#ff6b6b", "#b388ff"]];
+let C = [], cur = 0, ADMIN = false, pos = 0, target = 0;
+const accOf = (c, i) => { const a = c.profile.accent; if (a) return [a, ACC[i % ACC.length][1]]; return ACC[i % ACC.length]; };
+const lines = s => String(s || "").split("\n").map(x => x.trim()).filter(Boolean);
+const kchars = s => [...String(s)].map((ch, k) => `<span style="--k:${k}">${ch === " " ? "&nbsp;" : esc(ch)}</span>`).join("");
+
+/* ---------------- carrousel (ressort physique) ---------------- */
+function buildCar() {
+  const car = $("car"); car.querySelectorAll(".cr-cd").forEach(n => n.remove());
+  C.forEach((c, i) => { const [a, a2] = accOf(c, i), d = document.createElement("div"); d.className = "cr-cd"; d.dataset.i = i; d.style.setProperty("--glow", a + "66");
+    d.innerHTML = `<div class="ph" style="${c.photos[0] ? `background-image:url('${c.photos[0]}')` : `background:radial-gradient(120% 90% at 20% 10%,${a},transparent 60%),radial-gradient(100% 80% at 90% 90%,${a2},transparent 60%),#151515`}"></div>${c.photos[0] ? "" : `<div class="ini">${esc(c.name[0])}</div>`}<div class="gr"></div><div class="sh"></div>
+      ${c.live.length ? `<span class="lv"><i></i>en shift · ${esc(c.live.join(", "))}</span>` : ""}<div class="in"><b>${esc(c.name)}</b><small>${esc(c.profile.tagline || c.style.slice(0, 90))}</small></div>`;
+    d.onclick = () => { if (Math.abs(drag.moved) < 6) goC(i); }; car.appendChild(d); });
+  $("dots").innerHTML = C.map((_, i) => `<i class="${i === cur ? "on" : ""}"></i>`).join("");
+}
+const drag = { x: null, start: 0, moved: 0 };
+function layout() {
+  const cards = [...$("car").querySelectorAll(".cr-cd")], W = $("car").clientWidth, sp = Math.min(240, W * .42);
+  cards.forEach((el, i) => { const o = i - pos, a = Math.abs(o);
+    el.style.transform = `translateX(${o * sp}px) translateZ(${-a * 160}px) rotateY(${Math.max(-55, Math.min(55, -o * 32))}deg) scale(${1 - Math.min(a, 2) * .06})`;
+    el.style.zIndex = 100 - Math.round(a * 10); el.style.opacity = Math.max(0, 1 - Math.max(0, a - 1.6) * .8); el.style.filter = `brightness(${1 - Math.min(a, 1.5) * .35})`;
+    el.style.setProperty("--px", (o * -18).toFixed(1) + "px"); el.style.setProperty("--sh", (o * 120 - 20).toFixed(0) + "%"); el.classList.toggle("on", a < .5); });
+}
+let vel = 0;
+(function loop() { if (drag.x == null) { const f = target - pos; vel = vel * .78 + f * .09; pos += reduce ? f : vel; if (Math.abs(f) < .001 && Math.abs(vel) < .001) pos = target; } layout(); requestAnimationFrame(loop); })();
+function goC(i, silent) { i = Math.max(0, Math.min(C.length - 1, i)); target = i; if (i === cur && !silent && $("det").innerHTML) return; cur = i; [...$("dots").children].forEach((d, k) => d.classList.toggle("on", k === i)); paint(); }
+function bindCar() {
+  const car = $("car");
+  car.addEventListener("pointerdown", e => { if (e.target.closest(".cr-nav")) return; drag.x = e.clientX; drag.start = pos; drag.moved = 0; });
+  addEventListener("pointermove", e => { if (drag.x == null) return; const dx = e.clientX - drag.x; drag.moved = dx; pos = drag.start - dx / Math.min(240, car.clientWidth * .42); pos = Math.max(-.4, Math.min(C.length - .6, pos)); });
+  addEventListener("pointerup", () => { if (drag.x == null) return; drag.x = null; if (Math.abs(drag.moved) > 6) { vel = 0; goC(Math.round(pos - Math.sign(drag.moved) * .25)); } setTimeout(() => drag.moved = 0, 0); });
+  $("prv").onclick = () => goC(cur - 1); $("nxt").onclick = () => goC(cur + 1);
+  addEventListener("keydown", e => { if ($("dw").classList.contains("on")) return; if (e.key === "ArrowLeft") goC(cur - 1); if (e.key === "ArrowRight") goC(cur + 1); });
+}
+
+/* ---------------- fiche détaillée ---------------- */
+let TYPE = null;
+function paint() {
+  const c = C[cur], p = c.profile, [a, a2] = accOf(c, cur), cr = $("cr"); cr.style.setProperty("--a", a); cr.style.setProperty("--a2", a2);
+  const meta = [p.age && `${p.age} ans`, p.city, p.sign].filter(Boolean);
+  const SL = [["douceur", "Douce", "Piquante"], ["familiarite", "Distante", "Familière"], ["emojis", "Peu d'emojis", "Plein d'emojis"], ["rythme", "Messages courts", "Messages longs"]];
+  const cat = (p.catalogue.length ? p.catalogue : lines(c.prices.replace(/ · /g, "\n"))).map(l => { const m = l.match(/^(.*?)[\s:–—-]+(\d[\d\s,.–-]*\s*€.*)$/); return m ? [m[1].trim(), m[2].trim()] : [l, ""]; });
+  const li = (arr, cls, ic) => arr.length ? `<div class="cr-li ${cls}">${arr.map((x, k) => `<div style="--k:${k}"><i>${ic}</i><span>${esc(x)}</span></div>`).join("")}</div>` : `<div class="cr-none">Rien de renseigné.</div>`;
+  const gh = c.goldHour, ang = gh != null ? gh * 15 : 0;
+  $("det").innerHTML = `<div class="cr-g"><div class="cr-col">
+      <div class="cr-b cr-rv" style="--i:0"><div class="cr-id"><div style="min-width:0"><div class="big">${kchars(c.name)}</div><div class="cr-meta">${meta.map(m => `<span>${esc(m)}</span>`).join("")}${c.live.length ? `<span style="color:#5fd3a2">● en shift avec ${esc(c.live.join(", "))}</span>` : ""}</div></div></div>
+        ${p.tagline ? `<div class="cr-tag">${esc(p.tagline)}</div>` : ""}${p.story ? `<div class="cr-story">${esc(p.story)}</div>` : !p.tagline ? `<div class="cr-story">${esc(c.style)}</div>` : ""}
+        ${p.traits.length ? `<div class="cr-tr">${p.traits.map((t, k) => `<span style="--k:${k}">${esc(t)}</span>`).join("")}</div>` : ""}</div>
+      <div class="cr-b cr-rv" style="--i:1"><h3><span class="ic">💬</span>Sa <em>façon d'écrire</em></h3>
+        <div class="cr-ph" id="phone"><div class="top"><i>${esc(c.name[0])}</i>${esc(c.name)}<small>en ligne</small></div></div>
+        ${p.voice ? `<div class="cr-voice">${esc(p.voice)}</div>` : ""}${p.emojis ? `<div class="cr-emo">${[...new Intl.Segmenter("fr", { granularity: "grapheme" }).segment(p.emojis)].map(s => s.segment).filter(s => s.trim()).slice(0, 10).map((e, k) => `<span style="--k:${k}">${esc(e)}</span>`).join("")}</div>` : ""}</div>
+      <div class="cr-b cr-rv" style="--i:2"><h3><span class="ic">🎚️</span>Son <em>style</em></h3><div class="cr-sl">${SL.map(([k, l, r]) => `<div class="row"><span>${l}</span><div class="tk" style="--v:0%" data-v="${p.sliders[k]}"><b></b><i></i></div><span>${r}</span></div>`).join("")}</div></div>
+      <div class="cr-b cr-rv" style="--i:3"><div class="cr-2"><div><div class="cr-sub">Elle adore</div>${li(p.likes, "lk", "♥")}</div><div><div class="cr-sub">Sujets à éviter</div>${li(p.avoid, "av", "!")}</div></div></div>
+    </div><div class="cr-col">
+      <div class="cr-b cr-rv" style="--i:1"><div class="cr-2"><div><div class="cr-sub">Ce qu'elle fait</div>${li(p.does, "ok", "✓")}</div><div><div class="cr-sub">Ce qu'elle ne fait pas</div>${li(p.doesnt, "no", "✕")}</div></div></div>
+      <div class="cr-b cr-rv" style="--i:2"><h3><span class="ic">🏷️</span>Catalogue <em>& prix</em></h3><div class="cr-cat">${cat.map(([n, pr], k) => `<div style="--k:${k}"><span>${esc(n)}</span><span class="d"></span><b>${esc(pr)}</b></div>`).join("") || `<div class="cr-none">Pas de catalogue renseigné.</div>`}</div></div>
+      ${p.fanTips ? `<div class="cr-b cr-rv" style="--i:3"><h3><span class="ic">🧠</span>Conseils <em>pour ses fans</em></h3><div class="cr-story" style="margin:0">${esc(p.fanTips)}</div></div>` : ""}
+      <div class="cr-b cr-rv" style="--i:4"><h3><span class="ic">📈</span>Ses <em>chiffres</em></h3><div class="cr-st">
+        <div><small>Tes ventes sur elle</small><b data-n="${c.mine.total}">0 €</b></div><div><small>Ton record</small><b>${c.mine.best ? eur(c.mine.best) : "—"}</b></div>
+        <div><small>Panier moyen · 30 j</small><b>${c.team.avg ? eur(c.team.avg) : "—"}</b></div><div><small>Meilleur chatter · 30 j</small><b>${esc(c.team.top || "—")}</b></div>
+        ${gh != null ? `<div class="gh"><svg viewBox="0 0 70 70"><circle cx="35" cy="35" r="30" fill="none" stroke="#262626" stroke-width="5"/><circle cx="35" cy="35" r="30" fill="none" stroke="var(--a)" stroke-width="5" stroke-linecap="round" stroke-dasharray="15 174" transform="rotate(${ang - 90 - 14} 35 35)"/><line x1="35" y1="35" x2="35" y2="12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" transform="rotate(${ang} 35 35)"/><circle cx="35" cy="35" r="3" fill="#fff"/></svg><div><small>Heure où elle vend le plus</small><b>${String(gh).padStart(2, "0")} h – ${String((gh + 1) % 24).padStart(2, "0")} h</b></div></div>` : ""}</div></div>
+      ${c.photos.length ? `<div class="cr-b cr-rv" style="--i:5"><h3><span class="ic">📸</span>Ses <em>photos</em></h3><div class="cr-gal">${c.photos.map((u, k) => `<button style="--k:${k}" data-z="${u}"><img src="${u}" alt="" loading="lazy"></button>`).join("")}</div></div>` : ""}
+    </div></div>`;
+  requestAnimationFrame(() => requestAnimationFrame(() => document.querySelectorAll(".cr-sl .tk").forEach(t => t.style.setProperty("--v", t.dataset.v + "%"))));
+  document.querySelectorAll("[data-z]").forEach(b => b.onclick = () => { const l = document.createElement("div"); l.className = "cr-lb"; l.innerHTML = `<img src="${b.dataset.z}" alt="">`; l.onclick = () => l.remove(); document.body.appendChild(l); });
+  document.querySelectorAll(".cr-st b[data-n]").forEach(b => { const to = +b.dataset.n, s = performance.now(); (function f(t) { const k = Math.min(1, (t - s) / 1200); b.textContent = eur(Math.round(to * (1 - Math.pow(1 - k, 3)))); if (k < 1 && !reduce) requestAnimationFrame(f); else b.textContent = eur(to); })(s); });
+  // messages d'exemple qui s'écrivent
+  clearTimeout(TYPE); const ph = $("phone"), S = p.samples.length ? p.samples : lines(c.style).slice(0, 0);
+  const msgs = S.length ? S : ["(pas encore d'exemples : le manager peut en ajouter dans la fiche)"]; let k = 0;
+  const step = () => { if (!ph.isConnected || k >= msgs.length) return; const ty = document.createElement("div"); ty.className = "cr-ty"; ty.innerHTML = "<i></i><i></i><i></i>"; ph.appendChild(ty);
+    TYPE = setTimeout(() => { ty.remove(); const m = document.createElement("div"); m.className = "cr-ms"; m.textContent = msgs[k++]; ph.appendChild(m); TYPE = setTimeout(step, 700); }, reduce ? 0 : 700 + Math.min(1600, msgs[k].length * 18)); };
+  TYPE = setTimeout(step, 600);
+}
+
+/* ---------------- éditeur (manager) ---------------- */
+const F = [["tagline", "Accroche", "input", "Une phrase qui la résume"], ["age", "Âge", "input"], ["city", "Ville", "input"], ["sign", "Signe", "input"], ["story", "Son histoire", "ta", "Qui elle est, son parcours, son quotidien…"],
+  ["traits", "Traits de personnalité", "ta", "un par ligne : Taquine, Solaire, Mystérieuse…"], ["voice", "Sa façon d'écrire", "ta", "Minuscules ? Fautes volontaires ? Tutoiement ? Longueur des messages ?"], ["emojis", "Ses emojis", "input", "😏🙈✨"],
+  ["samples", "Exemples de messages", "ta", "un message par ligne, tel qu'elle l'écrirait"], ["likes", "Elle adore", "ta", "un sujet par ligne"], ["avoid", "Sujets à éviter", "ta", "un par ligne"],
+  ["does", "Ce qu'elle fait", "ta", "un type de contenu par ligne"], ["doesnt", "Ce qu'elle ne fait pas", "ta", "un par ligne"], ["catalogue", "Catalogue & prix", "ta", "un par ligne : Vidéo 5 min – 40 €"], ["fanTips", "Conseils pour ses fans", "ta", "Ce qui marche avec ses fans, les erreurs à éviter…"]];
+function openEd() {
+  const c = C[cur], p = c.profile, v = k => Array.isArray(p[k]) ? p[k].join("\n") : p[k] || "";
+  const fld = ([k, l, t, ph]) => `<div class="cr-fl"><label>${l}</label>${t === "ta" ? `<textarea data-k="${k}" rows="${["story", "voice", "fanTips"].includes(k) ? 4 : 3}" placeholder="${esc(ph || "")}">${esc(v(k))}</textarea>` : `<input data-k="${k}" value="${esc(v(k))}" placeholder="${esc(ph || "")}">`}</div>`;
+  $("dw").innerHTML = `<div class="hd"><b>Fiche de ${esc(c.name)}</b><button id="dwX" aria-label="Fermer">✕</button></div><div class="bd">
+    <div class="cr-fl"><label>Photos <small>· la première sert de couverture</small></label><div class="cr-phs" id="phs">${c.photos.map((u, i) => `<div class="c${i}"><img src="${u}" alt=""><button class="rm" data-rm="${i}" aria-label="Supprimer">✕</button>${i ? `<button class="cv" data-cv="${i}" aria-label="Mettre en couverture">★</button>` : ""}</div>`).join("")}${c.photos.length < 8 ? `<label>+<input type="file" accept="image/*" id="phIn" multiple></label>` : ""}</div></div>
+    <div class="cr-fl"><label>Couleur de sa fiche</label><div class="cr-ac" id="acc">${["", "#b388ff", "#ff7ab6", "#5fd3a2", "#7dd3fc", "#ffd23f", "#ff6a3d", "#ff6b6b"].map(x => `<button data-a="${x}" class="${(p.accent || "") === x ? "on" : ""}" style="background:${x || "conic-gradient(#b388ff,#ff7ab6,#5fd3a2,#b388ff)"}" aria-label="${x || "auto"}"></button>`).join("")}</div></div>
+    ${fld(F[0])}<div class="cr-r2">${fld(F[1])}${fld(F[2])}${fld(F[3])}</div>${F.slice(4, 8).map(fld).join("")}
+    <div class="cr-fl"><label>Son style</label>${[["douceur", "Douce", "Piquante"], ["familiarite", "Distante", "Familière"], ["emojis", "Peu d'emojis", "Plein"], ["rythme", "Courts", "Longs"]].map(([k, l, r]) => `<div class="cr-rg"><span>${l}</span><input type="range" min="0" max="100" data-s="${k}" value="${p.sliders[k]}"><span>${r}</span></div>`).join("")}</div>
+    ${F.slice(8).map(fld).join("")}</div><div class="ft"><button id="dwSave">Enregistrer la fiche</button></div>`;
+  $("scrim").classList.add("on"); $("dw").classList.add("on");
+  let acc = p.accent || ""; $("acc").querySelectorAll("button").forEach(b => b.onclick = () => { acc = b.dataset.a; $("acc").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); });
+  $("dwX").onclick = closeEd;
+  const reload = async () => { await load(); openEd(); };
+  $("phs").querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => { await api(`/api/admin/creators/${c.id}/photo/${b.dataset.rm}`, { method: "DELETE" }); reload(); });
+  $("phs").querySelectorAll("[data-cv]").forEach(b => b.onclick = async () => { await api(`/api/admin/creators/${c.id}/photo/${b.dataset.cv}/cover`, { body: {} }); reload(); });
+  if ($("phIn")) $("phIn").onchange = async e => { for (const f of [...e.target.files].slice(0, 8)) { const r = await fetch(`/api/admin/creators/${c.id}/photo`, { method: "POST", headers: { "Content-Type": f.type || "image/jpeg" }, body: f, credentials: "same-origin" }); if (!r.ok) notify("Photo refusée", (await r.json().catch(() => ({}))).error || "", "err"); } reload(); };
+  $("dwSave").onclick = async () => { const o = { accent: acc, sliders: {} }; $("dw").querySelectorAll("[data-k]").forEach(i => o[i.dataset.k] = i.value); $("dw").querySelectorAll("[data-s]").forEach(i => o.sliders[i.dataset.s] = +i.value);
+    try { await api(`/api/admin/creators/${c.id}/profile`, { method: "PUT", body: { profile: o } }); notify("Fiche enregistrée", `Les chatters voient la fiche de ${c.name}`, "ok"); closeEd(); await load(); } catch (e) { notify("Erreur", e.message, "err"); } };
+}
+function closeEd() { $("scrim").classList.remove("on"); $("dw").classList.remove("on"); }
+$("scrim").onclick = closeEd;
+
+async function load() { const d = await api("/api/creators"); const id = C[cur]?.id; C = d.creators; ADMIN = d.admin; const i = C.findIndex(c => c.id === id); cur = i >= 0 ? i : cur; buildCar(); goC(cur, true);
+  $("edW").innerHTML = ADMIN ? `<button class="cr-ed" id="ed">✎ Modifier la fiche</button>` : ""; if (ADMIN) $("ed").onclick = openEd; }
+(async () => {
+  const me = await api("/api/me"); renderShell("creatrices", me);
+  await load(); bindCar();
+  const q = +new URLSearchParams(location.search).get("id"); if (q) { const i = C.findIndex(c => c.id === q); if (i >= 0) { pos = target = i; goC(i, true); } }
+})();
+</script>
+</body>
+</html>

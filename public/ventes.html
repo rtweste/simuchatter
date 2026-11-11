@@ -13,6 +13,7 @@
 <meta name="apple-mobile-web-app-title" content="StellADS">
 
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/custom.css">
 <style>
 /* ======================= Ventes (préfixe vt-) ======================= */
 .vt{--g:#5fd3a2;--r:#e07a7a;font-family:Inter,system-ui,sans-serif;color:#f5f5f5}
@@ -281,6 +282,7 @@
         <div class="vt-mini" style="animation-delay:.15s"><div><small>Refusées</small><b id="kRef">—</b></div><span class="ic" style="background:rgba(224,122,122,.1);color:#e07a7a">✕</span></div>
       </div>
     </div>
+    <div class="vt-card" id="cuMine" hidden style="--d:.1s;margin-bottom:14px"></div>
     <div class="vt-card" style="--d:.12s">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <h3>Mes <em>ventes</em></h3>
@@ -365,6 +367,7 @@
     <div class="vt-chips l" id="whenChips"><button type="button" data-w="now" class="on">Maintenant</button><button type="button" data-w="1h">Il y a 1 h</button><button type="button" data-w="pick">Choisir…</button></div>
     <input class="vt-fi dt hidden" id="fDate" type="datetime-local" aria-label="Date et heure de la vente"></div>
   <div class="vt-fl"><span class="vt-lab">Note (facultatif)</span><input class="vt-fi" id="fNote" maxlength="300" placeholder="ex. vidéo personnalisée pour Marc"></div>
+  <div id="cuSlot"></div>
   <button class="vt-send" id="fBtn" type="submit">Envoyer pour validation</button>
   <div class="vt-err" id="fErr" role="alert"></div>
 </form>
@@ -372,6 +375,7 @@
 <div class="lightbox hidden" id="lb"><img id="lbImg" alt="Capture d'écran de la vente"></div>
 
 <script src="/common.js"></script>
+<script src="/custom-ui.js"></script>
 <script>
 const STATUS = { pending: "En attente", validated: "Validée", refused: "Refusée" };
 const pad = n => String(n).padStart(2, "0");
@@ -580,10 +584,10 @@ function openSheet(again) {
   WHEN = "now"; document.querySelectorAll("#whenChips button").forEach(x => x.classList.toggle("on", x.dataset.w === "now")); $("fDate").classList.add("hidden");
   if (again) { WHEN = "pick"; document.querySelectorAll("#whenChips button").forEach(x => x.classList.toggle("on", x.dataset.w === "pick")); $("fDate").classList.remove("hidden"); $("fDate").value = toLocalInput(again.sold_at); }
   $("shTitle").innerHTML = again ? "Renvoyer la <em>vente</em>" : "Déclarer une <em>vente</em>";
-  renderCrea(again?.model_id); syncAmtChips();
-  $("scrim").classList.add("on"); $("sheet").classList.add("on"); document.body.style.overflow = "hidden"; VS.open();
+  renderCrea(again?.model_id); syncAmtChips(); CUSTOM.reset();
+  $("scrim").classList.add("on"); $("sheet").classList.add("on"); document.body.style.overflow = "hidden"; document.body.classList.add("modal-open"); VS.open();
 }
-function closeSheet() { $("scrim").classList.remove("on"); $("sheet").classList.remove("on"); document.body.style.overflow = ""; }
+function closeSheet() { $("scrim").classList.remove("on"); $("sheet").classList.remove("on"); document.body.style.overflow = ""; document.body.classList.remove("modal-open"); }
 $("openSheet").onclick = () => openSheet();
 $("scrim").onclick = closeSheet; $("shClose").onclick = closeSheet;
 addEventListener("keydown", e => { if (e.key === "Escape") { if (!$("lb").classList.contains("hidden")) $("lb").classList.add("hidden"); else if ($("sheet").classList.contains("on")) closeSheet(); } });
@@ -597,6 +601,7 @@ $("sheet").onsubmit = async e => {
   const sold = WHEN === "now" ? Date.now() : WHEN === "1h" ? Date.now() - 3600e3 : new Date($("fDate").value).getTime();
   if (!sold || isNaN(sold)) { $("fErr").textContent = "Choisis la date et l'heure de la vente."; return; }
   if (sold > Date.now() + 5 * 60e3) { $("fErr").textContent = "La date de vente est dans le futur."; return; }
+  let CU = null; try { CU = CUSTOM.read(); } catch (err) { $("fErr").textContent = err.message; return; }
   $("fBtn").disabled = true; $("fBtn").textContent = "Envoi…";
   try {
     const blob = await compress(FILE);
@@ -605,10 +610,11 @@ $("sheet").onsubmit = async e => {
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || "Erreur " + r.status);
     try { localStorage.setItem("stLastModel", model); } catch (e) {}
+    if (CU) { try { await CUSTOM.submit(d.id, CU); notify("Demande envoyée au Studio", `Contenu perso pour @${CU.fan}`, "ok"); } catch (err) { notify("Vente envoyée, mais pas la demande perso", err.message, "err"); } }
     closeSheet(); VS.send();
     notify("Vente envoyée", `${E(amount)} · en attente de validation`, "ok");
     FRESH = d.id; if (FILTER && FILTER !== "pending") { FILTER = ""; document.querySelectorAll("#mySeg button").forEach(x => x.classList.toggle("on", !x.dataset.f)); }
-    await loadMine();
+    await loadMine(); if (CU) CUSTOM.mountMine($("cuMine"));
   } catch (err) { $("fErr").textContent = err.message; }
   $("fBtn").disabled = false; $("fBtn").textContent = "Envoyer pour validation";
 };
@@ -830,7 +836,7 @@ document.querySelectorAll(".vt-tabs button").forEach(b => b.onclick = () => {
     $("adminView").classList.remove("hidden"); loadQueue();
     setInterval(() => { if (!document.hidden && !$("t-queue").classList.contains("hidden")) loadQueue().catch(() => {}); }, 20000);
   } else {
-    $("chatterView").classList.remove("hidden"); await loadMine();
+    $("chatterView").classList.remove("hidden"); $("cuSlot").innerHTML = CUSTOM.formHTML(); CUSTOM.bindForm(); CUSTOM.mountMine($("cuMine")); await loadMine();
     if (new URLSearchParams(location.search).has("declarer")) openSheet();
     setInterval(() => { if (!document.hidden && !$("sheet").classList.contains("on")) loadMine({ watch: true }).catch(() => {}); }, 20000);
   }

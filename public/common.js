@@ -34,6 +34,9 @@ const ICONS = {
   calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
   euro: '<path d="M18 7.5A7 7 0 1 0 18 16.5"/><path d="M4 10.5h9M4 13.5h9"/>',
+  spark: '<path d="M12 3l2.2 5.6L20 11l-5.8 2.4L12 19l-2.2-5.6L4 11l5.8-2.4z"/><path d="M19 3v3M17.5 4.5h3"/>',
+  film: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M10 9.5v5l4.5-2.5z"/><path d="M3 9h2M3 15h2M19 9h2M19 15h2"/>',
+  bubbles: '<path d="M14 9a6 6 0 0 1-8.7 5.4L2.5 15l.7-2.8A6 6 0 1 1 14 9z"/><path d="M9.5 16.6A6 6 0 0 0 18.2 19l2.8.6-.7-2.8A6 6 0 0 0 16 8.2"/>',
   pulse: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M6 11h2.5l1.5-3 2.5 6 1.5-3H18M9 21h6M12 17v4"/>'
 };
 const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ""}</svg>`;
@@ -45,11 +48,17 @@ const MODULES = [
     desc: "Créneaux de la semaine et pointage des shifts." },
   { id: "ventes", label: "Ventes", href: "/ventes", icon: "receipt", section: "Organisation", roles: ["admin", "chatter"],
     desc: "Déclarez vos ventes avec la capture d'écran. Le manager les valide." },
+  { id: "chat", label: "Chat d'équipe", short: "Chat", href: "/chat", icon: "bubbles", section: "Organisation", roles: ["admin", "chatter"],
+    desc: "Le chat de toute l'équipe : salons, messages privés, annonces, sondages." },
+  { id: "creatrices", label: "Créatrices", short: "Créas", href: "/creatrices", icon: "spark", section: "Organisation", roles: ["admin", "chatter"], nodock: ["admin"],
+    desc: "Les fiches des créatrices : personnalité, façon d'écrire, catalogue, à faire et à éviter." },
   { id: "paie", label: "Ma paie", href: "/paie", icon: "euro", section: "Organisation", roles: ["chatter"],
     desc: "Ta paie de la quinzaine : commission, paliers, primes et historique." },
   { id: "compta", label: "Compta", href: "/compta", icon: "euro", section: "Manager", roles: ["admin"],
     desc: "Revenus par période de 15 jours, part des créatrices, commissions des chatters." },
-  { id: "salle", label: "Salle de contrôle", short: "Live", href: "/salle", icon: "pulse", section: "Manager", roles: ["admin"],
+  { id: "studio", label: "Studio", href: "/studio", icon: "film", section: "Manager", roles: ["admin"],
+    desc: "Les demandes de contenus personnalisés des fans : production et livraison aux chatters." },
+  { id: "salle", label: "Salle de contrôle", short: "Live", href: "/salle", icon: "pulse", section: "Manager", roles: ["admin"], nodock: ["admin"],
     desc: "Écran en direct à afficher dans l'agence : ventes, classement du jour et chatters en shift." },
   { id: "admin", label: "Gestion", href: "/admin", icon: "team", section: "Manager", roles: ["admin"],
     desc: "Équipe, créatrices et résultats des simulations." }
@@ -68,17 +77,24 @@ function renderShell(active, me) {
   window.ME_SHELL = me; setTimeout(() => { try { INTRO.check(me); } catch (e) {} }, 0);
   if (me && me.role === "trainee") setTimeout(() => { try { DEADLINE.mount(me.deadline); } catch (e) {} }, 0);
   // assistant « Demande à StellADS » pour les chatters et les élèves (pas dans le simulateur, où il gênerait la saisie)
-  if (me && (me.role === "chatter" || me.role === "trainee") && active !== "simu" && !window.ASSIST) {
+  if (me && (me.role === "chatter" || me.role === "trainee") && active !== "simu" && active !== "chat" && !window.ASSIST) {
     const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/assist.css"; document.head.appendChild(l);
     const sc = document.createElement("script"); sc.src = "/assist-ui.js"; sc.onload = () => { try { ASSIST_MOUNT(me); } catch (e) {} }; document.body.appendChild(sc);
   }
+  // pauses : pastille flottante + écran de pause, sur toutes les pages des chatters
+  if (me && me.role === "chatter" && !window.PAUSEUI) {
+    const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/pause.css"; document.head.appendChild(l);
+    const sc = document.createElement("script"); sc.src = "/pause-ui.js"; sc.onload = () => { try { PAUSEUI.mount(me, active); } catch (e) {} }; document.body.appendChild(sc);
+  }
+  // chat : compteur de messages non lus dans le menu
+  if (me && me.role !== "trainee" && active !== "chat") { const cu = () => api("/api/chat/unread").then(c => updateBadge(c.n, "chat")).catch(() => {}); setTimeout(cu, 800); setInterval(() => { if (!document.hidden) cu(); }, 30e3); }
   const el = document.getElementById("sidebar"); if (!el) return;
   const mods = MODULES.filter(m => m.roles.includes(me.role));
-  const badge = m => m.id === "ventes" && me.role === "admin";
+  const badge = m => ["ventes", "studio", "chat"].includes(m.id);
   let html = `<div class="sb-top"><a class="logo" href="/home" aria-label="StellADS — Accueil">${logoHTML()}</a><button class="sb-col" type="button" aria-label="Réduire le menu" title="Réduire le menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button></div><nav>`, sec;
   mods.forEach((m, i) => {
     if (m.section && m.section !== sec) { sec = m.section; html += `<div class="sec">${esc(sec)}</div>`; }
-    html += `<a href="${m.href}" style="--i:${i}" data-tip="${esc(m.label)}" class="${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""}>${icon(m.icon)}<span class="lb">${chars(m.label)}</span><span class="sr">${esc(m.label)}</span>${badge(m) ? '<em class="navbadge hidden" data-badge></em>' : ""}</a>`;
+    html += `<a href="${m.href}" style="--i:${i}" data-tip="${esc(m.label)}" class="${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""}>${icon(m.icon)}<span class="lb">${chars(m.label)}</span><span class="sr">${esc(m.label)}</span>${badge(m) ? `<em class="navbadge hidden" data-badge="${m.id}"></em>` : ""}</a>`;
   });
   html += `<span class="nv-line" aria-hidden="true"></span></nav><div class="me"><span class="av">${esc(me.username[0])}</span><div><b>${esc(me.username)}</b><small>${me.role === "admin" ? "Manager" : me.role === "trainee" ? "En formation" : "Chatter"}</small></div>
     ${me.role !== "admin" && INTRO_ON ? `<button onclick="INTRO.show(ME_SHELL,{replay:true})" title="Revoir la présentation" aria-label="Revoir la présentation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg></button>` : ""}<button onclick="logout()" title="Déconnexion" aria-label="Déconnexion" ${me.role !== "admin" && INTRO_ON ? 'style="margin-left:0"' : ""}>${icon("logout")}</button></div>`;
@@ -95,7 +111,7 @@ function renderShell(active, me) {
   // Dock flottant (téléphone)
   let dock = document.getElementById("dock");
   if (!dock) { dock = document.createElement("nav"); dock.id = "dock"; dock.className = "dock"; dock.setAttribute("aria-label", "Navigation principale"); document.body.appendChild(dock); }
-  dock.innerHTML = `<span class="dk-line" aria-hidden="true"></span>` + mods.map(m => `<a href="${m.href}" class="di ${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""} aria-label="${esc(m.label)}">${icon(m.icon)}<span class="lb">${chars(m.short || m.label)}</span>${badge(m) ? '<em class="navbadge hidden" data-badge></em>' : ""}</a>`).join("");
+  dock.innerHTML = `<span class="dk-line" aria-hidden="true"></span>` + mods.filter(m => !(m.nodock || []).includes(me.role) && !(me.role === "admin" && m.id === "simu")).map(m => `<a href="${m.href}" class="di ${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""} aria-label="${esc(m.label)}">${icon(m.icon)}<span class="lb">${chars(m.short || m.label)}</span>${badge(m) ? `<em class="navbadge hidden" data-badge="${m.id}"></em>` : ""}</a>`).join("");
   // Le menu de gauche et le dock font leur entrée une seule fois par session (après l'intro)
   try { if (!sessionStorage.getItem("stNav")) { el.classList.add("nav-in"); dock.classList.add("dock-in"); sessionStorage.setItem("stNav", "1"); } } catch (e) {}
   dock.querySelectorAll("a").forEach(a => a.addEventListener("click", e => {
@@ -113,6 +129,8 @@ function renderShell(active, me) {
   NAVFX.side = navLine(el.querySelector("nav"), el.querySelector(".nv-line"), "y");
   NAVFX.dock = navLine(dock, dock.querySelector(".dk-line"), "x");
   if (me.role === "admin") api("/api/admin/sales/count").then(c => updateBadge(c.pending)).catch(() => {});
+  if (me.role === "admin") { const sb = () => api("/api/admin/customs/count").then(c => updateBadge(c.n, "studio")).catch(() => {}); sb(); setInterval(() => { if (!document.hidden) sb(); }, 60e3); }
+  if (me.role === "chatter") { const sb = () => api("/api/customs/mine").then(c => updateBadge(c.ready, "ventes")).catch(() => {}); sb(); setInterval(() => { if (!document.hidden) sb(); }, 60e3); }
 }
 // lettres séparées : elles basculent une à une quand la page devient active
 const chars = t => [...String(t)].map((c, i) => `<span class="ch" aria-hidden="true" style="--i:${i}">${c === " " ? "&nbsp;" : esc(c)}</span>`).join("");
@@ -141,7 +159,7 @@ function navLine(wrap, line, ax) {
   return { to };
 }
 // pastille des ventes à valider : le chiffre défile quand il change
-function updateBadge(n) { document.querySelectorAll("[data-badge]").forEach(b => { b.classList.toggle("hidden", !n); const s = String(n), old = b.dataset.v; if (old === s) return; b.dataset.v = s;
+function updateBadge(n, key = "ventes") { document.querySelectorAll(`[data-badge="${key}"]`).forEach(b => { b.classList.toggle("hidden", !n); const s = String(n), old = b.dataset.v; if (old === s) return; b.dataset.v = s;
   b.innerHTML = s.split("").map(d => `<span class="dg"><span style="transform:translateY(${old ? 10 : -d * 10}%)">${[...Array(10).keys()].join("<br>")}</span></span>`).join("");
   if (old) { requestAnimationFrame(() => requestAnimationFrame(() => b.querySelectorAll(".dg > span").forEach((sp, i) => { sp.style.transition = `transform .9s cubic-bezier(.2,1.4,.4,1) ${i * .06}s`; sp.style.transform = `translateY(${-s[i] * 10}%)`; })));
     b.classList.remove("bump"); void b.offsetWidth; b.classList.add("bump"); } }); }

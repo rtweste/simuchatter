@@ -442,7 +442,7 @@
 .shV .mdl{margin:0}.shV .mdl select{height:56px;border-radius:28px;min-width:0;width:auto;max-width:130px;padding:0 14px}
 .shV .liveb{display:flex;align-items:center;gap:12px}
 .shV .liveb .dot{width:10px;height:10px;border-radius:50%;background:#3ccf91;animation:hPl 2s ease-out infinite;flex-shrink:0}
-.shV .liveb .stop{margin-left:auto}
+.shV .liveb .stop{margin-left:0}.shV .liveb #pzBtn{margin-left:auto}.shV .liveb #pzBtn[hidden]+.stop{margin-left:auto}
 
 @media (prefers-reduced-motion:reduce){.open .cl,.open .ca,.open .cp,.open .today,.open .tick.lit,.open .pace,.open .br,.open .avs .a{animation:none!important;opacity:1;transform:none;stroke-dashoffset:0}}
 @media (prefers-reduced-motion:reduce){.open .b,.quick .b,.open .spl,.open .pc .bar,.open .pc .pa{animation:none!important;opacity:1;transform:none;stroke-dashoffset:0}.fx{display:none}}
@@ -701,7 +701,7 @@ function shiftV3() {
   return `<div class="b a-shift shV" style="${wv("shift")}"><div class="shd"><h3>${op ? "Mon <em>shift en cours</em>" : "Mon <em>prochain shift</em>"}</h3><span class="mut">${op ? `sur <b>${esc(op.model_name)}</b>` : when}</span></div>
     <div class="g3"><div class="cdw"><span class="k" id="rollK">${op ? "EN SHIFT DEPUIS" : nx ? "COMMENCE DANS" : "PRÊT QUAND TU L'ES"}</span><div class="roll" id="roll"></div>
       <div class="mut" style="margin-top:8px">${wk}${nx && !op ? `<b>${String(dur).replace(".", ",")} h</b>` : op ? `depuis ${new Date(op.start_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}` : ""}</div></div>${crea}</div>
-    ${op ? `<div class="liveb"><span class="dot"></span><span class="mut">Bon shift sur <b>${esc(op.model_name)}</b> !</span><button class="btn ghost small stop" id="outBtn">Terminer</button></div>`
+    ${op ? `<div class="liveb"><span class="dot"></span><span class="mut">Bon shift sur <b>${esc(op.model_name)}</b> !</span><button class="btn ghost small" id="pzBtn" hidden></button><button class="btn ghost small stop" id="outBtn">Terminer</button></div>`
       : `<div class="slrow"><button class="slide" id="slide" aria-label="Glisser pour commencer mon shift"><span class="fill" id="sFill"></span><span class="lbl">Glisser pour commencer</span><span class="knob" id="sKnob"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <label class="mdl"><span class="sr">Créatrice</span><select id="inModel">${sel}</select></label></div>`}</div>`;
 }
@@ -727,13 +727,13 @@ function bindShiftV3() {
   if (op) { $("outBtn").onclick = async () => { $("outBtn").disabled = true; const dur = (Date.now() - op.start_at) / 3.6e6;
       // passation : le chatter note les fans à suivre avant de terminer (annuler = le shift continue)
       if (window.HANDOVER && !(await HANDOVER.beforeOut())) { $("outBtn").disabled = false; return; }
-      try { await api("/api/clock/out", { body: {} }); notify("Shift terminé", `${hrs(dur)} pointées sur ${op.model_name}`, "ok"); } catch (e) { notify("Impossible de terminer le shift", e.message, "err"); }
+      try { await api("/api/clock/out", { body: {} }); window.PAUSEUI && PAUSEUI.refresh(); notify("Shift terminé", `${hrs(dur)} pointées sur ${op.model_name}`, "ok"); } catch (e) { notify("Impossible de terminer le shift", e.message, "err"); }
       MODE = "static"; load(); }; return; }
   const sl = $("slide"), kn = $("sKnob"), fl = $("sFill"); let x0 = null, max = 0, done = false;
   const setX = x => { kn.style.left = (4 + x) + "px"; fl.style.width = (56 + x) + "px"; };
   const go = async () => { if (done) return; done = true; sl.classList.add("anim"); setX(max); SND.shift();
     const name = $("inModel").selectedOptions[0]?.textContent || "";
-    try { await api("/api/clock/in", { body: { model_id: $("inModel").value } }); notify("Shift commencé", `${name} · bon courage !`, "ok"); } catch (e) { notify("Impossible de pointer", e.message, "err"); }
+    try { await api("/api/clock/in", { body: { model_id: $("inModel").value } }); window.PAUSEUI && setTimeout(PAUSEUI.refresh, 600); notify("Shift commencé", `${name} · bon courage !`, "ok"); } catch (e) { notify("Impossible de pointer", e.message, "err"); }
     setTimeout(() => { MODE = "static"; load(); }, 450); };
   sl.addEventListener("pointerdown", e => { if (done) return; x0 = e.clientX; max = sl.clientWidth - 56; sl.classList.add("drag"); sl.classList.remove("anim"); sl.setPointerCapture(e.pointerId); });
   sl.addEventListener("pointermove", e => { if (x0 == null || done) return; setX(Math.max(0, Math.min(max, e.clientX - x0))); });

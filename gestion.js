@@ -55,7 +55,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     tiers: compta.getTiers(), tolerance: a.tolerance ?? 5, missedAlert: a.missedAlert ?? 10, reminder: a.reminder ?? 30, creatorPct: a.creatorPct ?? 50,
     slots: a.slots || [["6–9", "06:00", "09:00"], ["6–12", "06:00", "12:00"], ["12–18", "12:00", "18:00"], ["18–2", "18:00", "02:00"], ["18–3", "18:00", "03:00"]],
     fee: Number(getSet("platform_fee", "25")), goalCa: Number(getSet("goal_ca", "20000")), goalChatter: Number(getSet("goal_chatter", "300")),
-    rules: rules(), thresholds: th(), training: trCfg(), tlPrime: a.tlPrime ?? 30, assistantInfo: a.assistantInfo || "" }; };
+    rules: rules(), thresholds: th(), training: trCfg(), tlPrime: a.tlPrime ?? 30, assistantInfo: a.assistantInfo || "", pauseMax: a.pauseMax ?? 15, pauseCount: a.pauseCount ?? 2 }; };
   const user = id => db.prepare("SELECT id, username, role, active, created_at FROM users WHERE id = ?").get(id);
   const model = id => db.prepare("SELECT id, name FROM models WHERE id = ?").get(id);
 
@@ -115,7 +115,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       a.tiers = t.map(x => ({ from: x.from, rate: x.rate, ...(x.prime ? { prime: x.prime } : {}) })); compta.setTiers(a.tiers);
     }
     if (b.assistantInfo !== undefined) a.assistantInfo = String(b.assistantInfo || "").slice(0, 4000);
-    for (const [k, lo, hi] of [["tolerance", 0, 120], ["missedAlert", 1, 240], ["reminder", 5, 240], ["creatorPct", 0, 100], ["tlPrime", 0, 1000]]) if (b[k] !== undefined) { const v = num(b[k], lo, hi); if (v === null) return res.status(400).json({ error: "Valeur invalide : " + k }); a[k] = v; }
+    for (const [k, lo, hi] of [["tolerance", 0, 120], ["missedAlert", 1, 240], ["reminder", 5, 240], ["creatorPct", 0, 100], ["tlPrime", 0, 1000], ["pauseMax", 1, 180], ["pauseCount", 0, 10]]) if (b[k] !== undefined) { const v = num(b[k], lo, hi); if (v === null) return res.status(400).json({ error: "Valeur invalide : " + k }); a[k] = v; }
     if (b.slots !== undefined) {
       if (!Array.isArray(b.slots) || b.slots.some(s => !Array.isArray(s) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(s[1]) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(s[2]))) return res.status(400).json({ error: "Créneau invalide" });
       a.slots = b.slots.map(s => [String(s[0]).slice(0, 12), s[1], s[2]]);
@@ -151,6 +151,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       rate: ch.rate || 10, sales: ch.sales || 0, salesCount: ch.salesCount || 0, pay: ch.pay || 0, paid: ch.paid || null, hours: ch.hours || 0, renfortHours: ch.renfortHours || 0,
       punctuality: pq.total ? pq.pct : null, late: pq.late, absent: pq.absent, lateMin: pq.lateMin,
       live: open.length ? open.map(o => o.name + (o.reinforce ? " (renfort)" : "")).join(" + ") : null,
+      pause: (() => { try { const p = db.prepare("SELECT start_at FROM pauses WHERE user_id = ? AND end_at IS NULL").get(u.id); return p ? p.start_at : null; } catch (e) { return null; } })(), pauseMax: agency().pauseMax,
       next: nextShifts.map(s => ({ date: s.date, start: s.start, end: s.end, model: s.model_name, start_ms: s.start_ms, state: s.state })),
       simu: sims.length ? Math.round(sims.reduce((t, x) => t + x.score, 0) / sims.length) : null, simuN: sims.length,
       creators: habitual(u.id), points: pointsOf(u.id), suspendedUntil: su, training: u.role === "trainee" ? training(u.id) : null, notes: db.prepare("SELECT COUNT(*) n FROM user_notes WHERE user_id = ?").get(u.id).n };
