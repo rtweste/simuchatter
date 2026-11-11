@@ -87,7 +87,7 @@ function renderTeam() {
   $("nTeam").textContent = T.team.filter(c => c.active && c.role === "chatter").length;
 }
 qa("#teamSeg button").forEach(b => b.addEventListener("click", () => { qa("#teamSeg button").forEach(x => x.classList.toggle("on", x === b)); F = b.dataset.v; S.tick(); renderTeam(); }));
-async function loadTeam(force) { if (T && !force) return renderTeam(); try { T = await api("/api/admin/team"); renderTeam(); } catch (e) { fail(e); } }
+async function loadTeam(force) { loadRadar(); if (T && !force) return renderTeam(); try { T = await api("/api/admin/team"); renderTeam(); } catch (e) { fail(e); } }
 
 async function fiche(id) {
   let c; try { c = await api("/api/admin/team/" + id); } catch (e) { return fail(e); }
@@ -465,6 +465,25 @@ $("manualBtn").onclick = async () => {
     } catch (e) { dr.querySelector("[data-err]").textContent = e.message; S.warn(); }
   };
 };
+
+/* =================== RADAR : CHATTERS QUI DÉCROCHENT =================== */
+async function loadRadar() {
+  const el = $("radar"); if (!el) return; let d; try { d = await api("/api/admin/radar"); } catch (e) { return; }
+  if (!d.items.length) { el.innerHTML = ""; return; }
+  const IC = { sales: "📉", refused: "✕", punct: "⏰", idle: "💤" };
+  el.innerHTML = `<div class="rdr"><div class="rdr-h"><span class="rdr-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12 19 5"/></svg></span>
+      <div><b>Radar · ${d.items.length} chatter${d.items.length > 1 ? "s" : ""} à aider</b><small>Signaux repérés sur les 14 derniers jours</small></div></div>
+    <div class="rdr-l">${d.items.map((r, i) => `<div class="rdr-c lv${r.level}" style="animation-delay:${i * .06}s" data-id="${r.id}">
+      <div class="r1">${avatar(r.username)}<div><b>${esc(r.username)}</b><small>${r.level === 2 ? "décroche" : "à surveiller"}</small></div><span class="rdr-dot"></span></div>
+      <div class="sg">${r.signals.map(s => `<div><span>${IC[s.k] || "•"}</span><div><b>${esc(s.t)}</b><small>${esc(s.d)}</small></div></div>`).join("")}</div>
+      <div class="tr"><small>Entraînement conseillé · ${esc(r.training.why)}</small>
+        ${r.assigned ? `<button disabled>✓ Entraînement déjà assigné</button>` : `<button data-as>Assigner : ${esc(r.training.persona)} (${esc(r.training.difficulty)})</button>`}<button class="gh" data-fi>Fiche</button></div></div>`).join("")}</div></div>`;
+  el.querySelectorAll(".rdr-c").forEach(c => { const r = d.items.find(x => x.id === +c.dataset.id);
+    c.querySelector("[data-fi]").onclick = () => fiche(r.id);
+    const b = c.querySelector("[data-as]"); if (b) b.onclick = async () => { b.disabled = true; b.textContent = "…";
+      try { await api("/api/admin/assignments", { body: { userId: r.id, personaId: r.training.personaId, difficulty: r.training.difficulty, goal: 70, dueAt: Date.now() + 3 * 864e5, note: "Remise à niveau : " + r.signals.map(s => s.t).join(", ") } });
+        b.textContent = "✓ Assigné · à faire sous 3 jours"; toast(`Entraînement assigné à ${esc(r.username)}`, true); S.ok(); burst(b); } catch (e) { b.disabled = false; b.textContent = "Réessayer"; fail(e); } }; });
+}
 
 /* =================== CANDIDATURES (page publique /postuler) =================== */
 let K = null, KF = "new";
