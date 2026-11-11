@@ -333,7 +333,7 @@ $("slNo").onclick = () => $("slotAdd").classList.remove("on");
 $("slOk").onclick = () => { const a = $("slA").value, b = $("slB").value; if (!a || !b) return; const lbl = $("slName").value.trim() || `${+a.slice(0, 2)}–${+b.slice(0, 2)}`;
   SL.push([lbl, a, b]); SL.sort((x, y) => x[1].localeCompare(y[1]) || x[2].localeCompare(y[2])); $("slotAdd").classList.remove("on"); $("slName").value = ""; drawSlots(); regDirty(); S.tick(); };
 const TRK = [["sessions", "Sessions terminées", "au moins", ""], ["avg", "Score moyen sur les 5 dernières", "au moins", "/100"], ["hard", "Sessions difficiles réussies", "score de 70 ou plus", ""],
-  ["fans", "Profils de fans différents réussis", "score de 70 ou plus", ""], ["ethics", "Aucune alerte éthique", "sur les dernières sessions", "sess."], ["rt", "Temps de réponse moyen", "au maximum", "s"]];
+  ["fans", "Profils de fans différents réussis", "score de 70 ou plus", ""], ["ethics", "Aucune alerte éthique", "sur les dernières sessions", "sess."], ["rt", "Temps de réponse moyen", "au maximum", "s"], ["speed", "Débit de connexion", "au minimum, test de débit", "Mb/s"], ["typing", "Vitesse de frappe", "au minimum, avec 90 % de précision", "mots/min"]];
 function drawTr() {
   const t = AG.training;
   $("trCrit").innerHTML = TRK.map(([k, a, b, u]) => `<div class="set" data-tk="${k}"><span>${a}<small>${b}</small></span><div class="rt"><div class="unit"><input value="${t[k].v}" inputmode="numeric" aria-label="${a}">${u}</div><button class="tg2${t[k].on ? "" : " off"}" aria-label="Activer ce critère"></button></div></div>`).join("")

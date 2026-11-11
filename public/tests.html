@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tests d'aptitude — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="stylesheet" href="/style.css">
+<style>
+.tt{--c:#7dd3fc;--c2:#b388ff;--up:#ff7ab6;--ok:#5fd3a2;--bad:#ff6b6b;font-family:Inter,system-ui,sans-serif;color:#f2f2f2;position:relative}
+.tt-hd h1{font:900 clamp(34px,5vw,52px)/1 Inter;letter-spacing:-.05em;margin:4px 0 0}.tt-hd h1 em{background:linear-gradient(120deg,var(--c),var(--c2));-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.05em}
+.tt-hd p{color:#8a8a8a;font-size:13.5px;margin:6px 0 18px}
+/* accueil : deux cartes */
+.tt-hub{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:820px){.tt-hub{grid-template-columns:1fr}}
+.tt-card{position:relative;border-radius:26px;padding:22px;background:#101010;border:1px solid #1f1f1f;overflow:hidden;isolation:isolate;cursor:pointer;min-height:280px;display:flex;flex-direction:column;transition:transform .4s cubic-bezier(.2,.9,.25,1),border-color .3s;animation:ttUp .8s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(var(--i) * 90ms)}
+.tt-card:hover{transform:translateY(-4px);border-color:#2e2e2e}
+@keyframes ttUp{from{opacity:0;transform:translateY(24px);filter:blur(8px)}}
+.tt-card::before{content:"";position:absolute;inset:-30%;z-index:-1;background:radial-gradient(45% 45% at 80% 20%,var(--g1),transparent 70%),radial-gradient(40% 40% at 10% 90%,var(--g2),transparent 70%);opacity:.35;animation:ttDrift 10s ease-in-out infinite alternate}
+@keyframes ttDrift{to{transform:translate(-6%,5%) scale(1.1)}}
+.tt-card .k{font:800 10.5px Inter;letter-spacing:.18em;color:#9a9a9a;text-transform:uppercase}
+.tt-card h2{font:900 30px/1.05 Inter;letter-spacing:-.04em;margin:8px 0 6px}
+.tt-card p{font-size:13.5px;color:#aaa;line-height:1.5;margin:0;max-width:330px}
+.tt-card .ft{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:auto;padding-top:18px}
+.tt-card .bs small{display:block;font:800 10px Inter;letter-spacing:.14em;color:#777;text-transform:uppercase}.tt-card .bs b{display:block;font:900 26px Inter;letter-spacing:-.03em;margin-top:2px}.tt-card .bs b span{font-size:13px;color:#999;font-weight:800;margin-left:3px}
+.tt-go{height:46px;padding:0 18px;border-radius:15px;border:0;background:#fff;color:#0a0a0a;font:900 14px Inter;cursor:pointer;flex-shrink:0;display:flex;align-items:center;gap:8px}
+.tt-st{position:absolute;right:20px;top:20px;display:flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:99px;font:800 11.5px Inter;background:rgba(255,255,255,.08);color:#ccc}
+.tt-st.ok{background:rgba(95,211,162,.14);color:var(--ok)}.tt-st.no{background:rgba(255,107,107,.12);color:var(--bad)}
+.tt-ill{position:absolute;right:16px;bottom:70px;width:170px;height:120px;opacity:.9;pointer-events:none}
+@media(max-width:500px){.tt-ill{width:120px;height:90px;bottom:80px;opacity:.5}}
+.tt-ill .nd{transform-origin:85px 95px;animation:ttNd 3s cubic-bezier(.5,0,.2,1) infinite alternate}@keyframes ttNd{from{transform:rotate(-70deg)}to{transform:rotate(55deg)}}
+.tt-keys{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+.tt-keys i{height:22px;border-radius:6px;background:#1d1d1d;border:1px solid #2c2c2c;box-shadow:0 3px 0 #111;animation:ttKey 2.4s infinite;animation-delay:calc(var(--d) * 1s)}
+@keyframes ttKey{0%,8%{transform:translateY(3px);box-shadow:0 0 0 #111;background:#b388ff;border-color:#b388ff}16%,100%{transform:none}}
+.tt-hist{margin-top:14px;border-radius:22px;padding:16px 18px;background:#101010;border:1px solid #1f1f1f;animation:ttUp .8s .25s cubic-bezier(.2,.9,.25,1) both}
+.tt-hist h3{margin:0 0 8px;font-size:14px}.tt-hist h3 em{color:#888}
+.tt-hist div{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #1a1a1a;font-size:13px;color:#bbb}.tt-hist div:first-of-type{border:0}
+.tt-hist div b{color:#fff}.tt-hist div span{margin-left:auto;color:#666;font-size:12px}
+/* scène de test */
+.tt-stage{position:relative;border-radius:30px;background:#0b0b0d;border:1px solid #1d1d22;overflow:hidden;isolation:isolate;min-height:640px;animation:ttIn .7s cubic-bezier(.2,.9,.25,1) both}
+@keyframes ttIn{from{opacity:0;transform:scale(.97);filter:blur(10px)}}
+.tt-stage canvas.bg{position:absolute;inset:0;width:100%;height:100%;z-index:-1}
+.tt-top{display:flex;align-items:center;gap:10px;padding:16px 18px}
+.tt-top button{height:38px;padding:0 13px;border-radius:12px;border:0;background:rgba(255,255,255,.07);color:#ddd;font:800 13px Inter;cursor:pointer}
+.tt-top b{font-size:15px}.tt-top small{color:#888;font-size:12.5px;margin-left:4px}
+/* compteur de vitesse */
+.sp-w{display:flex;flex-direction:column;align-items:center;padding:0 16px 22px}
+.sp-g{position:relative;width:min(440px,92vw);aspect-ratio:1/0.86}
+.sp-g svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.sp-g .tr{fill:none;stroke:#1d1d24;stroke-width:22;stroke-linecap:round}
+.sp-g .fl{fill:none;stroke-width:22;stroke-linecap:round;transition:stroke .5s}
+.sp-g .tk text{fill:#8a8a99;font:800 13px Inter;text-anchor:middle;dominant-baseline:middle}
+.sp-g .tk line{stroke:#3a3a46;stroke-width:2}
+.sp-g .tk text.on{fill:#fff}
+.sp-g .nd{transition:none}
+.sp-c{position:absolute;left:0;right:0;top:60%;text-align:center;pointer-events:none}
+.sp-c .v{text-shadow:0 0 16px #0b0b0d,0 0 6px #0b0b0d,0 0 2px #0b0b0d;font:900 clamp(44px,12vw,64px)/1 Inter;letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+.sp-c .u{font:800 14px Inter;color:#9a9aa8;margin-top:4px;letter-spacing:.06em}
+.sp-c .ph{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 12px;border-radius:99px;margin-top:8px;background:rgba(255,255,255,.06);font:800 12px Inter;letter-spacing:.06em;text-transform:uppercase}
+.sp-c .ph i{width:8px;height:8px;border-radius:50%;background:currentColor;animation:ttBl 1s infinite}@keyframes ttBl{50%{opacity:.25}}
+.sp-start{position:absolute;left:50%;top:50%;width:150px;height:150px;margin:-75px 0 0 -75px;border-radius:50%;border:0;cursor:pointer;background:radial-gradient(circle at 35% 30%,#8fdcff,#3b82f6 60%,#2a2aa0);color:#fff;font:900 30px Inter;letter-spacing:.04em;box-shadow:0 0 0 0 rgba(125,211,252,.5),0 20px 60px rgba(59,130,246,.45);animation:spBr 2.2s ease-in-out infinite;transition:transform .5s cubic-bezier(.34,1.56,.64,1),opacity .4s}
+.sp-start:hover{transform:scale(1.06)}
+.sp-start.out{transform:scale(0);opacity:0;pointer-events:none}
+@keyframes spBr{0%{box-shadow:0 0 0 0 rgba(125,211,252,.45),0 20px 60px rgba(59,130,246,.45)}70%{box-shadow:0 0 0 26px rgba(125,211,252,0),0 20px 60px rgba(59,130,246,.45)}100%{box-shadow:0 0 0 0 rgba(125,211,252,0),0 20px 60px rgba(59,130,246,.45)}}
+.sp-m{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(560px,100%);margin-top:6px}
+.sp-m div{position:relative;border-radius:18px;padding:13px 14px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);overflow:hidden;transition:border-color .4s,background .4s}
+.sp-m div.on{border-color:var(--mc);background:color-mix(in srgb,var(--mc) 9%,transparent)}
+.sp-m div.done::after{content:"✓";position:absolute;right:12px;top:10px;width:20px;height:20px;border-radius:50%;background:var(--mc);color:#0a0a0a;font:900 11px/20px Inter;text-align:center;animation:ttPop .5s cubic-bezier(.34,1.56,.64,1)}
+@keyframes ttPop{from{transform:scale(0) rotate(-90deg)}}
+.sp-m small{display:flex;align-items:center;gap:6px;font:800 10px Inter;letter-spacing:.14em;color:#8a8a8a;text-transform:uppercase}.sp-m small i{width:8px;height:8px;border-radius:3px;background:var(--mc)}
+.sp-m b{display:block;font:900 26px Inter;letter-spacing:-.03em;margin-top:5px;font-variant-numeric:tabular-nums}.sp-m b span{font-size:12px;color:#888;font-weight:800;margin-left:3px}
+.sp-gr{width:min(560px,100%);height:90px;margin-top:10px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05)}
+@media(max-width:500px){.sp-m b{font-size:20px}.sp-m{gap:6px}.sp-m div{padding:11px}}
+/* verdict */
+.tt-vd{width:min(560px,100%);margin-top:14px;border-radius:22px;padding:18px;display:flex;gap:14px;align-items:center;animation:ttUp .8s cubic-bezier(.2,.9,.25,1) both}
+.tt-vd.ok{background:linear-gradient(120deg,rgba(95,211,162,.16),rgba(125,211,252,.08));border:1px solid rgba(95,211,162,.35)}
+.tt-vd.no{background:linear-gradient(120deg,rgba(255,107,107,.13),rgba(255,154,92,.06));border:1px solid rgba(255,107,107,.35)}
+.tt-vd .ic{width:52px;height:52px;border-radius:17px;display:grid;place-items:center;font-size:24px;flex-shrink:0;animation:ttPop .7s .2s cubic-bezier(.34,1.56,.64,1) both}
+.tt-vd.ok .ic{background:var(--ok);color:#06261a}.tt-vd.no .ic{background:var(--bad);color:#2a0606}
+.tt-vd b{display:block;font-size:16px}.tt-vd small{display:block;font-size:13px;color:#bbb;line-height:1.45;margin-top:3px}
+.tt-ac{display:flex;gap:8px;width:min(560px,100%);margin-top:12px}
+.tt-ac button,.tt-ac a{flex:1;height:50px;border-radius:15px;border:0;font:900 14px Inter;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none}
+.tt-ac .p{background:#fff;color:#0a0a0a}.tt-ac .s{background:rgba(255,255,255,.08);color:#fff}
+/* frappe */
+.ty-w{padding:4px 22px 26px;max-width:860px;margin:0 auto}
+.ty-hud{display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+.ty-tm{position:relative;width:76px;height:76px;flex-shrink:0}
+.ty-tm svg{width:100%;height:100%;transform:rotate(-90deg)}.ty-tm circle{fill:none;stroke-width:6}.ty-tm .b{stroke:#1e1e26}.ty-tm .f{stroke:url(#tyG);stroke-linecap:round;transition:stroke-dashoffset 1s linear}
+.ty-tm span{position:absolute;inset:0;display:grid;place-items:center;font:900 22px Inter;font-variant-numeric:tabular-nums}
+.ty-tm.warn span{color:var(--bad);animation:ttBl .5s infinite}
+.ty-k{display:flex;gap:8px;flex:1;min-width:0}
+.ty-k div{flex:1;border-radius:16px;padding:10px 12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);min-width:0}
+.ty-k small{display:block;font:800 10px Inter;letter-spacing:.14em;color:#8a8a8a;text-transform:uppercase}.ty-k b{display:block;font:900 28px/1.1 Inter;letter-spacing:-.03em;margin-top:3px;font-variant-numeric:tabular-nums}
+.ty-k b.bump{animation:tyB .25s}@keyframes tyB{50%{transform:scale(1.08);color:var(--c2)}}
+.ty-box{position:relative;height:calc(3 * 2.1em + 8px);overflow:hidden;font:600 clamp(20px,3.4vw,28px)/2.1em "JetBrains Mono",ui-monospace,Menlo,monospace;letter-spacing:-.01em;border-radius:20px;padding:4px 18px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);cursor:text;-webkit-mask:linear-gradient(transparent,#000 12%,#000 88%,transparent);mask:linear-gradient(transparent,#000 12%,#000 88%,transparent)}
+.ty-box.foc{border-color:rgba(179,136,255,.35)}
+.ty-tx{position:relative;transition:transform .35s cubic-bezier(.2,.9,.25,1)}
+.ty-w2{display:inline-block;margin-right:.6em;white-space:nowrap}
+.ty-w2 l{color:#4a4a58;transition:color .12s}
+.ty-w2 l.ok{color:#f4f4f4}.ty-w2 l.ko{color:var(--bad);text-decoration:underline wavy rgba(255,107,107,.7);text-underline-offset:6px}
+.ty-w2 l.x{color:rgba(255,107,107,.65)}
+.ty-w2.err l.ok{color:#f4c0c0}
+.ty-car{position:absolute;width:3px;height:1.3em;margin-top:.4em;border-radius:2px;background:linear-gradient(var(--c),var(--c2));box-shadow:0 0 12px var(--c2);transition:left .09s linear,top .2s cubic-bezier(.2,.9,.25,1);animation:tyCar 1s infinite}
+.ty-box.run .ty-car{animation:none}
+@keyframes tyCar{50%{opacity:0}}
+.ty-in{position:absolute;opacity:0;width:240px;height:30px;left:0;top:0;pointer-events:none;font-size:16px}
+.ty-hint{text-align:center;color:#888;font-size:13px;margin-top:12px}.ty-hint b{color:#ddd}
+.ty-hint kbd{display:inline-block;padding:2px 7px;border-radius:6px;background:#1d1d1d;border:1px solid #333;font:700 11px Inter;color:#ddd}
+.ty-res{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center;margin-top:6px}
+@media(max-width:640px){.ty-res{grid-template-columns:1fr}}
+.ty-big{text-align:center}.ty-big b{display:block;font:900 clamp(80px,16vw,120px)/.9 Inter;letter-spacing:-.06em;background:linear-gradient(160deg,#fff,var(--c2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.ty-big small{display:block;font:800 13px Inter;color:#999;letter-spacing:.1em;text-transform:uppercase;margin-top:6px}
+.ty-big .gd{display:inline-block;margin-top:12px;height:30px;padding:0 13px;border-radius:99px;font:900 12px/30px Inter;background:linear-gradient(120deg,var(--c),var(--c2));color:#0b0b14}
+.ty-ch{height:140px;display:flex;align-items:flex-end;gap:5px;padding:10px 0 0;border-bottom:1px solid #222;position:relative}
+.ty-ch i{flex:1;border-radius:6px 6px 2px 2px;background:linear-gradient(var(--c2),rgba(125,211,252,.35));transform-origin:bottom;animation:tyBar .8s cubic-bezier(.34,1.56,.64,1) both;animation-delay:calc(.3s + var(--k) * 50ms);position:relative}
+@keyframes tyBar{from{transform:scaleY(0)}}
+.ty-ch .gl{position:absolute;left:0;right:0;border-top:1.5px dashed rgba(95,211,162,.7);pointer-events:none}.ty-ch .gl span{position:absolute;right:0;top:-18px;font:800 10.5px Inter;color:var(--ok)}
+.ty-st{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.ty-st div{border-radius:14px;padding:10px 12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)}.ty-st small{display:block;font:800 9.5px Inter;letter-spacing:.12em;color:#888;text-transform:uppercase}.ty-st b{display:block;font:900 20px Inter;margin-top:2px}
+.tt-fx{position:fixed;inset:0;pointer-events:none;z-index:300}
+@media(max-width:560px){.tt-ill{display:none}.tt-top{padding:12px}.tt-top small{display:none}.tt-top button{white-space:nowrap;height:34px}
+  .ty-w{padding:4px 12px 20px}.ty-hud{gap:8px}.ty-tm{width:60px;height:60px}.ty-tm span{font-size:18px}.ty-k{gap:6px}.ty-k div{padding:8px 9px}.ty-k small{font-size:8.5px;letter-spacing:.08em}.ty-k b{font-size:20px;white-space:nowrap}
+  .ty-box{font-size:18px;padding:4px 12px}.ty-st b{font-size:17px}}
+@media(prefers-reduced-motion:reduce){.tt *{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs><linearGradient id="tyG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7dd3fc"/><stop offset="1" stop-color="#b388ff"/></linearGradient>
+<linearGradient id="spDn" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#7dd3fc"/></linearGradient><linearGradient id="spUp" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#b388ff"/><stop offset="1" stop-color="#ff7ab6"/></linearGradient></defs></svg>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area">
+<div class="wrap tt" id="tt">
+  <div class="tt-hd"><div class="eyebrow">Formation</div><h1>Tests <em>d'aptitude.</em></h1><p>Deux tests rapides pour vérifier que tu es prêt·e à chatter : ta connexion et ta vitesse d'écriture.</p></div>
+  <div id="view"></div>
+</div>
+</main>
+</div>
+<canvas class="tt-fx" id="fx"></canvas>
+<script src="/common.js"></script>
+<script>
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let R = null;
+const mb = n => n >= 100 ? Math.round(n) : n >= 10 ? n.toFixed(1).replace(".", ",") : n.toFixed(2).replace(".", ",");
+const ago = t => { const m = Math.round((Date.now() - t) / 6e4); return m < 60 ? `il y a ${Math.max(1, m)} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : new Date(t).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }); };
+
+/* ================= accueil ================= */
+async function hub() {
+  R = await api("/api/tests/me"); const s = R.speed, t = R.typing;
+  const okS = s.best && s.best.score >= s.min, okT = t.best && t.best.score >= t.min;
+  $("view").innerHTML = `<div class="tt-hub">
+    <div class="tt-card" data-go="speed" style="--i:0;--g1:#3b82f6;--g2:#7dd3fc"><span class="tt-st ${s.best ? okS ? "ok" : "no" : ""}">${s.best ? okS ? "✓ Validé" : "À refaire" : "À faire"}</span>
+      <div class="k">Test 1 · 1 minute</div><h2>Débit de<br>connexion</h2><p>Mesure ta vitesse de réception, d'envoi et ton ping. Minimum demandé : <b style="color:#fff">${s.min} Mb/s</b>.</p>
+      <svg class="tt-ill" viewBox="0 0 170 120"><path d="M20 95a65 65 0 0 1 130 0" fill="none" stroke="#1f2a3a" stroke-width="12" stroke-linecap="round"/><path d="M20 95a65 65 0 0 1 100-55" fill="none" stroke="url(#spDn)" stroke-width="12" stroke-linecap="round"/><g class="nd"><line x1="85" y1="95" x2="85" y2="42" stroke="#fff" stroke-width="4" stroke-linecap="round"/></g><circle cx="85" cy="95" r="7" fill="#fff"/></svg>
+      <div class="ft"><div class="bs"><small>Meilleur résultat</small><b>${s.best ? `${mb(s.best.down)}<span>Mb/s</span>` : "—"}</b></div><button class="tt-go">Lancer ›</button></div></div>
+    <div class="tt-card" data-go="typing" style="--i:1;--g1:#b388ff;--g2:#ff7ab6"><span class="tt-st ${t.best ? okT ? "ok" : "no" : ""}">${t.best ? okT ? "✓ Validé" : "À refaire" : "À faire"}</span>
+      <div class="k">Test 2 · 60 secondes</div><h2>Vitesse<br>de frappe</h2><p>Recopie un maximum de messages en 60 secondes. Minimum : <b style="color:#fff">${t.min} mots/min</b> avec 90 % de précision.</p>
+      <div class="tt-ill" style="bottom:80px"><div class="tt-keys">${Array.from({ length: 18 }, (_, i) => `<i style="--d:${((i * 7) % 18) / 7.5}"></i>`).join("")}</div></div>
+      <div class="ft"><div class="bs"><small>Meilleur résultat</small><b>${t.best ? `${Math.round(t.best.wpm)}<span>mots/min</span>` : "—"}</b></div><button class="tt-go">Lancer ›</button></div></div></div>
+    ${R.history.length ? `<div class="tt-hist"><h3>Mes derniers <em>tests</em></h3>${R.history.slice(0, 6).map(h => `<div>${h.kind === "speed" ? "📶" : "⌨️"} ${h.kind === "speed" ? `<b>${mb(h.down)} Mb/s</b> en réception · ${mb(h.up)} en envoi · ping ${Math.round(h.ping)} ms` : `<b>${Math.round(h.wpm)} mots/min</b> · ${Math.round(h.acc)} % de précision`}<span>${ago(h.at)}</span></div>`).join("")}</div>` : ""}`;
+  $("view").querySelectorAll("[data-go]").forEach(c => c.onclick = () => c.dataset.go === "speed" ? speed() : typing());
+}
+
+/* ================= test de débit ================= */
+const MARKS = [0, 1, 5, 10, 20, 30, 50, 75, 100, 250, 500, 1000];
+const A0 = 135, A1 = 405;   // arc de 270°
+const fr = v => { if (v <= 0) return 0; for (let i = 1; i < MARKS.length; i++) if (v <= MARKS[i]) return (i - 1 + (v - MARKS[i - 1]) / (MARKS[i] - MARKS[i - 1])) / (MARKS.length - 1); return 1; };
+const pt = (a, r) => [220 + Math.cos(a * Math.PI / 180) * r, 210 + Math.sin(a * Math.PI / 180) * r];
+const arcD = (a0, a1, r) => { const [x0, y0] = pt(a0, r), [x1, y1] = pt(a1, r); return `M${x0} ${y0} A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1}`; };
+let RUN = null;
+function speed() {
+  stopAll(); scrollTo({ top: 0, behavior: "smooth" });
+  const L = 2 * Math.PI * 180 * 270 / 360;
+  $("view").innerHTML = `<div class="tt-stage" id="stg"><canvas class="bg" id="bg"></canvas><div class="tt-top"><button id="back">‹ Retour</button><b>Débit de connexion</b><small>mesuré avec le serveur StellADS</small></div>
+    <div class="sp-w"><div class="sp-g"><svg viewBox="0 0 440 380"><path class="tr" d="${arcD(A0, A1, 180)}"/><path class="fl" id="arc" d="${arcD(A0, A1, 180)}" stroke="url(#spDn)" stroke-dasharray="${L}" stroke-dashoffset="${L}" style="filter:drop-shadow(0 0 10px rgba(125,211,252,.6))"/>
+      <g class="tk">${MARKS.map((m, i) => { const a = A0 + i / (MARKS.length - 1) * 270, [x, y] = pt(a, 140), [x1, y1] = pt(a, 158), [x2, y2] = pt(a, 166); return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><text x="${x}" y="${y}" data-m="${m}">${m}</text>`; }).join("")}</g>
+      <g id="nd"><path d="M216 210 L220 70 L224 210 Z" fill="#fff" opacity=".95"/><circle cx="220" cy="210" r="12" fill="#fff"/><circle cx="220" cy="210" r="5" fill="#0b0b0d"/></g></svg>
+      <div class="sp-c" id="cen" style="opacity:0"><div class="v" id="val">0</div><div class="u" id="unit">Mb/s</div><div class="ph" id="ph" style="color:#7dd3fc"><i></i><span>Réception</span></div></div>
+      <button class="sp-start" id="go">GO</button></div>
+      <div class="sp-m"><div id="mP" style="--mc:#ffd23f"><small><i></i>Ping</small><b id="vP">—</b></div><div id="mD" style="--mc:#7dd3fc"><small><i></i>Réception</small><b id="vD">—</b></div><div id="mU" style="--mc:#ff7ab6"><small><i></i>Envoi</small><b id="vU">—</b></div></div>
+      <canvas class="sp-gr" id="gr"></canvas><div id="out" style="display:contents"></div></div></div>`;
+  $("back").onclick = () => { stopAll(); hub(); };
+  const nd = $("nd"), arc = $("arc"); let cur = 0, vel = 0, target = 0, live = true, phase = "idle";
+  const G = { pts: [], max: 10 }, gr = $("gr"), gx = gr.getContext("2d");
+  const fitG = () => { const d = devicePixelRatio || 1; gr.width = gr.clientWidth * d; gr.height = gr.clientHeight * d; gx.setTransform(d, 0, 0, d, 0, 0); }; fitG();
+  // fond : flux de particules (vers le centre en réception, vers l'extérieur en envoi)
+  const bg = $("bg"), bx = bg.getContext("2d"), P = [];
+  const fitB = () => { const d = Math.min(2, devicePixelRatio || 1), r = $("stg").getBoundingClientRect(); bg.width = r.width * d; bg.height = r.height * d; bx.setTransform(d, 0, 0, d, 0, 0); bg.W = r.width; bg.H = r.height; }; fitB();
+  function frame() {
+    if (!live) return;
+    // aiguille montée sur ressort
+    vel = vel * .8 + (target - cur) * .09; cur += reduce ? target - cur : vel; const f = fr(Math.max(0, cur));
+    nd.setAttribute("transform", `rotate(${A0 + f * 270 - 270} 220 210)`); arc.style.strokeDashoffset = L * (1 - f);
+    document.querySelectorAll(".tk text").forEach(t => t.classList.toggle("on", +t.dataset.m <= cur + .01));
+    const W = bg.W, H = bg.H, cx = W / 2, cy = Math.min(H * .38, 260); bx.clearRect(0, 0, W, H);
+    const g = bx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * .6); g.addColorStop(0, phase === "up" ? "rgba(255,122,182,.16)" : "rgba(59,130,246,.16)"); g.addColorStop(1, "rgba(0,0,0,0)"); bx.fillStyle = g; bx.fillRect(0, 0, W, H);
+    if ((phase === "down" || phase === "up") && !reduce) { const n = Math.min(6, 1 + f * 8); for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, r0 = Math.max(W, H) * .7;
+        P.push(phase === "down" ? { x: cx + Math.cos(a) * r0, y: cy + Math.sin(a) * r0, tx: cx, ty: cy, t: 0, sp: .008 + f * .03, c: "125,211,252" } : { x: cx, y: cy, tx: cx + Math.cos(a) * r0, ty: cy + Math.sin(a) * r0, t: 0, sp: .008 + f * .03, c: "255,122,182" }); } }
+    for (let i = P.length - 1; i >= 0; i--) { const p = P[i]; p.t += p.sp; if (p.t >= 1) { P.splice(i, 1); continue; } const e = p.t * p.t, x = p.x + (p.tx - p.x) * e, y = p.y + (p.ty - p.y) * e, x2 = p.x + (p.tx - p.x) * Math.max(0, e - .05), y2 = p.y + (p.ty - p.y) * Math.max(0, e - .05);
+      bx.strokeStyle = `rgba(${p.c},${Math.sin(p.t * Math.PI) * .8})`; bx.lineWidth = 1.6; bx.beginPath(); bx.moveTo(x2, y2); bx.lineTo(x, y); bx.stroke(); }
+    // graphique en direct
+    const gw = gr.clientWidth, gh = gr.clientHeight; gx.clearRect(0, 0, gw, gh);
+    ["down", "up"].forEach(k => { const pts = G.pts.filter(p => p.k === k); if (pts.length < 2) return; const col = k === "down" ? "125,211,252" : "255,122,182";
+      const X = p => 8 + (p.t / 8) * (gw - 16), Y = p => gh - 8 - Math.min(1, p.v / G.max) * (gh - 18);
+      gx.beginPath(); pts.forEach((p, i) => i ? gx.lineTo(X(p), Y(p)) : gx.moveTo(X(p), Y(p))); gx.strokeStyle = `rgb(${col})`; gx.lineWidth = 2.2; gx.shadowColor = `rgb(${col})`; gx.shadowBlur = 8; gx.stroke(); gx.shadowBlur = 0;
+      gx.lineTo(X(pts[pts.length - 1]), gh); gx.lineTo(X(pts[0]), gh); gx.closePath(); const lg = gx.createLinearGradient(0, 0, 0, gh); lg.addColorStop(0, `rgba(${col},.3)`); lg.addColorStop(1, `rgba(${col},0)`); gx.fillStyle = lg; gx.fill(); });
+    requestAnimationFrame(frame);
+  }
+  frame();
+  RUN = { stop: () => { live = false; RUN.ab && RUN.ab.abort(); } };
+  const setVal = (v, unit) => { $("val").textContent = unit === "ms" ? Math.round(v) : mb(v); $("unit").textContent = unit; };
+  const setPh = (t, col) => { $("ph").style.color = col; $("ph").querySelector("span").textContent = t; };
+  $("go").onclick = async () => {
+    $("go").classList.add("out"); $("cen").style.transition = "opacity .5s .2s"; $("cen").style.opacity = 1; $("out").innerHTML = "";
+    try {
+      // 1) ping
+      phase = "ping"; $("mP").classList.add("on"); setPh("Ping", "#ffd23f"); const pings = [];
+      for (let i = 0; i < 12 && live; i++) { const t0 = performance.now(); await fetch("/api/speed/ping?r=" + Math.random(), { cache: "no-store", credentials: "same-origin" }); const d = performance.now() - t0; if (i) pings.push(d); setVal(d, "ms"); target = 0; await sleep(90); }
+      const sp = [...pings].sort((a, b) => a - b), ping = sp[Math.floor(sp.length / 2)], jitter = pings.slice(1).reduce((t, v, i) => t + Math.abs(v - pings[i]), 0) / Math.max(1, pings.length - 1);
+      $("vP").innerHTML = `${Math.round(ping)}<span>ms</span>`; $("mP").classList.replace("on", "done");
+      // 2) réception
+      phase = "down"; $("mD").classList.add("on"); setPh("Réception", "#7dd3fc"); arc.setAttribute("stroke", "url(#spDn)"); arc.style.filter = "drop-shadow(0 0 10px rgba(125,211,252,.6))";
+      const down = await measure("down", v => { target = v; setVal(v, "Mb/s"); G.max = Math.max(G.max, v * 1.15); }, G);
+      $("vD").innerHTML = `${mb(down)}<span>Mb/s</span>`; $("mD").classList.replace("on", "done"); target = 0; await sleep(500);
+      // 3) envoi
+      phase = "up"; $("mU").classList.add("on"); setPh("Envoi", "#ff7ab6"); arc.setAttribute("stroke", "url(#spUp)"); arc.style.filter = "drop-shadow(0 0 10px rgba(255,122,182,.6))";
+      const up = await measure("up", v => { target = v; setVal(v, "Mb/s"); G.max = Math.max(G.max, v * 1.15); }, G);
+      $("vU").innerHTML = `${mb(up)}<span>Mb/s</span>`; $("mU").classList.replace("on", "done"); phase = "done"; target = down; setVal(down, "Mb/s"); setPh("Terminé", "#5fd3a2"); $("ph").querySelector("i").style.animation = "none";
+      const r = await api("/api/tests/speed", { body: { down, up, ping, jitter } }), min = R ? R.speed.min : 10, ok = down >= min;
+      $("out").innerHTML = `<div class="tt-vd ${ok ? "ok" : "no"}"><span class="ic">${ok ? "✓" : "!"}</span><div><b>${ok ? "Connexion validée" : `Moins de ${min} Mb/s en réception`}</b><small>${ok ? `${mb(down)} Mb/s en réception, c'est suffisant pour chatter sans latence.${r.record ? " Nouveau record 🎉" : ""}` : "Rapproche-toi de ta box, passe en wifi 5 GHz ou en câble, ferme les vidéos et téléchargements en cours, puis refais le test."}${ping > 150 ? ` Ton ping est élevé (${Math.round(ping)} ms) : les messages peuvent partir avec du retard.` : ""}</small></div></div>
+        <div class="tt-ac"><button class="s" id="again">↺ Refaire le test</button><a class="p" href="/tests">Terminer</a></div>`;
+      $("again").onclick = speed; $("out").querySelector(".tt-ac a").onclick = e => { e.preventDefault(); stopAll(); hub(); };
+      if (ok) confetti(); notify(ok ? "Test de connexion validé" : "Connexion trop faible", `${mb(down)} Mb/s · ping ${Math.round(ping)} ms`, ok ? "ok" : "err");
+    } catch (e) { if (live) { notify("Test interrompu", e.message || "Vérifie ta connexion", "err"); $("go").classList.remove("out"); } }
+  };
+}
+// débit : plusieurs flux en parallèle pendant ~7 s, on ignore la 1re seconde (montée en charge)
+async function measure(kind, onV, G) {
+  const DUR = kind === "down" ? 7000 : 6000, WARM = 1000, ab = new AbortController(); if (RUN) RUN.ab = ab;
+  let bytes = 0, t0 = performance.now(), b1 = 0, t1 = 0, last = 0, lb = 0, ema = 0, done = false;
+  const stopAt = t0 + DUR;
+  const tick = setInterval(() => { const now = performance.now(), dt = (now - (last || t0)) / 1000, inst = (bytes - lb) * 8 / 1e6 / Math.max(.05, dt); last = now; lb = bytes;
+    ema = ema ? ema * .7 + inst * .3 : inst; if (!t1 && now - t0 > WARM) { t1 = now; b1 = bytes; } onV(ema); G.pts.push({ k: kind, t: (now - t0) / 1000 + (kind === "up" ? 0 : 0), v: ema }); }, 200);
+  const workerDown = async () => { while (!done && performance.now() < stopAt) { const r = await fetch(`/api/speed/down?bytes=${16 << 20}&r=${Math.random()}`, { cache: "no-store", credentials: "same-origin", signal: ab.signal }); const rd = r.body.getReader();
+      while (true) { const { done: d, value } = await rd.read(); if (d) break; bytes += value.length; if (performance.now() > stopAt) { try { await rd.cancel(); } catch (e) {} break; } } } };
+  const chunk = (() => { const b = new Uint8Array(4 << 20); for (let i = 0; i < b.length; i += 65536) crypto.getRandomValues(b.subarray(i, i + 65536)); return new Blob([b]); })();
+  const workerUp = () => new Promise(res => { const go = () => { if (done || performance.now() > stopAt) return res(); const x = new XMLHttpRequest(); let prev = 0; x.open("POST", "/api/speed/up?r=" + Math.random()); x.setRequestHeader("Content-Type", "application/octet-stream");
+      x.upload.onprogress = e => { bytes += e.loaded - prev; prev = e.loaded; if (performance.now() > stopAt) x.abort(); }; x.onloadend = () => go(); ab.signal.addEventListener("abort", () => x.abort()); x.send(chunk); }; go(); });
+  const ws = Array.from({ length: kind === "down" ? 4 : 3 }, () => (kind === "down" ? workerDown() : workerUp()).catch(() => {}));
+  await Promise.race([Promise.all(ws), sleep(DUR + 1500)]); done = true; ab.abort(); clearInterval(tick);
+  const end = performance.now(); if (!t1) { t1 = t0; b1 = 0; }
+  return Math.max(0, (bytes - b1) * 8 / 1e6 / ((end - t1) / 1000));
+}
+
+/* ================= test de frappe ================= */
+const PHRASES = ["coucou toi, tu as passé une bonne journée ?", "je viens de rentrer de la salle, je suis épuisée", "tu me fais rire, tu sais ça ?", "j'ai pensé à toi ce matin en me réveillant",
+  "dis-moi ce qui te ferait plaisir ce soir", "j'ai une petite surprise pour toi si tu es sage", "merci pour ton message, ça m'a fait sourire", "tu fais quoi de beau ce week-end ?",
+  "je prépare une nouvelle série de photos pour demain", "raconte-moi ta journée, je veux tout savoir", "tu as un prénom trop mignon", "je suis en train de choisir ma tenue pour ce soir",
+  "j'adore quand tu me parles de tes voyages", "tu préfères le rouge ou le noir ?", "je t'envoie un petit aperçu, dis-moi ce que tu en penses", "ça fait plaisir de te revoir par ici",
+  "tu as bien dormi cette nuit ?", "je reviens dans cinq minutes, ne bouge pas", "c'est gentil, tu es vraiment adorable", "j'ai tourné une vidéo rien que pour toi",
+  "on parle de quoi ce soir ?", "je suis curieuse de savoir ce que tu aimes", "j'espère que ton rendez-vous s'est bien passé", "tu me manquais un peu, je l'avoue"];
+let TY = null;
+function typing() {
+  stopAll(); scrollTo({ top: 0, behavior: "smooth" });
+  const words = []; let pool = []; while (words.length < 260) { if (!pool.length) pool = [...PHRASES].sort(() => Math.random() - .5); words.push(...pool.pop().split(" ")); }
+  const DUR = 60, C = 2 * Math.PI * 32;
+  $("view").innerHTML = `<div class="tt-stage" id="stg"><canvas class="bg" id="bg"></canvas><div class="tt-top"><button id="back">‹ Retour</button><b>Vitesse de frappe</b><small>60 secondes</small></div>
+    <div class="ty-w" id="tyw"><div class="ty-hud"><div class="ty-tm" id="tm"><svg viewBox="0 0 76 76"><circle class="b" cx="38" cy="38" r="32"/><circle class="f" id="tmF" cx="38" cy="38" r="32" stroke-dasharray="${C}" stroke-dashoffset="0"/></svg><span id="tmV">60</span></div>
+      <div class="ty-k"><div><small>Mots / min</small><b id="kW">0</b></div><div><small>Précision</small><b id="kA">100 %</b></div><div><small>Mots</small><b id="kN">0</b></div></div></div>
+      <div class="ty-box" id="box"><div class="ty-tx" id="tx">${words.map((w, i) => `<span class="ty-w2" data-i="${i}">${[...w].map(c => `<l>${esc(c)}</l>`).join("")}</span>`).join("")}</div><span class="ty-car" id="car"></span></div>
+      <input class="ty-in" id="in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" aria-label="Zone de frappe">
+      <div class="ty-hint" id="hint">Commence à taper pour lancer le chrono · <kbd>espace</kbd> pour passer au mot suivant · les accents comptent</div></div></div>`;
+  $("back").onclick = () => { stopAll(); hub(); };
+  const inp = $("in"), box = $("box"), tx = $("tx"), car = $("car"), W = [...tx.children];
+  let wi = 0, start = 0, keys = 0, okKeys = 0, okChars = 0, typedWords = 0, timer = null, ended = false, series = [], lastSec = 0, lastOk = 0, lineTop = 0;
+  const focus = () => { inp.focus({ preventScroll: true }); box.classList.add("foc"); };
+  box.onclick = focus; inp.onblur = () => box.classList.remove("foc"); setTimeout(focus, 400);
+  const place = () => { const w = W[wi]; if (!w) return; const typed = inp.value, ls = w.querySelectorAll("l"); const ref = typed.length < ls.length ? ls[typed.length] : null;
+    const br = box.getBoundingClientRect(), r = ref ? ref.getBoundingClientRect() : (w.lastElementChild || w).getBoundingClientRect();
+    // fait défiler le texte quand on passe à la ligne suivante
+    const top = w.offsetTop; if (top !== lineTop && top > 0) { lineTop = top; tx.style.transform = `translateY(${-Math.max(0, top - w.offsetHeight)}px)`; }
+    requestAnimationFrame(() => { const r2 = ref ? ref.getBoundingClientRect() : (w.lastElementChild || w).getBoundingClientRect(); car.style.left = (ref ? r2.left : r2.right) - br.left + "px"; car.style.top = r2.top - br.top + "px"; }); };
+  const paintWord = () => { const w = W[wi], v = inp.value; w.querySelectorAll("l.x").forEach(x => x.remove()); const ls = [...w.querySelectorAll("l")];
+    ls.forEach((l, i) => { l.className = i < v.length ? (v[i] === l.textContent ? "ok" : "ko") : ""; });
+    if (v.length > ls.length) [...v.slice(ls.length)].forEach(c => { const x = document.createElement("l"); x.className = "x"; x.textContent = c; w.appendChild(x); });
+    place(); };
+  const tick = () => { const el = (performance.now() - start) / 1000, left = Math.max(0, DUR - el); $("tmV").textContent = Math.ceil(left); $("tmF").style.strokeDashoffset = C * (el / DUR); $("tm").classList.toggle("warn", left <= 10);
+    const wpm = okChars / 5 / Math.max(el / 60, 1 / 60); $("kW").textContent = Math.round(wpm);
+    const sec = Math.floor(el / 5); if (sec > lastSec) { series.push(Math.round((okChars - lastOk) / 5 / (5 / 60))); lastOk = okChars; lastSec = sec; }
+    if (left <= 0) finish(); };
+  inp.addEventListener("paste", e => e.preventDefault());
+  inp.addEventListener("keydown", e => { if (e.key === "Tab") e.preventDefault(); });
+  inp.addEventListener("input", e => {
+    if (ended) return; if (!start) { start = performance.now(); timer = setInterval(tick, 100); box.classList.add("run"); $("hint").style.opacity = .4; }
+    let v = inp.value; try { inp.setSelectionRange(v.length, v.length); } catch (er) {}
+    if (e.inputType && e.inputType.startsWith("insert")) { keys++; const ls = W[wi].querySelectorAll("l:not(.x)"), c = v[v.length - 1]; if (c === " " ? v.trim() === W[wi].textContent.replace(/\s/g, "") : ls[v.length - 1] && ls[v.length - 1].textContent === c) okKeys++; }
+    if (v.endsWith(" ")) { const typed = v.trim(), w = W[wi]; if (!typed) { inp.value = ""; return; }
+      const good = typed === w.textContent.replace(/\s/g, "") || typed === [...w.querySelectorAll("l:not(.x)")].map(l => l.textContent).join("");
+      if (good) okChars += typed.length + 1; else w.classList.add("err");
+      typedWords++; $("kN").textContent = typedWords; $("kN").classList.remove("bump"); void $("kN").offsetWidth; $("kN").classList.add("bump");
+      inp.value = ""; wi++; if (!W[wi]) return finish(); place(); }
+    else paintWord();
+    $("kA").textContent = Math.round(okKeys / Math.max(1, keys) * 100) + " %"; });
+  async function finish() {
+    if (ended) return; ended = true; clearInterval(timer); inp.blur();
+    const el = Math.min(DUR, (performance.now() - start) / 1000), wpm = okChars / 5 / (el / 60), acc = okKeys / Math.max(1, keys) * 100;
+    if (series.length < 12 && okChars - lastOk > 0) series.push(Math.round((okChars - lastOk) / 5 / (Math.max(1, el - lastSec * 5) / 60)));
+    const min = R ? R.typing.min : 30, ok = wpm >= min && acc >= 90;
+    let r = {}; try { r = await api("/api/tests/typing", { body: { wpm, acc, dur: el, chars: okChars, errors: keys - okKeys, series } }); } catch (e) { notify("Résultat non enregistré", e.message, "err"); }
+    const grade = wpm >= 55 ? "Expert ⚡" : wpm >= 40 ? "Rapide 🚀" : wpm >= 25 ? "Correct 👍" : "Débutant 🌱", mx = Math.max(min * 1.3, ...series, 10);
+    $("tyw").innerHTML = `<div class="ty-res"><div class="ty-big"><b id="rW">0</b><small>mots par minute</small><span class="gd">${grade}</span></div>
+      <div><div class="ty-ch">${series.map((v, k) => `<i style="--k:${k};height:${Math.max(3, v / mx * 100)}%" title="${v} mots/min"></i>`).join("")}<span class="gl" style="bottom:${min / mx * 100}%"><span>objectif ${min}</span></span></div>
+        <div class="ty-st"><div><small>Précision</small><b style="color:${acc >= 90 ? "var(--ok)" : "var(--bad)"}">${Math.round(acc)} %</b></div><div><small>Mots tapés</small><b>${typedWords}</b></div><div><small>Erreurs</small><b>${keys - okKeys}</b></div></div></div></div>
+      <div style="display:flex;flex-direction:column;align-items:center"><div class="tt-vd ${ok ? "ok" : "no"}"><span class="ic">${ok ? "✓" : "!"}</span><div><b>${ok ? "Test de frappe validé" : acc < 90 ? "Précision en dessous de 90 %" : `Moins de ${min} mots/min`}</b><small>${ok ? `${Math.round(wpm)} mots/min avec ${Math.round(acc)} % de précision.${r.record ? " Nouveau record 🎉" : ""}` : acc < 90 ? "Va un peu moins vite et vise zéro faute : la précision compte autant que la vitesse." : "Entraîne-toi quelques minutes et retente : la vitesse vient avec la pratique."}</small></div></div>
+      <div class="tt-ac"><button class="s" id="again">↺ Refaire le test</button><a class="p" href="/tests">Terminer</a></div></div>`;
+    const b = $("rW"), s = performance.now(); (function f(t) { const p = Math.min(1, (t - s) / 1300); b.textContent = Math.round(wpm * (1 - Math.pow(1 - p, 3))); if (p < 1 && !reduce) requestAnimationFrame(f); else b.textContent = Math.round(wpm); })(s);
+    $("again").onclick = typing; $("tyw").querySelector(".tt-ac a").onclick = e => { e.preventDefault(); hub(); };
+    if (ok) confetti(); notify(ok ? "Test de frappe validé" : "Test de frappe à refaire", `${Math.round(wpm)} mots/min · ${Math.round(acc)} %`, ok ? "ok" : "err");
+  }
+  TY = { stop: () => { ended = true; clearInterval(timer); } };
+  // fond doux
+  const bg = $("bg"), bx = bg.getContext("2d"); const d = Math.min(2, devicePixelRatio || 1), rr = $("stg").getBoundingClientRect(); bg.width = rr.width * d; bg.height = rr.height * d; bx.setTransform(d, 0, 0, d, 0, 0);
+  (function f(t) { if (!bg.isConnected) return; bx.clearRect(0, 0, rr.width, rr.height); [[.2, .2, "179,136,255"], [.85, .7, "125,211,252"]].forEach(([x, y, c], i) => { const X = rr.width * (x + .05 * Math.sin(t * .0004 + i)), Y = rr.height * (y + .05 * Math.cos(t * .0005 + i)), g = bx.createRadialGradient(X, Y, 0, X, Y, rr.width * .5); g.addColorStop(0, `rgba(${c},.13)`); g.addColorStop(1, "rgba(0,0,0,0)"); bx.fillStyle = g; bx.fillRect(0, 0, rr.width, rr.height); }); requestAnimationFrame(f); })(0);
+  requestAnimationFrame(place);
+}
+function stopAll() { if (RUN) { RUN.stop(); RUN = null; } if (TY) { TY.stop(); TY = null; } }
+
+/* ================= confettis ================= */
+function confetti() { if (reduce) return; const cv = $("fx"), x = cv.getContext("2d"), d = devicePixelRatio || 1; cv.width = innerWidth * d; cv.height = innerHeight * d; x.setTransform(d, 0, 0, d, 0, 0);
+  const C = ["#7dd3fc", "#b388ff", "#ff7ab6", "#5fd3a2", "#ffd23f", "#fff"], P = Array.from({ length: 160 }, (_, i) => { const L = i % 2, a = -Math.PI / 2 + (L ? -.5 : .5) + (Math.random() - .5) * .9, v = 9 + Math.random() * 10; return { x: L ? innerWidth * .05 : innerWidth * .95, y: innerHeight, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 1.2, r: Math.random() * 6, f: Math.random() * 6, s: 6 + Math.random() * 6, c: C[i % 6], l: 1 }; });
+  (function f() { x.clearRect(0, 0, innerWidth, innerHeight); let n = 0; P.forEach(p => { p.vy += .25; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += .15; p.f += .2; p.l -= .006; if (p.l <= 0 || p.y > innerHeight + 30) return; n++;
+    x.save(); x.globalAlpha = p.l; x.translate(p.x, p.y); x.rotate(p.r); x.scale(1, Math.cos(p.f)); x.fillStyle = p.c; x.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); x.restore(); }); if (n) requestAnimationFrame(f); else x.clearRect(0, 0, innerWidth, innerHeight); })(); }
+
+(async () => {
+  const me = await api("/api/me"); renderShell("tests", me);
+  await hub(); const t = new URLSearchParams(location.search).get("t"); if (t === "speed") speed(); else if (t === "typing") typing();
+})();
+</script>
+</body>
+</html>

@@ -25,7 +25,7 @@ const DEFAULT_RULES = [
   { key: "fake", label: "Fausse vente ou capture truquée", detail: "faute grave", kind: "prime", amount: 0, points: 3 },
   { key: "rules", label: "Non-respect des consignes", detail: "manuel", kind: "warn", amount: 0, points: 1 }];
 const DEFAULT_TH = { warnAt: 3, suspendAt: 5, suspendDays: 7, windowDays: 30 };
-const TR_DEF = { sessions: { on: true, v: 8 }, avg: { on: true, v: 70 }, hard: { on: true, v: 2, score: 70 }, fans: { on: true, v: 3 }, ethics: { on: true, v: 5 }, rt: { on: true, v: 60 }, notify: true };
+const TR_DEF = { sessions: { on: true, v: 8 }, avg: { on: true, v: 70 }, hard: { on: true, v: 2, score: 70 }, fans: { on: true, v: 3 }, ethics: { on: true, v: 5 }, rt: { on: true, v: 60 }, speed: { on: true, v: 10 }, typing: { on: true, v: 30 }, notify: true };
 const KIND_LBL = { warn: "Avertissement", fine: "Retenue", prime: "Perte de prime", suspend: "Suspension" };
 
 module.exports = function mount(app, db, auth, admin, ctx) {
@@ -123,7 +123,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     if (b.rules !== undefined) { if (!Array.isArray(b.rules)) return res.status(400).json({ error: "Barème invalide" });
       a.rules = b.rules.filter(r => DEFAULT_RULES.some(d => d.key === r.key)).map(r => ({ key: r.key, kind: KIND_LBL[r.kind] ? r.kind : "warn", amount: Math.max(0, num(r.amount || 0, 0, 1e4) || 0), points: Math.max(0, Math.round(num(r.points || 0, 0, 20) || 0)) })); }
     if (b.training !== undefined) { const t = {}, src = b.training || {};
-      for (const k of ["sessions", "avg", "hard", "fans", "ethics", "rt"]) { const x = src[k] || {}, d = TR_DEF[k]; const v = num(x.v ?? d.v, 1, 1000);
+      for (const k of ["sessions", "avg", "hard", "fans", "ethics", "rt", "speed", "typing"]) { const x = src[k] || {}, d = TR_DEF[k]; const v = num(x.v ?? d.v, 1, 1000);
         if (v === null) return res.status(400).json({ error: "Critère invalide" }); t[k] = { on: x.on !== false, v: Math.round(v) };
         if (k === "hard") { const sc = num(x.score ?? d.score, 1, 100); t[k].score = sc === null ? d.score : Math.round(sc); } }
       t.notify = src.notify !== false; a.training = t; }
@@ -251,13 +251,19 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const eth = sims.slice(0, c.ethics.v).filter(s => (J(s.report) || {}).ethics_flag).length;
     const rts = last5.flatMap(s => (J(s.rts) || []).filter(x => typeof x === "number")), rt = rts.length ? Math.round(mean(rts)) : null;
     const n = sims.length, pl = (x, w) => `${x} ${w}${x > 1 ? "s" : ""}`;
+    // tests d'aptitude : meilleur débit et meilleure vitesse de frappe
+    db.exec("CREATE TABLE IF NOT EXISTS skill_tests (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, kind TEXT NOT NULL, score REAL NOT NULL, data TEXT, at INTEGER NOT NULL)");
+    const bestOf = k => db.prepare("SELECT MAX(score) s FROM skill_tests WHERE user_id = ? AND kind = ?").get(uid, k).s;
+    const sp = bestOf("speed"), ty = db.prepare("SELECT MAX(score) s FROM skill_tests WHERE user_id = ? AND kind = 'typing' AND json_extract(data, '$.acc') >= 90").get(uid).s;
     const all = [
       { key: "sessions", label: `${pl(c.sessions.v, "session")} terminée${c.sessions.v > 1 ? "s" : ""}`, value: `${Math.min(n, 99)} / ${c.sessions.v}`, ok: n >= c.sessions.v, pct: n / c.sessions.v },
       { key: "avg", label: `Moyenne ≥ ${c.avg.v} sur les 5 dernières`, value: avg5 == null ? "—" : String(avg5), ok: avg5 != null && avg5 >= c.avg.v, pct: (avg5 || 0) / c.avg.v },
       { key: "hard", label: `${pl(c.hard.v, "session")} difficile${c.hard.v > 1 ? "s" : ""} réussie${c.hard.v > 1 ? "s" : ""}`, sub: `score de ${c.hard.score} ou plus`, value: `${hardOk} / ${c.hard.v}`, ok: hardOk >= c.hard.v, pct: hardOk / c.hard.v },
       { key: "fans", label: `${pl(c.fans.v, "profil")} de fans réussi${c.fans.v > 1 ? "s" : ""}`, sub: "score de 70 ou plus", value: `${fansOk.size} / ${c.fans.v}`, ok: fansOk.size >= c.fans.v, pct: fansOk.size / c.fans.v },
       { key: "ethics", label: "Aucune alerte éthique", sub: `sur les ${c.ethics.v} dernières sessions`, value: !n ? "—" : eth ? pl(eth, "alerte") : "✓", ok: n > 0 && eth === 0, pct: n && !eth ? 1 : 0 },
-      { key: "rt", label: `Réponse moyenne < ${c.rt.v} s`, sub: "sur les 5 dernières sessions", value: rt == null ? "—" : `${rt} s`, ok: rt != null && rt < c.rt.v, pct: rt ? Math.min(1, c.rt.v / rt) : 0 }];
+      { key: "rt", label: `Réponse moyenne < ${c.rt.v} s`, sub: "sur les 5 dernières sessions", value: rt == null ? "—" : `${rt} s`, ok: rt != null && rt < c.rt.v, pct: rt ? Math.min(1, c.rt.v / rt) : 0 },
+      { key: "speed", label: `Connexion d'au moins ${c.speed.v} Mb/s`, sub: "test de débit", value: sp == null ? "—" : `${Math.round(sp)} Mb/s`, ok: sp != null && sp >= c.speed.v, pct: (sp || 0) / c.speed.v, link: "/tests?t=speed" },
+      { key: "typing", label: `Frappe d'au moins ${c.typing.v} mots/min`, sub: "test de frappe, 90 % de précision minimum", value: ty == null ? "—" : `${Math.round(ty)} mots/min`, ok: ty != null && ty >= c.typing.v, pct: (ty || 0) / c.typing.v, link: "/tests?t=typing" }];
     const byp = db.prepare("SELECT level FROM training_bypass WHERE user_id = ?").get(uid);
     const simCrit = all.filter(x => c[x.key].on).map(x => ({ ...x, pct: Math.max(0, Math.min(1, x.pct)) })).map(x => byp && !x.ok ? { ...x, ok: true, pct: 1, test: true } : x);
     const simReady = simCrit.every(x => x.ok), co = course(uid, simReady);
@@ -271,6 +277,8 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       miss.key === "hard" ? `Tente une session <b>difficile</b>${notFan ? ` contre <b>${notFan.label}</b>` : ""} : il t'en manque ${c.hard.v - hardOk}.` :
       miss.key === "fans" ? `Essaie un nouveau profil${notFan ? ` : <b>${notFan.label}</b>` : ""}. Il te faut ${c.fans.v} profils réussis.` :
       miss.key === "ethics" ? "Reste dans les règles sur tes prochaines sessions : une alerte éthique bloque la validation." :
+      miss.key === "speed" ? (sp == null ? `Fais le <b>test de connexion</b> : il prend moins d'une minute.` : `Ta connexion est à ${Math.round(sp)} Mb/s : refais le test depuis un meilleur réseau (wifi proche de la box, ou câble).`) :
+      miss.key === "typing" ? (ty == null ? `Fais le <b>test de frappe</b> : 60 secondes pour mesurer ta vitesse d'écriture.` : `Ta meilleure frappe est à ${Math.round(ty)} mots/min : vise ${c.typing.v} ou plus, entraîne-toi et retente.`) :
       miss.key === "course" ? `Ton simulateur est validé : la <b>formation Twizz</b> est débloquée. Regarde ${co.next ? `la vidéo <b>${co.next.n}</b>` : "les vidéos"} jusqu'au bout.` :
       `Réponds plus vite : ta moyenne est de ${rt} s, l'objectif est sous ${c.rt.v} s.`;
     const u = db.prepare("SELECT username, role, created_at FROM users WHERE id = ?").get(uid);

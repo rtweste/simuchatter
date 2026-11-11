@@ -34,6 +34,7 @@ const ICONS = {
   calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
   euro: '<path d="M18 7.5A7 7 0 1 0 18 16.5"/><path d="M4 10.5h9M4 13.5h9"/>',
+  gauge: '<path d="M3.5 17a9 9 0 1 1 17 0"/><path d="M12 13l4.5-4.5"/><circle cx="12" cy="13" r="1.4"/>',
   spark: '<path d="M12 3l2.2 5.6L20 11l-5.8 2.4L12 19l-2.2-5.6L4 11l5.8-2.4z"/><path d="M19 3v3M17.5 4.5h3"/>',
   film: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M10 9.5v5l4.5-2.5z"/><path d="M3 9h2M3 15h2M19 9h2M19 15h2"/>',
   bubbles: '<path d="M14 9a6 6 0 0 1-8.7 5.4L2.5 15l.7-2.8A6 6 0 1 1 14 9z"/><path d="M9.5 16.6A6 6 0 0 0 18.2 19l2.8.6-.7-2.8A6 6 0 0 0 16 8.2"/>',
@@ -44,6 +45,8 @@ const MODULES = [
   { id: "home", label: "Accueil", href: "/home", icon: "home", section: null, roles: ["admin", "chatter", "trainee"] },
   { id: "simu", label: "Simu Chatter", short: "Simu", href: "/app", icon: "chat", section: "Formation", roles: ["admin", "chatter", "trainee"],
     desc: "Entraînez-vous face à un fan simulé par l'IA et recevez une évaluation détaillée." },
+  { id: "tests", label: "Tests d'aptitude", short: "Tests", href: "/tests", icon: "gauge", section: "Formation", roles: ["admin", "trainee"],
+    desc: "Test de débit de connexion et test de vitesse de frappe." },
   { id: "planning", label: "Planning", href: "/planning", icon: "calendar", section: "Organisation", roles: ["admin", "chatter"],
     desc: "Créneaux de la semaine et pointage des shifts." },
   { id: "ventes", label: "Ventes", href: "/ventes", icon: "receipt", section: "Organisation", roles: ["admin", "chatter"],
@@ -71,13 +74,13 @@ const logoHTML = () => `<span class="lg-sh"><span class="base">${LOGO_SVG}</span
 function renderShell(active, me) {
   if (me && me.role === "chatter") PLANREM.start();
   // un stagiaire n'a accès qu'à l'accueil et au simulateur
-  if (me && me.role === "trainee" && !["home", "simu"].includes(active)) {
+  if (me && me.role === "trainee" && !["home", "simu", "tests"].includes(active)) {
     addEventListener("unhandledrejection", e => { if (e.reason && e.reason.redirect) e.preventDefault(); });
     go("/home"); throw Object.assign(new Error("Redirection vers l'accueil"), { redirect: true }); }
   window.ME_SHELL = me; setTimeout(() => { try { INTRO.check(me); } catch (e) {} }, 0);
   if (me && me.role === "trainee") setTimeout(() => { try { DEADLINE.mount(me.deadline); } catch (e) {} }, 0);
   // assistant « Demande à StellADS » pour les chatters et les élèves (pas dans le simulateur, où il gênerait la saisie)
-  if (me && (me.role === "chatter" || me.role === "trainee") && active !== "simu" && active !== "chat" && !window.ASSIST) {
+  if (me && (me.role === "chatter" || me.role === "trainee") && active !== "simu" && active !== "chat" && active !== "tests" && !window.ASSIST) {
     const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/assist.css"; document.head.appendChild(l);
     const sc = document.createElement("script"); sc.src = "/assist-ui.js"; sc.onload = () => { try { ASSIST_MOUNT(me); } catch (e) {} }; document.body.appendChild(sc);
   }

@@ -79,7 +79,7 @@ const TRAINEE = window.TRAINEE = (() => {
     const left = Math.max(0, (me.dailyLimit || 0) - (me.usedToday || 0)), st = T.stats, goal = (T.criteria.find(c => c.key === "avg") ? +T.criteria.find(c => c.key === "avg").label.match(/\d+/)[0] : 70);
     const miss = T.total - T.done;
     const crit = T.criteria.map((c, i) => `<div class="tr-ck${c.ok ? " ok" : ""}" style="--d:${(.12 + i * .05).toFixed(2)}s"><span class="bx">${c.ok ? CHECK : ""}</span><div>${esc(c.label)}${c.sub ? `<small>${esc(c.sub)}</small>` : ""}</div>
-      <div class="v${c.ok ? "" : " no"}">${esc(c.value)}${c.ok ? "" : `<span class="mini"><i style="width:${Math.round(c.pct * 100)}%"></i></span>`}</div></div>`).join("");
+      <div class="v${c.ok ? "" : " no"}">${c.link && !c.ok ? `<a class="tr-tst" href="${c.link}">${c.value === "—" ? "Passer le test" : "Refaire"} →</a>` : esc(c.value)}${c.ok ? "" : `<span class="mini"><i style="width:${Math.round(c.pct * 100)}%"></i></span>`}</div></div>`).join("");
     const asg = A.length ? A.slice(0, 3).map(a => `<div class="tr-asg"><span class="av">${esc((a.created_by_name || "M")[0].toUpperCase())}</span><div><b>${esc(a.label || a.persona)} · ${esc(DIFF(a.difficulty))}</b><small>Assigné par ${esc(a.created_by_name || "le manager")} · objectif ${a.goal}${a.due_at ? ` · avant le ${new Date(a.due_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}` : ""}</small></div><a class="tr-sb" href="/app">Commencer</a></div>`).join("")
       : `<div class="tr-mut">Aucun entraînement assigné pour l'instant. Ton manager peut t'en proposer depuis le Simu Chatter.</div>`;
     root.innerHTML = `<div class="tr">

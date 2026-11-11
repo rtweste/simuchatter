@@ -98,3 +98,4 @@
 .co-pt{position:fixed;width:9px;height:9px;border-radius:50%;background:#5fd3a2;box-shadow:0 0 12px #5fd3a2;z-index:10000;pointer-events:none}
 @media (max-width:640px){.co-ov{padding:12px;align-items:flex-start;padding-top:56px}.co-vd{border-radius:14px}.co-note{font-size:11px}}
 @media (prefers-reduced-motion:reduce){.co-v.nx .co-pl,.co-play,.co-ok{animation:none}}
+.tr-tst{display:inline-flex;align-items:center;height:28px;padding:0 11px;border-radius:9px;background:linear-gradient(120deg,#7dd3fc,#b388ff);color:#0b0b14;font:900 12px Inter;text-decoration:none;box-shadow:0 0 0 0 rgba(125,211,252,.5);animation:trTst 2s infinite}@keyframes trTst{70%{box-shadow:0 0 0 8px rgba(125,211,252,0)}100%{box-shadow:0 0 0 0 rgba(125,211,252,0)}}
