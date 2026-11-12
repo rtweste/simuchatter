@@ -20,6 +20,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
         if (has("applications")) run("UPDATE applications SET first_name = 'Ancien compte', contact = '', motivation = '', test_reply = '', test_answers = NULL, ip_hash = NULL WHERE user_id = ?", u.id);
         for (const t of ["chat_members", "chat_reads", "trainee_deadline", "training_ready", "chat_mutes"]) if (has(t)) run(`DELETE FROM ${t} WHERE user_id = ?`, u.id);
         if (has("team_leads")) run("DELETE FROM team_leads WHERE recruit_id = ? OR leader_id = ?", u.id, u.id);
+        run("UPDATE users SET team_lead = NULL WHERE team_lead = ?", u.id); run("UPDATE users SET team_lead = NULL, grade = NULL WHERE id = ?", u.id);
         run("DELETE FROM settings WHERE key = ?", "planprefs:" + u.id);
       db.exec("COMMIT"); } catch (e) { try { db.exec("ROLLBACK"); } catch (_) {} throw e; } }; tx();
       gest.log(null, "a", `Compte de **${u.username}** supprimé automatiquement`, "Désactivé depuis plus de 24 h · ventes et paies gardées dans la compta sous « " + name + " »");

@@ -44,7 +44,7 @@ const LOADED = {};
 function tab(t) {
   qa(".tabs button").forEach(x => x.classList.toggle("on", x.dataset.t === t)); qa(".pane").forEach(p => p.classList.toggle("on", p.dataset.p === t));
   try { history.replaceState(null, "", "#" + t); } catch (e) {}
-  ({ team: loadTeam, crea: loadCrea, reg: loadReg, jour: loadJour, sanc: loadSanc, cand: loadCand })[t]();
+  ({ team: loadTeam, crea: loadCrea, reg: loadReg, jour: loadJour, sanc: loadSanc, cand: loadCand, roles: () => ROLESUI.load() })[t]();
 }
 qa(".tabs button").forEach(b => b.addEventListener("click", () => { S.tick(); tab(b.dataset.t); }));
 
@@ -279,7 +279,7 @@ function crea(c) {
     <div class="sec"><span class="lab">VENTES PAR CHATTER</span>${c.chatters.length ? `<div class="bars">${c.chatters.map(x => `<div><span>${esc(x.username)}</span><span class="t"><i data-w="${x.amount / mx * 100}"></i></span><b>${E(x.amount)}</b></div>`).join("")}</div>` : '<div class="mut">Aucune vente validée sur la quinzaine.</div>'}</div>
     <div class="sec"><span class="lab">SES CRÉNEAUX CETTE SEMAINE</span>${c.slots.length ? `<div class="slots">${c.slots.map(slot).join("")}</div>` : '<div class="mut">Aucun shift prévu sur 7 jours.</div>'}</div>`}
     <div class="sec"><span class="lab">NOM</span><input class="fi" data-f="name" value="${esc(c.name)}" placeholder="Nom de la créatrice" maxlength="40"></div>
-    <div class="sec"><span class="lab">POURCENTAGE REVERSÉ</span><div class="unit" style="width:max-content"><input data-f="pct" value="${c.creator_pct}" inputmode="decimal"> % du CA net</div></div>
+    <div class="sec"><span class="lab">POURCENTAGE REVERSÉ${window.RK !== "founder" ? ' · RÉSERVÉ AU FONDATEUR' : ""}</span><div class="unit" style="width:max-content"><input data-f="pct" value="${c.creator_pct}" inputmode="decimal" ${window.RK !== "founder" ? "disabled" : ""}> % du CA net</div></div>
     <div class="sec"><span class="lab">STYLE D'ÉCRITURE ET PERSONNALITÉ</span><textarea class="ta" data-f="style" placeholder="Âge, centres d'intérêt, ton, emojis, tics d'écriture…">${esc(c.style)}</textarea></div>
     <div class="sec"><span class="lab">GRILLE DE PRIX</span><input class="fi" data-f="prices" value="${esc(c.prices)}" placeholder="Photos : 8–15 € · Vidéo : 20–40 €"></div>
     <div class="mut" style="margin-top:8px">Le style et les prix servent aussi au simulateur pour faire jouer cette créatrice.</div>
@@ -351,6 +351,10 @@ function fillReg() {
   qa("[data-s]").forEach(i => i.value = String(AG[i.dataset.s] ?? "").replace(".", ","));
   qa("[data-st]").forEach(i => i.value = AG[i.dataset.st] || "");
   drawTiers(); drawSlots(); calc(); $("regBar").classList.remove("on");
+  // paliers et part des créatrices : réservés au Fondateur
+  if (window.RK !== "founder") { qa("#tiers input, #tiers button").forEach(x => { x.disabled = true; }); $("addTier").style.display = "none";
+    const ci = document.querySelector('[data-s="creatorPct"]'); if (ci) { ci.disabled = true; ci.title = "Réservé au Fondateur"; }
+    const h = $("tiers").closest(".card").querySelector(".ch"); if (h && !h.querySelector(".lockbadge")) h.insertAdjacentHTML("beforeend", '<span class="lockbadge">Modifiable par le Fondateur</span>'); }
 }
 qa("[data-s]").forEach(i => i.addEventListener("input", regDirty)); qa("[data-st]").forEach(i => i.addEventListener("input", regDirty));
 async function loadReg(force) { if (AG && !force) return; try { AG = await api("/api/admin/agency"); fillReg(); } catch (e) { fail(e); } }
@@ -492,16 +496,9 @@ async function loadRadar() {
 
 /* =================== TEAM LEADER (dans la fiche) =================== */
 async function tlLoad(c) {
-  const box = dr.querySelector("[data-tl]"); if (!box) return; let d; try { d = await api("/api/admin/team-lead/" + c.id); } catch (e) { return; }
-  if (!dr.contains(box)) return;
-  const eur0 = n => Math.round(n).toLocaleString("fr-FR") + " €";
-  box.innerHTML = `<div class="sec"><span class="lab">TEAM LEADER</span>
-    ${c.role !== "admin" ? `<div class="tlsel"><select aria-label="Team leader"><option value="">Pas de team leader</option>${d.candidates.map(x => `<option value="${x.id}" ${d.leader && d.leader.id === x.id ? "selected" : ""}>${esc(x.username)}</option>`).join("")}</select><button class="sb w" data-tls>Enregistrer</button></div>
-      <div class="mut" style="margin-top:8px;line-height:1.5">${d.leader ? (d.leader.goalAt ? `🎉 Objectif atteint : ${esc(d.leader.username)} a reçu sa prime de ${eur0(d.leader.prime || d.prime)}.` : `${esc(d.leader.username)} accompagne ${esc(c.username)}. Prime de <b>${eur0(d.prime)}</b> quand ${esc(c.username)} atteint <b>${eur0(d.target)}</b> de ventes nettes sur une quinzaine.`) : "Choisis un chatter confirmé pour accompagner cette recrue : il voit ses chiffres sur son accueil et peut lui laisser des conseils."}</div>` : ""}
-    ${d.recruits.length ? `<div class="mut" style="margin-top:10px">Team leader de : ${d.recruits.map(r => `<b style="color:#fff">${esc(r.username)}</b>${r.goal_at ? " ✓" : ""}`).join(", ")}</div>` : ""}</div>`;
-  const b = box.querySelector("[data-tls]"); if (b) b.onclick = async () => { b.disabled = true;
-    try { await api("/api/admin/team-lead/" + c.id, { method: "PUT", body: { leaderId: box.querySelector("select").value || null } }); toast(box.querySelector("select").value ? `Team leader enregistré pour ${esc(c.username)}` : "Team leader retiré", true); S.ok(); tlLoad(c); }
-    catch (e) { fail(e); b.disabled = false; } };
+  const box = dr.querySelector("[data-tl]"); if (!box) return;
+  box.innerHTML = `<div class="sec"><span class="lab">RÔLE ET ÉQUIPE</span><button class="gbtn" data-goroles style="width:100%">Changer son rôle ou son équipe</button></div>`;
+  box.querySelector("[data-goroles]").onclick = () => { close(); tab("roles"); setTimeout(() => ROLESUI.open(c.id), 250); };
 }
 
 /* =================== CANDIDATURES (page publique /postuler) =================== */
@@ -594,9 +591,9 @@ return { tab, loadSanc };
   if (me.role !== "admin") { location.href = "/home"; return; }
   renderShell("admin", me);
   const h = (location.hash || "").slice(1);
-  GE.tab(["team", "crea", "reg", "jour", "sanc", "cand"].includes(h) ? h : "team");
-  if (h !== "cand") api("/api/admin/applications/count").then(c => { $("nCand").textContent = c.new || ""; }).catch(() => {});
+  GE.tab(["team", "crea", "reg", "jour", "sanc", "cand", "roles"].includes(h) && !(me.rk === "assistant" && ["cand", "reg", "sanc"].includes(h)) ? h : "team");
+  if (h !== "cand" && me.rk !== "assistant") api("/api/admin/applications/count").then(c => { $("nCand").textContent = c.new || ""; }).catch(() => {});
   // compteur « à traiter » visible dès l'ouverture
-  if (h !== "sanc") api("/api/admin/sanctions").then(s => { $("nTodo").textContent = s.kpis.todo || ""; }).catch(() => {});
+  if (h !== "sanc" && me.rk !== "assistant") api("/api/admin/sanctions").then(s => { $("nTodo").textContent = s.kpis.todo || ""; }).catch(() => {});
 })();
 

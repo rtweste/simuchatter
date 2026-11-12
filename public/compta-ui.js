@@ -56,16 +56,17 @@ function srcBar(el, s, legacyNet) {
     : parts.filter(p => p[2] > 0).map((p, i) => `<span class="${p[0]}" style="flex:${p[2]};--dl:${.1 + i * .08}s" title="${p[1]} : ${E(p[2])}"><b>${p[1]}</b><i>${E(p[2])}</i>${p[3] ? "<em>auto</em>" : ""}</span>`).join("");
 }
 function flowBar(bar, leg, t, fee) {
-  const ag = t.margin, parts = [["pf", "Plateforme", t.platform], ["cr", "Créatrices", t.creators], ["chh", "Chatters", t.chatters], [ag >= 0 ? "ag" : "ng", "Agence", Math.abs(ag)]];
+  const NM = window.RK === "assistant", ag = t.margin, parts = [["pf", "Plateforme", t.platform], ["cr", "Créatrices", t.creators], ["chh", "Chatters", t.chatters], ...(NM ? [] : [[ag >= 0 ? "ag" : "ng", "Agence", Math.abs(ag)]])];
   bar.innerHTML = !t.brut ? "" : parts.filter(p => p[2] > 0).map((p, i) => `<span class="${p[0]}" style="flex:${p[2]};--dl:${.2 + i * .15}s" title="${p[1]} : ${E(p[2])}">${p[1]}</span>`).join("");
   leg.innerHTML = `<div><i style="background:#1b1b1b;border:1px solid #333"></i>Plateforme (${fix2(fee)} % du chatting)<b>${E(t.platform)}</b></div><div><i style="background:#2c2c2c"></i>Créatrices<b>${E(t.creators)}</b></div>
-    <div><i style="background:#4a4a4a"></i>Paie des chatters<b>${E(t.chatters)}</b></div><div><i style="background:#5fd3a2"></i>Reste à l'agence<b style="color:${ag >= 0 ? "#5fd3a2" : "#e07a7a"}">${E(ag)}</b></div>`;
+    <div><i style="background:#4a4a4a"></i>Paie des chatters<b>${E(t.chatters)}</b></div>${NM ? "" : `<div><i style="background:#5fd3a2"></i>Reste à l'agence<b style="color:${ag >= 0 ? "#5fd3a2" : "#e07a7a"}">${E(ag)}</b></div>`}`;
 }
 function renderHero() {
   const t = C.totals;
   $("hLab").textContent = C.period.label; $("hTrend").outerHTML = `<span id="hTrend">${trendHtml(t.brut, C.prev.brut)}</span>`;
-  countTo($("kBrut"), t.brut, N0, 1200); countTo($("kNet"), t.net); countTo($("kMargin"), t.margin);
-  $("kMargin").classList.toggle("g", t.margin >= 0); $("kMargin").style.color = t.margin < 0 ? "#e07a7a" : "";
+  countTo($("kBrut"), t.brut, N0, 1200); countTo($("kNet"), t.net);
+  if (window.RK === "assistant") $("kMargin").closest(".c-sub").style.display = "none";
+  else { countTo($("kMargin"), t.margin); $("kMargin").classList.toggle("g", t.margin >= 0); $("kMargin").style.color = t.margin < 0 ? "#e07a7a" : ""; }
   srcBar($("srcBar"), t.sources, t.sources.legacy); flowBar($("flowBar"), $("flowLeg"), t, C.fee);
   document.querySelectorAll(".feeTxt").forEach(e => e.textContent = fix2(C.fee));
 }
@@ -78,8 +79,8 @@ function renderProj() {
   const max = Math.max(g || 0, C.projection || 0, t.brut) * 1.08 || 1;
   const mm = Math.max(1, ...P.map(x => Math.abs(x.margin || 0)));
   $("projCard").innerHTML = head + `<div class="c-goal"><span class="p" data-w="${C.running ? Math.min(100, C.projection / max * 100) : 0}"></span><span class="f" data-w="${Math.min(100, t.brut / max * 100)}"></span>${g ? `<span class="mk" style="left:${Math.min(99, g / max * 100)}%"><span>Objectif</span></span>` : ""}</div>
-    <div class="c-lab" style="margin-top:22px">Marge agence · ${P.length} dernières quinzaines</div>
-    <div class="c-spark">${P.map((x, i) => `<i class="${x.key === PERIOD ? "cur" : ""}${x.margin < 0 ? " neg" : ""}" data-h="${Math.abs(x.margin || 0) / mm * 100}" title="${esc(x.label)} : ${E(x.margin)}"><span>${shortLbl(x.key)}</span></i>`).join("")}</div>`;
+    ${window.RK === "assistant" ? "" : `<div class="c-lab" style="margin-top:22px">Marge agence · ${P.length} dernières quinzaines</div>
+    <div class="c-spark">${P.map((x, i) => `<i class="${x.key === PERIOD ? "cur" : ""}${x.margin < 0 ? " neg" : ""}" data-h="${Math.abs(x.margin || 0) / mm * 100}" title="${esc(x.label)} : ${E(x.margin)}"><span>${shortLbl(x.key)}</span></i>`).join("")}</div>`}`;
   requestAnimationFrame(() => requestAnimationFrame(() => { $("projCard").querySelectorAll("[data-w]").forEach(e => e.style.width = e.dataset.w + "%"); $("projCard").querySelectorAll("[data-h]").forEach(e => e.style.height = e.dataset.h + "%"); }));
 }
 function renderAlerts() {
@@ -207,6 +208,7 @@ function renderCreators() {
     } catch (e) { notify("Erreur", e.message, "err"); }
   });
   document.querySelectorAll("[data-src]").forEach(inp => inp.addEventListener("keydown", e => { if (e.key === "Enter") inp.blur(); }));
+  if (window.RK !== "founder") document.querySelectorAll("[data-cpct]").forEach(inp => { inp.disabled = true; inp.title = "Réservé au Fondateur"; });
   document.querySelectorAll("[data-cpct]").forEach(inp => inp.onchange = async () => { try { await api(`/api/admin/models/${inp.dataset.cpct}/pct`, { method: "PUT", body: { creator_pct: parseNum(inp.value) } }); await loadQ(); } catch (e) { notify("Erreur", e.message, "err"); } });
   document.querySelectorAll("[data-vers]").forEach(b => b.onclick = async () => { await api("/api/admin/creator-paid", { body: { period: PERIOD, model_id: +b.dataset.vers } }); VS.ok(); notify("Part versée", C.models.find(m => m.id === +b.dataset.vers).name, "ok"); loadQ(); });
   document.querySelectorAll("[data-unvers]").forEach(b => b.onclick = async () => { await api("/api/admin/creator-paid", { body: { period: PERIOD, model_id: +b.dataset.unvers, paid: false } }); loadQ(); });
@@ -222,6 +224,7 @@ function renderChecks() {
     + (C.running ? ck("mid", "◷", "La quinzaine n'est pas finie") : "");
   $("lockTxt").textContent = C.locked ? `Le ${dShort(C.locked.at)}${C.locked.by ? " par " + C.locked.by : ""} · chiffres figés` : "";
   const b = $("closeBtn"); b.textContent = "Clôturer la période"; delete b.dataset.force;
+  if (window.RK !== "founder") { b.disabled = true; b.textContent = "Clôture réservée au Fondateur"; b.title = "Seul le Fondateur peut clôturer une période"; const r = $("reopenBtn"); if (r) { r.disabled = true; r.title = "Réservé au Fondateur"; } }
 }
 $("closeBtn").onclick = async () => {
   const b = $("closeBtn"), P = payable().filter(c => c.pay > 0);
@@ -254,13 +257,13 @@ async function loadM(m) {
   const lab = M.label.charAt(0).toUpperCase() + M.label.slice(1), t = M.totals;
   $("pLab").textContent = lab; $("mLab").textContent = lab;
   $("mTrend").outerHTML = `<span id="mTrend">${trendHtml(t.brut, M.prevBrut)}</span>`;
-  countTo($("mBrut"), t.brut, N0, 1100); countTo($("mNet"), t.net); countTo($("mMargin"), t.margin);
+  countTo($("mBrut"), t.brut, N0, 1100); countTo($("mNet"), t.net); if (window.RK === "assistant") $("mMargin").closest(".c-sub").style.display = "none"; else countTo($("mMargin"), t.margin);
   srcBar($("mSrc"), t.sources, t.sources.legacy); flowBar($("mFlow"), $("mLeg"), t, C ? C.fee : 25);
   const allLocked = M.halves.every(h => h.locked), allPaid = M.halves.every(h => h.paid >= h.payable);
   $("mState").innerHTML = allLocked ? `<span class="c-tag v"><i></i>Clôturé${allPaid ? " · payé" : ""}</span>` : `<span class="c-tag w"><i></i>${M.halves.some(h => h.locked) ? "1 quinzaine clôturée" : "En cours"}</span>`;
   const mx = Math.max(1, ...M.halves.map(h => h.totals.brut));
   $("mHalves").innerHTML = M.halves.map(h => `<div data-goq="${h.key}" title="Ouvrir cette quinzaine"><small>${esc(h.label)}</small><b>${E(h.totals.brut)}</b><span class="c-qb"><i data-w="${h.totals.brut / mx * 100}"></i></span>
-    <em style="color:${h.totals.margin >= 0 ? "#5fd3a2" : "#e07a7a"}">Marge ${E(h.totals.margin)}</em><span class="c-tag ${h.locked ? "v" : "w"}"><i></i>${h.locked ? "Clôturée" : "Ouverte"} · ${h.paid}/${h.payable} payés</span></div>`).join("");
+    ${window.RK === "assistant" ? "" : `<em style="color:${h.totals.margin >= 0 ? "#5fd3a2" : "#e07a7a"}">Marge ${E(h.totals.margin)}</em>`}<span class="c-tag ${h.locked ? "v" : "w"}"><i></i>${h.locked ? "Clôturée" : "Ouverte"} · ${h.paid}/${h.payable} payés</span></div>`).join("");
   const pm = Math.max(1, ...M.chatters.map(c => c.pay));
   $("mPay").innerHTML = !M.chatters.length ? `<div class="c-empty">Aucune paie ce mois-ci.</div>` : M.chatters.map(c => `<div><span>${esc(c.username)}</span><span class="t"><i data-w="${c.pay / pm * 100}"></i></span><b>${E(c.pay)}</b>
     <span class="st">${c.paidAll ? '<span class="c-tag v"><i></i>Payé</span>' : '<span class="c-tag w"><i></i>À payer</span>'}</span></div>`).join("");

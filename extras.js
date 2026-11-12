@@ -146,13 +146,13 @@ ${c}`;
   app.get("/api/team-lead", auth, (req, res) => {
     checkGoals();
     const mine = db.prepare("SELECT * FROM team_leads WHERE leader_id = ? ORDER BY since").all(req.user.id).map(recruitView).filter(Boolean).filter(r => r.active);
-    const lead = db.prepare("SELECT t.*, u.username FROM team_leads t JOIN users u ON u.id = t.leader_id WHERE t.recruit_id = ?").get(req.user.id);
+    const me = db.prepare("SELECT team_lead FROM users WHERE id = ?").get(req.user.id), lead = me && me.team_lead ? db.prepare("SELECT u.id leader_id, u.username, COALESCE(t.since, u.created_at) since FROM users u LEFT JOIN team_leads t ON t.recruit_id = ? WHERE u.id = ? AND u.active = 1 AND u.grade = 'tl'").get(req.user.id, me.team_lead) : null;
     const tips = lead ? db.prepare("SELECT id, text, at, seen FROM team_tips WHERE recruit_id = ? ORDER BY at DESC LIMIT 5").all(req.user.id) : [];
     res.json({ recruits: mine, leader: lead ? { username: lead.username, since: lead.since } : null, tips, prime: gest.agency().tlPrime, target: firstTier() });
   });
   app.post("/api/team-lead/tip", auth, (req, res) => {
     const rid = parseInt(req.body?.recruitId, 10), t = String(req.body?.text || "").trim().slice(0, 400);
-    if (!db.prepare("SELECT 1 FROM team_leads WHERE recruit_id = ? AND leader_id = ?").get(rid, req.user.id)) return res.status(403).json({ error: "Ce n'est pas ta recrue" });
+    if (!db.prepare("SELECT 1 FROM users WHERE id = ? AND team_lead = ?").get(rid, req.user.id)) return res.status(403).json({ error: "Ce n'est pas ta recrue" });
     if (t.length < 3) return res.status(400).json({ error: "Écris ton conseil" });
     db.prepare("INSERT INTO team_tips (recruit_id, leader_id, text, at) VALUES (?,?,?,?)").run(rid, req.user.id, t, Date.now()); res.json({ ok: true });
   });
@@ -167,9 +167,10 @@ ${c}`;
   app.put("/api/admin/team-lead/:id", auth, admin, (req, res) => {
     const id = parseInt(req.params.id, 10), lid = req.body?.leaderId ? parseInt(req.body.leaderId, 10) : null, r = user(id);
     if (!r) return res.status(404).json({ error: "Introuvable" });
-    if (!lid) { db.prepare("DELETE FROM team_leads WHERE recruit_id = ?").run(id); gest.log(req.user.id, "a", `a retiré le team leader de **${r.username}**`, "Team leader"); return res.json({ ok: true }); }
+    if (!lid) { db.prepare("DELETE FROM team_leads WHERE recruit_id = ? AND goal_at IS NULL").run(id); db.prepare("UPDATE users SET team_lead = NULL WHERE id = ?").run(id); gest.log(req.user.id, "a", `a retiré le team leader de **${r.username}**`, "Team leader"); return res.json({ ok: true }); }
     const l = user(lid); if (!l || l.role !== "chatter" || lid === id) return res.status(400).json({ error: "Team leader invalide" });
     db.prepare("INSERT INTO team_leads (recruit_id, leader_id, since) VALUES (?,?,?) ON CONFLICT(recruit_id) DO UPDATE SET leader_id = excluded.leader_id").run(id, lid, Date.now());
+    db.prepare("UPDATE users SET team_lead = ? WHERE id = ?").run(lid, id); db.prepare("UPDATE users SET grade = 'tl' WHERE id = ? AND grade IS NULL").run(lid);
     gest.log(req.user.id, "a", `a choisi **${l.username}** comme team leader de **${r.username}**`, `Prime de ${eur(gest.agency().tlPrime)} quand ${r.username} atteint ${firstTier()} € sur une quinzaine`);
     res.json({ ok: true });
   });

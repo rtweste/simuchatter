@@ -16,7 +16,10 @@ const TEAMUI = window.TEAMUI = (() => {
       c.innerHTML = `<div class="hd"><span class="ic">🧭</span><div><h3>Ton team leader : <em>${esc(d.leader.username)}</em></h3><small>Il t'accompagne pendant tes débuts. Pose-lui tes questions !</small></div>${unseen ? `<span class="nw">${unseen} nouveau${unseen > 1 ? "x" : ""}</span>` : ""}</div>
         ${d.tips.length ? `<div class="tips">${d.tips.map(t => `<div class="${t.seen ? "" : "un"}"><span>💬</span><p>${esc(t.text)}<small>${ago(t.at)}</small></p></div>`).join("")}</div>` : `<div class="mut0">Pas encore de conseil : ${esc(d.leader.username)} t'en laissera ici.</div>`}`;
       after(c); if (unseen) setTimeout(() => api("/api/team-lead/seen", { body: {} }).catch(() => {}), 2500); }
-    if (d.recruits.length) { const c = document.createElement("section"); c.className = "tlx";
+    if (me.rk === "tl") { const c = document.createElement("a"); c.className = "tlx tlgo"; c.href = "/equipe";
+      c.innerHTML = `<div class="hd"><span class="ic">🧭</span><div><h3>Tu es <em>Team Leader</em></h3><small>Ventes, shifts, pauses, formation et alertes de ton équipe, avec conseils, entraînements et renforts en un geste.</small></div><span class="nw" style="background:#ededed;color:#0a0a0a">Mon équipe →</span></div>`;
+      after(c); }
+    else if (d.recruits.length) { const c = document.createElement("section"); c.className = "tlx";
       c.innerHTML = `<div class="hd"><span class="ic">🧭</span><div><h3>Mes <em>recrues</em></h3><small>Tu es team leader : aide-les à atteindre <b>${eur(d.target)}</b> de ventes nettes sur une quinzaine → <b>+${eur(d.prime)}</b> de prime pour toi</small></div></div>
         <div class="rl">${d.recruits.map(r => { const pct = Math.min(100, Math.round(r.goal.net / Math.max(1, r.goal.target) * 100));
           return `<div class="rc" data-id="${r.id}"><div class="r1"><span class="av">${esc(r.username[0].toUpperCase())}</span><div><b>${esc(r.username)}</b><small>${r.role === "trainee" ? (r.training ? `en formation · ${r.training.done}/${r.training.total} critères` : "en formation") : `chatter · dernier shift ${ago(r.lastShift)}`}</small></div>${r.goal.done ? '<span class="ok">🎉 Objectif atteint</span>' : ""}</div>

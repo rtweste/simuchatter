@@ -106,7 +106,7 @@ canvas.fx{position:fixed;inset:0;pointer-events:none;z-index:19}
 <script>
 (async () => {
   const $ = id => document.getElementById(id), reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const me = await api("/api/me"); if (me.role !== "admin") { location.href = "/home"; return; }
+  const me = await api("/api/me"); if (me.role !== "admin" || me.rk === "assistant") { location.href = "/home"; return; }
   try { $("logo").innerHTML = logoHTML(); } catch (e) {}
   const eur = n => Math.round(n).toLocaleString("fr-FR") + " €", hhmm = ms => new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   // horloge

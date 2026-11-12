@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Réglages fondateur — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/gestion-ui.css">
+<link rel="stylesheet" href="/roles.css">
+<style>
+.rl .fgr{align-items:start}
+.rl .stair{margin-top:30px}
+.rl .stp{min-width:0}
+.rl .stp b{font-size:clamp(12px,1.4vw,18px)}
+.rl .trow .stpr span{white-space:nowrap;font-size:13px}
+.rl .pick{display:flex;gap:8px;margin-top:10px}
+.rl .pick select{flex:1;min-width:0;height:40px;border-radius:12px;border:1px solid #262626;background:#151515;color:#f5f5f5;font:inherit;font-weight:700;padding:0 10px}
+.rl .hdr .hr2{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.rl .hold[disabled]{opacity:.45;cursor:not-allowed}
+.rl .roban{display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:15px;background:rgba(255,210,63,.07);border:1px solid rgba(255,210,63,.28);color:#e8d9a0;font-size:13px;font-weight:700;margin-bottom:14px}
+@media(max-width:760px){.rl .stair{margin-top:46px;gap:4px}.rl .stp b{font-size:11.5px}.rl .stp .pr{font-size:9px;padding:1px 4px}.rl .trow{grid-template-columns:22px repeat(3,minmax(0,1fr)) 28px}.rl .stpr button{width:22px}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area">
+<div class="wrap ge rl" id="root"><div class="ld">Chargement…</div></div>
+</main>
+</div>
+<script src="/common.js"></script>
+<script>
+(() => {
+  const root = $("root");
+  const SV = (d, s = 18, w = 1.8) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"></path></svg>`;
+  const LOCK = "M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z", CROWN = "M3 8l4 4 5-7 5 7 4-4-2 11H5z", PLUS = "M12 5v14M5 12h14", TRASH = "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3";
+  const E0 = n => Math.round(n || 0).toLocaleString("fr-FR") + " €", N = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  const lbl = v => innerWidth < 640 ? (v >= 1000 ? (Math.round(v / 100) / 10).toString().replace(".", ",") + "k" : String(Math.round(v))) : "dès " + E0(v);
+  let ME = null, D = null, T = [], P = [], dirty = false;
+  const q = s => root.querySelector(s), qa = s => [...root.querySelectorAll(s)];
+  const toast2 = (t, g) => { const el = q(".toast"); el.innerHTML = (g ? "✓ " : "") + t; el.classList.toggle("g", !!g); el.classList.add("on"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("on"), 3000); };
+  const lockov = t => `<div class="lockov"><span class="lk">${SV(LOCK, 24, 2)}</span><b>Réservé au Fondateur</b><small>${t}</small></div>`;
+  // commission : chaque taux sur sa tranche, + la plus haute prime atteinte
+  const pay = v => { let c = 0; const rates = []; T.forEach(t => { if (!rates.length || rates[rates.length - 1].rate !== t.rate) rates.push({ from: t.from, rate: t.rate }); });
+    rates.forEach((r, i) => { const hi = rates[i + 1] ? rates[i + 1].from : Infinity; if (v > r.from) c += (Math.min(v, hi) - r.from) * r.rate / 100; });
+    const pr = T.filter(t => t.prime && v >= t.from).reduce((m, t) => Math.max(m, t.prime), 0); return { c, pr, tot: c + pr }; };
+  function tiersCard() {
+    const rows = T.map((t, i) => `<div class="trow"><span class="ix">${i + 1}</span>
+      <div class="stpr"><button data-st="${i}:from:-1" aria-label="Baisser le seuil" ${i === 0 ? "disabled" : ""}>−</button><span data-tv="${i}:from">${E0(t.from)}</span><button data-st="${i}:from:1" aria-label="Monter le seuil" ${i === 0 ? "disabled" : ""}>+</button></div>
+      <div class="stpr"><button data-st="${i}:rate:-1" aria-label="Baisser le taux">−</button><span data-tv="${i}:rate">${t.rate} %</span><button data-st="${i}:rate:1" aria-label="Monter le taux">+</button></div>
+      <div class="stpr"><button data-st="${i}:prime:-1" aria-label="Baisser la prime">−</button><span data-tv="${i}:prime">${E0(t.prime || 0)}</span><button data-st="${i}:prime:1" aria-label="Monter la prime">+</button></div>
+      <button class="sb" data-del="${i}" aria-label="Supprimer le palier ${i + 1}" style="width:32px;padding:0;display:flex;align-items:center;justify-content:center" ${i === 0 ? "disabled" : ""}>${SV(TRASH, 14)}</button></div>`).join("");
+    const max = Math.max(6000, (T[T.length - 1] || { from: 0 }).from + 1500);
+    return `<div class="card lockable" data-tiers><div class="ch"><h3>Paliers de <em>commission</em></h3><span class="mut">Progressifs, sur les ventes nettes de la quinzaine</span></div>
+      <div class="stair">${T.map(t => `<div class="stp"><b>${t.rate} %</b><span class="pr" style="${t.prime ? "" : "display:none"}">+ ${E0(t.prime || 0)}</span><small>${lbl(t.from)}</small></div>`).join("")}<span class="mk"></span></div>
+      <div class="simr"><div><div class="lab">SIMULER UN CHATTER</div><div style="font-weight:900;font-size:15px;margin-top:3px" data-sv></div></div><input type="range" min="0" max="${max}" step="50" value="${Math.min(max, 2600)}" aria-label="Ventes nettes simulées"><div class="out"><b data-sp></b><small data-sd></small></div></div>
+      <div style="margin-top:12px"><div class="trow h"><span></span><span>À PARTIR DE</span><span>TAUX</span><span>PRIME</span><span></span></div>${rows}</div>
+      <button class="gbtn" data-add style="margin-top:10px">${SV(PLUS, 15, 2.4)}Ajouter un palier</button>
+      <div class="savebar ${dirty ? "on" : ""}"><b>Paliers modifiés</b><div style="display:flex;gap:8px"><button class="sb" data-cancel>Annuler</button><button class="sb w" data-save>Enregistrer</button></div></div>
+      ${lockov("Les managers voient les paliers dans Gestion › Réglages, sans pouvoir les modifier.")}</div>`;
+  }
+  function drawStair() {
+    qa(".stp").forEach((s, i) => { const t = T[i]; if (!t) return; const lo = Math.min(...T.map(x => x.rate)), hi = Math.max(...T.map(x => x.rate)); s.style.height = (46 + (hi > lo ? (t.rate - lo) / (hi - lo) : .5) * 104) + "px"; });
+    qa("[data-tv]").forEach(el => { const [i, f] = el.dataset.tv.split(":"), v = T[i] ? (T[i][f] || 0) : 0, txt = f === "rate" ? v + " %" : E0(v); if (el.textContent !== txt) { el.textContent = txt; el.classList.remove("fl3"); el.getBoundingClientRect(); el.classList.add("fl3"); } });
+    sim(); }
+  function sim() {
+    const inp = q(".simr input"); if (!inp) return; const v = +inp.value; let k = 0; T.forEach((t, i) => { if (v >= t.from) k = i; });
+    qa(".stp").forEach((s, i) => s.classList.toggle("cur", i === k));
+    const t = T[k], nx = T[k + 1] ? T[k + 1].from : +inp.max, fr = Math.min(1, (v - t.from) / Math.max(1, nx - t.from)), s = qa(".stp")[k], mk = q(".mk");
+    if (s && mk) mk.style.left = (s.offsetLeft + s.offsetWidth * fr) + "px";
+    const p = pay(v); q("[data-sv]").textContent = E0(v) + " de ventes"; q("[data-sp]").textContent = E0(p.tot);
+    q("[data-sd]").textContent = `${E0(p.c)} de commission${p.pr ? ` + ${E0(p.pr)} de prime` : ""}${T[k + 1] ? ` · palier suivant dans ${E0(T[k + 1].from - v)}` : " · palier max"}`; }
+  function creaCard() {
+    return `<div class="card lockable" style="--d:.06s"><div class="ch"><h3>Part des <em>créatrices</em></h3><span class="mut">Sur le CA net de chaque créatrice</span></div>
+      ${D.models.map(m => `<div class="crow" data-m="${m.id}"><div class="crh"><span class="av">${esc(m.name[0])}</span><div><b>${esc(m.name)}</b><div class="mut">CA net de la quinzaine : ${E0(m.net)}</div></div><span class="pc2">${m.creator_pct} %</span></div>
+        <div class="split"><i class="c1" style="width:${m.creator_pct}%"></i><i class="c2" style="width:${100 - m.creator_pct}%"></i></div><input type="range" min="0" max="100" step="1" value="${m.creator_pct}" aria-label="Part de ${esc(m.name)}">
+        <div class="lg2"><span>Sur 1 000 € nets : ${esc(m.name)} <b data-a>${E0(m.creator_pct * 10)}</b></span><span>Agence <b data-b>${E0((100 - m.creator_pct) * 10)}</b></span></div></div>`).join("") || '<div class="emp">Aucune créatrice.</div>'}
+      ${lockov("Visible en lecture par les managers. Seul le Fondateur peut la changer.")}</div>`;
+  }
+  function closeCard() {
+    const pp = D.prevPeriod, target = pp && !pp.locked ? pp : null, cur = D.period, t = (target || cur).totals || {};
+    const lines = [["Ventes nettes", t.net], ["Paie des chatters", t.chatters], ["Dont primes et ajustements", t.primes], ["Part des créatrices", t.creators]];
+    return `<div class="card clo lockable" style="--d:.1s"><div class="ch"><h3>Clôture de la <em>quinzaine</em></h3><span class="tag ${target ? "a" : "w"}">${esc((target || cur).label)}</span></div>
+      ${lines.map(([l, v]) => `<div class="pl2"><span>${l}</span><b>${E0(v)}</b></div>`).join("")}${t.margin != null ? `<div class="pl2 mg"><span>Marge de l’agence</span><b>${E0(t.margin)}</b></div>` : ""}
+      <div class="pre">${target ? `<div class="${D.pendingSales ? "ko" : "ok"}"><i>${D.pendingSales ? "!" : "✓"}</i>${D.pendingSales ? `${D.pendingSales} vente${D.pendingSales > 1 ? "s" : ""} encore à valider` : "Toutes les ventes sont validées"}</div><div class="ok"><i>✓</i>La quinzaine est terminée</div>` : `<div class="ok"><i>✓</i>${pp && pp.locked ? `Quinzaine précédente (${esc(pp.label)}) déjà clôturée` : "Rien à clôturer"}</div><div class="ko"><i>…</i>La quinzaine en cours se clôture une fois terminée</div>`}</div>
+      <button class="hold" ${target ? "" : "disabled"} data-key="${target ? target.key : ""}"><i class="fill"></i>${SV(LOCK, 18, 2)}<span>${target ? "Maintenir pour clôturer" : "Pas encore clôturable"}</span></button>
+      <div class="holdh">${target ? "Les paies sont figées et visibles par les chatters dans « Ma paie ». Seul le Fondateur peut rouvrir une période." : "Tu pourras la clôturer ici dès le lendemain de sa fin."}</div>
+      <div class="sealed"><span class="sl"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="shk" d="M7 11V8a5 5 0 0 1 10 0v3"/><path d="M5 11h14v10H5z"/><path d="M12 15v2"/></svg></span><b>Quinzaine clôturée</b><small>${esc((target || cur).label)} · paies figées</small></div>
+      ${lockov("Seul le Fondateur peut clôturer une période et figer les paies.")}</div>`;
+  }
+  function mgrCard() {
+    const ms = D.managers.filter(m => m.grade !== "founder");
+    return `<div class="card lockable" style="--d:.14s"><div class="ch"><h3>Les <em>managers</em></h3><span class="mut">Toi seul peux en nommer ou en retirer</span></div>
+      <div class="mgl">${ms.map(m => `<div class="on2"><span class="av">${esc(m.username[0].toUpperCase())}</span><div><b>${esc(N(m.username))}</b><span class="rb m">Manager</span></div><button class="sb r" data-unm="${m.id}">Retirer</button></div>`).join("") || '<div class="mut">Aucun autre manager pour l’instant.</div>'}</div>
+      <div class="pick"><select aria-label="Nommer un manager"><option value="">Nommer un manager…</option>${(D.cands || []).map(p => `<option value="${p.id}">${esc(N(p.username))} · ${p.rk === "assistant" ? "Assistante" : p.rk === "tl" ? "Team Leader" : "Chatter"}</option>`).join("")}</select><button class="sb w" data-nm style="height:40px">Nommer</button></div>
+      ${lockov("Seul le Fondateur peut nommer ou retirer un manager.")}</div>`;
+  }
+  function logCard() {
+    return `<div class="card" style="--d:.18s"><div class="ch"><h3>Journal <em>sensible</em></h3><span class="mut">Paliers, parts, clôtures, managers</span></div><div class="jl">${D.log.map(l => `<div><i></i><span><b>${esc(N(l.username || "?"))}</b> ${esc(l.text)} · ${new Date(l.at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} à ${new Date(l.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span></div>`).join("") || '<div><span class="mut">Rien pour le moment.</span></div>'}</div></div>`;
+  }
+  function render() {
+    const fd = D.founder;
+    root.className = "wrap ge rl" + (fd ? "" : " mgr ro");
+    root.innerHTML = `<div class="hdr"><div><div class="eb">FONDATEUR${fd ? " · " + esc(ME.username.toUpperCase()) : ""}</div><h1 class="ttl">Réglages <em class="gd">fondateur.</em></h1></div>
+      <div class="hr2"><span class="rb f" style="height:30px;padding:0 12px;font-size:12px">${SV(CROWN, 13, 2.4)}Fondateur seulement</span>${fd ? '<button class="sw2" type="button"><span>Aperçu vue manager</span><span class="tg3"></span></button>' : ""}</div></div>
+      ${fd ? "" : `<div class="roban">${SV(LOCK, 16, 2)}Ces réglages sont réservés au Fondateur : tu vois les valeurs, sans pouvoir les modifier.</div>`}
+      <div class="fgr"><div class="col">${tiersCard()}${closeCard()}</div><div class="col">${creaCard()}${mgrCard()}${logCard()}</div></div><div class="toast" role="status"></div>`;
+    bind(); setTimeout(drawStair, 60);
+  }
+  function bind() {
+    qa("[data-st]").forEach(b => b.addEventListener("click", () => { const [i, f, d] = b.dataset.st.split(":"); const st = f === "rate" ? .5 : f === "prime" ? 10 : 100;
+      T[i][f] = Math.max(0, Math.round(((T[i][f] || 0) + (+d) * st) * 100) / 100);
+      if (f === "from") { if (i > 0) T[i].from = Math.max(T[i - 1].from + 100, T[i].from); if (T[+i + 1]) T[i].from = Math.min(T[+i + 1].from - 100, T[i].from); }
+      if (f === "rate") T[i].rate = Math.min(100, T[i].rate);
+      dirty = true; q(".savebar").classList.add("on"); drawStair(); qa(".stp")[i].querySelector("b").textContent = T[i].rate + " %"; const pr = qa(".stp")[i].querySelector(".pr"); pr.style.display = T[i].prime ? "" : "none"; pr.textContent = "+ " + E0(T[i].prime || 0); qa(".stp")[i].querySelector("small").textContent = lbl(T[i].from); }));
+    qa("[data-del]").forEach(b => b.addEventListener("click", () => { T.splice(+b.dataset.del, 1); dirty = true; rerenderTiers(); }));
+    q("[data-add]").addEventListener("click", () => { const l = T[T.length - 1]; T.push({ from: l.from + 1000, rate: l.rate, prime: (l.prime || 0) + 20 }); dirty = true; rerenderTiers(); });
+    q(".simr input").addEventListener("input", sim);
+    q("[data-cancel]").addEventListener("click", () => { T = P.map(t => ({ ...t })); dirty = false; rerenderTiers(); toast2("Modifications annulées"); });
+    q("[data-save]").addEventListener("click", async e => { e.target.disabled = true;
+      try { await api("/api/admin/agency", { method: "PUT", body: { tiers: T.map(t => ({ from: t.from, rate: t.rate, prime: t.prime || 0 })) } }); P = T.map(t => ({ ...t })); dirty = false; q(".savebar").classList.remove("on"); toast2("Paliers enregistrés · la compta est recalculée", true); refreshLog(); }
+      catch (x) { toast2(esc(x.message)); } e.target.disabled = false; });
+    // part des créatrices
+    qa(".crow").forEach(r => { const i = r.querySelector("input"), up = () => { const v = +i.value; r.querySelector(".pc2").textContent = v + " %"; r.querySelector(".c1").style.width = v + "%"; r.querySelector(".c2").style.width = (100 - v) + "%"; r.querySelector("[data-a]").textContent = E0(v * 10); r.querySelector("[data-b]").textContent = E0((100 - v) * 10); };
+      i.addEventListener("input", up); i.addEventListener("change", async () => { try { await api(`/api/admin/models/${r.dataset.m}/pct`, { method: "PUT", body: { creator_pct: +i.value } }); toast2(`Part de ${esc(r.querySelector("b").textContent)} : ${i.value} %`, true); refreshLog(); } catch (x) { toast2(esc(x.message)); } }); });
+    // clôture : maintenir le bouton
+    const hb = q(".hold"); if (hb && !hb.disabled) { const fill = hb.querySelector(".fill"), lb = hb.querySelector("span"); let t0 = 0, raf = 0, done = false; const DUR = 1600;
+      const tick = now => { const k = Math.min(1, (now - t0) / DUR); fill.style.width = (k * 100) + "%"; if (k < 1) raf = requestAnimationFrame(tick); else finish(); };
+      const start = e => { if (done) return; e.preventDefault(); hb.classList.add("pressing"); lb.textContent = "Continue de maintenir…"; fill.style.transition = "none"; t0 = performance.now(); raf = requestAnimationFrame(tick); };
+      const stop = () => { if (done) return; cancelAnimationFrame(raf); hb.classList.remove("pressing"); lb.textContent = "Maintenir pour clôturer"; fill.style.transition = "width .4s"; fill.style.width = 0; };
+      const finish = async () => { done = true; hb.classList.remove("pressing"); lb.textContent = "Clôture…";
+        try { await api(`/api/admin/periods/${hb.dataset.key}/close`, { body: {} }); hb.classList.add("done"); lb.textContent = "Période clôturée";
+          const card = hb.closest(".clo"), seal = card.querySelector(".sealed"); setTimeout(() => seal.classList.add("on"), 250);
+          for (let k = 0; k < 26; k++) { const sp = document.createElement("span"); sp.className = "spark2"; card.appendChild(sp); const a = Math.random() * Math.PI * 2, d = 80 + Math.random() * 140; sp.style.left = "50%"; sp.style.top = "45%";
+            sp.animate([{ transform: "translate(-50%,-50%) scale(1)", opacity: 1 }, { transform: `translate(calc(-50% + ${Math.cos(a) * d}px), calc(-50% + ${Math.sin(a) * d}px)) scale(0)`, opacity: 0 }], { duration: 900 + Math.random() * 600, easing: "cubic-bezier(.2,.8,.2,1)", delay: 300 }).onfinish = () => sp.remove(); }
+          toast2("Quinzaine clôturée · paies figées", true); refreshLog();
+        } catch (x) { done = false; toast2(esc(x.message)); stop(); } };
+      hb.addEventListener("pointerdown", start); ["pointerup", "pointerleave", "pointercancel"].forEach(ev => hb.addEventListener(ev, stop));
+      hb.addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && !e.repeat) start(e); }); hb.addEventListener("keyup", e => { if (e.key === "Enter" || e.key === " ") stop(); }); }
+    // managers
+    qa("[data-unm]").forEach(b => b.addEventListener("click", async () => { const m = D.managers.find(x => x.id === +b.dataset.unm); if (!confirm(`Retirer ${N(m.username)} des managers ? Il redevient chatter.`)) return;
+      try { await api("/api/admin/roles/" + m.id, { body: { to: "chatter" } }); toast2(`${esc(N(m.username))} n’est plus manager`, true); load(); } catch (x) { toast2(esc(x.message)); } }));
+    q("[data-nm]").addEventListener("click", async () => { const v = q(".pick select").value; if (!v) return toast2("Choisis d’abord qui nommer"); const p = D.cands.find(x => x.id === +v);
+      if (!confirm(`Nommer ${N(p.username)} manager ? Il aura accès à tout, sauf à tes réglages de Fondateur.`)) return;
+      try { await api("/api/admin/roles/" + v, { body: { to: "manager" } }); toast2(`${esc(N(p.username))} est maintenant manager`, true); load(); } catch (x) { toast2(esc(x.message)); } });
+    const sw = q(".sw2"); sw && sw.addEventListener("click", () => { sw.classList.toggle("on"); root.classList.toggle("mgr", sw.classList.contains("on")); root.classList.toggle("ro", sw.classList.contains("on")); toast2(sw.classList.contains("on") ? "Aperçu : ce que voit un manager" : "Retour à ta vue"); });
+  }
+  const rerenderTiers = () => render();   // le nombre de paliers change : on redessine la page
+  async function refreshLog() { try { const d = await api("/api/admin/founder"); D.log = d.log; const c = q(".jl")?.closest(".card"); if (c) c.outerHTML = logCard(); } catch (e) {} }
+  async function load() {
+    try { const [d, r] = await Promise.all([api("/api/admin/founder"), api("/api/admin/roles").catch(() => null)]); D = d;
+      D.cands = r ? r.people.filter(p => ["chatter", "tl", "assistant"].includes(p.rk)) : [];
+      if (!dirty) { T = d.tiers.map(t => ({ from: t.from, rate: t.rate, prime: t.prime || 0 })); P = T.map(t => ({ ...t })); }
+      render();
+    } catch (e) { root.innerHTML = `<div class="card"><div class="emp">${esc(e.message)}</div></div>`; }
+  }
+  (async () => { try { ME = await api("/api/me"); renderShell("fondateur", ME); } catch (e) { return; } load(); })();
+})();
+</script>
+</body>
+</html>

@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/gestion-ui.css">
 <link rel="stylesheet" href="/entretien.css">
+<link rel="stylesheet" href="/roles.css">
 </head>
 <body>
 <div class="shell">
@@ -23,6 +24,7 @@
   <div class="hdr"><div><div class="eb">MANAGER</div><h1 class="ttl">La <em>gestion.</em></h1></div></div>
   <div class="tabs" role="tablist">
     <button class="on" data-t="team">Équipe<b id="nTeam"></b></button>
+    <button data-t="roles">Rôles et équipes</button>
     <button data-t="cand">Candidatures<b id="nCand"></b></button>
     <button data-t="crea">Créatrices<b id="nCrea"></b></button>
     <button data-t="reg">Réglages</button>
@@ -38,6 +40,9 @@
       <button class="wbtn" id="addBtn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Ajouter un compte</button></div>
     <div class="grid" id="teamGrid"><div class="ld">Chargement…</div></div>
   </section>
+
+  <!-- ============ RÔLES ET ÉQUIPES ============ -->
+  <section class="pane" data-p="roles"><div id="rolesRoot" class="rl"><div class="ld">Chargement…</div></div></section>
 
   <!-- ============ CANDIDATURES ============ -->
   <section class="pane" data-p="cand">
@@ -140,6 +145,7 @@
 </div>
 <script src="/common.js"></script>
 <script src="/entretien-ui.js"></script>
+<script src="/roles-ui.js"></script>
 <script src="/gestion-ui.js"></script>
 </body>
 </html>

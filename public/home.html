@@ -777,7 +777,8 @@ function heroAdm(line, brut, ahead) {
   const h = new Date().getHours(), hello = h < 5 ? "Bonne nuit" : h < 18 ? "Bonjour" : "Bonsoir";
   const date = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
   const n = D.pendingSales.n;
-  const chips = `<a class="act ${n ? "hot" : "dim"}" href="/ventes">${icon("receipt")}<span>Valider<span class="lx"> les ventes</span></span><span class="n">${n}</span></a>`
+  const chips = window.RK === "assistant" ? `<a class="act hot" href="/planning">${icon("calendar")}Planning</a><a class="act" href="/chat">${icon("bubbles")}Chat d'équipe</a><a class="act" href="/compta">${icon("euro")}Paies</a>`
+    : `<a class="act ${n ? "hot" : "dim"}" href="/ventes">${icon("receipt")}<span>Valider<span class="lx"> les ventes</span></span><span class="n">${n}</span></a>`
     + `<a class="act ${n ? "" : "hot"}" href="/compta">${icon("euro")}Saisir le CA</a>`
     + `<a class="act" href="/planning">${icon("calendar")}Planning</a>`;
   return `<div class="b hero a-hero" style="${wv("hero")}"><div class="stars">${stars()}</div><span class="glow"></span>
@@ -821,16 +822,17 @@ function podAdm(rows) {
 function renderAdmin() {
   const t = D.totals, ps = D.pendingSales, brut = t.brut || 0;
   const pace = Math.min(1, (+D.today.slice(8) - +D.period.from.slice(8) + 1) / D.nDays), ahead = D.projection >= D.goal;
-  const line = ps.n ? `<span><b>${ps.n} vente${ps.n > 1 ? "s" : ""}</b> attend${ps.n > 1 ? "ent" : ""} ta validation</span>`
+  const line = window.RK === "assistant" ? `Planning, remplacements, annonces et paies : tout est dans ton menu.` : ps.n ? `<span><b>${ps.n} vente${ps.n > 1 ? "s" : ""}</b> attend${ps.n > 1 ? "ent" : ""} ta validation</span>`
     : D.missingRevenue.length ? `CA brut à saisir pour <b>${D.missingRevenue.map(esc).join(", ")}</b>`
     : `Tout est à jour. Belle période !`;
-  const mh = D.marginHist, mt = D.prevMargin > 0 ? trendTxt(D.marginTrend) : ["nouvelle période", "nw"];
-  const k1 = barsB(mh.map(x => Math.max(0, x.margin)), mh.map(x => `${esc(x.label)} · <b>${eur(x.margin)}</b>`), null, 1.9)
+  const NM = !D.marginHist;   // l'Assistante ne voit pas la marge : la carte montre la paie des chatters
+  const mh = D.marginHist || [], mt = NM ? ["quinzaine en cours", "nw"] : D.prevMargin > 0 ? trendTxt(D.marginTrend) : ["nouvelle période", "nw"];
+  const k1 = NM ? `<div class="days"><span style="text-align:left;text-transform:none">Commissions et primes de la quinzaine</span></div>` : barsB(mh.map(x => Math.max(0, x.margin)), mh.map(x => `${esc(x.label)} · <b>${eur(x.margin)}</b>`), null, 1.9)
     + `<div class="days"><span style="text-align:left;text-transform:none">${mh.length} dernières périodes</span></div>`;
   $("hm").className = "hm adm " + MODE;
   $("hm").innerHTML = heroAdm(line, brut, ahead)
     + goalAdm(brut, ahead, pace)
-    + kpiAdm("k1", "Marge <em>de l'agence</em>", eur(t.margin), mt, k1, "/compta")
+    + (NM ? kpiAdm("k1", "Paie <em>des chatters</em>", eur(t.chatters), mt, k1, "/compta") : kpiAdm("k1", "Marge <em>de l'agence</em>", eur(t.margin), mt, k1, "/compta"))
     + `<div class="b a-logo" style="${wv("logo")}" aria-hidden="true"><div class="lgfx la" id="lgfx"></div></div>`
     + `<div class="b a-feed" style="${wv("feed")}"><div class="fxroot" id="fxroot"></div></div>`
     + podAdm(D.leaderboard.slice(0, 3));

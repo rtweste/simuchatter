@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mon équipe — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/gestion-ui.css">
+<link rel="stylesheet" href="/roles.css">
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area">
+<div class="wrap ge rl" id="root"><div class="ld">Chargement de ton équipe…</div></div>
+</main>
+</div>
+<script src="/common.js"></script>
+<script>
+(() => {
+  const root = $("root");
+  const SV = (d, s = 18, w = 1.8) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"></path></svg>`;
+  const IC = { msg: "M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z", target: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z", plus: "M12 5v14M5 12h14",
+    bell: "M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0", trophy: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3a3 3 0 0 1-3 4M7 5H4a3 3 0 0 0 3 4",
+    clock: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2", grad: "M2 9l10-5 10 5-10 5zM6 11v5c3 2 9 2 12 0v-5", check: "M5 12.5l4.5 4.5L19 7.5", bolt: "M13 2L4 14h7l-1 8 9-12h-7z",
+    gift: "M3 8h18v4H3zM5 12v9h14v-9M12 8v13M12 8S10 3 7.5 4.5 9 8 12 8zM12 8s2-5 4.5-3.5S15 8 12 8z", flag: "M5 21V4M5 4h11l-2 4 2 4H5" };
+  const I = (k, s, w) => SV(IC[k], s, w);
+  const E0 = n => Math.round(n || 0).toLocaleString("fr-FR") + " €";
+  const N = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  const A = s => esc((s || "?")[0].toUpperCase());
+  const hm = ms => new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
+  const ago = ms => { const m = Math.max(0, Math.round((Date.now() - ms) / 60000)); return m < 1 ? "à l’instant" : m < 60 ? `il y a ${m} min` : m < 1440 ? `il y a ${Math.floor(m / 60)} h` : `il y a ${Math.floor(m / 1440)} j`; };
+  const clk = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  let ME = null, D = null, TL = null, CH = null, seenEv = new Set(), first = true, cur = null, timers = [];
+  const q = s => root.querySelector(s), qa = s => [...root.querySelectorAll(s)];
+  const toast = (t, g) => { const el = q(".toast"); if (!el) return; el.innerHTML = (g ? "✓ " : "") + t; el.classList.toggle("g", !!g); el.classList.add("on"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("on"), 3000); };
+  const countUp = (el, to, dur) => { const from = Number(el.dataset.cur || 0), suf = el.dataset.suf || "", t0 = performance.now(); el.dataset.cur = to;
+    const step = now => { const k = Math.min(1, (now - t0) / (dur || 1500)), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(from + (to - from) * e).toLocaleString("fr-FR") + suf; if (k < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); };
+  const play = scope => { scope = scope || root;
+    scope.querySelectorAll("[data-count]").forEach(el => { if (el.dataset.done) return; el.dataset.done = 1; countUp(el, Number(el.dataset.count)); });
+    scope.querySelectorAll(".rg[data-p]").forEach(r => { const a = r.querySelector(".arc"); if (a) a.style.strokeDashoffset = a.dataset.c * (1 - Math.min(1, +r.dataset.p)); const t = r.querySelector(".tip2"); if (t) t.style.transform = `rotate(${Math.min(1, +r.dataset.p) * 360}deg)`; });
+    scope.querySelectorAll(".sp").forEach(p => p.style.strokeDashoffset = 0);
+    scope.querySelectorAll("[data-w]").forEach(i => i.style.width = i.dataset.w + "%"); };
+  const rg = (p, size, sw, col, inner, cls = "", tip = false) => { const r = size / 2 - sw / 2 - 2, c = 2 * Math.PI * r;
+    return `<div class="rg ${cls}" data-p="${Math.max(0, p).toFixed(3)}" style="width:${size}px;height:${size}px"><svg width="${size}" height="${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r.toFixed(1)}" fill="none" stroke="#1f1f1f" stroke-width="${sw}"/><circle class="arc" cx="${size / 2}" cy="${size / 2}" r="${r.toFixed(1)}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${c.toFixed(1)}" data-c="${c.toFixed(1)}"/></svg>${tip ? `<span class="tip2" style="--r2:${size / 2}px"></span>` : ""}<div class="rv">${inner}</div></div>`; };
+  const sk = (vals, w, h, col, area) => { if (!vals || vals.length < 2) vals = [0, 0]; const lo = Math.min(...vals), hi = Math.max(...vals), rr = (hi - lo) || 1;
+    const pts = vals.map((v, i) => [i / (vals.length - 1) * w, h - 3 - (v - lo) / rr * (h - 6)]), d = "M" + pts.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" L");
+    const id = "g" + Math.random().toString(36).slice(2, 8), x = pts[pts.length - 1];
+    return `<svg class="spk2" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${area ? `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".22"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w} ${h} L0 ${h}Z" fill="url(#${id})"/>` : ""}<path class="sp" d="${d}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" vector-effect="non-scaling-stroke"/><circle cx="${x[0].toFixed(1)}" cy="${x[1].toFixed(1)}" r="3" fill="${col}"/></svg>`; };
+  const G = "#5fd3a2", R = "#e07a7a", AM = "#f2b84b";
+  const stCls = m => ({ on: "on", pause: "pa", late: "la", off: "of", trainee: "of" }[m.status]);
+  const secs = ms => Math.max(0, Math.round((Date.now() - ms) / 1000));
+
+  /* ---------- constellation ---------- */
+  function orbit() {
+    const ms = D.members, n = ms.length, cx = 150, R0 = innerWidth < 520 ? 96 : n > 8 ? 124 : 116;
+    let lines = "", nodes = "";
+    ms.forEach((m, i) => { const a = -Math.PI / 2 + i * 2 * Math.PI / n, x = cx + R0 * Math.cos(a), y = cx + R0 * Math.sin(a), c = stCls(m);
+      lines += `<line x1="${cx}" y1="${cx}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" class="${c}"/>`;
+      const lab = m.status === "on" ? E0(m.ca) : m.status === "pause" ? `<span data-tk="${m.statusSince}" data-f="clk">${clk(secs(m.statusSince))}</span>` : m.status === "late" ? `+<span data-tk="${m.statusSince}">${Math.round(secs(m.statusSince) / 60)}</span> min` : m.role === "trainee" ? "élève" : "hors shift";
+      nodes += `<div class="nd ${c}" data-k="${m.id}" style="left:${x.toFixed(1)}px;top:${y.toFixed(1)}px"><button class="in" data-open="${m.id}" aria-label="Fiche de ${esc(m.username)}"><span class="bub">${A(m.username)}</span><span class="nm">${esc(N(m.username))}<small>${lab}</small></span></button></div>`; });
+    return `<div class="orbw"><div class="orb"><svg class="olines" viewBox="0 0 300 300">${lines}</svg>${nodes}</div><div class="core"><span class="bub">${A(D.leader.username)}</span><small>${ME.rk === "tl" ? "TOI" : "TL"}</small></div></div>`;
+  }
+  const evHTML = e => { const c = e.k === "late" ? "r" : e.k === "pause" ? "w" : ""; const am = e.k === "sale" ? "+" + E0(e.amount) : e.k === "late" ? "retard" : e.k === "pause" ? "pause" : e.k === "renfort" ? "renfort" : "shift";
+    return `<div class="fi2${e.k === "sale" && !first ? " hot" : ""}" data-ev="${e.id}"><span class="av">${A(e.who)}</span><span><b>${esc(N(e.who))}</b> ${esc(e.text)} <small class="mut" style="font-size:11px">· ${hm(e.at)}</small></span><span class="am ${c}">${am}</span></div>`; };
+  const legend = `<div class="lgd"><span><i style="background:${G}"></i>En ligne</span><span><i style="background:${AM}"></i>En pause</span><span><i style="background:${R}"></i>En retard</span><span><i style="border:1px dashed #777"></i>Hors shift</span></div>`;
+  function liveCard() {
+    const on = D.members.filter(m => m.status === "on" || m.status === "pause").length, planned = D.members.filter(m => ["on", "pause", "late"].includes(m.status)).length;
+    return `<div class="card"><div class="ch"><h3>Ton équipe <em>en direct</em></h3><span class="tag ${on ? "v live" : "w"}"><i></i>${on} en shift${planned > on ? ` sur ${planned}` : ""}</span></div>
+      <div class="lvw">${orbit()}<div class="feed"><div class="lab">FLUX EN DIRECT</div><div class="fl2">${D.events.length ? D.events.map(evHTML).join("") : '<div class="emp">Rien pour le moment. Les ventes, débuts de shift et pauses de ton équipe s’afficheront ici.</div>'}</div>${legend}</div></div></div>`;
+  }
+  /* ---------- défi + chiffres ---------- */
+  function defiCard() {
+    const ms = D.members, ca = ms.reduce((t, m) => t + m.ca, 0), lw = ms.reduce((t, m) => t + m.lastWeek, 0), n = ms.reduce((t, m) => t + m.n, 0);
+    const team = CH && CH.active ? CH.active.find(c => c.scope === "team" && !c.closed_at) : null;
+    const pts = ms.filter(m => m.punct && m.punct.total), pct = pts.length ? Math.round(pts.reduce((t, m) => t + m.punct.pct * m.punct.total, 0) / pts.reduce((t, m) => t + m.punct.total, 0)) : null;
+    const lates = ms.reduce((t, m) => t + (m.punct ? m.punct.late : 0), 0), pz = ms.filter(m => m.pauseAvg != null), pavg = pz.length ? Math.round(pz.reduce((t, m) => t + m.pauseAvg, 0) / pz.length) : null, over = ms.reduce((t, m) => t + m.pauseOver, 0);
+    const tr = ms.filter(m => m.role === "trainee"), sims = ms.reduce((t, m) => t + m.sim.n7, 0);
+    const dayCA = [0, 1, 2, 3, 4, 5, 6].map(i => ms.reduce((t, m) => t + (m.spark[i] || 0), 0));
+    const grad = '<defs><linearGradient id="gdg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b8860b"/><stop offset=".6" stop-color="#ffd23f"/><stop offset="1" stop-color="#fff3c4"/></linearGradient></defs>';
+    let ring, h2, p;
+    if (team) { const left = Math.max(0, team.target - team.value);
+      ring = rg(team.value / team.target, 168, 13, "url(#gdg)", `<b class="num" data-count="${Math.round(team.value)}" data-suf=" ${team.metric === "count" ? "" : "€"}">0</b><small>SUR ${Math.round(team.target).toLocaleString("fr-FR")}${team.metric === "count" ? " VENTES" : " €"}</small>`, "defi", true);
+      h2 = `${esc(team.title || "Défi d’équipe")}`; p = left ? `Plus que <b>${team.metric === "count" ? Math.ceil(left) + " ventes" : E0(left)}</b> · fin ${new Date(team.end_at).toLocaleDateString("fr-FR", { weekday: "long", timeZone: "Europe/Paris" })} ${hm(team.end_at)}` : "Défi réussi, bravo à toute l’équipe";
+    } else { ring = rg(lw ? ca / lw : (ca ? 1 : 0), 168, 13, "url(#gdg)", `<b class="num" data-count="${Math.round(ca)}" data-suf=" €">0 €</b><small>${lw ? "VS " + E0(lw).toUpperCase() : "CETTE SEMAINE"}</small>`, "defi", true);
+      h2 = `CA de ton équipe <em>cette semaine</em>`; p = lw ? (ca >= lw ? `Déjà au-dessus de la semaine dernière (${E0(lw)})` : `Encore ${E0(lw - ca)} pour égaler la semaine dernière`) : "Pas de défi d’équipe en cours"; }
+    ring = ring.replace('"><circle', `">${grad}<circle`);
+    const tot = Math.max(1, ca), shades = ["#ededed", "#b5b5b5", "#858585", "#5d5d5d", "#3d3d3d", "#2e2e2e"];
+    const cb = ms.filter(m => m.ca > 0).map((m, i) => ({ n: N(m.username), p: Math.round(m.ca / tot * 100), c: shades[Math.min(i, 5)] }));
+    return `<div class="card" style="--d:.06s"><div class="ch"><h3>${team ? "Défi <em>d’équipe</em>" : "La <em>semaine</em>"}</h3>${team ? `<span class="tag gd">${team.metric === "count" ? "ventes" : "CA"} de l’agence</span>` : `<span class="tag w">du lundi à aujourd’hui</span>`}</div>
+      <div class="dring">${ring}<div style="flex:1;min-width:0"><h2>${h2}</h2><p>${p}</p>
+      ${cb.length ? `<div class="ctb">${cb.map(x => `<i data-w="${x.p}" style="width:0;background:${x.c}"></i>`).join("")}</div><div class="ctl">${cb.map(x => `<span><i style="background:${x.c}"></i>${esc(x.n)} ${x.p} %</span>`).join("")}</div>` : '<div class="mut" style="margin-top:12px">Aucune vente de ton équipe cette semaine pour l’instant.</div>'}</div></div>
+      <div class="mini4"><div><small>Ventes de la semaine</small><b><span class="num" data-count="${n}">0</span><span class="dl ${ca >= lw ? "up" : "dn"}">${lw ? (ca >= lw ? "↑ " : "↓ ") + Math.abs(Math.round((ca / lw - 1) * 100)) + " % de CA" : ""}</span></b>${sk(dayCA, 120, 22, G)}</div>
+      <div><small>Ponctualité (quinzaine)</small><b>${pct == null ? "—" : `<span class="num" data-count="${pct}" data-suf=" %">0</span>`}<span class="dl ${lates ? "wr" : "up"}">${lates ? lates + " retard" + (lates > 1 ? "s" : "") : "aucun retard"}</span></b></div>
+      <div><small>Pause moyenne</small><b>${pavg == null ? "—" : `<span class="num" data-count="${pavg}" data-suf=" min">0</span>`}<span class="dl ${over ? "dn" : "up"}">${over ? over + " dépassée" + (over > 1 ? "s" : "") : `max ${D.pauseMax} min`}</span></b></div>
+      <div><small>Formation</small><b>${sims}<span class="dl ${tr.length ? "wr" : "up"}">simu${sims > 1 ? "s" : ""} en 7 j${tr.length ? ` · ${tr.length} élève${tr.length > 1 ? "s" : ""}` : ""}</span></b></div></div></div>`;
+  }
+  /* ---------- classement ---------- */
+  function board() {
+    const ms = D.members.filter(m => m.role !== "trainee"); if (!ms.length) return '<div class="emp">Pas encore de chatter dans ton équipe.</div>';
+    const top = Math.max(1, ...ms.map(m => m.ca));
+    const hd = '<div class="lr hd"><span>#</span><span>CHATTER</span><span class="xm">7 JOURS</span><span>CA DE LA SEMAINE</span><span class="xm" style="text-align:right">VENTES</span><span class="xm" style="text-align:right">PANIER</span></div>';
+    return `<div class="lb">${hd}${ms.map((m, i) => { const mv = (m.prevRank || i + 1) - (i + 1), mvh = mv > 0 ? `<small class="u">▲${mv}</small>` : mv < 0 ? `<small class="d">▼${-mv}</small>` : '<small class="s">=</small>';
+      const col = m.ca > m.lastWeek ? G : m.ca < m.lastWeek ? R : "#bdbdbd", sub = m.status === "on" || m.status === "pause" ? `en shift · ${esc(m.statusSub)}` : m.status === "late" ? "pas encore pointé" : esc(m.statusSub || "hors shift");
+      const tg = i === 0 && m.ca > 0 ? ' <span class="tag gd">en tête</span>' : m.lastWeek > 0 && m.ca < m.lastWeek * .6 && new Date().getDay() > 3 ? ' <span class="tag r">en baisse</span>' : "";
+      return `<button class="lr" data-open="${m.id}" style="animation-delay:${(i * .05).toFixed(2)}s;text-align:left;font:inherit;color:inherit;width:100%"><span class="rk">${i + 1}${mvh}</span><span class="who"><span class="av">${A(m.username)}</span><span>${esc(N(m.username))}${tg}<small>${sub}</small></span></span>
+        <span class="xm">${sk(m.spark, 92, 30, col)}</span><span class="cab"><span class="t"><i data-w="${(m.ca / top * 100).toFixed(0)}"></i></span><b class="num" data-count="${Math.round(m.ca)}" data-suf=" €">0 €</b></span><span class="c xm">${m.n}${m.pending ? `<small class="mut" style="display:block;font-size:10px">${m.pending} en attente</small>` : ""}</span><span class="c xm">${m.n ? E0(m.avg) : "—"}</span></button>`; }).join("")}</div>`;
+  }
+  /* ---------- ligne de temps ---------- */
+  function timeline() {
+    const T = D.timeline, span = T.to - T.from, P = ms => ((Math.max(T.from, Math.min(T.to, ms)) - T.from) / span * 100).toFixed(2) + "%", W = (a, b) => ((Math.min(T.to, b) - Math.max(T.from, a)) / span * 100).toFixed(2) + "%";
+    const hrs = []; for (let t = T.from; t <= T.to; t += 2 * 3.6e6) hrs.push(t);
+    const rows = T.rows.map(r => {
+      if (r.trainee) return `<div class="tlr"><span class="nm2"><span class="av">${A(r.username)}</span>${esc(N(r.username))}</span><div class="trk"><span class="off2" style="position:absolute;top:13px">En formation · pas de shift</span></div></div>`;
+      let t = "";
+      r.shifts.forEach(s => { t += `<span class="sh plan" style="left:${P(s.a)};width:${W(s.a, s.b)}" title="${esc(s.label)} · ${esc(s.model)}"></span>`;
+        if (s.state === "missing") t += `<span class="sh miss" style="left:${P(s.a)};width:${W(s.a, Math.min(Date.now(), s.b))}"></span><span class="lflag" style="left:${P(s.a)}">+${s.late} min</span>`;
+        else if (s.state === "absent") t += `<span class="sh miss" style="left:${P(s.a)};width:${W(s.a, s.b)}"></span><span class="lflag" style="left:${P(s.a)}">absent</span>`;
+        else if (s.late > 0) t += `<span class="lflag" style="left:${P(s.a)}">+${s.late} min</span>`; });
+      r.clocks.forEach(c => { const b = c.b || Date.now(); t += `<span class="sh done" style="left:${P(c.a)};width:${W(c.a, b)}"></span>`; });
+      r.pauses.forEach(p => t += `<span class="ps${p.b ? "" : " live"}" style="left:${P(p.a)};width:${W(p.a, p.b || Date.now())}"></span>`);
+      if (!r.shifts.length && !r.clocks.length) t += '<span class="off2" style="position:absolute;top:13px">Pas de shift aujourd’hui</span>';
+      return `<button class="tlr" data-open="${r.id}" style="width:100%;background:none;border-left:0;border-right:0;border-bottom:0;color:inherit;font:inherit;padding:0;text-align:left"><span class="nm2"><span class="av">${A(r.username)}</span>${esc(N(r.username))}</span><div class="trk">${t}</div></button>`; }).join("");
+    const ms = D.members, lates = ms.reduce((t, m) => t + (m.punct ? m.punct.late : 0), 0), abs = ms.reduce((t, m) => t + (m.punct ? m.punct.absent : 0), 0), over = ms.reduce((t, m) => t + m.pauseOver, 0);
+    return `<div class="tml"><div class="tlh"><span></span><div class="ticks">${hrs.map(t => `<span style="left:${P(t)}">${hm(t).slice(0, 2)}h</span>`).join("")}</div></div>${rows}<div class="nowl"><span class="now" data-now style="left:${P(Date.now())}" data-t="${hm(Date.now())}"></span></div></div>
+      <div class="sumc"><span class="r">Retards (quinzaine) <b>${lates}</b></span><span class="w">Pauses dépassées (semaine) <b>${over}</b></span><span>Absences <b>${abs}</b></span><span style="margin-left:auto;background:transparent;border:0;color:#6a6a6a">Vert = pointé · rayures = pause · pointillés = prévu</span></div>`;
+  }
+  /* ---------- formation ---------- */
+  function formation() {
+    return `<div class="ftg">${D.members.map((m, i) => { const sc = m.sim.avg5 ?? (m.sim.last ? m.sim.last.score : null), col = sc == null ? "#3a3a3a" : sc >= 75 ? G : sc >= 62 ? AM : R;
+      const tr = m.training, bad = tr && !tr.ready && (!m.sim.last || Date.now() - m.sim.last.at > 3 * 864e5);
+      const a0 = m.assignments[0];
+      const sub = tr ? (tr.ready ? "Prêt : sa formation peut être validée" : `${tr.done} / ${tr.total} critères · ${esc(tr.tip).slice(0, 90)}`) : a0 ? `Entraînement : ${esc(a0.persona)} · objectif ${a0.goal}${a0.due ? " · avant le " + new Date(a0.due).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}` : m.sim.last ? `Dernière simu ${ago(m.sim.last.at)} · ${m.sim.n7} en 7 j` : "Aucune simulation pour l’instant";
+      const bar = tr ? `<div class="mp">${Array.from({ length: Math.min(tr.total, 12) }, (_, k) => `<i class="${k < tr.done ? "ok" : k === tr.done && bad ? "cur" : ""}"></i>`).join("")}</div>` : m.sim.trend.length > 1 ? `<div style="margin-top:6px">${sk(m.sim.trend, 120, 18, col)}</div>` : "";
+      return `<button class="ft${bad ? " bad" : ""}" data-open="${m.id}" style="animation-delay:${(i * .05).toFixed(2)}s;text-align:left;color:inherit;font:inherit">${rg((sc || 0) / 100, 54, 6, col, `<b>${sc ?? "—"}</b>`)}<div style="min-width:0;flex:1"><b>${esc(N(m.username))}${tr ? ' <span class="rb e" style="margin-left:4px;height:18px">élève</span>' : ""}</b><small>${sub}</small>${bar}</div></button>`; }).join("")}</div>
+      <div class="sumc"><span>Score moyen au simulateur <b>${(() => { const s = D.members.map(m => m.sim.avg5).filter(x => x != null); return s.length ? Math.round(s.reduce((a, b) => a + b, 0) / s.length) : "—"; })()}</b></span><span>Entraînements en cours <b>${D.members.reduce((t, m) => t + m.assignments.length, 0)}</b></span>${D.members.some(m => m.training && !m.training.ready) ? `<span class="r">Élèves en formation <b>${D.members.filter(m => m.training && !m.training.ready).length}</b></span>` : ""}</div>`;
+  }
+  /* ---------- alertes ---------- */
+  const HID = () => { try { return JSON.parse(localStorage.getItem("stTlHide") || "{}"); } catch (e) { return {}; } };
+  function alertsCard() {
+    const hid = HID(), list = D.alerts.filter(a => !hid[a.key]);
+    const cls = a => ({ pause: "w", late: "r", sos: "g", train: "v", asg: "v" }[a.kind] || "w");
+    const act = a => a.kind === "late" ? `<button class="sb w" data-help="${a.uid}">Demander un renfort</button><button class="sb" data-act="c" data-who="${a.uid}">Lui écrire</button>`
+      : a.kind === "pause" ? `<button class="sb w" data-act="c" data-who="${a.uid}" data-tpl="Ta pause dépasse le temps prévu, reviens vite stp">Lui rappeler</button>`
+      : a.kind === "sos" ? `<a class="sb w" href="${esc(a.href || "/chat")}" style="display:inline-flex;align-items:center;text-decoration:none">Répondre dans le chat</a>`
+      : `<button class="sb w" data-act="${a.kind === "train" ? "c" : "e"}" data-who="${a.uid}">${a.kind === "train" ? "Envoyer un conseil" : "Voir l’entraînement"}</button><button class="sb" data-open="${a.uid}">Sa fiche</button>`;
+    return `<div class="card" style="--d:.1s"><div class="ch"><h3><span class="bellw">${I("bell", 17)}</span> Alertes de <em>mon équipe</em></h3><span class="cnt"${list.length ? "" : ' style="background:#262626;color:#8a8a8a"'}>${list.length}</span></div>
+      <div class="al">${list.length ? list.map((a, i) => `<div class="ai ${cls(a)}" data-key="${esc(a.key)}" style="animation-delay:${(i * .06).toFixed(2)}s">${a.kind === "pause" ? `<span class="tm2" data-tk="${a.at - D.pauseMax * 60000}" data-f="clk"></span>` : `<span class="tm2">${ago(a.at)}</span>`}<b>${esc(N(a.title))}</b><small>${esc(a.sub || "")}</small><div class="aa">${act(a)}<button class="sb" data-hide aria-label="Masquer l’alerte">Masquer</button></div></div>`).join("") : '<div class="emp">Tout roule : aucune alerte dans ton équipe.</div>'}</div></div>`;
+  }
+  /* ---------- à faire (suggestions) ---------- */
+  function todos() {
+    const ms = D.members, out = [], ch = ms.filter(m => m.role !== "trainee");
+    const top = [...ch].sort((a, b) => b.ca - a.ca)[0]; if (top && top.ca > 0) out.push([`Féliciter ${N(top.username)}`, `${E0(top.ca)} cette semaine, en tête de l’équipe`, "tag gd", "Bravo", "c", top.id, `Bravo pour ta semaine, ${E0(top.ca)} c’est énorme, continue comme ça`]);
+    const late = ch.filter(m => m.punct && m.punct.late + m.punct.absent >= 2).sort((a, b) => (b.punct.late + b.punct.absent) - (a.punct.late + a.punct.absent))[0];
+    if (late) out.push([`Faire un point avec ${N(late.username)}`, `${late.punct.late} retard${late.punct.late > 1 ? "s" : ""} et ${late.punct.absent} absence${late.punct.absent > 1 ? "s" : ""} sur la quinzaine`, "tag r", "Point", "c", late.id, ""]);
+    const lowP = ch.filter(m => m.n >= 3).sort((a, b) => a.avg - b.avg)[0]; if (lowP && ch.filter(m => m.n >= 3).length > 1) out.push([`Entraîner ${N(lowP.username)} sur les prix`, `Panier moyen de ${E0(lowP.avg)}, le plus bas de l’équipe`, "tag lv", "Coaching", "e", lowP.id, ""]);
+    const pz = ch.find(m => m.pauseOver >= 2); if (pz) out.push([`Parler des pauses avec ${N(pz.username)}`, `${pz.pauseOver} pauses trop longues cette semaine`, "tag a", "Pauses", "c", pz.id, "Attention à la durée de tes pauses, essaie de rester sous le temps prévu"]);
+    const tr = ms.find(m => m.training && !m.training.ready); if (tr) out.push([`Accompagner ${N(tr.username)} en formation`, `${tr.training.done} / ${tr.training.total} critères validés`, "tag lv", "Élève", "c", tr.id, ""]);
+    const quiet = ch.find(m => m.sim.n7 === 0 && m.n === 0); if (quiet) out.push([`Relancer ${N(quiet.username)}`, "Aucune vente ni simulation cette semaine", "tag w", "Relance", "c", quiet.id, ""]);
+    return out.slice(0, 5);
+  }
+  const TDK = () => "stTlTodo:" + D.today;
+  function todoCard() {
+    const T = todos(); if (!T.length) return "";
+    let ok = {}; try { ok = JSON.parse(localStorage.getItem(TDK()) || "{}"); } catch (e) {}
+    return `<div class="card" style="--d:.14s"><div class="ch"><h3>À faire <em>aujourd’hui</em></h3><span class="mut" data-tdl></span></div><div class="mut">Suggestions tirées des chiffres de ton équipe</div>
+      ${T.map((t, i) => `<div class="td${ok[t[0]] ? " ok" : ""}" data-td="${esc(t[0])}" style="animation-delay:${(i * .05).toFixed(2)}s"><button class="bx" aria-label="Fait">${I("check", 13, 3.2)}</button><div style="min-width:0;flex:1"><b>${esc(t[0])}</b><small>${esc(t[1])}</small><button class="sb" style="margin-top:7px" data-act="${t[4]}" data-who="${t[5]}"${t[6] ? ` data-tpl="${esc(t[6])}"` : ""}>${t[4] === "e" ? "Assigner un entraînement" : "Lui écrire"}</button></div><span class="k ${t[2]}">${t[3]}</span></div>`).join("")}<div class="prg"><i></i></div></div>`;
+  }
+  function primeCard() {
+    const p = D.primes.filter(x => !x.done).sort((a, b) => b.net / b.target - a.net / a.target)[0], won = D.primes.filter(x => x.done).length;
+    if (!p && !won) return "";
+    if (!p) return `<div class="card prime" style="--d:.18s"><span class="gift">${I("gift", 22)}</span><div style="flex:1;min-width:0"><b>${won} prime${won > 1 ? "s" : ""} Team Leader gagnée${won > 1 ? "s" : ""}</b><small>Bravo : tes recrues ont atteint leur premier palier.</small></div></div>`;
+    const pct = Math.min(100, Math.round(p.net / Math.max(1, p.target) * 100));
+    return `<div class="card prime" style="--d:.18s"><span class="gift">${I("gift", 22)}</span><div style="flex:1;min-width:0"><b>Prime Team Leader · ${E0(p.prime)}</b><small>${p.role === "trainee" ? `Quand ${esc(N(p.username))} sera chatter et atteindra ${E0(p.target)} de ventes nettes sur une quinzaine.` : `Quand ${esc(N(p.username))} atteint ${E0(p.target)} de ventes nettes sur une quinzaine. Il en est à ${E0(p.net)}.`}${won ? ` · ${won} déjà gagnée${won > 1 ? "s" : ""}` : ""}</small><div class="pt"><i data-w="${pct}"></i></div></div></div>`;
+  }
+  /* ---------- fiche d'un membre ---------- */
+  function drawerHTML(m) {
+    const tg = { on: '<span class="tag v live"><i></i>En ligne</span>', pause: `<span class="tag a live"><i></i>Pause <span data-tk="${m.statusSince}" data-f="clk"></span></span>`, late: '<span class="tag r live"><i></i>Pas pointé</span>', off: '<span class="tag w">Hors shift</span>', trainee: '<span class="rb e">Élève</span>' }[m.status];
+    const col = m.ca >= m.lastWeek ? G : R, pu = m.punct;
+    const cal = pu && pu.last.length ? pu.last.map(c => `<i class="${c === "v" ? "ok" : c === "r" ? "la" : "ab"}"></i>`).join("") : "";
+    const kp = m.role === "trainee" && m.training ? `<div class="dk"><div><small>Formation</small><b>${m.training.done} / ${m.training.total}</b><em>${m.training.ready ? "prêt à valider" : "critères validés"}</em></div><div><small>Score simulateur</small><b style="color:${(m.sim.avg5 || 0) >= 70 ? G : R}">${m.sim.avg5 ?? "—"}</b><em>moyenne des 5 dernières</em></div></div>
+      <div class="sec"><span class="lab">CONSEIL DU MOMENT</span><div class="mut" style="font-size:12.5px;line-height:1.5">${esc(m.training.tip)}</div></div>`
+      : `<div class="dk"><div><small>CA de la semaine</small><b class="num" data-count="${Math.round(m.ca)}" data-suf=" €">0 €</b><em>${m.n} vente${m.n > 1 ? "s" : ""} · panier ${m.n ? E0(m.avg) : "—"}</em></div><div><small>Score simulateur</small><b>${m.sim.avg5 ?? "—"}<span style="font-size:12px;color:#6a6a6a"> / 100</span></b><em>${m.sim.n7} simu${m.sim.n7 > 1 ? "s" : ""} en 7 j</em></div>
+        <div><small>Ponctualité</small><b>${pu && pu.total ? pu.pct + " %" : "—"}</b><em>${pu ? `${pu.late} retard${pu.late > 1 ? "s" : ""} · ${pu.absent} absence${pu.absent > 1 ? "s" : ""}` : "quinzaine"}</em></div><div><small>Pause moyenne</small><b style="color:${(m.pauseAvg || 0) > D.pauseMax ? R : "#fff"}">${m.pauseAvg == null ? "—" : m.pauseAvg + " min"}</b><em>${m.pauseOver ? m.pauseOver + " dépassée" + (m.pauseOver > 1 ? "s" : "") : "limite " + D.pauseMax + " min"}</em></div></div>
+        <div class="sec"><span class="lab">CA SUR 7 JOURS</span>${sk(m.spark, 420, 70, col, true).replace('class="spk2"', 'class="spk2" style="width:100%;height:70px"')}</div>`;
+    const asg = m.assignments.length ? `<div class="sec"><span class="lab">ENTRAÎNEMENTS EN COURS</span>${m.assignments.map(a => `<div class="simu" style="margin-top:6px"><span><b>${esc(a.persona)}</b> · ${esc(a.difficulty)} · objectif ${a.goal}</span><span class="mut">${a.due ? "avant le " + new Date(a.due).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}</span></div>`).join("")}</div>` : "";
+    return `<div class="dh"><span class="av">${A(m.username)}</span><div><b>${esc(N(m.username))} ${tg}</b><small>${esc(m.statusSub || (m.role === "trainee" ? "Élève" : "Chatter"))}</small></div><button class="x" aria-label="Fermer">✕</button></div>${kp}
+      ${cal ? `<div class="sec"><span class="lab">DERNIERS SHIFTS</span><div class="cal" style="grid-template-columns:repeat(12,1fr)">${cal}</div><div class="lgd" style="padding-top:8px"><span><i style="background:rgba(95,211,162,.55)"></i>À l’heure</span><span><i style="background:${R}"></i>En retard</span><span><i style="border:1px dashed ${R}"></i>Absent</span></div></div>` : ""}
+      ${asg}<div class="sec"><span class="lab">TES CONSEILS</span><div class="thr">${m.tips.length ? [...m.tips].reverse().map(t => `<div class="bub2">${esc(t.text)}<small>${ago(t.at)} · ${t.seen ? "vu" : "pas encore vu"}</small></div>`).join("") : '<div class="mut">Aucun conseil envoyé pour le moment.</div>'}</div></div>
+      <div class="acts4"><button class="w" data-act="c" data-who="${m.id}">${I("msg", 16)}Conseil</button><button data-act="e" data-who="${m.id}">${I("target", 16)}Entraînement</button><button data-help="${m.id}">${I("plus", 16)}Renfort</button><button data-flag="${m.id}">${I("flag", 16)}Signaler</button></div>
+      <div class="flagbox" style="display:none;margin-top:10px"><textarea class="ta" maxlength="600" placeholder="Explique ce qui se passe à tes managers…"></textarea><button class="send" style="margin-top:8px">Envoyer aux managers</button></div>`;
+  }
+  /* ---------- feuille d'action ---------- */
+  function sheetHTML() {
+    const who = D.members.map(m => `<button data-k="${m.id}"><span class="av">${A(m.username)}</span>${esc(N(m.username))}</button>`).join("");
+    const tpl = ["Valorise le contenu avant de donner le prix", "Pose-lui une question sur lui avant de proposer", "Pense à relancer tes fans inactifs ce soir", "Ta pause dépasse le temps prévu, reviens vite stp"];
+    const ps = D.personas.map((p, i) => `<button data-p="${esc(p.id)}" class="${i === 0 ? "on" : ""}"><span class="ic">${I("target", 17)}</span><span><b>${esc(p.label)}</b><small>Fan : ${esc(p.name)}</small></span></button>`).join("");
+    return `<div class="shd"><b>Agir sur <em>mon équipe</em></b><button class="x" aria-label="Fermer">✕</button></div>
+      <div class="tb2 full" data-sheettabs><span class="ind"></span><button class="on" data-t="c">${I("msg", 15)}Conseil</button><button data-t="e">${I("target", 15)}Entraînement</button><button data-t="r">${I("plus", 15)}Renfort</button></div>
+      <div class="sp2" data-p="c"><div class="fl"><span class="lab">POUR QUI</span><div class="chs who">${who}</div></div><div class="fl"><span class="lab">MODÈLES RAPIDES</span><div class="chs tx tpl">${tpl.map(t => `<button>${esc(t)}</button>`).join("")}</div></div>
+        <div class="fl"><label class="lab" for="tipTa" style="display:block">TON MESSAGE</label><textarea class="ta" id="tipTa" maxlength="400" placeholder="Écris ton conseil…"></textarea><div class="mut" style="margin-top:6px">Il le voit sur son accueil, dans « Ton team leader ».</div></div></div>
+      <div class="sp2" data-p="e" style="display:none"><div class="fl"><span class="lab">POUR QUI</span><div class="chs who">${who}</div></div><div class="fl"><span class="lab">SCÉNARIO DU SIMULATEUR</span><div class="scn" style="max-height:240px;overflow:auto">${ps}</div></div>
+        <div class="fl"><span class="lab">DIFFICULTÉ</span><div class="chs tx diff"><button data-v="facile">Facile</button><button data-v="normal" class="on">Normal</button><button data-v="difficile">Difficile</button></div></div>
+        <div class="fl"><span class="lab">SCORE À ATTEINDRE</span><div class="rng"><input type="range" min="50" max="95" step="5" value="70" aria-label="Score à atteindre"><b>70</b></div></div>
+        <div class="fl"><span class="lab">À FAIRE AVANT</span><div class="chs tx due"><button data-d="0">Ce soir</button><button data-d="1" class="on">Demain</button><button data-d="7">Cette semaine</button></div></div></div>
+      <div class="sp2" data-p="r" style="display:none"><div class="fl"><span class="lab">POUR LA CRÉATRICE DE</span><div class="chs who rw">${D.members.filter(m => m.role !== "trainee").map(m => `<button data-k="${m.id}"><span class="av">${A(m.username)}</span>${esc(N(m.username))}${m.status === "late" ? " · retard" : m.status === "on" || m.status === "pause" ? " · en shift" : ""}</button>`).join("")}</div></div>
+        <div class="fl"><div class="radar"><span class="rp"></span><span class="rp"></span><span class="rp"></span><span class="ctr">${I("bolt", 20)}</span></div><div class="mut" style="margin-top:8px;line-height:1.5">Les chatters en shift voient la demande et peuvent prendre la créatrice en renfort. Les managers sont prévenus.</div></div></div>
+      <button class="send" data-go>Envoyer le conseil</button>`;
+  }
+
+  /* ---------- rendu ---------- */
+  function render() {
+    if (!D.members.length) {
+      root.innerHTML = `<div class="hdr"><div><div class="eb">TEAM LEADER</div><h1 class="ttl">Mon <em>équipe.</em></h1></div></div><div class="card"><div class="emp">Ton équipe est vide pour l’instant. Un manager peut te rattacher des chatters et des élèves dans <b>Gestion › Rôles et équipes</b>.</div></div><div class="toast"></div>`; return; }
+    const hdr = `<div class="hdr"><div><div class="eb">TEAM LEADER · ÉQUIPE ${esc(D.leader.username.toUpperCase())}</div><h1 class="ttl">Mon <em>équipe.</em></h1></div>
+      <div class="hbtns"><button class="gbtn" data-act="c">${I("msg", 16)}Conseil</button><button class="gbtn" data-act="e">${I("target", 16)}Entraînement</button><button class="wbtn" data-act="r">${I("plus", 17, 2.4)}Demander un renfort</button></div></div>`;
+    const tabs = `<div class="card" style="--d:.08s"><div class="ch"><div class="tb2 main"><span class="ind"></span><button class="${(TL || "v") === "v" ? "on" : ""}" data-t="v">${I("trophy", 15)}Ventes</button><button class="${TL === "s" ? "on" : ""}" data-t="s">${I("clock", 15)}Shifts</button><button class="${TL === "f" ? "on" : ""}" data-t="f">${I("grad", 15)}Formation</button></div><span class="mut">Semaine en cours · touche un chatter pour sa fiche</span></div>
+      <div class="pn ${(TL || "v") === "v" ? "on" : ""}" data-p="v">${board()}</div><div class="pn ${TL === "s" ? "on" : ""}" data-p="s">${timeline()}</div><div class="pn ${TL === "f" ? "on" : ""}" data-p="f">${formation()}</div></div>`;
+    root.innerHTML = `${hdr}<div class="g2">${liveCard()}${defiCard()}</div><div class="g3">${tabs}<div class="col">${alertsCard()}${todoCard()}${primeCard()}</div></div>
+      <div class="scrim"></div><div class="drawer" role="dialog" aria-modal="true" aria-label="Fiche du membre"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="Agir sur mon équipe">${sheetHTML()}</div><div class="toast" role="status"></div>`;
+    D.events.forEach(e => seenEv.add(e.id));
+    bind(); setTimeout(() => play(), 120); first = false;
+  }
+  // mise à jour en direct sans tout redessiner : constellation, flux, compteur, chronos
+  function refresh(nd) {
+    const old = D; D = nd;
+    const fresh = D.events.filter(e => !seenEv.has(e.id)).reverse();
+    const fl = q(".fl2"); if (fl && fresh.length) { fl.querySelector(".empty")?.remove(); fresh.forEach(e => { seenEv.add(e.id); fl.insertAdjacentHTML("afterbegin", evHTML(e)); if (e.k === "sale") ping(e); }); while (fl.children.length > 12) fl.lastElementChild.remove(); setTimeout(() => qa(".fi2.hot").forEach(x => x.classList.remove("hot")), 2600); }
+    const changed = JSON.stringify(old.members.map(m => [m.id, m.status, m.ca])) !== JSON.stringify(D.members.map(m => [m.id, m.status, m.ca]));
+    if (changed) { const ow = q(".orbw"); if (ow) { ow.outerHTML = orbit(); bindOpen(q(".orbw")); } const p = q('.pn[data-p="v"]'); if (p) { p.innerHTML = board(); bindOpen(p); play(p); } }
+    const ac = q(".al")?.closest(".card"); if (ac && JSON.stringify(old.alerts.map(a => a.key)) !== JSON.stringify(D.alerts.map(a => a.key))) { const n0 = old.alerts.length; ac.outerHTML = alertsCard(); bindAlerts(); if (D.alerts.length > n0) { const b = q(".bellw"); b && b.classList.add("ring"); } }
+    const tlp = q('.pn[data-p="s"]'); if (tlp) { tlp.innerHTML = timeline(); bindOpen(tlp); }
+  }
+  function ping(e) { const nd = q(`.nd[data-k="${e.uid}"] .bub`), w = q(".orbw"); if (!nd || !w) return;
+    const a = nd.getBoundingClientRect(), b = w.getBoundingClientRect(), z = b.width / (w.offsetWidth || 1) || 1, p = document.createElement("span"); p.className = "ping"; p.textContent = "+" + E0(e.amount);
+    p.style.left = ((a.left + a.width / 2 - b.left) / z) + "px"; p.style.top = ((a.top - b.top) / z) + "px"; w.appendChild(p); setTimeout(() => p.remove(), 2300);
+    nd.animate([{ transform: "scale(1)" }, { transform: "scale(1.25)" }, { transform: "scale(1)" }], { duration: 600, easing: "cubic-bezier(.3,1.6,.5,1)" }); }
+  const mem = id => D.members.find(m => m.id === +id);
+  function tabs(tb, onPick) { const ind = tb.querySelector(".ind"), bs = [...tb.querySelectorAll("button")];
+    const mv = b => { if (!ind || !b) return; ind.style.width = b.offsetWidth + "px"; ind.style.transform = `translateX(${b.offsetLeft - 3}px)`; };
+    setTimeout(() => mv(tb.querySelector("button.on") || bs[0]), 60); addEventListener("resize", () => mv(tb.querySelector("button.on")));
+    bs.forEach(b => b.addEventListener("click", () => { bs.forEach(x => x.classList.toggle("on", x === b)); mv(b); onPick && onPick(b.dataset.t); }));
+    return t => { const b = bs.find(x => x.dataset.t === t); if (b) b.click(); }; }
+  let goTab = null;
+  function bindOpen(scope) { scope.querySelectorAll("[data-open]").forEach(el => el.addEventListener("click", () => openDr(+el.dataset.open))); scope.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => openSheet(b.dataset.act, b.dataset.who, b.dataset.tpl))); scope.querySelectorAll("[data-help]").forEach(b => b.addEventListener("click", () => help(+b.dataset.help, b))); }
+  function bindAlerts() { const ac = q(".al")?.closest(".card"); if (!ac) return; bindOpen(ac);
+    ac.querySelectorAll("[data-hide]").forEach(b => b.addEventListener("click", () => { const a = b.closest(".ai"), h = HID(); h[a.dataset.key] = Date.now(); try { localStorage.setItem("stTlHide", JSON.stringify(h)); } catch (e) {} a.classList.add("gone"); setTimeout(() => { a.remove(); const c = q(".cnt"); if (c) c.textContent = qa(".ai").length; }, 450); })); }
+  function bind() {
+    const mt = q(".tb2.main"); if (mt) tabs(mt, t => { TL = t; qa(".pn").forEach(p => p.classList.toggle("on", p.dataset.p === t)); const p = q(`.pn[data-p="${t}"]`); if (p) { p.querySelectorAll(".sp").forEach(x => { x.style.transition = "none"; x.style.strokeDashoffset = 1; x.getBoundingClientRect(); x.style.transition = ""; }); p.querySelectorAll("[data-w]").forEach(x => { x.style.transition = "none"; x.style.width = 0; x.getBoundingClientRect(); x.style.transition = ""; }); p.querySelectorAll("[data-count]").forEach(x => { delete x.dataset.done; x.dataset.cur = 0; }); setTimeout(() => play(p), 50); } });
+    bindOpen(root.querySelector(".hdr")); bindOpen(q(".g2")); bindOpen(q(".pn[data-p='v']").parentElement); bindAlerts();
+    const tc = q("[data-tdl]")?.closest(".card"); if (tc) { bindOpen(tc); const tds = [...tc.querySelectorAll(".td")], prg = tc.querySelector(".prg i");
+      const upd = () => { const k = tds.filter(t => t.classList.contains("ok")).length; prg.style.width = (k / tds.length * 100) + "%"; q("[data-tdl]").textContent = `${k} / ${tds.length}`; }; upd();
+      tds.forEach(t => t.querySelector(".bx").addEventListener("click", () => { t.classList.toggle("ok"); let ok = {}; try { ok = JSON.parse(localStorage.getItem(TDK()) || "{}"); } catch (e) {} ok[t.dataset.td] = t.classList.contains("ok"); try { localStorage.setItem(TDK(), JSON.stringify(ok)); } catch (e) {} upd(); if (t.classList.contains("ok")) toast("C’est noté", true); })); }
+    const scrim = q(".scrim"), dr = q(".drawer"), sh = q(".sheet");
+    const close = () => { dr.classList.remove("on"); sh.classList.remove("on"); scrim.classList.remove("on"); cur = null; };
+    scrim.addEventListener("click", close); sh.querySelector(".x").addEventListener("click", close);
+    addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+    window._closeAll = close;
+    // feuille d'action
+    goTab = tabs(sh.querySelector("[data-sheettabs]"), t => { sh.querySelectorAll(".sp2").forEach(p => p.style.display = p.dataset.p === t ? "block" : "none"); const g = sh.querySelector("[data-go]"); g.classList.remove("ok"); g.disabled = false; g.textContent = { c: "Envoyer le conseil", e: "Assigner l’entraînement", r: "Demander un renfort" }[t]; sh.dataset.t = t; sh.querySelector(".radar").classList.remove("go"); });
+    sh.querySelectorAll(".chs, .scn").forEach(gp => gp.querySelectorAll("button").forEach(b => b.addEventListener("click", () => { gp.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); if (gp.classList.contains("tpl")) $("tipTa").value = b.textContent;
+      if (gp.classList.contains("who")) sh.querySelectorAll(".chs.who").forEach(o => o.querySelectorAll("button").forEach(x => x.classList.toggle("on", x.dataset.k === b.dataset.k))); })));
+    const ri = sh.querySelector(".rng input"), rb = sh.querySelector(".rng b"); ri.addEventListener("input", () => rb.textContent = ri.value);
+    sh.querySelector("[data-go]").addEventListener("click", send);
+  }
+  function openDr(id) { const m = mem(id); if (!m) return; cur = m.id; const dr = q(".drawer"); dr.innerHTML = drawerHTML(m); dr.classList.add("on"); q(".sheet").classList.remove("on"); q(".scrim").classList.add("on");
+    dr.querySelector(".x").addEventListener("click", () => window._closeAll()); bindOpen(dr);
+    dr.querySelectorAll(".cal i").forEach((c, i) => c.style.animationDelay = (.2 + i * .03) + "s");
+    const fb = dr.querySelector(".flagbox"); dr.querySelector("[data-flag]").addEventListener("click", () => { fb.style.display = fb.style.display === "none" ? "block" : "none"; if (fb.style.display === "block") fb.querySelector("textarea").focus(); });
+    fb.querySelector(".send").addEventListener("click", async e => { const t = fb.querySelector("textarea").value.trim(); if (t.length < 3) return fb.querySelector("textarea").focus(); e.target.disabled = true;
+      try { await api("/api/team/flag", { body: { userId: m.id, text: t, tl: D.leader.id } }); toast("Signalé aux managers · c’est noté sur sa fiche", true); fb.style.display = "none"; fb.querySelector("textarea").value = ""; } catch (x) { toast(esc(x.message)); } e.target.disabled = false; });
+    setTimeout(() => play(dr), 200); }
+  function openSheet(t, who, tpl) { const sh = q(".sheet"); if (!sh) return; q(".drawer").classList.remove("on"); sh.classList.add("on"); q(".scrim").classList.add("on"); goTab(t || "c");
+    const w = who || cur; sh.querySelectorAll(".chs.who").forEach(g => g.querySelectorAll("button").forEach(b => b.classList.toggle("on", w != null && b.dataset.k === String(w))));
+    if (t === "c" || !t) { const ta = $("tipTa"); if (tpl) ta.value = tpl; setTimeout(() => ta.focus(), 350); } }
+  async function help(uid, btn) { const m = mem(uid); if (!m) return; if (btn) btn.disabled = true;
+    try { const r = await api("/api/team/help", { body: { userId: uid, tl: D.leader.id } }); toast(r.already ? "Un renfort est déjà demandé sur sa créatrice" : `Renfort demandé pour la créatrice de ${esc(N(m.username))} · les chatters en shift le voient`, true); }
+    catch (e) { toast(esc(e.message)); } if (btn) btn.disabled = false; }
+  async function send() {
+    const sh = q(".sheet"), t = sh.dataset.t || "c", g = sh.querySelector("[data-go]"), wb = sh.querySelector(`.sp2[data-p="${t}"] .chs.who button.on`);
+    if (!wb) return toast("Choisis d’abord pour qui");
+    const uid = +wb.dataset.k, m = mem(uid); g.disabled = true;
+    try {
+      if (t === "c") { const tx = $("tipTa").value.trim(); if (tx.length < 3) { g.disabled = false; $("tipTa").focus(); return toast("Écris ton conseil"); }
+        await api("/api/team/tip", { body: { userId: uid, text: tx, tl: D.leader.id } }); m.tips.unshift({ text: tx, at: Date.now(), seen: 0 }); $("tipTa").value = ""; g.classList.add("ok"); g.textContent = "✓ Conseil envoyé"; toast(`Conseil envoyé à ${esc(N(m.username))} · il le voit sur son accueil`, true); }
+      else if (t === "e") { const p = sh.querySelector(".scn button.on"), d = sh.querySelector(".diff button.on"), dd = +sh.querySelector(".due button.on").dataset.d, goal = +sh.querySelector(".rng input").value;
+        const due = new Date(); due.setHours(23, 59, 0, 0); due.setDate(due.getDate() + dd);
+        await api("/api/team/assign", { body: { userId: uid, personaId: p.dataset.p, difficulty: d.dataset.v, goal, dueAt: due.getTime(), tl: D.leader.id } }); g.classList.add("ok"); g.textContent = "✓ Entraînement assigné"; toast(`Entraînement assigné à ${esc(N(m.username))} · objectif ${goal}`, true); }
+      else { const rd = sh.querySelector(".radar"); rd.classList.add("go"); g.textContent = "Envoi de la demande…";
+        const r = await api("/api/team/help", { body: { userId: uid, tl: D.leader.id } }); await sleep(1200); g.classList.add("ok"); g.textContent = r.already ? "✓ Déjà demandé" : "✓ Renfort demandé"; toast(r.already ? "Un renfort est déjà demandé sur sa créatrice" : "Renfort demandé · les chatters en shift et les managers sont prévenus", true); }
+      setTimeout(() => { window._closeAll(); load(true); }, 1300);
+    } catch (e) { toast(esc(e.message)); g.disabled = false; sh.querySelector(".radar").classList.remove("go"); g.textContent = { c: "Envoyer le conseil", e: "Assigner l’entraînement", r: "Demander un renfort" }[t]; }
+  }
+  // chronos (pauses, retards) et ligne « maintenant »
+  setInterval(() => { qa("[data-tk]").forEach(el => { const s = secs(+el.dataset.tk); el.textContent = el.dataset.f === "clk" ? clk(s) : Math.round(s / 60); }); }, 1000);
+  async function load(silent) {
+    const tl = new URLSearchParams(location.search).get("tl");
+    try { const [d, ch] = await Promise.all([api("/api/team" + (tl ? "?tl=" + encodeURIComponent(tl) : "")), CH ? Promise.resolve(CH) : api("/api/challenges").catch(() => null)]); CH = ch;
+      if (d.teams) { root.innerHTML = `<div class="hdr"><div><div class="eb">MANAGER</div><h1 class="ttl">Les <em>équipes.</em></h1></div></div><div class="card"><div class="ch"><h3>Choisis un <em>Team Leader</em></h3></div>${d.teams.length ? `<div class="chs">${d.teams.map(t => `<a class="gbtn" href="/equipe?tl=${t.id}">${esc(N(t.username))}</a>`).join("")}</div>` : '<div class="emp">Aucun Team Leader pour l’instant. Nomme-en un dans Gestion › Rôles et équipes.</div>'}</div>`; return; }
+      if (silent && D && q(".lvw")) refresh(d); else { D = d; render(); }
+    } catch (e) { if (!silent) root.innerHTML = `<div class="card"><div class="emp">${esc(e.message)}</div></div>`; }
+  }
+  (async () => {
+    try { ME = await api("/api/me"); renderShell("equipe", ME); } catch (e) { return; }
+    await load(); setInterval(() => { if (!document.hidden && !q(".drawer.on") && !q(".sheet.on")) load(true); }, 20000);
+  })();
+})();
+</script>
+</body>
+</html>

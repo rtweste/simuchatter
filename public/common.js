@@ -40,38 +40,47 @@ const ICONS = {
   bubbles: '<path d="M14 9a6 6 0 0 1-8.7 5.4L2.5 15l.7-2.8A6 6 0 1 1 14 9z"/><path d="M9.5 16.6A6 6 0 0 0 18.2 19l2.8.6-.7-2.8A6 6 0 0 0 16 8.2"/>',
   pulse: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M6 11h2.5l1.5-3 2.5 6 1.5-3H18M9 21h6M12 17v4"/>',
   flag: '<path d="M5 21V4h11l-1.6 4L16 12H5"/>',
-  gift: '<path d="M20 12v8H4v-8M2.5 7.5h19V12h-19zM12 21V7.5"/><path d="M12 7.5H8a2.5 2.5 0 0 1 0-5c3 0 4 5 4 5zM12 7.5h4a2.5 2.5 0 0 0 0-5c-3 0-4 5-4 5z"/>'
+  gift: '<path d="M20 12v8H4v-8M2.5 7.5h19V12h-19zM12 21V7.5"/><path d="M12 7.5H8a2.5 2.5 0 0 1 0-5c3 0 4 5 4 5zM12 7.5h4a2.5 2.5 0 0 0 0-5c-3 0-4 5-4 5z"/>',
+  users: '<circle cx="9" cy="7.5" r="3.2"/><path d="M3 20c.6-3.6 3-5.5 6-5.5s5.4 1.9 6 5.5"/><circle cx="17" cy="9" r="2.4"/><path d="M16.5 14.4c2.4.3 4 2 4.5 5.1"/><circle cx="9" cy="7.5" r="7.2" stroke-dasharray="2 3.2" opacity=".55"/>',
+  crown: '<path d="M3 8l4.2 4L12 5l4.8 7L21 8l-2 11H5z"/><path d="M5.5 19h13"/>'
 };
 const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ""}</svg>`;
 const MODULES = [
   { id: "home", label: "Accueil", href: "/home", icon: "home", section: null, roles: ["admin", "chatter", "trainee"] },
-  { id: "simu", label: "Simu Chatter", short: "Simu", href: "/app", icon: "chat", section: "Formation", roles: ["admin", "chatter", "trainee"],
+  { id: "simu", label: "Simu Chatter", short: "Simu", href: "/app", icon: "chat", section: "Formation", roles: ["admin", "chatter", "trainee"], hide: ["assistant"],
     desc: "Entraînez-vous face à un fan simulé par l'IA et recevez une évaluation détaillée." },
-  { id: "tests", label: "Tests d'aptitude", short: "Tests", href: "/tests", icon: "gauge", section: "Formation", roles: ["admin", "trainee"],
+  { id: "tests", label: "Tests d'aptitude", short: "Tests", href: "/tests", icon: "gauge", section: "Formation", roles: ["admin", "trainee"], hide: ["assistant"],
     desc: "Test de débit de connexion et test de vitesse de frappe." },
   { id: "planning", label: "Planning", href: "/planning", icon: "calendar", section: "Organisation", roles: ["admin", "chatter"],
     desc: "Créneaux de la semaine et pointage des shifts." },
-  { id: "ventes", label: "Ventes", href: "/ventes", icon: "receipt", section: "Organisation", roles: ["admin", "chatter"],
+  { id: "ventes", label: "Ventes", href: "/ventes", icon: "receipt", section: "Organisation", roles: ["admin", "chatter"], hide: ["assistant"],
     desc: "Déclarez vos ventes avec la capture d'écran. Le manager les valide." },
   { id: "chat", label: "Chat d'équipe", short: "Chat", href: "/chat", icon: "bubbles", section: "Organisation", roles: ["admin", "chatter"],
     desc: "Le chat de toute l'équipe : salons, messages privés, annonces, sondages." },
-  { id: "creatrices", label: "Créatrices", short: "Créas", href: "/creatrices", icon: "spark", section: "Organisation", roles: ["admin", "chatter"], nodock: ["admin"],
+  { id: "creatrices", label: "Créatrices", short: "Créas", href: "/creatrices", icon: "spark", section: "Organisation", roles: ["admin", "chatter"], nodock: ["admin", "tl"],
     desc: "Les fiches des créatrices : personnalité, façon d'écrire, catalogue, à faire et à éviter." },
-  { id: "parrainage", label: "Parrainage", href: "/parrainage", icon: "gift", section: "Organisation", roles: ["admin", "chatter"], nodock: ["admin", "chatter"],
+  { id: "parrainage", label: "Parrainage", href: "/parrainage", icon: "gift", section: "Organisation", roles: ["admin", "chatter"], nodock: ["admin", "chatter"], hide: ["assistant"],
     desc: "Ton lien d'invitation, tes filleuls et tes primes de parrainage." },
   { id: "paie", label: "Ma paie", href: "/paie", icon: "euro", section: "Organisation", roles: ["chatter"],
     desc: "Ta paie de la quinzaine : commission, paliers, primes et historique." },
+  { id: "equipe", label: "Mon équipe", short: "Équipe", href: "/equipe", icon: "users", section: "Team Leader", roles: ["chatter"], only: ["tl"],
+    desc: "Ton équipe en direct : ventes, shifts, pauses, formation, alertes et coaching." },
   { id: "compta", label: "Compta", href: "/compta", icon: "euro", section: "Manager", roles: ["admin"],
     desc: "Revenus par période de 15 jours, part des créatrices, commissions des chatters." },
-  { id: "studio", label: "Studio", href: "/studio", icon: "film", section: "Manager", roles: ["admin"],
+  { id: "studio", label: "Studio", href: "/studio", icon: "film", section: "Manager", roles: ["admin"], hide: ["assistant"],
     desc: "Les demandes de contenus personnalisés des fans : production et livraison aux chatters." },
-  { id: "defis", label: "Défis", href: "/defis", icon: "flag", section: "Manager", roles: ["admin"], nodock: ["admin"],
+  { id: "defis", label: "Défis", href: "/defis", icon: "flag", section: "Manager", roles: ["admin"], nodock: ["admin"], hide: ["assistant"],
     desc: "Les défis de la semaine : objectifs d'équipe ou perso, progression et récompenses." },
-  { id: "salle", label: "Salle de contrôle", short: "Live", href: "/salle", icon: "pulse", section: "Manager", roles: ["admin"], nodock: ["admin"],
+  { id: "salle", label: "Salle de contrôle", short: "Live", href: "/salle", icon: "pulse", section: "Manager", roles: ["admin"], nodock: ["admin"], hide: ["assistant"],
     desc: "Écran en direct à afficher dans l'agence : ventes, classement du jour et chatters en shift." },
   { id: "admin", label: "Gestion", href: "/admin", icon: "team", section: "Manager", roles: ["admin"],
-    desc: "Équipe, créatrices et résultats des simulations." }
+    desc: "Équipe, créatrices et résultats des simulations." },
+  { id: "fondateur", label: "Réglages fondateur", short: "Fondateur", href: "/fondateur", icon: "crown", section: "Fondateur", roles: ["admin"], only: ["founder"], nodock: ["admin"],
+    desc: "Paliers de commission, part des créatrices, clôture des quinzaines et managers." }
 ];
+// rubriques visibles selon le rôle fin (Fondateur, Manager, Assistante, Team Leader…)
+const RKOF = me => me.rk || (me.role === "admin" ? "manager" : me.role);
+const modsFor = me => MODULES.filter(m => m.roles.includes(me.role) && (!m.only || m.only.includes(RKOF(me))) && !(m.hide || []).includes(RKOF(me)));
 const eur = n => (n == null || isNaN(n)) ? "—" : Number(n).toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
 const hrs = h => { const m = Math.round((h || 0) * 60); return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}`; };
 const LOGO_SVG = `<svg aria-hidden="true" focusable="false" viewBox="-4 -4 703.5 76.8" xmlns="http://www.w3.org/2000/svg" fill="#fff" aria-label="StellADS" role="img"><g class="letters"><path class="lt lt0" d="M27.8 69.8Q19.8 69.8 14.0 66.75Q8.200000000000001 63.699999999999996 3.8000000000000003 58.199999999999996L8.9 53.199999999999996Q12.4 58.099999999999994 17.05 60.5Q21.700000000000003 62.9 28.1 62.9Q34.7 62.9 38.800000000000004 59.9Q42.900000000000006 56.9 42.900000000000006 51.599999999999994Q42.900000000000006 47.5 41.0 44.849999999999994Q39.1 42.199999999999996 36.05 40.55Q33.0 38.89999999999999 29.3 37.599999999999994Q25.6 36.3 21.950000000000003 34.849999999999994Q18.3 33.4 15.200000000000001 31.199999999999996Q12.100000000000001 28.999999999999993 10.25 25.599999999999994Q8.4 22.199999999999996 8.4 16.89999999999999Q8.4 11.299999999999997 11.100000000000001 7.299999999999997Q13.8 3.299999999999997 18.5 1.1499999999999986Q23.200000000000003 -1.0 29.200000000000003 -1.0Q35.9 -1.0 41.150000000000006 1.5999999999999943Q46.400000000000006 4.199999999999989 49.900000000000006 8.599999999999994L44.900000000000006 13.599999999999994Q41.7 9.799999999999997 37.900000000000006 7.799999999999997Q34.1 5.799999999999997 29.0 5.799999999999997Q23.0 5.799999999999997 19.4 8.599999999999994Q15.8 11.399999999999991 15.8 16.39999999999999Q15.8 20.299999999999997 17.65 22.699999999999996Q19.5 25.099999999999994 22.6 26.699999999999996Q25.700000000000003 28.299999999999997 29.35 29.549999999999997Q33.0 30.799999999999997 36.7 32.3Q40.400000000000006 33.8 43.45 36.099999999999994Q46.5 38.39999999999999 48.400000000000006 41.949999999999996Q50.300000000000004 45.5 50.300000000000004 51.0Q50.300000000000004 59.9 44.25 64.85Q38.2 69.8 27.8 69.8Z"/><path class="lt lt1" d="M113.30000000000001 68.8V1.8999999999999915H120.70000000000002V68.8ZM89.10000000000001 6.699999999999996V0.0H144.9V6.699999999999996Z"/><path class="lt lt2" d="M187.40000000000003 68.8V0.0H194.70000000000002V68.8ZM192.20000000000002 68.8V62.099999999999994H232.70000000000002V68.8ZM192.20000000000002 36.8V30.299999999999997H229.50000000000003V36.8ZM192.20000000000002 6.699999999999996V0.0H232.10000000000002V6.699999999999996Z"/><path class="lt lt3" d="M276.3 68.8V0.0H283.6V68.8ZM281.1 68.8V62.099999999999994H319.0V68.8Z"/><path class="lt lt4" d="M361.7 68.8V0.0H369.0V68.8ZM366.5 68.8V62.099999999999994H404.4V68.8Z"/><path class="lt lt5" d="M469.4 0.0 441.99999999999994 68.8H449.99999999999994L473.69999999999993 8.1H470.79999999999995L494.69999999999993 68.8H502.49999999999994L474.9 0.0Z"/><path class="lt lt6" d="M549.4999999999999 68.8V62.0H569.6999999999999Q577.8 62.0 584.0 58.45Q590.1999999999999 54.9 593.6999999999999 48.64999999999999Q597.1999999999999 42.39999999999999 597.1999999999999 34.3Q597.1999999999999 26.199999999999996 593.6999999999999 19.999999999999996Q590.1999999999999 13.799999999999997 584.0 10.249999999999996Q577.8 6.699999999999996 569.6999999999999 6.699999999999996H549.6999999999999V0.0H569.9Q577.4 0.0 583.75 2.549999999999997Q590.0999999999999 5.099999999999994 594.8499999999999 9.749999999999993Q599.5999999999999 14.399999999999991 602.1999999999999 20.64999999999999Q604.8 26.89999999999999 604.8 34.4Q604.8 41.699999999999996 602.1999999999999 48.0Q599.5999999999999 54.3 594.8999999999999 58.949999999999996Q590.1999999999999 63.599999999999994 583.8499999999999 66.19999999999999Q577.4999999999999 68.8 570.0999999999999 68.8ZM544.9999999999999 68.8V0.0H552.3V68.8Z"/><path class="lt lt7" d="M667.8999999999999 69.8Q659.8999999999999 69.8 654.0999999999999 66.75Q648.3 63.699999999999996 643.8999999999999 58.199999999999996L648.9999999999999 53.199999999999996Q652.4999999999999 58.099999999999994 657.1499999999999 60.5Q661.8 62.9 668.1999999999999 62.9Q674.8 62.9 678.8999999999999 59.9Q682.9999999999999 56.9 682.9999999999999 51.599999999999994Q682.9999999999999 47.5 681.0999999999999 44.849999999999994Q679.1999999999999 42.199999999999996 676.1499999999999 40.55Q673.0999999999999 38.89999999999999 669.3999999999999 37.599999999999994Q665.6999999999999 36.3 662.05 34.849999999999994Q658.3999999999999 33.4 655.3 31.199999999999996Q652.1999999999999 28.999999999999993 650.3499999999999 25.599999999999994Q648.4999999999999 22.199999999999996 648.4999999999999 16.89999999999999Q648.4999999999999 11.299999999999997 651.1999999999998 7.299999999999997Q653.8999999999999 3.299999999999997 658.5999999999999 1.1499999999999986Q663.3 -1.0 669.3 -1.0Q675.9999999999999 -1.0 681.2499999999999 1.5999999999999943Q686.4999999999999 4.199999999999989 689.9999999999999 8.599999999999994L684.9999999999999 13.599999999999994Q681.8 9.799999999999997 678.0 7.799999999999997Q674.1999999999999 5.799999999999997 669.0999999999999 5.799999999999997Q663.0999999999999 5.799999999999997 659.4999999999999 8.599999999999994Q655.8999999999999 11.399999999999991 655.8999999999999 16.39999999999999Q655.8999999999999 20.299999999999997 657.7499999999999 22.699999999999996Q659.5999999999999 25.099999999999994 662.6999999999999 26.699999999999996Q665.8 28.299999999999997 669.4499999999999 29.549999999999997Q673.0999999999999 30.799999999999997 676.8 32.3Q680.4999999999999 33.8 683.55 36.099999999999994Q686.5999999999999 38.39999999999999 688.4999999999999 41.949999999999996Q690.3999999999999 45.5 690.3999999999999 51.0Q690.3999999999999 59.9 684.3499999999999 64.85Q678.3 69.8 667.8999999999999 69.8Z"/></g><path class="star" d="M472.25,35.09 Q472.97,49.51 481.19,50.22 Q472.97,50.94 472.25,65.36 Q471.53,50.94 463.31,50.22 Q471.53,49.51 472.25,35.09Z" style="transform-origin:472.25px 50.22px"/></svg>`;
@@ -93,6 +102,11 @@ function loadChallenges(mode, host) {
 }
 function renderShell(active, me) {
   if (me && me.role === "chatter") PLANREM.start();
+  if (me) { document.documentElement.classList.add("rk-" + RKOF(me)); window.RK = RKOF(me); }
+  // pages réservées : l'Assistante n'a ni salle de contrôle, ni ventes, ni Studio, ni défis
+  if (me && ((RKOF(me) === "assistant" && ["salle", "studio", "ventes", "defis", "fondateur", "parrainage", "simu", "tests"].includes(active)) || (active === "equipe" && !["tl", "founder", "manager"].includes(RKOF(me))) || (active === "fondateur" && !["founder", "manager"].includes(RKOF(me))))) {
+    addEventListener("unhandledrejection", e => { if (e.reason && e.reason.redirect) e.preventDefault(); });
+    go("/home"); throw Object.assign(new Error("Redirection vers l'accueil"), { redirect: true }); }
   // un stagiaire n'a accès qu'à l'accueil et au simulateur
   if (me && me.role === "trainee" && !["home", "simu", "tests"].includes(active)) {
     addEventListener("unhandledrejection", e => { if (e.reason && e.reason.redirect) e.preventDefault(); });
@@ -117,14 +131,14 @@ function renderShell(active, me) {
   // chat : compteur de messages non lus dans le menu
   if (me && me.role !== "trainee" && active !== "chat") { const cu = () => api("/api/chat/unread").then(c => updateBadge(c.n, "chat")).catch(() => {}); setTimeout(cu, 800); setInterval(() => { if (!document.hidden) cu(); }, 30e3); }
   const el = document.getElementById("sidebar"); if (!el) return;
-  const mods = MODULES.filter(m => m.roles.includes(me.role));
+  const mods = modsFor(me);
   const badge = m => ["ventes", "studio", "chat"].includes(m.id);
   let html = `<div class="sb-top"><a class="logo" href="/home" aria-label="StellADS — Accueil">${logoHTML()}</a><button class="sb-col" type="button" aria-label="Réduire le menu" title="Réduire le menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button></div><nav>`, sec;
   mods.forEach((m, i) => {
     if (m.section && m.section !== sec) { sec = m.section; html += `<div class="sec">${esc(sec)}</div>`; }
     html += `<a href="${m.href}" style="--i:${i}" data-tip="${esc(m.label)}" class="${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""}>${icon(m.icon)}<span class="lb">${chars(m.label)}</span><span class="sr">${esc(m.label)}</span>${badge(m) ? `<em class="navbadge hidden" data-badge="${m.id}"></em>` : ""}</a>`;
   });
-  html += `<span class="nv-line" aria-hidden="true"></span></nav><div class="me"><span class="av">${esc(me.username[0])}</span><div><b>${esc(me.username)}</b><small>${me.role === "admin" ? "Manager" : me.role === "trainee" ? "En formation" : "Chatter"}</small></div>
+  html += `<span class="nv-line" aria-hidden="true"></span></nav><div class="me"><span class="av">${esc(me.username[0])}</span><div><b>${esc(me.username)}</b><small>${esc(me.roleLabel || (me.role === "admin" ? "Manager" : me.role === "trainee" ? "En formation" : "Chatter"))}</small></div>
     ${me.role !== "admin" && INTRO_ON ? `<button onclick="INTRO.show(ME_SHELL,{replay:true})" title="Revoir la présentation" aria-label="Revoir la présentation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg></button>` : ""}<button onclick="logout()" title="Déconnexion" aria-label="Déconnexion" ${me.role !== "admin" && INTRO_ON ? 'style="margin-left:0"' : ""}>${icon("logout")}</button></div>`;
   el.innerHTML = html;
   if (me.role === "admin") loadAlerts("mountBell");   // cloche des alertes du shift
@@ -140,7 +154,7 @@ function renderShell(active, me) {
   // Dock flottant (téléphone)
   let dock = document.getElementById("dock");
   if (!dock) { dock = document.createElement("nav"); dock.id = "dock"; dock.className = "dock"; dock.setAttribute("aria-label", "Navigation principale"); document.body.appendChild(dock); }
-  dock.innerHTML = `<span class="dk-line" aria-hidden="true"></span>` + mods.filter(m => !(m.nodock || []).includes(me.role) && !(me.role === "admin" && m.id === "simu")).map(m => `<a href="${m.href}" class="di ${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""} aria-label="${esc(m.label)}">${icon(m.icon)}<span class="lb">${chars(m.short || m.label)}</span>${badge(m) ? `<em class="navbadge hidden" data-badge="${m.id}"></em>` : ""}</a>`).join("");
+  dock.innerHTML = `<span class="dk-line" aria-hidden="true"></span>` + mods.filter(m => !(m.nodock || []).includes(me.role) && !(m.nodock || []).includes(RKOF(me)) && !(me.role === "admin" && m.id === "simu")).map(m => `<a href="${m.href}" class="di ${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""} aria-label="${esc(m.label)}">${icon(m.icon)}<span class="lb">${chars(m.short || m.label)}</span>${badge(m) ? `<em class="navbadge hidden" data-badge="${m.id}"></em>` : ""}</a>`).join("");
   // Le menu de gauche et le dock font leur entrée une seule fois par session (après l'intro)
   try { if (!sessionStorage.getItem("stNav")) { el.classList.add("nav-in"); dock.classList.add("dock-in"); sessionStorage.setItem("stNav", "1"); } } catch (e) {}
   dock.querySelectorAll("a").forEach(a => a.addEventListener("click", e => {

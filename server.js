@@ -192,15 +192,18 @@ app.use((req, res, next) => {
 function auth(req, res, next) {
   const tok = req.cookies.tok;
   if (!tok) return res.status(401).json({ error: "Non connecté" });
-  const row = db.prepare(`SELECT u.id, u.username, u.role, u.active, t.expires_at FROM tokens t
+  const row = db.prepare(`SELECT u.id, u.username, u.role, u.active, u.grade, u.team_lead, t.expires_at FROM tokens t
     JOIN users u ON u.id = t.user_id WHERE t.token = ?`).get(tok);
   if (!row || row.expires_at < Date.now() || !row.active) return res.status(401).json({ error: "Session expirée" });
-  req.user = row;
+  row.rk = PERM.rk(row); req.user = row;
+  if (row.grade === "assistant" && req.path === "/api/home") PERM.stripMargin(res);
   if (row.role === "trainee" && TRAINEE_BLOCK.test(req.path)) return res.status(403).json({ error: "Réservé aux chatters : termine ta formation d'abord" });
   next();
 }
 const TRAINEE_BLOCK = /^\/api\/(sales|shifts|swaps|reinforce|help|planning|clock|my-pay|my-sanctions|home)(\/|$)/;
-const admin = (req, res, next) => req.user.role === "admin" ? next() : res.status(403).json({ error: "Réservé au manager" });
+// rôles fins (Fondateur, Manager, Assistante, Team Leader) : voir perms.js
+const PERM = require("./perms")(db, () => GEST && GEST.agency());
+const admin = PERM.admin;
 // journal d'activité (branché plus bas, une fois la gestion montée)
 let GEST = null;
 app.use((req, res, next) => GEST ? GEST.middleware(req, res, next) : next());
@@ -251,7 +254,9 @@ app.get("/api/me", auth, (req, res) => {
   let deadline = null;
   if (req.user.role === "trainee" && GEST) { GEST.startDeadline(req.user.id); deadline = GEST.deadline(req.user.id);
     if (deadline.state === "rejected") return res.status(401).json({ error: "Session expirée" }); }
-  res.json({ id: req.user.id, username: req.user.username, role: req.user.role, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro, deadline });
+  const tl = req.user.team_lead ? db.prepare("SELECT id, username FROM users WHERE id = ? AND active = 1 AND grade = 'tl'").get(req.user.team_lead) : null;
+  res.json({ id: req.user.id, username: req.user.username, role: req.user.role, grade: req.user.grade || null, rk: req.user.rk, roleLabel: PERM.LABEL[req.user.rk],
+    teamLead: tl ? { id: tl.id, username: tl.username } : null, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro, deadline });
 });
 // nouvelle version de la vidéo : les élèves déjà inscrits la regardent une fois (une seule réinitialisation)
 setTimeout(() => { try { const k = db.prepare("SELECT value FROM settings WHERE key = 'intro_version'").get();
@@ -415,7 +420,7 @@ app.patch("/api/admin/users/:id", auth, admin, (req, res) => {
   if (req.body?.role !== undefined) {
     if (id === req.user.id) return res.status(400).json({ error: "Tu ne peux pas changer ton propre rôle" });
     if (!["admin", "chatter", "trainee"].includes(req.body.role)) return res.status(400).json({ error: "Rôle invalide" });
-    db.prepare("UPDATE users SET role = ? WHERE id = ?").run(req.body.role, id);
+    db.prepare("UPDATE users SET role = ?, grade = NULL, team_lead = CASE WHEN ? = 'admin' THEN NULL ELSE team_lead END WHERE id = ?").run(req.body.role, req.body.role, id);
     db.prepare("DELETE FROM tokens WHERE user_id = ?").run(id);
   }
   res.json({ ok: true });
@@ -465,7 +470,8 @@ require("./chat")(app, db, auth, admin, { dataDir: path.dirname(DB_PATH), gest: 
 require("./tests")(app, db, auth, admin, { gest: GEST });   // tests d'aptitude : débit et frappe
 require("./challenges")(app, db, auth, admin, { compta: COMPTA, gest: GEST });   // défis de la semaine
 CAND_CTX.referrals = require("./referrals")(app, db, auth, admin, { compta: COMPTA, gest: GEST });   // parrainage
-require("./alerts")(app, db, auth, admin, { planning: PLAN, gest: GEST });
+const ALERTS = require("./alerts")(app, db, auth, admin, { planning: PLAN, gest: GEST });
+require("./roles")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, gest: GEST, perms: PERM, alerts: ALERTS, PERSONAS });   // rôles, équipes des Team Leaders, réglages du Fondateur
 require("./purge")(app, db, auth, admin, { gest: GEST });
 require("./announce")(app, db, auth, admin, { gest: GEST });   // annonces importantes / urgentes : bandeau, écran bloquant, suivi de lecture   // comptes désactivés depuis 24 h : supprimés (historique gardé)   // alertes du shift en cours (cloche manager, salle de contrôle)
 /* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */

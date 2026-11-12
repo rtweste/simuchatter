@@ -44,7 +44,7 @@ const SALLE = window.SALLE = (() => {
   /* ---------- boucle ---------- */
   async function start(h) {
     let me; try { me = await api("/api/me"); } catch (e) { return; }
-    if (me.role !== "admin") { location.href = "/home"; return; }
+    if (me.role !== "admin" || me.rk === "assistant") { location.href = "/home"; return; }
     chrome(h);
     if (DEMO) {
       let real = null; try { real = await api("/api/admin/control"); } catch (e) {}
