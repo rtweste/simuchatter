@@ -41,7 +41,7 @@ window.PUSH = (() => {
       let st = await state(), d = null; try { d = await info(true); } catch (e) {}
       const on = st === "on";
       const top = st === "ios-install" ? iosSteps() : st === "unsupported" ? `<div class="ps-note">Ce navigateur ne gère pas les notifications. Utilise Chrome ou l'appli installée.</div>`
-        : st === "denied" ? `<div class="ps-note r">Les notifications sont bloquées pour StellADS. Autorise-les dans les réglages du téléphone (Notifications › StellADS) ou du navigateur, puis reviens ici.</div>`
+        : st === "denied" ? `<div class="ps-note r">${blocked()}</div>`
         : `<button class="ps-dev${on ? " on" : ""}" data-dev><span class="ps-pulse"></span><span class="ps-dt"><b>${on ? "Activées sur cet appareil" : "Désactivées sur cet appareil"}</b><small>${on ? "Tu reçois les alertes même site fermé" : "Touche pour les activer"}</small></span><span class="ps-tg"></span></button>`;
       body.innerHTML = top + (d ? `<div class="ps-lab">CE QUE JE REÇOIS</div><div class="ps-list">${Object.entries(d.kinds).map(([k, l]) => `<button class="ps-row${d.prefs[k] ? " on" : ""}" data-k="${k}"><span>${l}</span><span class="ps-tg"></span></button>`).join("")}</div>
         <div class="ps-ft"><span>${d.devices} appareil${d.devices > 1 ? "s" : ""} relié${d.devices > 1 ? "s" : ""}</span>${on ? '<button class="ps-test" data-test>Envoyer un test</button>' : ""}</div>` : "");
@@ -53,6 +53,12 @@ window.PUSH = (() => {
     };
     draw();
   }
+  // notifications bloquées : comment les débloquer selon le téléphone
+  function blocked() { const e = env();
+    if (e.android) return e.standalone ? "Les notifications sont bloquées. Va dans <b>Réglages › Applications › StellADS › Notifications</b> et active-les, puis reviens ici."
+      : "Les notifications sont bloquées pour le site. Touche le <b>cadenas</b> à gauche de l’adresse, puis <b>Autorisations › Notifications › Autoriser</b>, et reviens ici.";
+    if (e.ios) return "Les notifications sont bloquées. Va dans <b>Réglages › Notifications › StellADS</b> et active « Autoriser les notifications », puis reviens ici.";
+    return "Les notifications sont bloquées pour le site. Clique sur le <b>cadenas</b> à gauche de l’adresse, autorise les notifications, puis recharge la page."; }
   function toastP(t) { try { notify("Notifications", t, "info"); } catch (e) { alert(t); } }
   // petite carte sur l'accueil tant que les notifications ne sont pas activées
   async function nudge(host) {
@@ -64,5 +70,5 @@ window.PUSH = (() => {
     c.querySelector(".ps-go").onclick = () => sheet();
     c.querySelector(".ps-no").onclick = () => { try { localStorage.setItem("stPushNo", Date.now() + 3 * 864e5); } catch (e) {} c.remove(); };
   }
-  return { env, state, enable, disable, sync, sheet, nudge, iosSteps };
+  return { env, state, enable, disable, sync, sheet, nudge, iosSteps, blocked };
 })();

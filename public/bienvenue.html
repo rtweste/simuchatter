@@ -182,7 +182,7 @@ h1 em{font-style:italic;background:linear-gradient(100deg,#fff,#9be8c6 45%,#ffd2
       el.querySelector("[data-skip]").onclick = next;
       if (st === "on") { box.innerHTML = '<div class="ok3"><i>✓</i>Déjà activées sur ce téléphone</div>'; b.textContent = "Continuer"; b.onclick = next; return; }
       if (st === "ios-install") { box.innerHTML = `<div class="card">${PUSH.iosSteps()}</div>`; b.textContent = "Continuer"; b.onclick = next; return; }
-      if (st === "denied") { box.innerHTML = '<div class="ps-note r">Les notifications sont bloquées pour StellADS : autorise-les dans les réglages du téléphone.</div>'; b.textContent = "Continuer"; b.onclick = next; return; }
+      if (st === "denied") { box.innerHTML = `<div class="ps-note r">${PUSH.blocked()}</div>`; b.textContent = "Continuer"; b.onclick = next; return; }
       if (st === "unsupported") { box.innerHTML = '<div class="ps-note">Ce navigateur ne gère pas les notifications. Ouvre StellADS dans Chrome ou depuis l\'appli installée.</div>'; b.textContent = "Continuer"; b.onclick = next; return; }
       b.onclick = async () => { b.disabled = true; b.textContent = "Autorise sur ton téléphone…";
         try { await PUSH.enable(); box.innerHTML = '<div class="ok3"><i>✓</i>C\'est activé : tu vas recevoir un test</div>'; api("/api/push/test", { body: {} }).catch(() => {}); b.disabled = false; b.textContent = "Continuer"; b.onclick = next; }
