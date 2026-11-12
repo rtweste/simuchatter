@@ -453,13 +453,16 @@ const COMPTA = require("./compta")(app, db, auth, admin, validatedByPeriod);
 const PLAN = require("./planning")(app, db, auth, admin);
 /* ----- Gestion : équipe, créatrices, réglages, journal, sanctions ----- */
 GEST = require("./gestion")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, PERSONAS });
-require("./candidatures")(app, db, auth, admin, { bcrypt, gest: GEST, ai });   // page publique /postuler
+const CAND_CTX = { bcrypt, gest: GEST, ai };
+require("./candidatures")(app, db, auth, admin, CAND_CTX);   // page publique /postuler
 HAND = require("./handover")(app, db, auth, admin, { planning: PLAN, gest: GEST });   // passation de shift
 require("./teamfx")(app, db, auth, admin, { planning: PLAN, gest: GEST, PERSONAS });   // salle de contrôle, radar, mur des ventes
 require("./extras")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, gest: GEST, ai });   // assistant, Wrapped, team leaders
 STUDIO = require("./studio")(app, db, auth, admin, { dataDir: path.dirname(DB_PATH), gest: GEST, planning: PLAN });   // contenus perso, fiches créatrices, pauses
 require("./chat")(app, db, auth, admin, { dataDir: path.dirname(DB_PATH), gest: GEST, planning: PLAN });   // chat d'équipe
 require("./tests")(app, db, auth, admin, { gest: GEST });   // tests d'aptitude : débit et frappe
+require("./challenges")(app, db, auth, admin, { compta: COMPTA, gest: GEST });   // défis de la semaine
+CAND_CTX.referrals = require("./referrals")(app, db, auth, admin, { compta: COMPTA, gest: GEST });   // parrainage
 require("./alerts")(app, db, auth, admin, { planning: PLAN, gest: GEST });   // alertes du shift en cours (cloche manager, salle de contrôle)
 /* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */
 LIVE = require("./simlive")(app, db, auth, admin, { loadSim, publicSim, PERSONAS, busy });

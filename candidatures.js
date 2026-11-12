@@ -58,6 +58,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const src = String(b.source || "").toLowerCase().replace(/[^\w\-]/g, "").slice(0, 30) || null;
     const newId = db.prepare("INSERT INTO applications (at, first_name, age, contact_type, contact, slots, exp, motivation, test_reply, test_answers, source, ip_hash) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
       .run(now, name, age, ct, contact, JSON.stringify(sl), b.exp, mot, test, JSON.stringify(answers), src, ip).lastInsertRowid;
+    try { if (b.ref && ctx.referrals) ctx.referrals.attach(newId, b.ref); } catch (e) {}   // parrainage
     setTimeout(() => grade(newId), 50);   // correction par l'IA en arrière-plan : ne ralentit pas l'envoi
     h.push(now); hits.set(ip, h);
     gest.log(null, "a", `Nouvelle candidature de **${name}**`, `${age} ans · ${CONTACT[ct]}${src ? " · pub : " + src : ""}`);

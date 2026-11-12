@@ -72,6 +72,11 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       if (cs.n) push({ key: "custom:" + cs.t, kind: "custom", lvl: 2, at: cs.t,
         title: `${cs.n} contenu${cs.n > 1 ? "s" : ""} perso en retard`, sub: `Promis pour le ${day(cs.t)} à ${hm(cs.t)}`, actions: [{ label: "Ouvrir le Studio", href: "/studio", main: true }] });
     }
+    // 8. primes de parrainage à valider
+    if (has("referrals")) {
+      const rf = db.prepare("SELECT COUNT(*) n, MIN(eligible_at) t FROM referrals WHERE status = 'to_validate'").get();
+      if (rf.n) push({ key: "ref:" + rf.t + ":" + rf.n, kind: "ref", at: rf.t || now, title: `${rf.n} prime${rf.n > 1 ? "s" : ""} de parrainage à valider`, sub: "Le filleul a terminé son premier mois", actions: [{ label: "Voir", href: "/parrainage", main: true }] });
+    }
     return out.sort((x, y) => y.lvl - x.lvl || y.at - x.at);
   }
   app.get("/api/admin/alerts", auth, admin, (req, res) => { try { res.json({ now: Date.now(), items: alerts() }); } catch (e) { console.error("alertes", e.message); res.json({ now: Date.now(), items: [] }); } });

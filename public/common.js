@@ -38,7 +38,9 @@ const ICONS = {
   spark: '<path d="M12 3l2.2 5.6L20 11l-5.8 2.4L12 19l-2.2-5.6L4 11l5.8-2.4z"/><path d="M19 3v3M17.5 4.5h3"/>',
   film: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M10 9.5v5l4.5-2.5z"/><path d="M3 9h2M3 15h2M19 9h2M19 15h2"/>',
   bubbles: '<path d="M14 9a6 6 0 0 1-8.7 5.4L2.5 15l.7-2.8A6 6 0 1 1 14 9z"/><path d="M9.5 16.6A6 6 0 0 0 18.2 19l2.8.6-.7-2.8A6 6 0 0 0 16 8.2"/>',
-  pulse: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M6 11h2.5l1.5-3 2.5 6 1.5-3H18M9 21h6M12 17v4"/>'
+  pulse: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M6 11h2.5l1.5-3 2.5 6 1.5-3H18M9 21h6M12 17v4"/>',
+  flag: '<path d="M5 21V4h11l-1.6 4L16 12H5"/>',
+  gift: '<path d="M20 12v8H4v-8M2.5 7.5h19V12h-19zM12 21V7.5"/><path d="M12 7.5H8a2.5 2.5 0 0 1 0-5c3 0 4 5 4 5zM12 7.5h4a2.5 2.5 0 0 0 0-5c-3 0-4 5-4 5z"/>'
 };
 const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ""}</svg>`;
 const MODULES = [
@@ -55,12 +57,16 @@ const MODULES = [
     desc: "Le chat de toute l'équipe : salons, messages privés, annonces, sondages." },
   { id: "creatrices", label: "Créatrices", short: "Créas", href: "/creatrices", icon: "spark", section: "Organisation", roles: ["admin", "chatter"], nodock: ["admin"],
     desc: "Les fiches des créatrices : personnalité, façon d'écrire, catalogue, à faire et à éviter." },
+  { id: "parrainage", label: "Parrainage", href: "/parrainage", icon: "gift", section: "Organisation", roles: ["admin", "chatter"], nodock: ["admin", "chatter"],
+    desc: "Ton lien d'invitation, tes filleuls et tes primes de parrainage." },
   { id: "paie", label: "Ma paie", href: "/paie", icon: "euro", section: "Organisation", roles: ["chatter"],
     desc: "Ta paie de la quinzaine : commission, paliers, primes et historique." },
   { id: "compta", label: "Compta", href: "/compta", icon: "euro", section: "Manager", roles: ["admin"],
     desc: "Revenus par période de 15 jours, part des créatrices, commissions des chatters." },
   { id: "studio", label: "Studio", href: "/studio", icon: "film", section: "Manager", roles: ["admin"],
     desc: "Les demandes de contenus personnalisés des fans : production et livraison aux chatters." },
+  { id: "defis", label: "Défis", href: "/defis", icon: "flag", section: "Manager", roles: ["admin"], nodock: ["admin"],
+    desc: "Les défis de la semaine : objectifs d'équipe ou perso, progression et récompenses." },
   { id: "salle", label: "Salle de contrôle", short: "Live", href: "/salle", icon: "pulse", section: "Manager", roles: ["admin"], nodock: ["admin"],
     desc: "Écran en direct à afficher dans l'agence : ventes, classement du jour et chatters en shift." },
   { id: "admin", label: "Gestion", href: "/admin", icon: "team", section: "Manager", roles: ["admin"],
@@ -77,7 +83,14 @@ function loadAlerts(mode) {
   const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/alerts.css"; document.head.appendChild(l);
   const sc = document.createElement("script"); sc.src = "/alerts-ui.js"; sc.onload = () => { try { ALERTS[mode](); } catch (e) {} }; document.body.appendChild(sc);
 }
-if (/^\/salle/.test(location.pathname)) addEventListener("load", () => loadAlerts("mountStrip"));
+if (/^\/salle/.test(location.pathname)) addEventListener("load", () => { loadAlerts("mountStrip"); loadChallenges("salle"); });
+// défis de la semaine : carte sur l'accueil, écran « défi réussi », bandeau de la salle
+function loadChallenges(mode, host) {
+  const run = () => { try { mode === "salle" ? CHALL.salle() : CHALL.mount(host); } catch (e) {} };
+  if (window.CHALL) return run();
+  const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/challenge.css"; document.head.appendChild(l);
+  const sc = document.createElement("script"); sc.src = "/challenge-ui.js"; sc.onload = run; document.body.appendChild(sc);
+}
 function renderShell(active, me) {
   if (me && me.role === "chatter") PLANREM.start();
   // un stagiaire n'a accès qu'à l'accueil et au simulateur

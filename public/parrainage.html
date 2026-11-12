@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Parrainage — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="stylesheet" href="/style.css">
+<style>
+.pr{font-family:Inter,system-ui,sans-serif;color:#f5f5f5;--v:#b388ff;--v2:#d7c4ff;--gd:#ffd23f}
+.pr h1{font:800 42px/1.05 Inter,sans-serif;letter-spacing:-.045em;margin:0}.pr h1 em{font-style:italic;color:var(--v2)}
+.pr .eyebrow{color:var(--v);font-weight:800;letter-spacing:.22em}
+.pr-sub{color:#a8a8a8;font-size:15.5px;margin-top:10px;max-width:640px;line-height:1.5}.pr-sub b{color:var(--gd)}
+.pr-row{display:flex;flex-wrap:wrap;gap:18px;align-items:stretch;margin-top:22px}
+.pr-card{border-radius:24px;padding:24px;background:#0d0d0f;border:1px solid rgba(255,255,255,.08);box-sizing:border-box;animation:prIn .7s cubic-bezier(.2,.9,.25,1) both}
+@keyframes prIn{from{opacity:0;transform:translateY(12px)}}
+.pr-k{font-size:12px;font-weight:800;letter-spacing:.14em;color:#a3a3a3}
+.pr-link{flex:999 1 600px;min-width:0;display:flex;flex-wrap:wrap;gap:24px;align-items:center;background:linear-gradient(150deg,rgba(179,136,255,.14),rgba(17,17,19,.92) 50%),#0d0d0f;border-color:rgba(179,136,255,.38);position:relative;overflow:hidden}
+.pr-link::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.05) 50%,transparent 65%);background-size:250% 100%;animation:prSheen 6s ease-in-out infinite;pointer-events:none}
+@keyframes prSheen{0%,60%{background-position:120% 0}100%{background-position:-120% 0}}
+.pr-lk{flex:999 1 320px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.pr-lk .pr-k{color:#c9b3ff}
+.pr-cp{display:flex;gap:8px;flex-wrap:wrap}
+.pr-cp input{flex:1 1 240px;min-width:0;height:54px;box-sizing:border-box;border-radius:15px;background:#08080a;border:1px solid #2c2933;color:#f5f5f5;font:700 15.5px Inter,sans-serif;padding:0 16px}
+.pr-btn{height:54px;padding:0 22px;border-radius:15px;border:0;background:var(--v);color:#1a0b33;font:900 15px Inter,sans-serif;cursor:pointer;position:relative;overflow:hidden;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.pr-btn:active{transform:scale(.96)}.pr-btn.ok{background:#5fd3a2;color:#06261a}
+.pr-sh{display:flex;gap:8px;flex-wrap:wrap}
+.pr-sh a,.pr-sh button{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 15px;border-radius:13px;background:#141416;border:1px solid #2a2a2e;color:#e6e6e6;text-decoration:none;font:700 14px Inter,sans-serif;cursor:pointer;transition:background .2s,transform .3s cubic-bezier(.34,1.56,.64,1)}
+.pr-sh a:hover,.pr-sh button:hover{background:#1c1c1f}.pr-sh svg{width:16px;height:16px}
+.pr-qr{flex:1 1 170px;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;z-index:1}
+.pr-qr div{width:168px;height:168px;padding:14px;box-sizing:border-box;border-radius:20px;background:#f5f5f5;box-shadow:0 20px 60px rgba(179,136,255,.25)}
+.pr-qr img{width:100%;height:100%;display:block}
+.pr-qr small{font-size:12px;color:#9a9a9a;font-weight:600}
+.pr-prime{flex:1 1 300px;min-width:0;border-color:rgba(255,210,63,.3);display:flex;flex-direction:column;gap:14px;animation-delay:.08s}
+.pr-prime .pr-k{color:var(--gd)}
+.pr-big{font-size:48px;font-weight:900;letter-spacing:-.05em;line-height:1}.pr-big span{font-size:18px;color:#9a9a9a;letter-spacing:-.01em}
+.pr-wait{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:rgba(255,210,63,.07);border:1px solid rgba(255,210,63,.25);font-size:13.5px;line-height:1.4}
+.pr-st{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.pr-st div{padding:12px 14px;border-radius:14px;background:#141416;border:1px solid #232326}
+.pr-st b{display:block;font-size:24px;font-weight:900;letter-spacing:-.03em}.pr-st small{font-size:12px;color:#9a9a9a;font-weight:600}
+.pr-kids{margin-top:18px;display:flex;flex-direction:column;gap:12px;animation-delay:.14s}
+.pr-kh{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.pr-steps{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#9a9a9a;font-weight:600}
+.pr-kid{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 16px;border-radius:18px;background:#121214;border:1px solid #222225}
+.pr-av{width:42px;height:42px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;font-size:16px;font-weight:900;color:#0a0a0a}
+.pr-kn{flex:1 1 150px;min-width:0}.pr-kn b{display:block;font-size:15px}.pr-kn small{font-size:12.5px;color:#9a9a9a}
+.pr-tr{flex:2 1 300px;display:flex;align-items:center}
+.pr-tr>div{flex:1;display:flex;align-items:center}.pr-tr>div:last-child{flex:0}
+.pr-tr i{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;background:#1b1b1e;border:2px solid #2e2e33;color:#1a0b33;transition:background .4s,border-color .4s}
+.pr-tr i svg{width:11px;height:11px;opacity:0}
+.pr-tr i.on{background:var(--v);border-color:var(--v)}.pr-tr i.on svg{opacity:1}.pr-tr i.cur{border-color:var(--v);box-shadow:0 0 0 4px rgba(179,136,255,.18)}
+.pr-tr span{flex:1;height:3px;background:#2a2a2e;margin:0 2px;border-radius:2px;overflow:hidden}.pr-tr span em{display:block;height:100%;width:0;background:var(--v);transition:width .8s cubic-bezier(.2,.9,.25,1)}
+.pr-tag{height:30px;padding:0 12px;border-radius:10px;font-size:12.5px;font-weight:800;line-height:30px;white-space:nowrap}
+.pr-tag.paid{background:rgba(255,210,63,.14);color:var(--gd)}.pr-tag.wait{background:rgba(255,210,63,.1);color:#ffe58a}.pr-tag.on{background:rgba(179,136,255,.14);color:#c9b3ff}.pr-tag.new,.pr-tag.off{background:#1c1c1f;color:#bbb}
+.pr-kid.off{opacity:.55}
+.pr-empty{padding:26px;border-radius:18px;border:1px dashed #2a2a2e;color:#9a9a9a;font-size:14px;text-align:center;line-height:1.5}
+/* manager */
+.pm-set{display:flex;align-items:center;gap:8px;flex-wrap:wrap;height:auto;padding:8px 8px 8px 16px;border-radius:15px;background:#0d0d0f;border:1px solid #26262a}
+.pm-set label{font-size:13px;color:#a3a3a3;font-weight:700}
+.pm-set input{width:70px;height:36px;box-sizing:border-box;border-radius:10px;background:#08080a;border:1px solid #2a2a2e;color:var(--gd);font:800 15px Inter;text-align:center}
+.pm-set button{height:36px;padding:0 14px;border-radius:10px;border:0;background:#f5f5f5;color:#0a0a0a;font:800 13px Inter;cursor:pointer}
+.pm-k{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:20px}
+.pm-k div{padding:18px;border-radius:20px;background:#0d0d0f;border:1px solid rgba(255,255,255,.08);animation:prIn .7s cubic-bezier(.2,.9,.25,1) both}
+.pm-k b{display:block;font-size:32px;font-weight:900;letter-spacing:-.04em;margin-top:8px}.pm-k small{font-size:12.5px;color:#9a9a9a}
+.pm-pay{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 16px;border-radius:18px;background:#131315;border:1px solid #242427}
+.pm-pay .pr-av{width:40px;height:40px;font-size:15px}
+.pm-pay .ar{color:#6f6f6f}
+.pm-pay button{height:44px;padding:0 16px;border-radius:13px;font:800 14px Inter;cursor:pointer}
+.pm-ok{border:0;background:var(--gd);color:#2a1d00}.pm-no{border:1px solid #2a2a2e;background:transparent;color:#cfcfcf}
+.pm-tb{overflow-x:auto;border-radius:16px;border:1px solid #222225}
+.pm-tb table{width:100%;min-width:560px;border-collapse:collapse;font-size:13.5px}
+.pm-tb th{background:#121214;color:#9a9a9a;text-align:left;font-weight:700;padding:11px 14px}.pm-tb td{padding:12px 14px;border-top:1px solid #1d1d20}
+.pm-ref{display:inline-flex;height:26px;padding:0 10px;border-radius:8px;background:rgba(179,136,255,.12);color:#c9b3ff;font-weight:700;align-items:center}
+.pm-top{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px}
+.pm-top.f{background:rgba(255,210,63,.07)}
+@media(max-width:760px){.pm-k{grid-template-columns:repeat(2,minmax(0,1fr))}.pr h1{font-size:32px}}
+@media(prefers-reduced-motion:reduce){.pr-card,.pm-k div,.pr-link::after{animation:none}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area">
+<div class="wrap pr" id="root"></div>
+</main>
+</div>
+<script src="/common.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id), root = $("root");
+  const AV = ["#9be8c6,#5fd3a2", "#d7c4ff,#b388ff", "#bfe6ff,#7dd3fc", "#ffe9a6,#ffd23f", "#ffc2d0,#ff7a9c"];
+  const av = (n, i) => `<span class="pr-av" style="background:linear-gradient(135deg,${AV[(i ?? (n || "").length) % AV.length]})">${esc((n || "?")[0].toUpperCase())}</span>`;
+  const day = t => new Date(t).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  const ic = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+  const CHECK = ic('<path d="M5 12.5 10 17.5 19 7"/>').replace('stroke-width="2"', 'stroke-width="3.6"');
+  const eur0 = n => eur(n).replace(",00", "");
+
+  /* ---------- chatter ---------- */
+  async function chatter() {
+    const [d, lk] = await Promise.all([api("/api/referrals/me"), api("/api/referrals/link")]);
+    const url = lk.url, msg = `Je bosse comme chatter chez StellADS : formation offerte, shifts selon tes dispos, payé à la commission. Si ça te tente, postule ici : ${url}`;
+    root.innerHTML = `<div class="eyebrow">Parrainage</div><h1>Fais grandir <em>l'équipe.</em></h1>
+      <div class="pr-sub">Partage ton lien. Quand une personne que tu as invitée est recrutée et termine ses ${d.days} premiers jours, tu touches <b>${eur0(d.prime)}</b> sur ta paie.</div>
+      <div class="pr-row">
+        <section class="pr-card pr-link" aria-label="Ton lien personnel">
+          <div class="pr-lk"><label class="pr-k" for="lnk">TON LIEN PERSONNEL</label>
+            <div class="pr-cp"><input id="lnk" readonly value="${esc(url.replace(/^https?:\/\//, ""))}"><button type="button" class="pr-btn" id="cp">Copier le lien</button></div>
+            <div class="pr-sh">
+              <a href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${ic('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>')}WhatsApp</a>
+              <a href="https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent("Je bosse comme chatter chez StellADS, postule ici :")}" target="_blank" rel="noopener">${ic('<path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/>')}Telegram</a>
+              <button type="button" id="story">${ic('<rect x="4" y="2.5" width="16" height="19" rx="3"/><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8"/>')}Image pour ta story</button>
+            </div></div>
+          <div class="pr-qr"><div><img src="/api/referrals/qr.svg" alt="QR code de ton lien" width="140" height="140"></div><small>À scanner sur un téléphone</small></div>
+        </section>
+        <section class="pr-card pr-prime" aria-label="Tes primes">
+          <div class="pr-k">TES PRIMES DE PARRAINAGE</div>
+          <div class="pr-big">${eur0(d.paid)}<span> gagnés</span></div>
+          ${d.pending ? `<div class="pr-wait">${ic('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>').replace("<svg", '<svg width="18" height="18" style="color:#ffd23f;flex-shrink:0"')}<div><b>${eur0(d.pending)} possibles</b> avec tes filleuls en cours</div></div>` : ""}
+          <div class="pr-st"><div><b>${d.stats.clicks}</b><small>visites de ton lien (90 j)</small></div><div><b>${d.stats.apps}</b><small>candidature${d.stats.apps > 1 ? "s" : ""}</small></div><div><b>${d.stats.training}</b><small>en formation</small></div><div><b>${d.stats.hired}</b><small>recruté${d.stats.hired > 1 ? "s" : ""}</small></div></div>
+        </section>
+      </div>
+      <section class="pr-card pr-kids" aria-label="Tes filleuls">
+        <div class="pr-kh"><div class="pr-k">TES FILLEULS</div><div class="pr-steps">${d.steps.map(s => `<span>${esc(s)}</span>`).join("")}</div></div>
+        ${d.kids.length ? d.kids.map((k, i) => `<div class="pr-kid ${k.kind === "off" ? "off" : ""}">${av(k.name, i)}<div class="pr-kn"><b>${esc(k.name)}</b><small>Invité${""} le ${day(k.invited_at)}</small></div>
+          <div class="pr-tr">${d.steps.map((s, j) => `<div><i class="${j < k.step ? "on" : j === k.step && k.kind !== "off" ? "cur" : ""}" title="${esc(s)}">${CHECK}</i>${j < d.steps.length - 1 ? `<span><em data-w="${j < k.step - 1 ? 100 : 0}"></em></span>` : ""}</div>`).join("")}</div>
+          <span class="pr-tag ${k.kind}">${esc(k.tag)}</span></div>`).join("")
+          : `<div class="pr-empty">Personne n'a encore postulé avec ton lien.<br>Envoie-le à une amie ou poste l'image en story : chaque candidature apparaîtra ici.</div>`}
+      </section>`;
+    requestAnimationFrame(() => root.querySelectorAll("[data-w]").forEach(e => e.style.width = e.dataset.w + "%"));
+    $("cp").onclick = async () => { try { await navigator.clipboard.writeText(url); } catch (e) { $("lnk").select(); document.execCommand && document.execCommand("copy"); }
+      const b = $("cp"); b.classList.add("ok"); b.textContent = "Copié ✓"; setTimeout(() => { b.classList.remove("ok"); b.textContent = "Copier le lien"; }, 1800); };
+    $("story").onclick = () => story(url, ME.username);
+  }
+  // image 1080 × 1920 pour une story Instagram / TikTok, avec le QR code
+  async function story(url, name) {
+    const cv = document.createElement("canvas"); cv.width = 1080; cv.height = 1920; const x = cv.getContext("2d");
+    const g = x.createRadialGradient(300, 300, 0, 300, 300, 900); g.addColorStop(0, "rgba(179,136,255,.6)"); g.addColorStop(1, "rgba(179,136,255,0)");
+    x.fillStyle = "#07060a"; x.fillRect(0, 0, 1080, 1920); x.fillStyle = g; x.fillRect(0, 0, 1080, 1920);
+    const g2 = x.createRadialGradient(950, 1750, 0, 950, 1750, 900); g2.addColorStop(0, "rgba(95,211,162,.45)"); g2.addColorStop(1, "rgba(95,211,162,0)"); x.fillStyle = g2; x.fillRect(0, 0, 1080, 1920);
+    try { await document.fonts.load("900 120px Inter"); } catch (e) {}
+    x.fillStyle = "#fff"; x.font = "300 54px Inter, sans-serif"; x.letterSpacing = "26px"; x.fillText("STELLADS", 96, 200); x.letterSpacing = "0px";
+    x.fillStyle = "#c9b3ff"; x.font = "800 38px Inter, sans-serif"; x.letterSpacing = "10px"; x.fillText("ON RECRUTE", 96, 520); x.letterSpacing = "0px";
+    x.fillStyle = "#fff"; x.font = "900 150px Inter, sans-serif"; x.fillText("Deviens", 90, 690); x.font = "italic 900 150px Inter, sans-serif"; x.fillStyle = "#d7c4ff"; x.fillText("chatter.", 90, 850);
+    x.font = "700 46px Inter, sans-serif"; ["Formation offerte", "Shifts selon tes dispos", "Payé à la commission"].forEach((t, i) => { x.fillStyle = "#5fd3a2"; x.beginPath(); x.arc(112, 990 + i * 86 - 15, 12, 0, 7); x.fill(); x.fillStyle = "#e6e6e6"; x.fillText(t, 150, 990 + i * 86); });
+    // carte « invité par » + QR
+    const rr = (X, Y, W, H, R) => { x.beginPath(); x.moveTo(X + R, Y); x.arcTo(X + W, Y, X + W, Y + H, R); x.arcTo(X + W, Y + H, X, Y + H, R); x.arcTo(X, Y + H, X, Y, R); x.arcTo(X, Y, X + W, Y, R); x.closePath(); };
+    x.fillStyle = "rgba(255,255,255,.08)"; rr(80, 1380, 920, 360, 48); x.fill(); x.strokeStyle = "rgba(255,255,255,.16)"; x.lineWidth = 3; x.stroke();
+    const ag = x.createLinearGradient(130, 1450, 250, 1570); ag.addColorStop(0, "#9be8c6"); ag.addColorStop(1, "#5fd3a2"); x.fillStyle = ag; x.beginPath(); x.arc(190, 1500, 60, 0, 7); x.fill();
+    x.fillStyle = "#0a0a0a"; x.font = "900 60px Inter, sans-serif"; x.textAlign = "center"; x.fillText((name || "?")[0].toUpperCase(), 190, 1522); x.textAlign = "left";
+    x.fillStyle = "#bdbdbd"; x.font = "600 34px Inter, sans-serif"; x.fillText("Invité par", 280, 1480); x.fillStyle = "#fff"; x.font = "800 52px Inter, sans-serif"; x.fillText(name, 280, 1540);
+    x.fillStyle = "#bdbdbd"; x.font = "600 30px Inter, sans-serif"; x.fillText("Scanne le code pour postuler", 130, 1660);
+    const qr = new Image(); qr.src = "/api/referrals/qr.svg"; await qr.decode().catch(() => {});
+    x.fillStyle = "#f5f5f5"; rr(720, 1420, 240, 240, 28); x.fill(); try { x.drawImage(qr, 740, 1440, 200, 200); } catch (e) {}
+    x.fillStyle = "#8a8a8a"; x.font = "600 28px Inter, sans-serif"; x.textAlign = "center"; x.fillText("Réservé aux personnes majeures", 540, 1830);
+    cv.toBlob(async b => { const f = new File([b], "stellads-invitation.png", { type: "image/png" });
+      if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], text: url }); return; } catch (e) { if (e.name === "AbortError") return; } }
+      const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = f.name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); notify("Image enregistrée", "Poste-la en story avec ton lien", "ok"); }, "image/png");
+  }
+
+  /* ---------- manager ---------- */
+  async function manager() {
+    const d = await api("/api/admin/referrals"), k = d.kpis;
+    root.innerHTML = `<div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px"><div><div class="eyebrow">Manager · Parrainage</div><h1>Qui fait venir <em>les bons profils.</em></h1></div>
+      <div class="pm-set"><label for="pp">Prime par recrue</label><input id="pp" value="${d.settings.prime}" inputmode="decimal"><label for="pd">après</label><input id="pd" value="${d.settings.days}" inputmode="numeric" style="width:56px;color:#f5f5f5"><label>jours</label><button type="button" id="ps">Enregistrer</button></div></div>
+      <div class="pm-k">
+        <div><span class="pr-k">CANDIDATURES PARRAINÉES</span><b>${k.refApps}</b><small>sur ${k.totalApps} en 90 jours</small></div>
+        <div style="animation-delay:.05s"><span class="pr-k">TAUX DE RECRUTEMENT</span><b style="color:#5fd3a2">${k.refRate} %</b><small>contre ${k.baseRate} % sans parrain</small></div>
+        <div style="animation-delay:.1s"><span class="pr-k">PRIMES VERSÉES</span><b style="color:#ffd23f">${eur0(k.paid)}</b><small>${k.paidN} recrue${k.paidN > 1 ? "s" : ""} validée${k.paidN > 1 ? "s" : ""}</small></div>
+        <div style="animation-delay:.15s"><span class="pr-k">À VALIDER</span><b style="color:#c9b3ff">${k.toValidate}</b><small>premier mois terminé</small></div>
+      </div>
+      <div class="pr-row">
+        <section class="pr-card" style="flex:999 1 560px;min-width:0;border-color:rgba(255,210,63,.28);display:flex;flex-direction:column;gap:12px" aria-label="Primes à valider">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="pr-k" style="color:#ffd23f">PRIMES À VALIDER</div><div style="font-size:13px;color:#9a9a9a">ajoutées à la paie du parrain</div></div>
+          ${d.toPay.length ? d.toPay.map((p, i) => `<div class="pm-pay">${av(p.referrer, i)}<span class="ar">${ic('<path d="M5 12h14M13 6l6 6-6 6"/>').replace("<svg", '<svg width="20" height="20"')}</span>${av(p.filleul, i + 2)}
+            <div style="flex:1 1 200px;min-width:0"><b style="font-size:15px">${esc(p.referrer)} → ${esc(p.filleul)}</b><div style="font-size:12.5px;color:#9a9a9a">Recruté le ${day(p.hired_at)} · délai terminé le ${day(p.eligible_at)}</div></div>
+            <b style="font-size:20px;color:#ffd23f">${eur0(p.prime)}</b><button type="button" class="pm-ok" data-ok="${p.id}">Valider</button><button type="button" class="pm-no" data-no="${p.id}">Refuser</button></div>`).join("")
+            : `<div class="pr-empty" style="padding:18px">Aucune prime à valider pour l'instant.</div>`}
+          <div class="pr-k" style="margin-top:8px">CANDIDATURES PARRAINÉES</div>
+          ${d.apps.length ? `<div class="pm-tb"><table><thead><tr><th scope="col">Candidat</th><th scope="col">Parrain</th><th scope="col">Test</th><th scope="col">Étape</th></tr></thead><tbody>${d.apps.map(a => `<tr><td><b>${esc(a.name)}</b><div style="font-size:12px;color:#888">${day(a.at)}</div></td><td><span class="pm-ref">${esc(a.referrer)}</span></td>
+            <td style="font-weight:800;color:${a.score == null ? "#777" : a.score >= 70 ? "#5fd3a2" : a.score >= 50 ? "#e0a35f" : "#ff8fa3"}">${a.score == null ? "—" : a.score}</td><td style="color:#cfcfcf">${esc(a.tag)}</td></tr>`).join("")}</tbody></table></div>`
+            : `<div class="pr-empty" style="padding:18px">Aucune candidature parrainée pour l'instant. Les chatters trouvent leur lien dans « Parrainage ».</div>`}
+        </section>
+        <section class="pr-card" style="flex:1 1 320px;min-width:0;background:linear-gradient(160deg,rgba(179,136,255,.12),rgba(13,13,15,.95) 45%),#0d0d0f;border-color:rgba(179,136,255,.32);display:flex;flex-direction:column;gap:10px" aria-label="Meilleurs parrains">
+          <div class="pr-k" style="color:#c9b3ff">MEILLEURS PARRAINS</div>
+          ${d.top.length ? d.top.map((t, i) => `<div class="pm-top ${i === 0 ? "f" : ""}"><span style="width:22px;text-align:center;font-weight:900;color:${["#ffd23f", "#d4d4d4", "#c08457"][i] || "#8a8a8a"}">${i + 1}</span>${av(t.username, i)}<div style="flex:1;min-width:0"><b style="font-size:14.5px">${esc(t.username)}</b><div style="font-size:12px;color:#9a9a9a">${t.apps} candidature${t.apps > 1 ? "s" : ""} · ${t.hired} recruté${t.hired > 1 ? "s" : ""}</div></div><b style="font-size:16px">${t.hired}</b></div>`).join("")
+            : `<div style="font-size:13px;color:#9a9a9a;line-height:1.5">Le classement apparaîtra avec les premières candidatures parrainées.</div>`}
+        </section>
+      </div>`;
+    $("ps").onclick = async () => { try { await api("/api/admin/referrals/settings", { body: { prime: +String($("pp").value).replace(",", "."), days: +$("pd").value } }); notify("Prime de parrainage enregistrée", "", "ok"); manager(); } catch (e) { notify("Impossible", e.message, "err"); } };
+    root.querySelectorAll("[data-ok],[data-no]").forEach(b => b.onclick = async () => { b.disabled = true;
+      try { await api(`/api/admin/referrals/${b.dataset.ok || b.dataset.no}`, { body: { decision: b.dataset.ok ? "approve" : "refuse" } }); notify(b.dataset.ok ? "Prime validée" : "Prime refusée", b.dataset.ok ? "Ajoutée à la paie du parrain" : "", "ok"); manager(); }
+      catch (e) { notify("Impossible", e.message, "err"); b.disabled = false; } });
+  }
+  let ME = null;
+  (async () => {
+    ME = await api("/api/me"); renderShell("parrainage", ME);
+    if (ME.role === "trainee") return go("/home");
+    try { ME.role === "admin" ? await manager() : await chatter(); } catch (e) { root.innerHTML = `<div class="pr-empty">Impossible de charger le parrainage : ${esc(e.message)}</div>`; }
+  })();
+})();
+</script>
+</body>
+</html>
