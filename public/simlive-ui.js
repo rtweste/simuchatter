@@ -77,7 +77,7 @@ const SIMLIVE = window.SIMLIVE = (() => {
       </div><div>
         <section class="gx-card" style="--d:.05s"><h3>Réglages</h3>${settingsHTML()}</section>
         <section class="gx-card" style="--d:.1s"><h3>Entraînements <em>assignés</em></h3><div id="gAsg">${asgHTML()}</div></section>
-        <section class="gx-card" style="--d:.15s" id="gEthCard"><div class="gx-hr"><h3>Alertes <em>éthiques</em></h3><span class="gx-mut">Signalées par l'IA dans les rapports</span></div><div id="gEth"><p class="gx-empty">Chargement…</p></div></section>
+        
       </div></div>
       <section class="gx-card" style="--d:.2s;margin-top:14px"><div class="gx-hr"><h3>Toutes les <em>sessions</em></h3><span class="gx-flt"><select id="gfUser" aria-label="Chatter"><option value="">Tous les chatters</option>${OV.chatters.map(c => `<option value="${c.id}">${esc(c.username)}</option>`).join("")}</select><select id="gfFan" aria-label="Profil de fan"><option value="">Tous les profils</option>${OV.personas.map(p => `<option value="${p.id}">${esc(p.name)} · ${esc(p.label)}</option>`).join("")}</select></span></div><div id="gSess"><p class="gx-empty">Chargement…</p></div></section>`;
     bindLive(); bindStatic(); loadSessions(true);
@@ -89,7 +89,7 @@ const SIMLIVE = window.SIMLIVE = (() => {
     let list; try { list = await api("/api/admin/sims?" + qs); } catch (e) { $("gSess").innerHTML = `<p class="gx-empty">${esc(e.message)}</p>`; return; }
     const row = s => `<button class="gx-row" data-rep="${s.id}">${ring(s.score)}<span><b>${esc(s.username)}</b> avec ${esc(s.persona || "")} · ${esc(s.creator_name)}${dec(s.score)}${s.ethics ? ' <span class="gx-pill r">⚠ éthique</span>' : ""}<small>${esc(DIFF(s.difficulty))} · ${s.revenue} € · ${s.avgRt != null ? s.avgRt + " s de réponse · " : ""}${ago(s.started_at)}${s.verdict ? " · " + esc(s.verdict) : ""}</small></span><span class="gx-pill">Rapport →</span></button>`;
     $("gSess").innerHTML = list.length ? `<div class="gx-rows gx-all">${list.slice(0, 60).map(row).join("")}</div>${list.length > 60 ? `<p class="gx-mut" style="margin-top:8px">60 sessions affichées sur ${list.length}. Filtre par chatter pour voir les autres.</p>` : ""}` : `<p class="gx-empty">Aucune session pour ce filtre.</p>`;
-    if (first) { const fl = list.filter(s => s.ethics).slice(0, 8);
+    if (first && $("gEth")) { const fl = list.filter(s => s.ethics).slice(0, 8);
       $("gEth").innerHTML = fl.length ? `<div class="gx-rows">${fl.map(s => `<button class="gx-row eth" data-rep="${s.id}"><span class="gx-av" style="color:${R}">!</span><span><b>${esc(s.username)}</b> avec ${esc(s.persona || "")}<small style="color:#e9a0a0">${esc(s.ethics)}</small><small>${ago(s.started_at)}</small></span><span class="gx-pill">Voir →</span></button>`).join("")}</div>` : `<p class="gx-empty">Aucune alerte. 👍</p>`; }
     document.querySelectorAll("#gSess [data-rep], #gEth [data-rep]").forEach(b => b.onclick = async () => { try { showReport(await api("/api/sims/" + b.dataset.rep)); } catch (e) { notify("Rapport indisponible", e.message, "err"); } });
   }

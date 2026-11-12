@@ -463,7 +463,7 @@ app.get("/api/admin/sims", auth, admin, (req, res) => {
     FROM sims s JOIN users u ON u.id = s.user_id WHERE ${where.join(" AND ")} ORDER BY s.started_at DESC LIMIT 300`).all(...args)
     .map(r => {
       const rep = r.report ? J(r.report) : {};
-      return { ...r, report: undefined, rts: undefined, avgRt: avg(J(r.rts)), persona: PERSONAS.find(p => p.id === r.persona_id)?.name, ethics: rep.ethics_flag || null, verdict: rep.verdict || "" };
+      return { ...r, report: undefined, rts: undefined, avgRt: avg(J(r.rts)), persona: PERSONAS.find(p => p.id === r.persona_id)?.name, ethics: null, verdict: rep.verdict || "" };
     }));
 });
 

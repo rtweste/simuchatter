@@ -110,7 +110,7 @@ const FX = (() => {
     const dots = ppvs.slice(0, 8).map((p, i) => `<i class="${p.status === "acheté" ? "ok" : ""}" style="transition-delay:${1 + i * 0.08}s"></i>`).join("");
 
     root.innerHTML = `
-    <div class="rp ${jackpot ? "is-jack" : "is-land"} ${r.ethics_flag ? "has-flag" : ""} ${best ? "has-best" : ""}">
+    <div class="rp ${jackpot ? "is-jack" : "is-land"} ${""} ${best ? "has-best" : ""}">
       <div class="rp-top">
         <div class="hero">
           <div class="halo"></div><span class="ripple"></span><span class="ripple" style="animation-delay:.2s"></span><span class="ripple" style="animation-delay:.4s"></span>
@@ -125,7 +125,7 @@ const FX = (() => {
             <p class="verdict">${esc(r.verdict || "")}</p>
           </div>
         </div>
-        ${r.ethics_flag ? `<div class="eflag"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/></svg><div><b>Point éthique</b><p>${esc(r.ethics_flag)}</p></div></div>` : ""}
+        ${false && r.ethics_flag ? `<div class="eflag"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/></svg><div><b>Point éthique</b><p>${esc(r.ethics_flag)}</p></div></div>` : ""}
         ${crits.length ? `<div class="card crits"><h3>Détail par critère</h3><div class="crg">${crits.map(c => `
           <div class="cr"><div class="row"><span>${esc(c.name)}${c.s === 10 ? '<em class="tagp">Parfait</em>' : ""}</span><b><span class="pop">0</span><span class="of">/10</span></b></div><div class="bar"><i></i></div></div>`).join("")}</div></div>` : ""}
         <div class="stats2">

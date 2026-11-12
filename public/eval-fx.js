@@ -141,7 +141,7 @@ const EVAL = (() => {
       <button class="ev-back" data-back>${ICO.back}Retour</button>
       <div class="ev-hdr"><div><div class="ev-eb">SIMU CHATTER · RÉSULTAT</div><h1 class="ev-ttl">Ton <em>évaluation.</em></h1>${ctxLine(sim)}</div>
         <div class="ev-acts"><button class="ev-bt ev-snd ${soundPref() ? "" : "off"}" data-snd aria-label="Activer ou couper le son" title="Son">${soundPref() ? ICO.snd : ICO.mute}</button>${canReplay ? `<button class="ev-bt" data-replay>${ICO.replay}Rejouer avec ${esc(sim.persona.name)}</button>` : ""}<button class="ev-bt w" data-new>Nouvelle simulation${ICO.arrow}</button></div></div>
-      ${r.ethics_flag ? `<div class="ev-flag">${ICO.flag}<div><b>Point éthique</b>${esc(r.ethics_flag)}</div></div>` : ""}
+      ${false && r.ethics_flag ? `<div class="ev-flag">${ICO.flag}<div><b>Point éthique</b>${esc(r.ethics_flag)}</div></div>` : ""}
       <div class="ev-g2"><section class="ev-card ev-hero" style="--d:.05s"><div class="ev-htop">
         <div class="ev-ring" style="--sc:${sc};--scA:${sc}22;--off:${(C * (1 - score / 100)).toFixed(1)}" role="img" aria-label="Score ${score} sur 100"><div class="ev-halo"></div>
           <svg viewBox="0 0 168 168"><circle cx="84" cy="84" r="72" fill="none" stroke="#1d1d1d" stroke-width="10"/><circle class="fg" cx="84" cy="84" r="72" fill="none" stroke="${sc}" stroke-width="10" stroke-linecap="round"/></svg>
@@ -164,7 +164,7 @@ const EVAL = (() => {
   function intro(root, sim, opts = {}) {
     const lines = (sim.log || []).filter(l => l.who === "fan" || l.who === "chatter").slice(-24);
     const filler = lines.length < 8 ? [...lines, ...lines, ...lines] : lines;
-    const CK = ["Accroche & lien", "Personnalisation & écoute", "Respect du personnage", "Technique de vente", "Gestion des objections", "Éthique & respect"];
+    const CK = ["Accroche & lien", "Personnalisation & écoute", "Respect du personnage", "Technique de vente", "Gestion des objections"];
     root.innerHTML = `<div class="evp"><div class="ev-intro"><div class="ev-ib">
       <div class="ev-ih"><div class="ev-eb">SIMU CHATTER</div><div class="t">Analyse de ta <em>session</em><span>...</span></div>${ctxLine(sim)}</div>
       <div class="ev-ig"><div class="ev-chat"><div class="ev-roll">${filler.map(l => `<div class="m ${l.who === "chatter" ? "me" : ""}">${esc(l.text)}<span class="tg"></span></div>`).join("")}</div><div class="ev-scan"></div></div>

@@ -237,7 +237,7 @@ body{overflow-x:hidden}
 
 <script src="/common.js"></script>
 <script>
-api("/api/me", { noRedirect: true }).then(() => location.href = "/home").catch(() => {});
+api("/api/me", { noRedirect: true, fresh: true }).then(() => location.href = "/home").catch(() => {});
 
 $("logo").innerHTML = logoHTML();
 const BTN = $("b").innerHTML;

@@ -177,13 +177,14 @@ Donne UN conseil concret et court (3 phrases max) pour le prochain message, en f
 // Format imposé de l'évaluation : l'API renvoie directement un objet valide (plus d'erreur « réponse illisible »)
 const STR = { type: "string" };
 const EVAL_TOOL = { name: "evaluation", description: "Enregistre l'évaluation de la session du chatter.",
-  input_schema: { type: "object", required: ["score", "verdict", "criteria", "strengths", "improvements", "rewrites", "best", "ethics_flag"], properties: {
+  input_schema: { type: "object", required: ["score", "verdict", "criteria", "strengths", "improvements", "rewrites", "best"], properties: {
     score: { type: "integer", minimum: 0, maximum: 100 }, verdict: STR,
     criteria: { type: "array", items: { type: "object", required: ["name", "score", "comment"], properties: { name: STR, score: { type: "integer", minimum: 0, maximum: 10 }, comment: STR } } },
     strengths: { type: "array", items: STR }, improvements: { type: "array", items: STR },
     rewrites: { type: "array", items: { type: "object", required: ["original", "better", "why"], properties: { original: STR, better: STR, why: STR } } },
-    best: { type: "object", required: ["message", "why"], properties: { message: STR, why: STR } },
-    ethics_flag: { type: ["string", "null"], description: "null si rien à signaler, sinon la description du problème" } } } };
+    best: { type: "object", required: ["message", "why"], properties: { message: STR, why: STR } } } } };
+// plus de critère ni d'alerte éthique dans le Simu
+const noEthics = r => { if (!r || typeof r !== "object") return r; r.ethics_flag = null; if (Array.isArray(r.criteria)) r.criteria = r.criteria.filter(c => !/thique/i.test(c.name || "")); return r; };
 async function evaluate(sim, persona, stats) {
   const prompt = `Tu es responsable formation dans une agence qui gère des créatrices de contenu. Évalue la performance d'un chatter lors d'une simulation d'entraînement, en français. Cette note sert au recrutement : elle doit permettre de savoir si cette personne peut devenir chatter. Sois juste, concret et bienveillant, pas sévère : tu évalues un débutant, pas un expert.
 
@@ -214,7 +215,7 @@ CRITÈRES (note chacun sur 10) :
 3. Respect du personnage de la créatrice (ton, style d'écriture, cohérence)
 4. Technique de vente (timing, construction de la valeur, teasing, prix cohérents)
 5. Gestion des objections
-6. Éthique & respect : pas de pression sur un fan vulnérable, respect d'un refus, aucune fausse promesse (rencontre réelle, exclusivité mensongère). Les messages chauds ou osés ne sont pas une faute. Une faute grave ici doit faire fortement baisser le score global.
+Les messages chauds ou osés ne sont pas une faute.
 
 N'applique PAS toi-même la pénalité des conseils : elle est calculée à part.
 
@@ -222,13 +223,13 @@ CONVERSATION :
 ${transcript(sim.log)}
 
 RÉPONDS UNIQUEMENT EN JSON :
-{"score": 0-100, "verdict": "une phrase de synthèse", "criteria": [{"name": "...", "score": 0-10, "comment": "1-2 phrases"}], "strengths": ["..."], "improvements": ["..."], "rewrites": [{"original": "message exact du chatter", "better": "version améliorée", "why": "courte raison"}], "best": {"message": "le message exact du chatter le plus réussi", "why": "pourquoi il fonctionne, en une phrase courte"}, "ethics_flag": null ou "description du problème"}
+{"score": 0-100, "verdict": "une phrase de synthèse", "criteria": [{"name": "...", "score": 0-10, "comment": "1-2 phrases"}], "strengths": ["..."], "improvements": ["..."], "rewrites": [{"original": "message exact du chatter", "better": "version améliorée", "why": "courte raison"}], "best": {"message": "le message exact du chatter le plus réussi", "why": "pourquoi il fonctionne, en une phrase courte"}}
 Donne 2 à 3 réécritures des messages les plus perfectibles (moins si le chatter a écrit très peu). Même si la conversation est très courte, évalue-la quand même et réponds en JSON. Dans les textes, utilise « » plutôt que des guillemets droits.`;
   if (MOCK) {
     return {
       score: 68, verdict: "Bonne prise de contact, vente un peu précipitée.",
-      criteria: ["Accroche & lien", "Personnalisation & écoute", "Respect du personnage", "Technique de vente", "Gestion des objections", "Éthique & respect"]
-        .map((n, i) => ({ name: n, score: [7, 6, 8, 6, 5, 9][i], comment: "Commentaire de test." })),
+      criteria: ["Accroche & lien", "Personnalisation & écoute", "Respect du personnage", "Technique de vente", "Gestion des objections"]
+        .map((n, i) => ({ name: n, score: [7, 6, 8, 6, 5][i], comment: "Commentaire de test." })),
       strengths: ["Ton chaleureux"], improvements: ["Poser plus de questions avant de vendre"],
       rewrites: [{ original: sim.log.find(l => l.who === "chatter")?.text || "…", better: "Version améliorée de test", why: "Plus personnel" }],
       best: { message: sim.log.filter(l => l.who === "chatter").slice(-1)[0]?.text || "…", why: "Message de test : rebond personnel sur ce que dit le fan." },
@@ -240,10 +241,10 @@ Donne 2 à 3 réécritures des messages les plus perfectibles (moins si le chatt
     const res = await ask(prompt.replace("RÉPONDS UNIQUEMENT EN JSON :", "Donne ton évaluation avec l'outil « evaluation », en suivant cette structure :"), MODEL_EVAL, 6000, tag,
       { tools: [EVAL_TOOL], tool_choice: { type: "tool", name: "evaluation" } });
     const tu = res.content.find(c => c.type === "tool_use");
-    if (tu && tu.input && typeof tu.input.score === "number" && Array.isArray(tu.input.criteria)) return tu.input;
+    if (tu && tu.input && typeof tu.input.score === "number" && Array.isArray(tu.input.criteria)) return noEthics(tu.input);
     console.error("Évaluation par outil incomplète, passage au texte :", res.stop_reason);
   } catch (e) { if (e.status && e.status !== 400) throw e; console.error("Évaluation par outil échouée, passage au texte :", e.message); }
-  return askJSON(prompt, MODEL_EVAL, 6000, tag);
+  return noEthics(await askJSON(prompt, MODEL_EVAL, 6000, tag));
 }
 
 /* ---------- Lecture d'une capture de vente (Twizz) ---------- */

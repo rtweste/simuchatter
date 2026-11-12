@@ -10,16 +10,28 @@ const fmtDate = t => new Date(t).toLocaleString("fr-FR", { dateStyle: "short", t
 const scoreColor = s => s >= 70 ? "var(--good)" : s >= 50 ? "var(--warn)" : "var(--bad)";
 const LEVEL = { 1: ["Facile", "t1"], 2: ["Moyen", "t2"], 3: ["Avancé", "t3"] };
 
+// Page préparée en avance (pré-chargement au survol) : elle ne fait rien d'autre que lire tant qu'on ne l'a pas ouverte
+const PG_ON = () => !document.prerendering ? Promise.resolve() : new Promise(r => document.addEventListener("prerenderingchange", r, { once: true }));
+// Le compte connecté est gardé quelques secondes entre deux pages : le menu s'affiche tout de suite, puis se met à jour en fond
+const ME_KEY = "stMe";
 async function api(path, opts = {}) {
+  const write = !!opts.body || (opts.method && opts.method !== "GET");
+  if (write) { await PG_ON(); try { sessionStorage.removeItem(ME_KEY); } catch (_) {} }
+  if (path === "/api/me" && !write && !opts.fresh) {
+    let c = null; try { c = JSON.parse(sessionStorage.getItem(ME_KEY) || "null"); } catch (_) {}
+    if (c && Date.now() - c.t < 60e3 && c.me) { api(path, { ...opts, fresh: true }).catch(() => {}); return c.me; }
+  }
   const res = await fetch(path, {
     method: opts.method || (opts.body ? "POST" : "GET"),
     headers: opts.body ? { "Content-Type": "application/json" } : {},
     body: opts.body ? JSON.stringify(opts.body) : undefined,
     credentials: "same-origin"
   });
+  if (res.status === 401) try { sessionStorage.removeItem(ME_KEY); } catch (_) {}
   if (res.status === 401 && !opts.noRedirect && !path.includes("/login")) { go("/"); throw new Error("Non connecté"); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || "Erreur " + res.status);
+  if (path === "/api/me") try { sessionStorage.setItem(ME_KEY, JSON.stringify({ t: Date.now(), me: data })); } catch (_) {}
   return data;
 }
 
@@ -134,7 +146,7 @@ function renderShell(active, me) {
   if (me && me.role === "trainee" && !["home", "simu", "tests", "chat"].includes(active)) {
     addEventListener("unhandledrejection", e => { if (e.reason && e.reason.redirect) e.preventDefault(); });
     go("/home"); throw Object.assign(new Error("Redirection vers l'accueil"), { redirect: true }); }
-  window.ME_SHELL = me; setTimeout(() => { try { INTRO.check(me); } catch (e) {} }, 0);
+  window.ME_SHELL = me; PG_ON().then(() => setTimeout(() => { try { INTRO.check(me); } catch (e) {} }, 0));
   if (me && me.role === "trainee") setTimeout(() => { try { DEADLINE.mount(me.deadline); } catch (e) {} }, 0);
   // assistant « Demande à StellADS » pour les chatters et les élèves (pas dans le simulateur, où il gênerait la saisie)
   if (me && (me.role === "chatter" || me.role === "trainee") && active !== "simu" && active !== "chat" && active !== "tests" && !window.ASSIST) {
@@ -187,12 +199,25 @@ function renderShell(active, me) {
     a.classList.add("on"); NAVFX.dock?.to(a, true); const iv = setInterval(() => NAVFX.dock?.to(a, false), 30); setTimeout(() => clearInterval(iv), 460);
     setTimeout(() => go(a.getAttribute("href")), 260); // laisse le trait glisser avant de changer de page
   }));
-  // menu de gauche : on note d'où l'on part pour que le trait glisse sur la page suivante
+  // menu de gauche : on note d'où l'on part pour que le trait glisse sur la page suivante, et où en était le défilement du menu
+  const nav = el.querySelector("nav");
   el.querySelectorAll("nav a").forEach(a => a.addEventListener("click", e => {
     if (a.classList.contains("on") || e.metaKey || e.ctrlKey) return;
-    const o = el.querySelector("nav a.on"); try { if (o) sessionStorage.setItem("stNavFrom", JSON.stringify({ y: o.offsetTop, h: o.offsetHeight })); } catch (_) {}
+    const o = el.querySelector("nav a.on"); try { if (o) sessionStorage.setItem("stNavFrom", JSON.stringify({ y: o.offsetTop, h: o.offsetHeight })); sessionStorage.setItem("stNavScroll", String(nav.scrollTop)); } catch (_) {}
   }));
-  NAVFX.side = navLine(el.querySelector("nav"), el.querySelector(".nv-line"), "y");
+  // le menu garde sa position d'une page à l'autre, et l'entrée active reste visible
+  const keepScroll = () => { if (!nav || nav.scrollHeight <= nav.clientHeight) return; let y = null; try { y = sessionStorage.getItem("stNavScroll"); } catch (_) {}
+    if (y !== null) nav.scrollTop = +y; const on = nav.querySelector("a.on");
+    if (on && (on.offsetTop < nav.scrollTop + 8 || on.offsetTop + on.offsetHeight > nav.scrollTop + nav.clientHeight - 16)) nav.scrollTop = Math.max(0, on.offsetTop - nav.clientHeight / 2 + on.offsetHeight / 2); };
+  keepScroll(); nav && nav.addEventListener("scroll", () => { try { sessionStorage.setItem("stNavScroll", String(nav.scrollTop)); } catch (_) {} }, { passive: true });
+  // page pré-chargée : le trait du menu part de la page d'où l'on vient au moment où on l'ouvre vraiment
+  if (document.prerendering) PG_ON().then(() => { keepScroll(); NAVFX.side = navLine(nav, el.querySelector(".nv-line"), "y"); });
+  else NAVFX.side = navLine(nav, el.querySelector(".nv-line"), "y");
+  // pré-chargement : en survolant une entrée du menu, le navigateur prépare déjà la page (Chrome, Edge)
+  try { if (!document.querySelector('script[type="speculationrules"]') && HTMLScriptElement.supports && HTMLScriptElement.supports("speculationrules")) {
+    const sr = document.createElement("script"); sr.type = "speculationrules";
+    sr.textContent = JSON.stringify({ prerender: [{ where: { and: [{ selector_matches: ".sidebar nav a, .dock a" }, { not: { selector_matches: ".on" } }] }, eagerness: "moderate" }] });
+    document.head.appendChild(sr); } } catch (_) {}
   NAVFX.dock = navLine(dock, dock.querySelector(".dk-line"), "x");
   if (me.role === "admin") api("/api/admin/sales/count").then(c => updateBadge(c.pending)).catch(() => {});
   if (me.role === "admin") { const sb = () => api("/api/admin/customs/count").then(c => updateBadge(c.n, "studio")).catch(() => {}); sb(); setInterval(() => { if (!document.hidden) sb(); }, 60e3); }
@@ -254,7 +279,7 @@ function renderReport(sim) {
         <div class="kpi"><small>PPV achetés</small><b style="font-size:16px">${ppvs.filter(p => p.status === "acheté").length} / ${ppvs.length}</b></div>
         <div class="kpi"><small>Conseils</small><b style="font-size:16px">${sim.hints}</b></div>
       </div>
-      ${r.ethics_flag ? `<div class="flag">⚠️ <b>Point éthique :</b> ${esc(r.ethics_flag)}</div>` : ""}
+      ${false && r.ethics_flag ? `<div class="flag">⚠️ <b>Point éthique :</b> ${esc(r.ethics_flag)}</div>` : ""}
       <h2 style="margin-top:20px">Points forts</h2><ul>${(r.strengths || []).map(s => `<li>${esc(s)}</li>`).join("")}</ul>
       <h2 style="margin-top:14px">À améliorer</h2><ul>${(r.improvements || []).map(s => `<li>${esc(s)}</li>`).join("")}</ul>
     </div>
