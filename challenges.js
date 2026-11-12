@@ -66,12 +66,12 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       if (c.end_at > now) return;
       const solo = c.scope === "solo", won = solo ? rows.some(r => r.v >= c.target) : total >= c.target, shares = won ? primeShares(c, rows) : {};
       const pkey0 = compta.periodOfDate(compta.parisDate(c.end_at - 1)), pkey = compta.isLocked && compta.isLocked(pkey0) ? compta.periodOfDate(compta.parisDate(now)) : pkey0;
-      const tx = db.transaction(() => {
+      const tx = () => { db.exec("BEGIN"); try {
         rows.forEach(r => { const p = shares[r.user_id] || 0, w = solo ? r.v >= c.target : won;
           db.prepare("INSERT OR REPLACE INTO challenge_results (challenge_id, user_id, value, share, prime, won) VALUES (?,?,?,?,?,?)").run(c.id, r.user_id, r.v, total ? r.v / total : 0, p, w ? 1 : 0);
           if (p > 0) db.prepare("INSERT INTO pay_adjust (period, user_id, amount, reason, created_at, created_by) VALUES (?,?,?,?,?,?)").run(pkey, r.user_id, p, `Défi réussi · ${c.title}`.slice(0, 160), now, null); });
         db.prepare("UPDATE challenges SET status = ?, closed_at = ?, reached_at = COALESCE(reached_at, ?) WHERE id = ?").run(won ? "done" : "failed", now, won && !solo ? c.end_at : null, c.id);
-      }); tx();
+      db.exec("COMMIT"); } catch (e) { try { db.exec("ROLLBACK"); } catch (_) {} throw e; } }; tx();
       gest.log(null, "a", won ? `Défi terminé et réussi : **${c.title}**` : `Défi terminé sans être atteint : **${c.title}**`,
         won ? `${Object.values(shares).filter(x => x > 0).length} prime(s) ajoutée(s) à la paie · ${eur(Object.values(shares).reduce((t, x) => t + x, 0))}` : `${unit(c.metric, solo ? (rows[0] ? rows[0].v : 0) : total)} sur ${unit(c.metric, c.target)}`);
     });

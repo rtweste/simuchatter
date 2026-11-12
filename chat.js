@@ -187,9 +187,10 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
     else if (!body) return res.status(400).json({ error: "Message vide" });
     if (req.user.role !== "admin") { const hit = persoHit(body + " " + (meta.fan || "") + " " + (meta.options || []).join(" ")); if (hit) return res.status(400).json({ error: `Message bloqué : il contient ${hit}. Pas d'infos perso dans le chat.`, blocked: true }); }
     if (req.user.role === "admin" && (b.announce || ch.readonly)) meta.announce = true;
+    if (meta.announce && ["important", "urgent"].includes(b.level)) meta.level = b.level;   // bandeau sur l'accueil / écran bloquant
     const id = post(ch, req.user.id, body, kind, meta, reply ? reply.id : null, root ? root.id : null);
     if (meta.announce) db.prepare("UPDATE chat_messages SET pinned = 1 WHERE id = ?").run(id);
-    if (ch.readonly) log(req.user.id, "a", `a publié une annonce dans **#${ch.name}**`, body.slice(0, 120));
+    if (ch.readonly) log(req.user.id, "a", `a publié une annonce${meta.level === "urgent" ? " urgente" : meta.level === "important" ? " importante" : ""} dans **#${ch.name}**`, body.slice(0, 120));
     res.json({ ok: true, message: one(id, req.user.id, req.user.role === "admin") });
   });
   app.put("/api/chat/m/:id", auth, noTrainee, (req, res) => {

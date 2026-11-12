@@ -377,12 +377,14 @@ app.get("/api/my-sims", auth, (req, res) => {
     .map(r => ({ ...r, avgRt: avg(J(r.rts)), rts: undefined, persona: PERSONAS.find(p => p.id === r.persona_id)?.name })));
 });
 
+// suppression automatique des comptes désactivés : date de désactivation et de suppression
+for (const c of ["deactivated_at", "deleted_at"]) if (!db.prepare("PRAGMA table_info(users)").all().some(x => x.name === c)) db.exec(`ALTER TABLE users ADD COLUMN ${c} INTEGER`);
 /* ----- Manager ----- */
 app.get("/api/admin/users", auth, admin, (req, res) => {
   res.json(db.prepare(`SELECT u.id, u.username, u.role, u.active, u.created_at,
       COUNT(s.id) sessions, ROUND(AVG(s.score)) avgScore, ROUND(AVG(s.revenue)) avgRevenue, MAX(s.started_at) lastAt
     FROM users u LEFT JOIN sims s ON s.user_id = u.id AND s.status = 'done'
-    GROUP BY u.id ORDER BY u.role, u.username`).all());
+    WHERE u.deleted_at IS NULL GROUP BY u.id ORDER BY u.role, u.username`).all());
 });
 app.post("/api/admin/users", auth, admin, (req, res) => {
   const username = String(req.body?.username || "").trim();
@@ -463,7 +465,9 @@ require("./chat")(app, db, auth, admin, { dataDir: path.dirname(DB_PATH), gest: 
 require("./tests")(app, db, auth, admin, { gest: GEST });   // tests d'aptitude : débit et frappe
 require("./challenges")(app, db, auth, admin, { compta: COMPTA, gest: GEST });   // défis de la semaine
 CAND_CTX.referrals = require("./referrals")(app, db, auth, admin, { compta: COMPTA, gest: GEST });   // parrainage
-require("./alerts")(app, db, auth, admin, { planning: PLAN, gest: GEST });   // alertes du shift en cours (cloche manager, salle de contrôle)
+require("./alerts")(app, db, auth, admin, { planning: PLAN, gest: GEST });
+require("./purge")(app, db, auth, admin, { gest: GEST });
+require("./announce")(app, db, auth, admin, { gest: GEST });   // annonces importantes / urgentes : bandeau, écran bloquant, suivi de lecture   // comptes désactivés depuis 24 h : supprimés (historique gardé)   // alertes du shift en cours (cloche manager, salle de contrôle)
 /* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */
 LIVE = require("./simlive")(app, db, auth, admin, { loadSim, publicSim, PERSONAS, busy });
 

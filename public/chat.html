@@ -77,7 +77,7 @@ async function openCh(id, keepThread) {
   $("bk").onclick = () => { $("ct").classList.remove("open"); document.body.classList.remove("chat-in"); CUR = null; renderRail(); };
   $("pinsB").onclick = () => { const p = $("pinBox").firstElementChild; if (p) p.scrollIntoView({ behavior: "smooth" }); else notify("Aucun message épinglé", "", "info"); };
   $("cpW").innerHTML = c.canWrite ? composerHTML("m") : `<div class="ct-ro">📣 Seuls les managers peuvent écrire dans #${esc(c.name)}</div>`;
-  if (c.canWrite) bindComposer("m");
+  if (c.canWrite) { bindComposer("m"); if (c.readonly) { ANN_LV = "normal"; bindLevel(); } }
   renderRail(); MSGS = []; $("sc").innerHTML = `<div class="ct-empty" style="height:auto;padding:40px"><span class="ct-ty on" style="opacity:1"><i></i><i></i><i></i></span></div>`;
   const d = await api(`/api/chat/c/${id}/messages`); if (CUR !== id) return; MSGS = d.messages; PINS = d.pins;
   if (firstUnread) { const idx = MSGS.length - firstUnread; NEWAT = MSGS[idx] ? MSGS[idx].id : 0; }
@@ -93,8 +93,25 @@ function paintPins() {
       ${B.me.role === "admin" ? `<button class="ct-ackb done" id="ackB">Voir qui l'a lu</button>` : `<button class="ct-ackb ${a.me ? "done" : ""}" id="ackB">${a.me ? "✓ Lu" : "J'ai lu"}</button>`}</div></div>`;
   requestAnimationFrame(() => requestAnimationFrame(() => { const f = box.querySelector(".f"); if (f) f.style.strokeDashoffset = f.dataset.o; }));
   $("pinTx").onclick = () => $("pinTx").classList.toggle("open");
-  $("ackB").onclick = async () => { if (B.me.role === "admin") return notify(`Lu par ${a.n} / ${a.of}`, a.who.map(w => w.username).join(", ") || "personne pour l'instant", "info"); if (a.me) return; await api(`/api/chat/m/${p.id}/ack`, { body: {} }); burstAt($("ackB"), ["✓", "✨", "👍"]); };
-  if (B.me.role === "admin") $("pinBox").querySelector(".ct-ack").onclick = () => notify(`Lu par ${a.n}`, a.who.map(w => w.username).join(", ") || "personne pour l'instant", "info");
+  $("ackB").onclick = async () => { if (B.me.role === "admin") return readsPanel(p.id); if (a.me) return; await api(`/api/chat/m/${p.id}/ack`, { body: {} }); burstAt($("ackB"), ["✓", "✨", "👍"]); };
+  if (B.me.role === "admin") $("pinBox").querySelector(".ct-ack").onclick = () => readsPanel(p.id);
+}
+// suivi de lecture d'une annonce (manager) : qui a lu, qui n'a pas lu, relance
+async function readsPanel(id) {
+  let d; try { d = await api(`/api/admin/announcements/${id}/reads`); } catch (e) { return notify("Impossible", e.message, "err"); }
+  document.querySelector(".ct-rd")?.remove();
+  const C = 2 * Math.PI * 38, n = d.read.length, of = Math.max(d.of, n), ago = t => { const m = Math.max(0, Math.round((Date.now() - t) / 60000)); return m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 1440)} j`; };
+  const ov = document.createElement("div"); ov.className = "ct-rd"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-label", "Suivi de lecture");
+  ov.innerHTML = `<div class="ct-rdp"><button class="x" aria-label="Fermer">✕</button><div class="k">SUIVI DE LECTURE${d.level !== "normal" ? ` · <span class="${d.level}">${d.level === "urgent" ? "URGENTE" : "IMPORTANTE"}</span>` : ""}</div><p class="q">${esc(d.body.slice(0, 160))}${d.body.length > 160 ? "…" : ""}</p>
+    <div class="hd"><div class="ring"><svg viewBox="0 0 92 92" aria-hidden="true"><circle cx="46" cy="46" r="38" class="b"/><circle cx="46" cy="46" r="38" class="f" style="stroke-dasharray:${C};stroke-dashoffset:${C}" data-o="${C * (1 - n / Math.max(1, of))}" transform="rotate(-90 46 46)"/></svg><b>${n}/${of}</b></div>
+      <div><b class="t">${d.unread.length ? `${d.unread.length} chatter${d.unread.length > 1 ? "s ne l'ont" : " ne l'a"} pas lue` : "Tout le monde l'a lue"}</b><small>${d.unread.filter(u => u.live).length ? `dont ${d.unread.filter(u => u.live).length} en shift en ce moment` : ""}</small></div></div>
+    ${d.unread.length ? `<button class="rl" id="rdRem">Relancer ${d.unread.length > 1 ? "les " + d.unread.length : ""} par notification</button>` : ""}
+    ${d.unread.length ? `<div class="s">PAS ENCORE LU</div><div class="ls">${d.unread.map(u => `<div class="u">${av(u.username)}<div><b>${esc(u.username)}</b><small>${u.live ? `En shift sur ${esc(u.live.model)}` : "Hors shift"}</small></div><i class="${u.live ? "on" : ""}"></i></div>`).join("")}</div>` : ""}
+    ${n ? `<div class="s">LU</div><div class="ch">${d.read.map(r => `<span>${esc(r.username)} · ${ago(r.at)}</span>`).join("")}</div>` : ""}</div>`;
+  document.body.appendChild(ov); requestAnimationFrame(() => { ov.classList.add("on"); requestAnimationFrame(() => { const f = ov.querySelector(".f"); if (f) f.style.strokeDashoffset = f.dataset.o; }); });
+  const close = () => { ov.classList.remove("on"); setTimeout(() => ov.remove(), 300); };
+  ov.querySelector(".x").onclick = close; ov.addEventListener("click", e => { if (e.target === ov) close(); });
+  const rb = ov.querySelector("#rdRem"); if (rb) rb.onclick = async () => { rb.disabled = true; try { const r = await api(`/api/admin/announcements/${id}/remind`, { body: {} }); notify("Relance envoyée", `${r.n} chatter${r.n > 1 ? "s" : ""} prévenu${r.n > 1 ? "s" : ""} dans les 30 s`, "ok"); rb.textContent = "Relance envoyée ✓"; } catch (e) { notify("Impossible", e.message, "err"); rb.disabled = false; } };
 }
 function paintMsgs(scroll, more) {
   const sc = $("sc"); if (!sc) return;
@@ -114,10 +131,10 @@ function listHTML(list, inThread) {
 }
 function msgHTML(m, prev, inThread) {
   if (m.kind === "system") return `<div class="ct-sys" data-id="${m.id}">${fmt(m.body).replace(/\*\*/g, "")}</div>`;
-  const cont = prev && prev.user_id === m.user_id && m.kind === "text" && prev.kind === "text" && m.created_at - prev.created_at < 5 * 60e3 && !m.reply && !prev.deleted;
+  const cont = prev && prev.user_id === m.user_id && m.kind === "text" && prev.kind === "text" && m.created_at - prev.created_at < 5 * 60e3 && !m.reply && !prev.deleted && !m.meta?.level;
   const mine = m.user_id === B.me.id, ment = (m.meta?.mentions || []).includes(B.me.id), name = m.user_id ? m.username : "StellADS";
   return `<div class="ct-m ${cont ? "cont" : ""} ${mine ? "mine" : ""} ${ment ? "ment" : ""}" data-id="${m.id}"><div class="gut" data-t="${tm(m.created_at)}">${m.user_id ? av(name, USERS[m.user_id]?.status) : `<span class="ct-av" style="background:linear-gradient(135deg,#5fd3a2,#7dd3fc)">✦</span>`}</div>
-    <div style="min-width:0"><div class="who"><b>${esc(name)}</b>${m.role === "admin" ? `<span class="rl">MANAGER</span>` : ""}<small>${tm(m.created_at)}</small>${m.pinned ? `<small>📌</small>` : ""}${m.hidden ? `<small style="color:#ff8a8a">masqué</small>` : ""}</div>
+    <div style="min-width:0"><div class="who"><b>${esc(name)}</b>${m.role === "admin" ? `<span class="rl">MANAGER</span>` : ""}${m.meta?.level === "urgent" ? `<span class="rl lv-u">URGENTE</span>` : m.meta?.level === "important" ? `<span class="rl lv-i">IMPORTANTE</span>` : ""}<small>${tm(m.created_at)}</small>${m.pinned ? `<small>📌</small>` : ""}${m.hidden ? `<small style="color:#ff8a8a">masqué</small>` : ""}</div>
       ${m.reply ? `<div class="ct-rq" data-jump="${m.reply.id}"><b>${esc(m.reply.username || "")}</b><span>${esc(m.reply.body)}</span></div>` : ""}
       ${body(m)}${reacts(m)}${!inThread && m.thread ? `<button class="ct-thl" data-th="${m.id}"><span class="ct-stk">${m.thread.users.map(u => av(USERS[u]?.username || "?")).join("")}</span>${m.thread.n} réponse${m.thread.n > 1 ? "s" : ""}<small>· ${tm(m.thread.last)}</small></button>` : ""}</div>
     ${m.deleted ? "" : actions(m, inThread)}</div>`;
@@ -213,8 +230,12 @@ function edit(m) { const k = TH && THM.includes(m) ? "t" : "m", ta = $("ta" + k)
 
 /* =============== composer =============== */
 const REPLY = {};
+let ANN_LV = "normal";
+const LEVELS = [["normal", "Normale", "Visible dans #informations"], ["important", "Importante", "Bandeau sur l'accueil jusqu'à « J'ai lu »"], ["urgent", "Urgente", "Écran bloquant sur toutes les pages"]];
+function levelHTML() { return `<div class="ct-lv" role="radiogroup" aria-label="Importance de l'annonce">${LEVELS.map(([v, n, s]) => `<button type="button" role="radio" aria-checked="${ANN_LV === v}" class="${v} ${ANN_LV === v ? "on" : ""}" data-lv="${v}"><b><i></i>${n}</b><small>${s}</small></button>`).join("")}</div>`; }
+function bindLevel() { document.querySelectorAll("[data-lv]").forEach(b => b.onclick = () => { ANN_LV = b.dataset.lv; const w = b.closest(".ct-lv"); w.outerHTML = levelHTML(); bindLevel(); const se = $("sem"); if (se) se.classList.toggle("urg", ANN_LV === "urgent"); }); }
 function composerHTML(k) {
-  return `<div class="ct-cp" id="cp${k}"><div id="rb${k}"></div><div class="ct-pl" id="pl${k}">
+  return `<div class="ct-cp" id="cp${k}">${k === "m" && chan(CUR).readonly && B.me.role === "admin" ? levelHTML() : ""}<div id="rb${k}"></div><div class="ct-pl" id="pl${k}">
       <button data-pa="img"><span style="background:rgba(125,211,252,.12)">📷</span><div>Photo ou GIF<small>Une capture, un GIF, une image</small></div></button>
       <button data-pa="poll"><span style="background:rgba(179,136,255,.14)">📊</span><div>Sondage<small>Les réponses s'affichent en direct</small></div></button>
       <button data-pa="swap"><span style="background:rgba(95,211,162,.12)">🔁</span><div>Remplacement de shift<small>Un collègue prend ton créneau</small></div></button>
@@ -261,7 +282,10 @@ async function sendText(k) {
   const ta = $("ta" + k), body = ta.value.trim(); if (!body) return; $("mp" + k)?.remove();
   if (ta.dataset.edit) { try { await api(`/api/chat/m/${ta.dataset.edit}`, { method: "PUT", body: { body } }); delete ta.dataset.edit; ta.value = ""; $("rb" + k).innerHTML = ""; autosize(ta); toggleSend(k); } catch (e) { blocked(k, e); } return; }
   const save = ta.value; ta.value = ""; autosize(ta); toggleSend(k);
-  try { const r = await api(`/api/chat/c/${CUR}/messages`, { body: { body, reply_to: REPLY[k], thread_root: k === "t" ? TH : null } }); setReply(k, null); insert(r.message, true); try { SND.click?.(); } catch (e) {} }
+  const lvl = k === "m" && chan(CUR).readonly && B.me.role === "admin" ? ANN_LV : undefined;
+  if (lvl === "urgent" && !confirm("Publier une annonce URGENTE ? Chaque chatter verra un écran bloquant jusqu'à ce qu'il confirme l'avoir lue.")) { ta.value = save; autosize(ta); toggleSend(k); return; }
+  try { const r = await api(`/api/chat/c/${CUR}/messages`, { body: { body, reply_to: REPLY[k], thread_root: k === "t" ? TH : null, level: lvl } }); setReply(k, null); insert(r.message, true); try { SND.click?.(); } catch (e) {}
+    if (lvl && lvl !== "normal") { notify(lvl === "urgent" ? "Annonce urgente publiée" : "Annonce importante publiée", lvl === "urgent" ? "Écran bloquant pour chaque chatter jusqu'à confirmation" : "Bandeau sur l'accueil de chaque chatter", "ok"); ANN_LV = "normal"; const w = document.querySelector(".ct-lv"); if (w) { w.outerHTML = levelHTML(); bindLevel(); } } }
   catch (e) { ta.value = save; autosize(ta); toggleSend(k); blocked(k, e); }
 }
 function blocked(k, e) { const bx = $("bx" + k); bx.classList.remove("shake"); void bx.offsetWidth; bx.classList.add("shake"); notify(/bloqué/.test(e.message) ? "Message bloqué 🔒" : "Envoi impossible", e.message, "err"); }
