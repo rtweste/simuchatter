@@ -443,6 +443,7 @@ details.dcard[open] summary{margin-bottom:12px}
 <link rel="stylesheet" href="/eval-fx.css">
 <link rel="stylesheet" href="/chat-fx.css">
 <link rel="stylesheet" href="/simlive.css">
+<link rel="stylesheet" href="/simlock.css">
 </head>
 <body>
 <div class="shell">
@@ -457,19 +458,8 @@ details.dcard[open] summary{margin-bottom:12px}
       <div class="s-stats" id="sStats"></div></div>
     <div id="myAssign"></div>
     <div id="paneTrain">
-    <div class="s-grid">
-      <section class="s-card" style="--d:.05s"><h2 class="s-h"><span class="n">1</span>Choisis ton <em>fan</em></h2><div class="s-fans" id="personas"></div></section>
-      <section class="s-card" style="--d:.12s"><h2 class="s-h"><span class="n">2</span>Prépare ta <em>session</em></h2>
-        <div class="s-sess">
-          <div><div class="s-lab">DIFFICULTÉ</div>
-            <div class="s-seg" id="segDiff" role="radiogroup" aria-label="Difficulté"><span class="ind"></span><button type="button" data-d="facile" role="radio">Facile</button><button type="button" data-d="normal" role="radio" class="on" aria-checked="true">Normal</button><button type="button" data-d="difficile" role="radio">Difficile</button></div>
-            <input type="hidden" id="difficulty" value="normal"><div class="s-dhint" id="dHint"></div></div>
-          <div class="s-recap" id="recap"></div>
-          <button class="s-go" id="startBtn"><span id="startLbl">Lancer la simulation</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-          <div class="err" id="startErr"></div>
-          <div class="s-lim" id="quota"></div>
-        </div></section>
-    </div>
+    <div id="simLock"></div>
+    <input type="hidden" id="difficulty" value="normal"><button type="button" id="startBtn" hidden><span id="startLbl"></span></button>
     <section class="s-card" style="--d:.2s;margin-top:16px"><div class="s-hrow"><h2 class="s-h">Mes <em>sessions</em></h2><span class="s-hint2">Touche une session pour revoir le rapport</span></div>
       <div id="history"></div></section>
     </div>
@@ -578,6 +568,7 @@ details.dcard[open] summary{margin-bottom:12px}
 <script src="/eval-fx.js"></script>
 <script src="/chat-fx.js"></script>
 <script src="/simlive-ui.js"></script>
+<script src="/simlock.js"></script>
 <script>
 let PERSONAS = [], MODELS = [], selPersona = null, SIM = null, busy = false, chatterCount = 0;
 
@@ -586,42 +577,24 @@ async function init() {
   const me = await api("/api/me"); window.IS_ADMIN = me.role === "admin"; window.ME_NAME = me.username;
   window.SIMLIVE && SIMLIVE.onInit(me);
   renderShell("simu", me);
-  $("quota").textContent = me.role === "admin" ? "Compte manager : pas de limite quotidienne" :
-    `Simulations aujourd'hui : ${me.usedToday} / ${me.dailyLimit}`;
   PERSONAS = await api("/api/personas");
   selPersona = selPersona || PERSONAS[0].id;
   renderPersonas();
   setDiff($("difficulty").value, false);
+  $("quota").textContent = me.role === "admin" ? "Compte manager : pas de limite quotidienne" :
+    `Simulations aujourd'hui : ${me.usedToday} / ${me.dailyLimit}`;
   loadHistory();
 }
 const FAN_COLORS = { nouveau: "#2c3a52", radin: "#3d3350", baleine: "#4a3b2a", froid: "#2d4440", agressif: "#4a2c32", fragile: "#3a3a46" };
 const fanColor = id => FAN_COLORS[id] || "#333";
+let LOCK = null;
 function renderPersonas() {
-  $("personas").innerHTML = PERSONAS.map((p, i) => `<div class="s-fan ${p.id === selPersona ? "on" : ""}" data-id="${p.id}" role="radio" tabindex="0" aria-checked="${p.id === selPersona}" style="--i:${i}">
-    <span class="chk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-    <div class="top"><span class="fav">${esc(p.name[0])}</span><div class="nm"><b>${esc(p.name)}</b><i>${esc(p.label)}</i></div></div>
-    <p>${esc(p.desc)}</p>
-    <div class="s-lvl l${p.level}"><span class="bars">${[1, 2, 3].map(n => `<i class="${n <= p.level ? "on" : ""}"></i>`).join("")}</span>${LEVEL[p.level][0]}</div></div>`).join("");
-  document.querySelectorAll(".s-fan").forEach(el => {
-    el.onclick = () => { selPersona = el.dataset.id; document.querySelectorAll(".s-fan").forEach(x => { x.classList.toggle("on", x === el); x.setAttribute("aria-checked", x === el); }); recap(); };
-    el.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.click(); } };
-    el.onpointermove = e => { const r = el.getBoundingClientRect(); el.style.setProperty("--mx", (e.clientX - r.left) + "px"); el.style.setProperty("--my", (e.clientY - r.top) + "px"); };
-  });
-  recap();
+  LOCK = SIMLOCK.mount($("simLock"), { personas: PERSONAS, selected: selPersona, difficulty: $("difficulty").value,
+    onSelect: id => { selPersona = id; }, onDiff: d => { $("difficulty").value = d; }, onLaunch: () => startSim() });
 }
 const DHINT = { facile: "Fan patient et indulgent : idéal pour s'entraîner aux bases.", normal: "Réaliste : il réagit comme un vrai abonné.", difficile: "Exigeant : il décroche vite si tu le perds." };
-function setDiff(d, anim = true) {
-  const bts = [...document.querySelectorAll("#segDiff button")], i = bts.findIndex(b => b.dataset.d === d);
-  bts.forEach((b, k) => { b.classList.toggle("on", k === i); b.setAttribute("aria-checked", k === i); });
-  const ind = document.querySelector("#segDiff .ind"); if (!anim) { ind.style.transition = "none"; requestAnimationFrame(() => ind.style.transition = ""); }
-  ind.style.transform = `translateX(${i * 100}%)`; $("difficulty").value = d; $("dHint").textContent = DHINT[d]; recap();
-}
-document.querySelectorAll("#segDiff button").forEach(b => b.onclick = () => setDiff(b.dataset.d));
-function recap() {
-  const p = PERSONAS.find(x => x.id === selPersona), d = document.querySelector("#segDiff button.on");
-  if (!p || !$("recap")) return;
-  $("recap").innerHTML = `Tu vas parler à <b>${esc(p.name)}</b><span class="sep"></span><b>${esc(d?.textContent || "")}</b>`;
-}
+function setDiff(d) { $("difficulty").value = d; LOCK && LOCK.setDiff(d); }
+function recap() {}
 async function loadHistory() {
   const h = await api("/api/my-sims");
   // compteurs : score moyen (5 dernières vs 5 d'avant), meilleur score, sessions sur 7 jours, série de jours
