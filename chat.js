@@ -80,6 +80,11 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
   const noTrainee = (req, res, next) => next();
   const staffOnly = (req, res, next) => req.user.role === "trainee" ? res.status(403).json({ error: "Réservé aux chatters" }) : next();
   const chOf = id => db.prepare("SELECT * FROM chat_channels WHERE id = ?").get(id);
+  const AVS = () => { try { return Object.fromEntries(db.prepare("SELECT user_id, updated_at FROM user_avatars").all().map(r => [r.user_id, r.updated_at])); } catch (e) { return {}; } };
+  const RL = u => u.role !== "admin" ? null : u.grade === "founder" ? "FONDATEUR" : u.grade === "assistant" ? "ASSISTANT" : "MANAGER";
+  let AV = {}, AVt = 0;
+  function pubUser(u) { if (Date.now() - AVt > 5000) { AV = AVS(); AVt = Date.now(); }
+    return { id: u.id, username: u.username, role: u.role, name: u.display_name || u.username, color: u.color || null, avatar: AV[u.id] ? `/api/avatar/${u.id}?v=${AV[u.id]}` : null, rl: RL(u), status: statusOf(u.id) }; }
   function canSee(ch, u) { if (!ch) return false;
     if (ch.kind === "training") return u.role === "trainee" || u.role === "admin";
     if (u.role === "trainee") return false;
@@ -158,7 +163,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
     });
   }
   app.get("/api/chat/boot", auth, noTrainee, (req, res) => {
-    const users = db.prepare(req.user.role === "trainee" ? "SELECT id, username, role FROM users WHERE active = 1 AND role IN ('trainee','admin') ORDER BY username" : "SELECT id, username, role FROM users WHERE active = 1 AND role <> 'trainee' ORDER BY username").all().map(u => ({ ...u, status: statusOf(u.id) }));
+    const users = db.prepare(req.user.role === "trainee" ? "SELECT id, username, role, grade, display_name, color FROM users WHERE active = 1 AND role IN ('trainee','admin') ORDER BY username" : "SELECT id, username, role, grade, display_name, color FROM users WHERE active = 1 AND role <> 'trainee' ORDER BY username").all().map(u => pubUser(u));
     res.json({ me: { id: req.user.id, username: req.user.username, role: req.user.role, muted: muted(req.user.id) }, channels: channelsFor(req.user), users, quick: QUICK });
   });
   app.get("/api/chat/unread", auth, (req, res) => {

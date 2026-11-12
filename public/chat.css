@@ -276,3 +276,6 @@
 .ct-rdp .u{display:flex;align-items:center;gap:10px}.ct-rdp .u b{display:block;font-size:13.5px}.ct-rdp .u small{font-size:12px;color:#9a9a9a}.ct-rdp .u>div{flex:1;min-width:0}
 .ct-rdp .u i{width:8px;height:8px;border-radius:50%;background:#3a3a3e}.ct-rdp .u i.on{background:#5fd3a2;box-shadow:0 0 8px #5fd3a2}
 .ct-rdp .ch{display:flex;flex-wrap:wrap;gap:6px}.ct-rdp .ch span{height:28px;padding:0 10px;border-radius:9px;background:#151517;border:1px solid #232326;font-size:12px;color:#d4d4d4;line-height:28px}
+/* badge du fondateur à sa couleur, photo de profil avec anneau */
+.ct-m .who .rl.fd{background:color-mix(in srgb,var(--ac,#ffd23f) 16%,#141414);color:var(--ac,#ffd23f);border:1px solid color-mix(in srgb,var(--ac,#ffd23f) 45%,transparent)}
+.ct-av.ph{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--ac,#3a3a3a) 80%,transparent)}
