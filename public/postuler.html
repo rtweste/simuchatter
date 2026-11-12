@@ -341,7 +341,7 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
       <div class="done" id="done">
         <div class="ok"><svg viewBox="0 0 48 48"><path d="M13 25l8 8 15-17"/></svg></div>
         <h2 class="r" style="--d:0">Candidature envoyée</h2>
-        <p class="r" style="--d:1" id="doneTxt">Merci ! On regarde ta candidature et on revient vers toi très vite.</p>
+        <p class="r" style="--d:1" id="doneTxt">Merci ! Ta candidature est bien envoyée.</p>
       </div>
       <input class="hp" id="website" tabindex="-1" autocomplete="off" aria-hidden="true">
     </section>
@@ -493,7 +493,7 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
   document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); $("next").click(); } });
   function success(token) {
     const via = { whatsapp: "sur WhatsApp", telegram: "sur Telegram", email: "par e-mail" }[A.contactType];
-    $("doneTxt").textContent = `Merci ${A.firstName.trim()} ! On regarde ta candidature et on revient vers toi ${via} très vite.`;
+    $("doneTxt").textContent = `Merci ${A.firstName.trim()} ! Ta candidature est bien envoyée.`;
     if (token) result(token, via);
     document.querySelectorAll(".top,.stage,.ft").forEach(el => { if (!reduce && el.animate) el.animate([{ opacity: 1 }, { opacity: 0, filter: "blur(6px)" }], { duration: 350, fill: "forwards" }); else el.style.opacity = 0; });
     setTimeout(() => { $("done").classList.add("on"); confetti(); }, 300);
@@ -519,7 +519,12 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
         const f = D.querySelector(".w-ring .f"), n = D.querySelector("[data-sc]"), t1 = performance.now() + 700;
         (function an(t) { const k = Math.max(0, Math.min(1, (t - t1) / 1400)), e = 1 - Math.pow(1 - k, 3); f.style.strokeDashoffset = C * (1 - e * sc / 100); n.textContent = Math.round(e * sc); if (k < 1) requestAnimationFrame(an); })(performance.now());
         confetti(); }
-      else box.remove(); };   // le message « on revient vers toi » est déjà affiché au-dessus
+      // pas de contact débloqué : on dit pourquoi, sans promettre de rappeler le candidat
+      else { const h = $("done").querySelector("h2");
+        if (r.passed) { h.innerHTML = "Test <em>réussi</em> 🎉"; $("doneTxt").textContent = `Bravo ${A.firstName.trim()} ! Ton test est réussi. Le contact du manager n'est pas disponible pour le moment : reviens sur cette page un peu plus tard ou attends notre message ${via}.`; }
+        else if (r.graded) { h.innerHTML = "Candidature <em>enregistrée</em>"; $("doneTxt").textContent = `Merci ${A.firstName.trim()} ! Ton score n'atteint pas encore le niveau demandé pour débloquer le contact du manager. Entraîne-toi et retente ta chance dans quelques semaines.`; }
+        else $("doneTxt").textContent = `Merci ${A.firstName.trim()} ! Ta candidature est bien enregistrée.`;
+        box.remove(); } };
     setTimeout(tick, 2500);
   }
   function confetti() {
