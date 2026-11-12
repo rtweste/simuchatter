@@ -1,0 +1,71 @@
+/* Alertes manager : cloche, panneau, bandeau de la salle de contrôle */
+.sidebar .me .al-bell{position:relative;margin-left:auto}
+.sidebar .me .al-bell + button{margin-left:0}
+.sidebar.mini .me .al-bell{margin:0}
+.al-bell svg{transform-origin:50% 8%}
+.al-bell.on{color:var(--text,#fff);background:var(--panel2,#1a1a1a)}
+.al-bell.ring svg{animation:alRing 1s cubic-bezier(.36,.07,.19,.97)}
+@keyframes alRing{0%,100%{transform:rotate(0)}15%{transform:rotate(16deg)}30%{transform:rotate(-14deg)}45%{transform:rotate(10deg)}60%{transform:rotate(-7deg)}75%{transform:rotate(3deg)}}
+.al-n{position:absolute;top:1px;right:0;min-width:17px;height:17px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#e0a35f;color:#1a1000;font:800 10px/17px Inter,system-ui,sans-serif;font-style:normal;text-align:center;box-shadow:0 0 0 2px var(--bg,#000)}
+.al-n.r{background:#ff4d6d;color:#fff;animation:alGlow 1.8s ease-in-out infinite}
+.al-n.hidden{display:none}
+@keyframes alGlow{0%,100%{box-shadow:0 0 0 2px var(--bg,#000),0 0 0 0 rgba(255,77,109,.6)}50%{box-shadow:0 0 0 2px var(--bg,#000),0 0 0 6px rgba(255,77,109,0)}}
+
+.al-pn{position:fixed;z-index:400;width:410px;max-width:calc(100vw - 20px);display:flex;flex-direction:column;border-radius:22px;background:rgba(14,14,16,.94);border:1px solid rgba(255,255,255,.09);
+  -webkit-backdrop-filter:blur(22px) saturate(1.3);backdrop-filter:blur(22px) saturate(1.3);box-shadow:0 30px 90px rgba(0,0,0,.65);opacity:0;pointer-events:none;transform:translateX(-10px) scale(.97);transform-origin:0 100%;
+  transition:opacity .25s,transform .4s cubic-bezier(.2,.9,.25,1);font-family:Inter,system-ui,sans-serif;color:#f2f2f2;overflow:hidden}
+.al-pn[data-o="top"]{width:auto;transform:translateY(-10px) scale(.98);transform-origin:50% 0}
+.al-pn.on{opacity:1;pointer-events:auto;transform:none}
+.al-hd{display:flex;align-items:center;gap:12px;padding:18px 20px 14px;border-bottom:1px solid rgba(255,255,255,.06)}
+.al-hd b{display:block;font:800 17px Inter;letter-spacing:-.02em}
+.al-hd small{display:flex;align-items:center;gap:7px;margin-top:3px;font-size:11.5px;color:#888}
+.al-hd small i{width:6px;height:6px;border-radius:50%;background:#5fd3a2;box-shadow:0 0 8px #5fd3a2;animation:alBlink 2s ease-in-out infinite}
+@keyframes alBlink{50%{opacity:.35}}
+.al-cnt{margin-left:auto;min-width:30px;height:30px;padding:0 8px;box-sizing:border-box;border-radius:10px;background:#1d1d20;font:800 14px/30px Inter;text-align:center;color:#ccc}
+.al-cnt.r{background:rgba(255,77,109,.15);color:#ff8fa3}
+.al-ls{overflow:auto;padding:10px;display:flex;flex-direction:column;gap:8px;overscroll-behavior:contain}
+.al-it{position:relative;flex-shrink:0;display:flex;gap:12px;padding:13px 40px 13px 13px;border-radius:16px;background:#151517;border:1px solid #232327;overflow:hidden;
+  animation:alIn .5s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(var(--i) * 45ms);transition:opacity .3s,transform .3s}
+.al-it::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c)}
+.al-it.l2{background:linear-gradient(100deg,color-mix(in srgb,var(--c) 12%,#151517),#151517 60%);border-color:color-mix(in srgb,var(--c) 35%,#232327)}
+.al-it.gone{opacity:0;transform:translateX(30px)}
+@keyframes alIn{from{opacity:0;transform:translateY(10px)}}
+.al-ic{width:34px;height:34px;border-radius:11px;flex-shrink:0;display:grid;place-items:center;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
+.al-it.l2 .al-ic{animation:alPulse 2s ease-in-out infinite}
+@keyframes alPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 45%,transparent)}50%{box-shadow:0 0 0 6px transparent}}
+.al-tx{min-width:0;flex:1}
+.al-tx b{display:block;font-size:14px;line-height:1.3}
+.al-tx small{display:block;margin-top:3px;font-size:12.5px;color:#999;line-height:1.4}
+.al-ac{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
+.al-ac button{height:30px;padding:0 12px;border-radius:9px;border:1px solid #2c2c31;background:#1c1c1f;color:#ddd;font:700 12px Inter;cursor:pointer;transition:background .2s,transform .3s cubic-bezier(.34,1.56,.64,1)}
+.al-ac button:hover{background:#252529}.al-ac button:active{transform:scale(.94)}
+.al-ac button.m{background:var(--c);border-color:var(--c);color:#0a0a0a}
+.al-ac button.busy{opacity:.5;pointer-events:none}
+.al-t{margin-left:auto;font-size:11px;color:#666;white-space:nowrap}
+.al-x{position:absolute;top:9px;right:9px;width:26px;height:26px;border-radius:8px;border:0;background:transparent;color:#666;display:grid;place-items:center;cursor:pointer}
+.al-x:hover{background:#222;color:#ccc}
+.al-ok{display:flex;flex-direction:column;align-items:center;gap:6px;padding:34px 20px 30px;text-align:center}
+.al-ok span{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;color:#5fd3a2;background:rgba(95,211,162,.1);margin-bottom:6px;animation:alPop .6s cubic-bezier(.34,1.56,.64,1)}
+@keyframes alPop{from{transform:scale(.5);opacity:0}}
+.al-ok b{font-size:15px}.al-ok small{color:#888;font-size:12.5px}
+
+/* bandeau de la salle de contrôle */
+.al-strip{position:fixed;left:50%;top:18px;z-index:997;display:flex;align-items:center;gap:16px;max-width:min(980px,calc(100vw - 40px));padding:10px 14px 10px 12px;border-radius:18px;
+  background:rgba(12,12,14,.82);border:1px solid rgba(255,255,255,.1);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:0 20px 60px rgba(0,0,0,.55);
+  transform:translate(-50%,-140%);opacity:0;transition:transform .6s cubic-bezier(.2,.9,.25,1),opacity .4s;font-family:Inter,system-ui,sans-serif;color:#f2f2f2}
+.al-strip.on{transform:translate(-50%,0);opacity:1}
+.al-strip.ping{animation:alStripPing 1s ease-out}
+@keyframes alStripPing{0%{box-shadow:0 0 0 0 rgba(255,77,109,.6),0 20px 60px rgba(0,0,0,.55)}100%{box-shadow:0 0 0 22px rgba(255,77,109,0),0 20px 60px rgba(0,0,0,.55)}}
+.al-sh{display:flex;align-items:center;gap:9px;padding-right:14px;border-right:1px solid rgba(255,255,255,.08);white-space:nowrap;font-size:13px}
+.al-dot{width:9px;height:9px;border-radius:50%;background:#e0a35f;box-shadow:0 0 10px #e0a35f;animation:alBlink 1.4s ease-in-out infinite}
+.al-dot.r{background:#ff4d6d;box-shadow:0 0 12px #ff4d6d}
+.al-sl{position:relative;min-width:0;flex:1}
+.al-sc{display:none;align-items:center;gap:10px;min-width:0}
+.al-sc.on{display:flex;animation:alSlide .55s cubic-bezier(.2,.9,.25,1)}
+@keyframes alSlide{from{opacity:0;transform:translateY(12px)}}
+.al-sc .al-ic{width:30px;height:30px;border-radius:9px}
+.al-sc b{font-size:15px;white-space:nowrap}
+.al-sc small{font-size:13px;color:#999;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.al-pg{display:flex;gap:4px}.al-pg i{width:6px;height:6px;border-radius:3px;background:#333;transition:width .4s,background .4s}.al-pg i.on{width:16px;background:#ddd}
+@media(max-width:700px){.al-strip{top:10px;gap:10px}.al-sc small,.al-pg{display:none}}
+@media(prefers-reduced-motion:reduce){.al-pn,.al-strip,.al-it,.al-sc.on,.al-bell.ring svg,.al-n.r,.al-it.l2 .al-ic{animation:none!important;transition:none!important}}

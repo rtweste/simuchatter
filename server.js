@@ -460,6 +460,7 @@ require("./extras")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, gest
 STUDIO = require("./studio")(app, db, auth, admin, { dataDir: path.dirname(DB_PATH), gest: GEST, planning: PLAN });   // contenus perso, fiches créatrices, pauses
 require("./chat")(app, db, auth, admin, { dataDir: path.dirname(DB_PATH), gest: GEST, planning: PLAN });   // chat d'équipe
 require("./tests")(app, db, auth, admin, { gest: GEST });   // tests d'aptitude : débit et frappe
+require("./alerts")(app, db, auth, admin, { planning: PLAN, gest: GEST });   // alertes du shift en cours (cloche manager, salle de contrôle)
 /* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */
 LIVE = require("./simlive")(app, db, auth, admin, { loadSim, publicSim, PERSONAS, busy });
 
