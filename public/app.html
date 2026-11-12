@@ -461,8 +461,6 @@ details.dcard[open] summary{margin-bottom:12px}
       <section class="s-card" style="--d:.05s"><h2 class="s-h"><span class="n">1</span>Choisis ton <em>fan</em></h2><div class="s-fans" id="personas"></div></section>
       <section class="s-card" style="--d:.12s"><h2 class="s-h"><span class="n">2</span>Prépare ta <em>session</em></h2>
         <div class="s-sess">
-          <div><div class="s-lab">CRÉATRICE INCARNÉE</div><div class="s-creas" id="creas" role="radiogroup" aria-label="Créatrice incarnée"></div><input type="hidden" id="model"></div>
-          <div class="s-cinfo" id="modelInfo"></div>
           <div><div class="s-lab">DIFFICULTÉ</div>
             <div class="s-seg" id="segDiff" role="radiogroup" aria-label="Difficulté"><span class="ind"></span><button type="button" data-d="facile" role="radio">Facile</button><button type="button" data-d="normal" role="radio" class="on" aria-checked="true">Normal</button><button type="button" data-d="difficile" role="radio">Difficile</button></div>
             <input type="hidden" id="difficulty" value="normal"><div class="s-dhint" id="dHint"></div></div>
@@ -590,11 +588,10 @@ async function init() {
   renderShell("simu", me);
   $("quota").textContent = me.role === "admin" ? "Compte manager : pas de limite quotidienne" :
     `Simulations aujourd'hui : ${me.usedToday} / ${me.dailyLimit}`;
-  [PERSONAS, MODELS] = await Promise.all([api("/api/personas"), api("/api/models")]);
+  PERSONAS = await api("/api/personas");
   selPersona = selPersona || PERSONAS[0].id;
   renderPersonas();
-  $("model").value = $("model").value || MODELS[0]?.id || "";
-  renderCreas(); showModel(); setDiff($("difficulty").value, false);
+  setDiff($("difficulty").value, false);
   loadHistory();
 }
 const FAN_COLORS = { nouveau: "#2c3a52", radin: "#3d3350", baleine: "#4a3b2a", froid: "#2d4440", agressif: "#4a2c32", fragile: "#3a3a46" };
@@ -612,15 +609,6 @@ function renderPersonas() {
   });
   recap();
 }
-function renderCreas() {
-  $("creas").innerHTML = MODELS.map(m => `<button type="button" class="s-crea ${m.id == $("model").value ? "on" : ""}" data-id="${m.id}" role="radio" aria-checked="${m.id == $("model").value}"><span class="ca">${esc(m.name[0])}</span><b>${esc(m.name)}</b></button>`).join("");
-  document.querySelectorAll(".s-crea").forEach(b => b.onclick = () => { $("model").value = b.dataset.id; document.querySelectorAll(".s-crea").forEach(x => { x.classList.toggle("on", x === b); x.setAttribute("aria-checked", x === b); }); showModel(); });
-}
-function showModel() {
-  const m = MODELS.find(x => x.id == $("model").value);
-  $("modelInfo").innerHTML = m ? `${esc(m.style)}${m.prices ? `<div class="tags">${m.prices.split(/\s*[·|]\s*|\n+/).filter(Boolean).map(t => `<span>${esc(t)}</span>`).join("")}</div>` : ""}` : "";
-  recap();
-}
 const DHINT = { facile: "Fan patient et indulgent : idéal pour s'entraîner aux bases.", normal: "Réaliste : il réagit comme un vrai abonné.", difficile: "Exigeant : il décroche vite si tu le perds." };
 function setDiff(d, anim = true) {
   const bts = [...document.querySelectorAll("#segDiff button")], i = bts.findIndex(b => b.dataset.d === d);
@@ -630,9 +618,9 @@ function setDiff(d, anim = true) {
 }
 document.querySelectorAll("#segDiff button").forEach(b => b.onclick = () => setDiff(b.dataset.d));
 function recap() {
-  const p = PERSONAS.find(x => x.id === selPersona), m = MODELS.find(x => x.id == $("model").value), d = document.querySelector("#segDiff button.on");
+  const p = PERSONAS.find(x => x.id === selPersona), d = document.querySelector("#segDiff button.on");
   if (!p || !$("recap")) return;
-  $("recap").innerHTML = `Tu vas parler à <b>${esc(p.name)}</b><span class="sep"></span>en tant que <b>${esc(m?.name || "—")}</b><span class="sep"></span><b>${esc(d?.textContent || "")}</b>`;
+  $("recap").innerHTML = `Tu vas parler à <b>${esc(p.name)}</b><span class="sep"></span><b>${esc(d?.textContent || "")}</b>`;
 }
 async function loadHistory() {
   const h = await api("/api/my-sims");
@@ -669,7 +657,7 @@ async function startSim(fromReport) {
   $("startBtn").disabled = true; $("startErr").textContent = "";
   $("startLbl").textContent = "Démarrage…";
   try {
-    const r = await api("/api/sims", { body: { personaId: selPersona, difficulty: $("difficulty").value, modelId: $("model").value } });
+    const r = await api("/api/sims", { body: { personaId: selPersona, difficulty: $("difficulty").value } });
     if (!fromReport) { $("homeScreen").classList.add("leaving"); await sleep(260); $("homeScreen").classList.remove("leaving"); }
     $("reportScreen").classList.add("hidden");
     openChat(r.sim);
@@ -937,8 +925,7 @@ $("endBtn").onclick = async () => {
 /* ---------- Rapport ---------- */
 function evalOpts() {
   return { prev: [], onBack: newSession, onReplay: s => {
-    const m = MODELS.find(x => x.name === s.creator_name);
-    selPersona = s.persona.id; if (m) $("model").value = m.id;
+    selPersona = s.persona.id;
     $("difficulty").value = s.difficulty || "normal";
     startSim(true);
   } };

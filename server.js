@@ -286,7 +286,8 @@ function ownSim(req, res) {
 app.post("/api/sims", auth, async (req, res) => {
   const { personaId, difficulty, modelId } = req.body || {};
   const persona = PERSONAS.find(p => p.id === personaId);
-  const model = db.prepare("SELECT * FROM models WHERE id = ?").get(modelId);
+  // plus de choix de créatrice : on en tire une au hasard (le chatter la découvre en début de session)
+  const model = (modelId && db.prepare("SELECT * FROM models WHERE id = ?").get(modelId)) || db.prepare("SELECT * FROM models ORDER BY RANDOM() LIMIT 1").get();
   if (!persona || !model) return res.status(400).json({ error: "Profil ou créatrice invalide" });
   const diff = ["facile", "normal", "difficile"].includes(difficulty) ? difficulty : "normal";
   if (req.user.role !== "admin") {
