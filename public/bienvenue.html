@@ -129,7 +129,8 @@ h1 em{font-style:italic;background:linear-gradient(100deg,#fff,#9be8c6 45%,#ffd2
   const P = { eye: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6", check: "M5 12.5l4.5 4.5L19 7.5", share: "M12 3v12M8 7l4-4 4 4M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6",
     bell: "M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0", clock: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2", receipt: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6",
     cal: "M3.5 5h17v15.5h-17zM3.5 10h17M8 3v4M16 3v4", chat: "M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z", grad: "M2 9l10-5 10 5-10 5zM6 11v5c3 2 9 2 12 0v-5", target: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z", down: "M12 4v12M7 11l5 5 5-5M5 20h14" };
-  const T = new URLSearchParams(location.search).get("t");
+  const JOIN = location.pathname === "/rejoindre";
+  const T = JOIN ? null : new URLSearchParams(location.search).get("t"), JT = JOIN ? new URLSearchParams(location.search).get("t") : null;
   let ME = null, OB = null, STEPS = [], cur = -1, deferred = null;
   addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferred = e; const b = document.querySelector("[data-install]"); if (b) b.style.display = ""; });
   const stage = $("stage");
@@ -155,6 +156,27 @@ h1 em{font-style:italic;background:linear-gradient(100deg,#fff,#9be8c6 45%,#ffd2
         const b = el.querySelector("[data-go]"); b.disabled = true; b.textContent = "Création…";
         try { await api("/api/invite/" + encodeURIComponent(T), { body: { password: p1.value } }); await boot(true); } catch (e) { b.disabled = false; b.textContent = "Créer mon mot de passe"; fail(er, e.message); } };
       el.querySelector("[data-go]").onclick = go; p2.onkeydown = e => { if (e.key === "Enter") go(); }; } });
+  /* ---------- 1 bis. session d'entretien : créer son compte formation ---------- */
+  const STEP_JOIN = { html: () => `<div><div class="eb">TA FORMATION STELLADS</div><h1>Crée ton <em>compte.</em></h1></div>
+      <p class="sub">Indique ton prénom et choisis un mot de passe. Ton identifiant de connexion s'affichera juste après : note-le bien.</p>
+      <div class="card"><div class="fld"><label for="fn">PRÉNOM</label><div class="inp"><input id="fn" autocomplete="given-name" maxlength="40" placeholder="Ton prénom" style="padding-right:16px"></div></div>
+        <div class="fld" style="margin-top:12px"><label for="p1">MOT DE PASSE</label><div class="inp"><input id="p1" type="password" autocomplete="new-password" placeholder="8 caractères minimum"><button type="button" aria-label="Afficher le mot de passe" data-eye>${SV(P.eye)}</button></div>
+        <div class="meter" id="mt"><i></i><i></i><i></i><i></i></div></div>
+        <div class="fld" style="margin-top:12px"><label for="p2">CONFIRME-LE</label><div class="inp"><input id="p2" type="password" autocomplete="new-password" placeholder="Le même, une seconde fois"></div></div></div>
+      <div class="err" id="er" role="alert"></div><button class="go" data-go>Créer mon compte</button>`,
+    bind: el => { const fn = el.querySelector("#fn"), p1 = el.querySelector("#p1"), p2 = el.querySelector("#p2"), mt = el.querySelector("#mt"), er = el.querySelector("#er"); setTimeout(() => fn.focus(), 500);
+      el.querySelector("[data-eye]").onclick = () => { const t = p1.type === "password" ? "text" : "password"; p1.type = t; p2.type = t; };
+      p1.oninput = () => { const v = p1.value; let s = 0; if (v.length >= 8) s++; if (/[A-Z]/.test(v) && /[a-z]/.test(v)) s++; if (/\d/.test(v)) s++; if (/[^\w]/.test(v) || v.length >= 12) s++; mt.className = "meter s" + (v ? Math.max(1, s) : 0); };
+      const go = async () => { er.textContent = ""; if (fn.value.trim().length < 2) return fail(er, "Indique ton prénom"); if (p1.value.length < 8) return fail(er, "Au moins 8 caractères pour le mot de passe"); if (p1.value !== p2.value) return fail(er, "Les deux mots de passe ne sont pas pareils");
+        const b = el.querySelector("[data-go]"); b.disabled = true; b.textContent = "Création…";
+        try { const r = await api("/api/join/" + encodeURIComponent(JT), { body: { firstName: fn.value.trim(), password: p1.value } }); stage.querySelector(".st").innerHTML = idCard(r.username); }
+        catch (e) { b.disabled = false; b.textContent = "Créer mon compte"; fail(er, e.message); } };
+      el.querySelector("[data-go]").onclick = go; p2.onkeydown = e => { if (e.key === "Enter") go(); }; } };
+  // l'identifiant à retenir, mis en avant avant la suite
+  const idCard = u => `<div class="fin"><span class="av" style="width:84px;height:84px;font-size:34px;border-radius:26px">${esc(u[0].toUpperCase())}</span><div class="eb">COMPTE CRÉÉ</div><h1>Ton identifiant : <em>${esc(u)}</em></h1>
+      <p class="sub">Tu te connecteras avec <b>${esc(u)}</b> et ton mot de passe. Fais une capture d'écran si besoin.</p><button class="go" onclick="this.disabled=true;window._jboot()">J'ai noté, on continue</button></div>`;
+  window._jboot = () => boot(true);
+
   /* ---------- 2. créatrices ---------- */
   let CR = [], pick = new Set();
   const STEP_CR = { html: () => `<div><div class="eb">ÉTAPE · TES CRÉATRICES</div><h1>Avec qui tu <em>chattes ?</em></h1></div><p class="sub">Choisis les créatrices sur lesquelles tu travailles. Ton accueil et tes ventes seront préparés pour elles. Tu pourras changer plus tard.</p>
@@ -216,14 +238,20 @@ h1 em{font-style:italic;background:linear-gradient(100deg,#fff,#9be8c6 45%,#ffd2
 
   async function boot(afterPw) {
     try { ME = await api("/api/me", { noRedirect: true }); } catch (e) { ME = null; }
-    if (!ME) { if (!T) { location.href = "/"; return; } return; }
+    if (!ME) { if (!T && !JT) { location.href = "/"; return; } return; }
     OB = await api("/api/onboarding").catch(() => ({ models: [], mine: [] }));
     pick = new Set(OB.mine || []);
     if (ME.role === "chatter") { try { const c = await api("/api/creators"); CR = c.creators.map(x => ({ id: x.id, name: x.name, photo: x.photos[0] || null, fo: (x.focus[0] || [50, 35]).map(v => v + "%").join(" ") })); } catch (e) { CR = (OB.models || []).map(m => ({ id: m.id, name: m.name })); } }
-    STEPS = [...(T ? [{ html: () => "" }] : []), ...(ME.role === "chatter" && CR.length ? [STEP_CR] : []), STEP_INST, STEP_NOT, STEP_TOUR, STEP_END];
-    show(T ? 1 : 0);
+    const first = T || JT;
+    STEPS = [...(first ? [{ html: () => "" }] : []), ...(ME.role === "chatter" && CR.length ? [STEP_CR] : []), STEP_INST, STEP_NOT, STEP_TOUR, STEP_END];
+    show(first ? 1 : 0);
   }
   (async () => {
+    if (JT) {
+      try { await api("/api/join/" + encodeURIComponent(JT), { noRedirect: true }); }
+      catch (e) { stage.innerHTML = `<div class="st on"><div class="eb">SESSION D'ENTRETIEN</div><h1>Oups, <em>ce lien ne marche plus.</em></h1><p class="sub">${esc(e.message)}</p><a class="go" href="/" style="display:flex;align-items:center;justify-content:center;text-decoration:none">Aller à la connexion</a></div>`; return; }
+      STEPS = [STEP_JOIN, STEP_INST, STEP_NOT, STEP_TOUR, STEP_END]; show(0); return;
+    }
     if (T) {
       let inv = null; try { inv = await api("/api/invite/" + encodeURIComponent(T), { noRedirect: true }); }
       catch (e) { stage.innerHTML = `<div class="st on"><div class="eb">LIEN D'INVITATION</div><h1>Oups, <em>ce lien ne marche plus.</em></h1><p class="sub">${esc(e.message)}</p><a class="go" href="/" style="display:flex;align-items:center;justify-content:center;text-decoration:none">Aller à la connexion</a></div>`; return; }

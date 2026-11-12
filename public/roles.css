@@ -544,3 +544,26 @@
 .ge .lc-l .sb{display:inline-flex;align-items:center;justify-content:center}
 .ge .lc-wrap .scrim,.ge .lc-wrap .sheet{z-index:85}
 @media(max-width:760px){.ge .lc-ks{grid-template-columns:1fr 1fr}.ge .lc-sh{width:auto}}
+/* ---------- comptes formation express ---------- */
+.ge .fx .tb2{margin-top:2px}
+.ge .fx-live{display:grid;grid-template-columns:190px 1fr;gap:16px;align-items:center;margin-top:16px}
+.ge .fx-qr{position:relative;width:190px;height:190px;border-radius:22px;background:#f5f5f5;padding:16px;box-shadow:0 20px 50px -18px rgba(95,211,162,.6),0 0 0 1px rgba(95,211,162,.5);overflow:hidden;animation:rlPop .7s cubic-bezier(.3,1.5,.5,1) both}
+.ge .fx-qr img{display:block;width:100%;height:100%}
+.ge .fx-scan{position:absolute;left:10px;right:10px;height:3px;border-radius:2px;background:linear-gradient(90deg,transparent,#5fd3a2,transparent);box-shadow:0 0 14px #5fd3a2;animation:fxScan 2.4s ease-in-out infinite}
+@keyframes fxScan{0%{top:12px;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:calc(100% - 14px);opacity:0}}
+.ge .fx-info{display:flex;flex-direction:column;gap:8px;min-width:0;align-items:flex-start}
+.ge .fx-n{font-size:40px;font-weight:900;letter-spacing:-.05em;line-height:1}.ge .fx-n small{font-size:14px;color:#7a7a7a;letter-spacing:0}
+.ge .fx-link{display:flex;align-items:center;gap:8px;width:100%;padding:6px 6px 6px 12px;border-radius:12px;background:#141414;border:1px solid #262626;font-size:12px;font-weight:700;color:#bdbdbd}
+.ge .fx-link span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ge .fx-list{display:flex;flex-direction:column;gap:6px;max-height:34vh;overflow:auto}
+.ge .fx-new{animation:fxNew .8s cubic-bezier(.3,1.5,.5,1) both;border-color:rgba(95,211,162,.6)}
+@keyframes fxNew{0%{opacity:0;transform:translateY(-12px) scale(.95);box-shadow:0 0 0 0 rgba(95,211,162,.7)}60%{opacity:1;box-shadow:0 0 0 8px rgba(95,211,162,0)}100%{transform:none}}
+.ge .fx-empty{padding:16px;text-align:center;border:1px dashed #262626;border-radius:13px}
+.fx-big{position:fixed;inset:0;z-index:200;background:rgba(5,5,6,.96);display:flex;align-items:center;justify-content:center;gap:48px;flex-wrap:wrap;padding:30px;font-family:Inter,system-ui,sans-serif;color:#fff;opacity:0;transition:opacity .35s}
+.fx-big.on{opacity:1}
+.fx-bq{width:min(62vh,80vw);height:min(62vh,80vw);background:#f5f5f5;border-radius:36px;padding:28px;box-shadow:0 0 0 2px #5fd3a2,0 40px 120px -30px rgba(95,211,162,.7)}
+.fx-bq img{width:100%;height:100%;display:block}
+.fx-bt{display:flex;flex-direction:column;gap:10px;max-width:360px}.fx-bt>span{font-size:30px;font-weight:900;letter-spacing:-.03em;line-height:1.1}
+.fx-bt b{font-size:64px;font-weight:900;letter-spacing:-.05em;color:#5fd3a2}.fx-bt small{font-size:15px;color:#8a8a8a;font-weight:700;word-break:break-all}
+.fx-big>button{position:absolute;right:22px;top:22px;width:44px;height:44px;border-radius:14px;border:1px solid #333;background:#151515;color:#ddd;font-size:16px;cursor:pointer}
+@media(max-width:760px){.ge .fx-live{grid-template-columns:1fr;justify-items:center}.ge .fx-info{align-items:center;text-align:center}}

@@ -193,6 +193,57 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     res.json({ ok: true, role: i.role });
   });
 
+  /* ===================== COMPTES FORMATION EXPRESS (sessions d'entretien) ===================== */
+  // un lien (ou QR code) valable quelques heures : chaque candidat crée lui-même son compte élève avec son prénom
+  db.exec("CREATE TABLE IF NOT EXISTS signup_sessions (token TEXT PRIMARY KEY, created_by INTEGER, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, max INTEGER NOT NULL, closed_at INTEGER)");
+  if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "signup_session")) db.exec("ALTER TABLE users ADD COLUMN signup_session TEXT");
+  const sessOf = t => db.prepare("SELECT * FROM signup_sessions WHERE token = ?").get(String(t || ""));
+  const sessUsers = t => db.prepare("SELECT id, username, created_at FROM users WHERE signup_session = ? ORDER BY created_at DESC").all(t);
+  const sessView = (req, x) => { const users = sessUsers(x.token); return { token: x.token, link: `${base(req)}/rejoindre?t=${x.token}`, expiresAt: x.expires_at, max: x.max, closed: !!x.closed_at || x.expires_at < Date.now(), users }; };
+  app.post("/api/admin/trainee-sessions", auth, admin, (req, res) => {
+    if (!canInvite(req)) return res.status(403).json({ error: "Réservé au Fondateur et aux managers" });
+    const hours = Math.max(1, Math.min(12, parseInt(req.body?.hours, 10) || 3)), max = Math.max(1, Math.min(60, parseInt(req.body?.max, 10) || 25));
+    const t = crypto.randomBytes(9).toString("base64url"), now = Date.now();
+    db.prepare("INSERT INTO signup_sessions (token, created_by, created_at, expires_at, max) VALUES (?,?,?,?,?)").run(t, req.user.id, now, now + hours * 3.6e6, max);
+    gest.log(req.user.id, "a", "a ouvert une session de comptes formation", `${max} comptes max · ${hours} h`);
+    res.json(sessView(req, sessOf(t)));
+  });
+  app.get("/api/admin/trainee-sessions", auth, admin, (req, res) => {
+    const x = db.prepare("SELECT * FROM signup_sessions WHERE closed_at IS NULL AND expires_at > ? ORDER BY created_at DESC LIMIT 1").get(Date.now());
+    res.json({ session: x ? sessView(req, x) : null });
+  });
+  app.get("/api/admin/trainee-sessions/:t", auth, admin, (req, res) => { const x = sessOf(req.params.t); if (!x) return res.status(404).json({ error: "Session introuvable" }); res.json(sessView(req, x)); });
+  app.post("/api/admin/trainee-sessions/:t/close", auth, admin, (req, res) => { db.prepare("UPDATE signup_sessions SET closed_at = ? WHERE token = ? AND closed_at IS NULL").run(Date.now(), String(req.params.t)); res.json({ ok: true }); });
+  app.get("/api/admin/trainee-sessions/:t/qr.svg", auth, admin, (req, res) => {
+    const x = sessOf(req.params.t); if (!x) return res.status(404).end();
+    require("qrcode").toString(`${base(req)}/rejoindre?t=${x.token}`, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#0a0a0a", light: "#00000000" } }, (e, svg) => { if (e) return res.status(500).end(); res.type("image/svg+xml").send(svg); });
+  });
+  // public : rejoindre une session
+  const jtries = new Map();
+  app.get("/api/join/:t", (req, res) => {
+    const x = sessOf(req.params.t); if (!x || x.closed_at || x.expires_at < Date.now()) return res.status(410).json({ error: "Ce lien n'est plus valable : demande-en un nouveau au recruteur" });
+    const n = sessUsers(x.token).length; if (n >= x.max) return res.status(410).json({ error: "Toutes les places de cette session sont prises : préviens le recruteur" });
+    res.json({ ok: true, left: x.max - n });
+  });
+  app.post("/api/join/:t", (req, res) => {
+    const ip = req.ip, k = ip + ":" + req.params.t, a = jtries.get(k) || 0; if (a >= 4) return res.status(429).json({ error: "Trop de comptes créés depuis cet appareil" });
+    const x = sessOf(req.params.t); if (!x || x.closed_at || x.expires_at < Date.now()) return res.status(410).json({ error: "Ce lien n'est plus valable : demande-en un nouveau au recruteur" });
+    if (sessUsers(x.token).length >= x.max) return res.status(410).json({ error: "Toutes les places de cette session sont prises" });
+    const first = String(req.body?.firstName || "").trim().slice(0, 40), pw = String(req.body?.password || "");
+    if (first.length < 2) return res.status(400).json({ error: "Indique ton prénom" });
+    if (pw.length < 8) return res.status(400).json({ error: "Ton mot de passe doit faire au moins 8 caractères" });
+    let b0 = first.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 20); if (b0.length < 3) b0 = (b0 + "chat").slice(0, 8);
+    let username = b0, n = 1; while (db.prepare("SELECT 1 FROM users WHERE username = ? COLLATE NOCASE").get(username)) username = b0 + (++n);
+    const now = Date.now();
+    const uid = db.prepare("INSERT INTO users (username, pass_hash, role, created_at, signup_session) VALUES (?,?,?,?,?)").run(username, bcrypt.hashSync(pw, 10), "trainee", now, x.token).lastInsertRowid;
+    jtries.set(k, a + 1);
+    const token = crypto.randomBytes(32).toString("hex"), ttl = 30 * 24 * 3600e3;
+    db.prepare("INSERT INTO tokens VALUES (?,?,?)").run(token, uid, now + ttl);
+    res.cookie("tok", token, { httpOnly: true, sameSite: "lax", secure: PROD, maxAge: ttl });
+    gest.log(uid, "a", `**${first}** a créé son compte formation **${username}**`, "Session d'entretien");
+    res.json({ ok: true, username });
+  });
+
   /* ===================== PREMIER LANCEMENT ===================== */
   app.get("/api/onboarding", auth, (req, res) => {
     const u = db.prepare("SELECT onboarded_at FROM users WHERE id = ?").get(req.user.id);

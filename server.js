@@ -481,6 +481,7 @@ require("./announce")(app, db, auth, admin, { gest: GEST });   // annonces impor
 LIVE = require("./simlive")(app, db, auth, admin, { loadSim, publicSim, PERSONAS, busy });
 
 /* ----- Pages ----- */
+app.get("/rejoindre", (req, res) => res.sendFile(path.join(__dirname, "public", "bienvenue.html")));   // comptes formation express (session d'entretien)
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html"] }));
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
 
