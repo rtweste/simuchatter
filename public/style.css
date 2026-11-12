@@ -77,6 +77,9 @@ ul{padding-left:18px;line-height:1.6;margin:6px 0}
 .sidebar nav svg{width:18px;height:18px;flex-shrink:0}
 .sidebar .me{margin-top:auto;border-top:1px solid var(--line);padding:14px 10px 0;display:flex;align-items:center;gap:10px}
 .sidebar .me .av{width:32px;height:32px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;text-transform:uppercase}
+/* photo / initiale du compte : rond net, à la couleur choisie dans Mon profil */
+.sidebar .me .av{flex-shrink:0;width:34px;height:34px;border:0;color:#fff;font-weight:800;font-size:14px;text-decoration:none;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.26),transparent 62%),color-mix(in srgb,var(--ac,#7a7a7a) 42%,#161616);box-shadow:0 0 0 2px #0a0a0a,0 0 0 3.5px color-mix(in srgb,var(--ac,#7a7a7a) 75%,transparent);transition:transform .25s cubic-bezier(.3,1.5,.4,1),box-shadow .25s}
+.sidebar .me a.av:hover{transform:scale(1.07);box-shadow:0 0 0 2px #0a0a0a,0 0 0 3.5px var(--ac,#bdbdbd)}
 .sidebar .me b{display:block;font-size:13px}.sidebar .me small{color:var(--muted);font-size:12px}
 .sidebar .me button{margin-left:auto;background:transparent;color:var(--muted);padding:6px;border-radius:8px;width:34px;height:34px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .sidebar .me{flex-shrink:0}

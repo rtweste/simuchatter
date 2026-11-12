@@ -144,7 +144,7 @@
   // la petite photo en bas de la barre latérale
   function side() { const a = document.querySelector(".sidebar .me .av"); if (!a) return;
     if (P.avatar) { a.style.background = `#111 url(${P.avatar}) center/cover`; a.style.fontSize = "0"; } else { a.style.background = ""; a.style.fontSize = ""; }
-    a.style.borderColor = P.color; const b = document.querySelector(".sidebar .me b"); if (b) b.textContent = P.name || P.username; }
+    a.style.setProperty("--ac", P.color); const b = document.querySelector(".sidebar .me b"); if (b) b.textContent = P.name || P.username; }
 
   $("undo").onclick = () => { F = clone(pick(P)); draw(); };
   $("save").onclick = async () => {

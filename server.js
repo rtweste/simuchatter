@@ -276,6 +276,8 @@ app.get("/api/me", auth, (req, res) => {
 // nouvelle version de la vidéo : les élèves déjà inscrits la regardent une fois (une seule réinitialisation)
 setTimeout(() => { try { const k = db.prepare("SELECT value FROM settings WHERE key = 'intro_version'").get();
   if (!k || k.value !== "3") { db.prepare("UPDATE users SET intro_seen = 0 WHERE role = 'trainee'").run(); db.prepare("INSERT INTO settings (key, value) VALUES ('intro_version', '3') ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(); } } catch (e) { console.error("intro v2", e.message); } }, 0);
+// vidéo de présentation à la première connexion des comptes chatter : les chatters déjà là sont considérés comme l'ayant vue
+setTimeout(() => { try { if (!db.prepare("SELECT 1 FROM settings WHERE key = 'intro_chatters'").get()) { db.prepare("UPDATE users SET intro_seen = 1 WHERE role = 'chatter'").run(); db.prepare("INSERT INTO settings (key, value) VALUES ('intro_chatters', '1')").run(); } } catch (e) { console.error("intro chatters", e.message); } }, 800);
 app.post("/api/me/mgr-intro-seen", auth, (req, res) => { db.prepare("UPDATE users SET mgr_intro_seen = 1 WHERE id = ?").run(req.user.id); res.json({ ok: true }); });
 app.post("/api/me/simu-intro-seen", auth, (req, res) => { db.prepare("UPDATE users SET simu_intro_seen = 1 WHERE id = ?").run(req.user.id); res.json({ ok: true }); });
 app.post("/api/me/intro-seen", auth, (req, res) => { db.prepare("UPDATE users SET intro_seen = 1 WHERE id = ?").run(req.user.id); res.json({ ok: true }); });
