@@ -141,7 +141,14 @@ async function playFan(sim) {
   let replies = Array.isArray(r.replies) ? r.replies : [r.reply];
   replies = replies.filter(x => typeof x === "string" && x.trim()).slice(0, 3);
   if (!replies.length) replies = ["..."];
-  if (typeof r.interest === "number") sim.interest = Math.max(0, Math.min(100, Math.round(r.interest)));
+  // l'intérêt bouge par paliers : une petite maladresse ne fait pas chuter un fan qui vient d'acheter
+  if (typeof r.interest === "number") {
+    const prev = sim.interest, want = Math.max(0, Math.min(100, Math.round(r.interest)));
+    const maxDown = r.left ? 100 : sim.difficulty === "difficile" ? 15 : sim.difficulty === "facile" ? 8 : 12;
+    let v = Math.max(prev - maxDown, Math.min(prev + 15, want));
+    if (sim.pending_ppv && r.ppv_decision === "buy") v = Math.max(v, prev);   // il achète : son intérêt ne baisse pas ce tour-ci
+    sim.interest = v;
+  }
 
   let ppvEvent = null;
   if (sim.pending_ppv && r.ppv_decision) {
