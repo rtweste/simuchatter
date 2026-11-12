@@ -24,6 +24,18 @@
 .rl .hdr .hr2{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .rl .hold[disabled]{opacity:.45;cursor:not-allowed}
 .rl .roban{display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:15px;background:rgba(255,210,63,.07);border:1px solid rgba(255,210,63,.28);color:#e8d9a0;font-size:13px;font-weight:700;margin-bottom:14px}
+.rl .rzt{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rl .rzt span{background:#141414;border:1px solid #1f1f1f;border-radius:13px;padding:9px 11px;font-size:10.5px;font-weight:800;color:#7a7a7a}
+.rl .rzt b{display:block;font-size:17px;font-weight:900;color:#fff;letter-spacing:-.02em;margin-top:2px}
+.rl .rzt .neg{border-color:rgba(224,122,122,.45);background:rgba(224,122,122,.08)}.rl .rzt .neg b{color:#e07a7a}
+.rl .rzp{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:10px 12px;border-radius:13px;border:1px solid #1f1f1f;background:#141414;color:#e6e6e6;margin-top:7px;font:inherit;transition:border-color .25s,background .25s}
+.rl .rzp .bx{width:22px;height:22px;border-radius:7px;border:2px solid #383838;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#0a0a0a;transition:all .3s cubic-bezier(.3,1.5,.5,1)}
+.rl .rzp .bx svg{transform:scale(0);transition:transform .3s cubic-bezier(.3,1.6,.5,1)}
+.rl .rzp.on{border-color:rgba(224,122,122,.5);background:rgba(224,122,122,.06)}.rl .rzp.on .bx{background:#e07a7a;border-color:#e07a7a}.rl .rzp.on .bx svg{transform:scale(1)}
+.rl .rzp b{display:block;font-size:13px;font-weight:800}.rl .rzp small{display:block;font-size:11.5px;color:#7a7a7a;font-weight:700;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rl .rzp em{font-style:normal;font-weight:900;font-size:13px;white-space:nowrap}.rl .rzp.off{opacity:.45;cursor:default}
+.rl .rzh{border-color:rgba(224,122,122,.5);color:#e07a7a}.rl .rzh .fill{background:linear-gradient(90deg,#8a2e2e,#e07a7a)}.rl .rzh.done{background:#e07a7a;border-color:#e07a7a;color:#0a0a0a}
+.rl .rz .seg button{max-width:150px;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:760px){.rl .stair{margin-top:46px;gap:4px}.rl .stp b{font-size:11.5px}.rl .stp .pr{font-size:9px;padding:1px 4px}.rl .trow{grid-template-columns:22px repeat(3,minmax(0,1fr)) 28px}.rl .stpr button{width:22px}}
 </style>
 </head>
@@ -94,6 +106,37 @@
       <div class="sealed"><span class="sl"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="shk" d="M7 11V8a5 5 0 0 1 10 0v3"/><path d="M5 11h14v10H5z"/><path d="M12 15v2"/></svg></span><b>Quinzaine clôturée</b><small>${esc((target || cur).label)} · paies figées</small></div>
       ${lockov("Seul le Fondateur peut clôturer une période et figer les paies.")}</div>`;
   }
+  let RS = null, RP = null;
+  function resetCard() {
+    if (!D.founder) return "";
+    const cur = D.period.key, prev = D.prevPeriod ? D.prevPeriod.key : null;
+    if (!RS) return `<div class="card rz" style="--d:.12s"><div class="ch"><h3>Remettre la compta <em>à zéro</em></h3></div><div class="ld" style="padding:20px">Chargement…</div></div>`;
+    const t = RS.totals || {}, neg = (t.margin || 0) < 0;
+    return `<div class="card rz" style="--d:.12s"><div class="ch"><h3>Remettre la compta <em>à zéro</em></h3><div class="seg">${[[cur, D.period.label], ...(prev ? [[prev, D.prevPeriod.label]] : [])].map(([k, l]) => `<button data-rp="${k}" class="${RS.key === k ? "on" : ""}">${esc(l)}</button>`).join("")}</div></div>
+      <div class="rzt"><span>CA brut <b>${E0(t.brut)}</b></span><span>Paie chatters <b>${E0(t.chatters)}</b></span><span class="${neg ? "neg" : ""}">Marge <b>${E0(t.margin)}</b></span></div>
+      <div class="mut" style="margin:10px 0 4px">Choisis ce qui repart à zéro sur cette quinzaine. Le reste n’est pas touché.</div>
+      ${RS.parts.map(x => `<button class="rzp${x.on ? " on" : ""}${x.n ? "" : " off"}" data-rz="${x.k}" ${x.n ? "" : "disabled"}><span class="bx">${SV("M5 12.5l4.5 4.5L19 7.5", 13, 3.2)}</span><span style="flex:1;min-width:0"><b>${esc(x.label)}</b><small>${esc(x.sub)}</small></span>${x.n ? `<em>${E0(x.amount)}</em>` : ""}</button>`).join("")}
+      <button class="hold rzh" data-rzgo ${RS.parts.some(x => x.on) ? "" : "disabled"}><i class="fill"></i>${SV("M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5", 18, 2)}<span>Maintenir pour remettre à zéro</span></button>
+      <div class="holdh">Action définitive. ${RS.locked ? "La quinzaine est clôturée : elle sera rouverte. " : ""}Les ventes ne sont supprimées que si tu les coches.</div></div>`;
+  }
+  async function loadReset(k) { try { RS = await api("/api/admin/founder/reset?period=" + encodeURIComponent(k || RP || D.period.key)); RP = RS.key; const c = q(".rz"); if (c) { c.outerHTML = resetCard(); bindReset(); } } catch (e) { toast2(esc(e.message)); } }
+  function bindReset() {
+    const c = q(".rz"); if (!c) return;
+    c.querySelectorAll("[data-rp]").forEach(b => b.addEventListener("click", () => loadReset(b.dataset.rp)));
+    c.querySelectorAll("[data-rz]").forEach(b => b.addEventListener("click", () => { const x = RS.parts.find(y => y.k === b.dataset.rz); x.on = !x.on;
+      if (x.k === "sales" && x.on && !confirm(`Supprimer aussi les ${x.n} ventes déclarées de cette quinzaine ? Elles disparaissent des ventes, du classement et des paies.`)) { x.on = false; return; }
+      b.classList.toggle("on", x.on); c.querySelector("[data-rzgo]").disabled = !RS.parts.some(y => y.on); }));
+    const hb = c.querySelector("[data-rzgo]"); const fill = hb.querySelector(".fill"), lb = hb.querySelector("span"); let t0 = 0, raf = 0, busy = false; const DUR = 1600;
+    const tick = now => { const k = Math.min(1, (now - t0) / DUR); fill.style.width = (k * 100) + "%"; if (k < 1) raf = requestAnimationFrame(tick); else go(); };
+    const start = e => { if (busy || hb.disabled) return; e.preventDefault(); hb.classList.add("pressing"); lb.textContent = "Continue de maintenir…"; fill.style.transition = "none"; t0 = performance.now(); raf = requestAnimationFrame(tick); };
+    const stop = () => { if (busy) return; cancelAnimationFrame(raf); hb.classList.remove("pressing"); lb.textContent = "Maintenir pour remettre à zéro"; fill.style.transition = "width .4s"; fill.style.width = 0; };
+    const go = async () => { busy = true; hb.classList.remove("pressing"); lb.textContent = "Remise à zéro…";
+      try { const r = await api("/api/admin/founder/reset", { body: { period: RS.key, parts: RS.parts.filter(x => x.on).map(x => x.k) } }); hb.classList.add("done"); lb.textContent = "C’est fait";
+        toast2(`Compta du ${esc(RS.label)} remise à zéro · marge ${E0(r.after.totals ? r.after.totals.margin : 0)}`, true); setTimeout(() => { RS = null; load(); }, 1200);
+      } catch (x) { busy = false; toast2(esc(x.message)); stop(); } };
+    hb.addEventListener("pointerdown", start); ["pointerup", "pointerleave", "pointercancel"].forEach(ev => hb.addEventListener(ev, stop));
+    hb.addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && !e.repeat) start(e); }); hb.addEventListener("keyup", e => { if (e.key === "Enter" || e.key === " ") stop(); });
+  }
   function mgrCard() {
     const ms = D.managers.filter(m => m.grade !== "founder");
     return `<div class="card lockable" style="--d:.14s"><div class="ch"><h3>Les <em>managers</em></h3><span class="mut">Toi seul peux en nommer ou en retirer</span></div>
@@ -110,8 +153,9 @@
     root.innerHTML = `<div class="hdr"><div><div class="eb">FONDATEUR${fd ? " · " + esc(ME.username.toUpperCase()) : ""}</div><h1 class="ttl">Réglages <em class="gd">fondateur.</em></h1></div>
       <div class="hr2"><span class="rb f" style="height:30px;padding:0 12px;font-size:12px">${SV(CROWN, 13, 2.4)}Fondateur seulement</span>${fd ? '<button class="sw2" type="button"><span>Aperçu vue manager</span><span class="tg3"></span></button>' : ""}</div></div>
       ${fd ? "" : `<div class="roban">${SV(LOCK, 16, 2)}Ces réglages sont réservés au Fondateur : tu vois les valeurs, sans pouvoir les modifier.</div>`}
-      <div class="fgr"><div class="col">${tiersCard()}${closeCard()}</div><div class="col">${creaCard()}${mgrCard()}${logCard()}</div></div><div class="toast" role="status"></div>`;
+      <div class="fgr"><div class="col">${tiersCard()}${closeCard()}${resetCard()}</div><div class="col">${creaCard()}${mgrCard()}${logCard()}</div></div><div class="toast" role="status"></div>`;
     bind(); setTimeout(drawStair, 60);
+    if (D.founder) { if (RS) bindReset(); else loadReset(); }
   }
   function bind() {
     qa("[data-st]").forEach(b => b.addEventListener("click", () => { const [i, f, d] = b.dataset.st.split(":"); const st = f === "rate" ? .5 : f === "prime" ? 10 : 100;

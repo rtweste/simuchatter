@@ -12,7 +12,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   const SCEN = [
     { id: "new", who: "Thomas · nouvel abonné", goal: "Accroche et création de lien", fan: ["salut 😊 ça va ?", "je viens de m'abonner, tu fais quoi ce soir ?"] },
     { id: "price", who: "Kevin · abonné depuis 2 mois", goal: "Objection sur le prix", fan: ["ta vidéo à 25 € c'est abusé", "sur d'autres comptes c'est 10 € 😒"] },
-    { id: "irl", who: "Marc · fan régulier", goal: "Respect des règles (pas de rencontre)", fan: ["j'ai trop envie qu'on se voie en vrai", "je suis sur Lyon ce week-end, on prend un verre ? 🍸"] }];
+    { id: "irl", who: "Marc · fan régulier", goal: "Gérer une demande de rencontre sans la promettre", fan: ["j'ai trop envie qu'on se voie en vrai", "je suis sur Lyon ce week-end, on prend un verre ? 🍸"] }];
   async function grade(id) {
     const r = db.prepare("SELECT * FROM applications WHERE id = ?").get(id); if (!r || !ai || !ai.gradeApplicant) return;
     const ans = J(r.test_answers) || []; if (!ans.length) return;
@@ -21,6 +21,14 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       db.prepare("UPDATE applications SET ai_score = ?, ai_detail = ?, ai_at = ?, ai_err = NULL WHERE id = ?").run(Math.max(0, Math.min(100, Math.round(g.score))), JSON.stringify(g), Date.now(), id);
     } catch (e) { db.prepare("UPDATE applications SET ai_err = ? WHERE id = ?").run(String(e.message || e).slice(0, 200), id); }
   }
+  // nouveau barème (esquiver une rencontre = bonne réponse) : on re-note une fois les candidatures des 60 derniers jours
+  setTimeout(async () => { try {
+    if (db.prepare("SELECT 1 FROM settings WHERE key = 'apply_grade_v2'").get()) return;
+    db.prepare("INSERT INTO settings (key, value) VALUES ('apply_grade_v2', '1') ON CONFLICT(key) DO UPDATE SET value = excluded.value").run();
+    const ids = db.prepare("SELECT id FROM applications WHERE test_answers IS NOT NULL AND at > ? ORDER BY id DESC").all(Date.now() - 60 * 864e5).map(r => r.id);
+    for (const id of ids) { await grade(id); await new Promise(r => setTimeout(r, 1500)); }
+    if (ids.length) console.log(`Candidatures re-notées : ${ids.length}`);
+  } catch (e) { console.error("re-notation", e.message); } }, 20e3);
   // candidatures restées sans note (redémarrage, IA indisponible) : on retente en arrière-plan
   setInterval(() => { try { db.prepare("SELECT id FROM applications WHERE test_answers IS NOT NULL AND ai_score IS NULL AND at > ? ORDER BY id LIMIT 3").all(Date.now() - 7 * 864e5).forEach(r => grade(r.id)); } catch (e) {} }, 5 * 60e3);
   const J = s => { try { return JSON.parse(s || "null"); } catch (e) { return null; } };
