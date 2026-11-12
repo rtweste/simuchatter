@@ -6,19 +6,39 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   db.exec(`CREATE TABLE IF NOT EXISTS applications (id INTEGER PRIMARY KEY, at INTEGER NOT NULL, first_name TEXT NOT NULL, age INTEGER NOT NULL,
     contact_type TEXT NOT NULL, contact TEXT NOT NULL, slots TEXT NOT NULL DEFAULT '[]', exp TEXT, motivation TEXT, test_reply TEXT,
     source TEXT, status TEXT NOT NULL DEFAULT 'new', user_id INTEGER, decided_at INTEGER, decided_by INTEGER, ip_hash TEXT, seen INTEGER NOT NULL DEFAULT 0)`);
-  for (const [c, t] of [["test_answers", "TEXT"], ["ai_score", "INTEGER"], ["ai_detail", "TEXT"], ["ai_at", "INTEGER"], ["ai_err", "TEXT"], ["ai_tries", "INTEGER NOT NULL DEFAULT 0"]])
+  for (const [c, t] of [["quiz", "TEXT"], ["pub_token", "TEXT"], ["test_answers", "TEXT"], ["ai_score", "INTEGER"], ["ai_detail", "TEXT"], ["ai_at", "INTEGER"], ["ai_err", "TEXT"], ["ai_tries", "INTEGER NOT NULL DEFAULT 0"]])
     if (!db.prepare("PRAGMA table_info(applications)").all().some(x => x.name === c)) db.exec(`ALTER TABLE applications ADD COLUMN ${c} ${t}`);
   // test de chatting : 3 situations de fans
   const SCEN = [
     { id: "new", who: "Thomas · nouvel abonné", goal: "Accroche et création de lien", fan: ["salut 😊 ça va ?", "je viens de m'abonner, tu fais quoi ce soir ?"] },
     { id: "price", who: "Kevin · abonné depuis 2 mois", goal: "Objection sur le prix", fan: ["ta vidéo à 25 € c'est abusé", "sur d'autres comptes c'est 10 € 😒"] },
     { id: "irl", who: "Marc · fan régulier", goal: "Gérer une demande de rencontre sans la promettre", fan: ["j'ai trop envie qu'on se voie en vrai", "je suis sur Lyon ce week-end, on prend un verre ? 🍸"] }];
+  // nouveau test : 4 questions de chatting (choix multiples, corrigées ici) puis une seule mise en situation écrite
+  const LIVE = ["price"];
+  const QUIZ = [
+    { id: "q_hello", crit: "chaleur", q: "Un nouvel abonné t'écrit « salut, ça va ? ». Que réponds-tu ?",
+      opts: ["« ça va et toi »", "« Coucou toi 😏 ça va super, contente que tu sois là ! Tu t'appelles comment ? »", "Tu lui envoies tout de suite une vidéo payante", "Tu attends qu'il t'écrive autre chose"], ok: 1 },
+    { id: "q_kyc", crit: "chaleur", q: "Pourquoi demander son prénom et son âge à un nouvel abonné ?",
+      opts: ["Pour remplir un formulaire", "Ça ne sert à rien, il vaut mieux vendre tout de suite", "Pour personnaliser la conversation et vérifier qu'il est majeur", "Pour le mettre mal à l'aise"], ok: 2 },
+    { id: "q_ppv", crit: "vente", q: "Quel est le meilleur moment pour proposer un contenu payant ?",
+      opts: ["Dès le premier message", "Quand la conversation est lancée et que le fan est réceptif", "Jamais, on attend qu'il demande", "Toutes les deux minutes, pour être sûr"], ok: 1 },
+    { id: "q_irl", crit: "regles", q: "Un fan te propose de vous voir en vrai ce week-end. Que fais-tu ?",
+      opts: ["Tu acceptes pour le garder", "Tu lui donnes ton Snap pour en parler ailleurs", "Tu montres que l'idée te plaît mais tu ramènes la discussion ici, sans rien promettre", "Tu le bloques"], ok: 2 }];
+  const quizOf = r => { const q = J(r.quiz); if (!Array.isArray(q)) return null;
+    const items = QUIZ.map(x => { const a = q.find(y => y && y.id === x.id) || {}; return { id: x.id, q: x.q, crit: x.crit, choice: a.choice ?? null, answer: x.opts[a.choice] ?? null, good: x.opts[x.ok], ok: a.choice === x.ok }; });
+    return { items, correct: items.filter(x => x.ok).length, total: items.length }; };
   async function grade(id) {
     const r = db.prepare("SELECT * FROM applications WHERE id = ?").get(id); if (!r || !ai || !ai.gradeApplicant) return;
     const ans = J(r.test_answers) || []; if (!ans.length) return;
     db.prepare("UPDATE applications SET ai_tries = ai_tries + 1 WHERE id = ?").run(id);
-    const items = SCEN.map(sc => { const a = ans.find(x => x.id === sc.id) || {}; return { ...sc, text: a.text || "", ms: a.ms || 0, paste: !!a.paste }; });
+    const items = SCEN.filter(sc => ans.some(x => x.id === sc.id)).map(sc => { const a = ans.find(x => x.id === sc.id) || {}; return { ...sc, text: a.text || "", ms: a.ms || 0, paste: !!a.paste }; });
     try { const g = await ai.gradeApplicant(items, { app: id });
+      // questions de chatting : elles comptent pour 40 % du score ; la question sur la rencontre décide du critère « règles »
+      const qz = quizOf(r);
+      if (qz) { const pct = qz.correct / qz.total * 100, irl = qz.items.find(x => x.id === "q_irl");
+        g.quiz = qz; g.score_ia = g.score; g.score = Math.round(g.score * .6 + pct * .4);
+        g.criteres = g.criteres || {}; if (irl) { g.criteres.regles = irl.ok ? Math.max(8, g.criteres.regles || 0) : Math.min(2, g.criteres.regles ?? 2); if (!irl.ok) { g.regles_ok = false; g.score = Math.min(g.score, 45); } }
+        if (qz.correct < qz.total) (g.a_ameliorer = g.a_ameliorer || []).push(`Questions : ${qz.correct}/${qz.total} bonnes réponses`); }
       db.prepare("UPDATE applications SET ai_score = ?, ai_detail = ?, ai_at = ?, ai_err = NULL WHERE id = ?").run(Math.max(0, Math.min(100, Math.round(g.score))), JSON.stringify(g), Date.now(), id);
     } catch (e) { console.error("correction candidature", id, e.message || e);
       // une re-correction ratée ne fait pas disparaître la note d'avant
@@ -48,7 +68,16 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   const CONTACT = { whatsapp: "WhatsApp", telegram: "Telegram", email: "E-mail" };
 
   // ---------- public ----------
-  app.get("/api/apply/config", (req, res) => res.json({ slots: slots(), exp: EXP, contact: CONTACT, scenarios: SCEN.map(({ id, who, fan }) => ({ id, who, fan })) }));
+  app.get("/api/apply/config", (req, res) => res.json({ slots: slots(), exp: EXP, contact: CONTACT, scenarios: SCEN.filter(sc => LIVE.includes(sc.id)).map(({ id, who, fan }) => ({ id, who, fan })),
+    quiz: QUIZ.map(({ id, q, opts }) => ({ id, q, opts })) }));
+  // résultat du test : le WhatsApp du manager n'est donné que si le score atteint le seuil choisi dans les Réglages
+  const unlockOf = r => { const ag = gest.agency() || {}, wa = String(ag.applyWhatsapp || "").replace(/[^\d]/g, ""), min = Number.isFinite(+ag.applyUnlock) && ag.applyUnlock !== "" && ag.applyUnlock != null ? +ag.applyUnlock : 70;
+    return wa.length >= 9 && r.ai_score != null && r.ai_score >= min ? { whatsapp: "+" + wa, link: `https://wa.me/${wa}?text=${encodeURIComponent(`Bonjour, je suis ${r.first_name}, je viens de réussir le test de chatting StellADS 🙂`)}` } : null; };
+  app.get("/api/apply/result/:token", (req, res) => {
+    const t = String(req.params.token || ""); if (!/^[a-f0-9]{24}$/.test(t)) return res.status(404).json({ error: "Introuvable" });
+    const r = db.prepare("SELECT * FROM applications WHERE pub_token = ?").get(t); if (!r || Date.now() - r.at > 3600e3) return res.status(404).json({ error: "Introuvable" });
+    if (r.ai_score == null && !r.ai_err && Date.now() - r.at < 120e3) return res.json({ state: "pending" });
+    res.json({ state: "done", unlock: unlockOf(r) }); });
   const hits = new Map();
   app.post("/api/apply", (req, res) => {
     const b = req.body || {}, ip = crypto.createHash("sha256").update(String(req.ip) + "stellads").digest("hex").slice(0, 16), now = Date.now();
@@ -69,19 +98,22 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     if (!EXP[b.exp]) return res.status(400).json({ error: "Indique ton expérience" });
     const mot = String(b.motivation || "").trim().slice(0, 800);
     if (mot.length < 15) return res.status(400).json({ error: "Dis-nous en quelques mots pourquoi tu veux nous rejoindre" });
-    const answers = SCEN.map(sc => { const a = (Array.isArray(b.answers) ? b.answers : []).find(x => x && x.id === sc.id) || {};
+    const answers = SCEN.filter(sc => LIVE.includes(sc.id)).map(sc => { const a = (Array.isArray(b.answers) ? b.answers : []).find(x => x && x.id === sc.id) || {};
       return { id: sc.id, text: String(a.text || "").trim().slice(0, 600), ms: Math.max(0, Math.min(36e5, Math.round(Number(a.ms) || 0))), paste: !!a.paste }; });
-    if (answers.some(a => a.text.length < 5)) return res.status(400).json({ error: "Réponds aux 3 messages du test de chatting" });
+    if (answers.some(a => a.text.length < 5)) return res.status(400).json({ error: "Réponds au fan du test de chatting" });
+    const quiz = QUIZ.map(x => { const a = (Array.isArray(b.quiz) ? b.quiz : []).find(y => y && y.id === x.id) || {}; const c = Number.isInteger(a.choice) && a.choice >= 0 && a.choice < x.opts.length ? a.choice : null; return { id: x.id, choice: c }; });
+    if (quiz.some(x => x.choice === null)) return res.status(400).json({ error: "Réponds aux questions du test de chatting" });
+    const tok = crypto.randomBytes(12).toString("hex");
     const test = answers[0].text;
     if (!b.consent) return res.status(400).json({ error: "Coche la case d'accord pour envoyer ta candidature" });
     const src = String(b.source || "").toLowerCase().replace(/[^\w\-]/g, "").slice(0, 30) || null;
-    const newId = db.prepare("INSERT INTO applications (at, first_name, age, contact_type, contact, slots, exp, motivation, test_reply, test_answers, source, ip_hash) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
-      .run(now, name, age, ct, contact, JSON.stringify(sl), b.exp, mot, test, JSON.stringify(answers), src, ip).lastInsertRowid;
+    const newId = db.prepare("INSERT INTO applications (at, first_name, age, contact_type, contact, slots, exp, motivation, test_reply, test_answers, quiz, pub_token, source, ip_hash) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+      .run(now, name, age, ct, contact, JSON.stringify(sl), b.exp, mot, test, JSON.stringify(answers), JSON.stringify(quiz), tok, src, ip).lastInsertRowid;
     try { if (b.ref && ctx.referrals) ctx.referrals.attach(newId, b.ref); } catch (e) {}   // parrainage
     setTimeout(() => grade(newId), 50);   // correction par l'IA en arrière-plan : ne ralentit pas l'envoi
     h.push(now); hits.set(ip, h);
     gest.log(null, "a", `Nouvelle candidature de **${name}**`, `${age} ans · ${CONTACT[ct]}${src ? " · pub : " + src : ""}`);
-    res.json({ ok: true });
+    res.json({ ok: true, token: tok });
   });
 
   // ---------- manager ----------
@@ -91,7 +123,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       slots: J(r.slots) || [], exp: r.exp, expLabel: EXP[r.exp], motivation: r.motivation, testReply: r.test_reply, source: r.source, status: r.status,
       decidedAt: r.decided_at, user: u, seen: !!r.seen, dup,
       test: (J(r.test_answers) || []).map(a => { const sc = SCEN.find(x => x.id === a.id) || {}; return { ...a, who: sc.who, fan: sc.fan, goal: sc.goal }; }),
-      score: r.ai_score, grade: J(r.ai_detail), gradePending: !!r.test_answers && r.ai_score == null && !r.ai_err, gradeErr: r.ai_err }; };
+      quiz: quizOf(r), score: r.ai_score, grade: J(r.ai_detail), gradePending: !!r.test_answers && r.ai_score == null && !r.ai_err, gradeErr: r.ai_err }; };
   app.get("/api/admin/applications", auth, admin, (req, res) => {
     const rows = db.prepare("SELECT * FROM applications ORDER BY (status = 'new') DESC, at DESC LIMIT 300").all().map(view);
     const since = Date.now() - 30 * 864e5, src = {};

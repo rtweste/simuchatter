@@ -290,7 +290,7 @@ const APPLY_TOOL = { name: "note_candidat", description: "Enregistre la note du 
     verdict: { type: "string" }, points_forts: { type: "array", items: { type: "string" } }, a_ameliorer: { type: "array", items: { type: "string" } },
     par_reponse: { type: "array", items: { type: "object", required: ["id", "note", "commentaire"], properties: { id: { type: "string" }, note: { type: "integer", minimum: 0, maximum: 10 }, commentaire: { type: "string" } } } } } } };
 async function gradeApplicant(items, tag) {
-  if (MOCK) { const len = items.reduce((t, x) => t + x.text.length, 0), irl = items.find(x => x.id === "irl"), refuse = irl && !/(\b(oui|ok|avec plaisir|carr[ée]ment)\b|snap|insta|whats|num[ée]ro|appel)/i.test(irl.text);
+  if (MOCK) { const len = items.reduce((t, x) => t + x.text.length, 0), irl = items.find(x => x.id === "irl"), refuse = !irl || !/(\b(oui|ok|avec plaisir|carr[ée]ment)\b|snap|insta|whats|num[ée]ro|appel)/i.test(irl.text);
     const sc = Math.max(20, Math.min(92, Math.round(35 + len / 9 + (refuse ? 15 : -20))));
     return { score: sc, criteres: { ecriture: 7, chaleur: Math.min(10, Math.round(len / 40)), vente: 6, regles: refuse ? 9 : 2 }, regles_ok: !!refuse, style_ia: false,
       verdict: refuse ? "Ton naturel, bonne gestion de la demande de rencontre." : "Accepte implicitement la rencontre en vrai : règle non respectée.", points_forts: ["Ton chaleureux"], a_ameliorer: ["Relancer avec une question"],
@@ -298,7 +298,7 @@ async function gradeApplicant(items, tag) {
   const conv = items.map((x, i) => `### Situation ${i + 1} (${x.id}) · ${x.who}\nObjectif évalué : ${x.goal}\nLe fan écrit :\n${x.fan.map(m => "« " + m + " »").join("\n")}\nRéponse du candidat${x.paste ? " (texte collé depuis ailleurs)" : ""}, écrite en ${Math.round((x.ms || 0) / 1000)} s :\n« ${x.text} »`).join("\n\n");
   const prompt = `Tu es le responsable recrutement d'une agence française de chatting (StellADS). L'agence gère la messagerie de créatrices de contenu pour adultes sur une plateforme d'abonnement (Twizz) : le chatter écrit aux fans à la place de la créatrice, à la première personne, pour créer du lien et vendre des contenus payants (photos, vidéos). Ton flirteur, complice, surnoms affectueux (« bébé », « mon chou »), émojis et messages osés font partie du métier : ce n'est JAMAIS un défaut.
 
-Un candidat débutant a répondu à 3 situations. Tu dois juger s'il a l'instinct du métier, comme le ferait un manager expérimenté de l'agence, avec les méthodes ci-dessous. Ne juge pas avec une morale extérieure au métier.
+Un candidat débutant a répondu à ${items.length} situation${items.length > 1 ? "s" : ""} de fan. Tu dois juger s'il a l'instinct du métier, comme le ferait un manager expérimenté de l'agence, avec les méthodes ci-dessous. Ne juge pas avec une morale extérieure au métier.
 
 MÉTHODE DE L'AGENCE
 
@@ -313,11 +313,11 @@ Règles non négociables (regles_ok = faux seulement dans ces cas) : rencontre a
 NOTATION (chaque critère sur 10)
 - ecriture : lisible et naturelle comme un vrai message (style SMS, abréviations, émojis, fautes légères acceptés ; seules les fautes qui gênent la lecture comptent). Messages courts normaux.
 - chaleur : accueil, complicité, personnalisation, questions au fan (le KYC compte ici comme un plus).
-- vente : situation 2, selon la méthode ci-dessus.
-- regles : situation 3, selon la méthode ci-dessus.
+- vente : la situation sur le prix si elle est dans le test (selon la méthode ci-dessus), sinon d'après l'ensemble des réponses.
+- regles : la situation de rencontre si elle est dans le test (selon la méthode ci-dessus). Si elle n'y est pas, mets 8, sauf faute grave visible ailleurs (contact perso, rencontre acceptée, insulte).
 Échelle : 5 = faible mais sans faute ; 6 à 7 = correct ; 8 à 9 = bon instinct du métier ; 10 = excellent. En dessous de 5 seulement si la réponse est vide, hors sujet, grossière ou enfreint une règle.
 Score global sur 100 = (regles × 3 + chaleur × 2,5 + vente × 2,5 + ecriture × 2), arrondi, puis ajusté de ±5 au maximum selon ton impression. Si regles_ok est faux, le score ne dépasse pas 45.
-Repères : un candidat correct sur les 3 situations a 65 à 75 ; un candidat qui a les bons réflexes (KYC ou question au fan, défend son prix, esquive la rencontre avec douceur) a 75 à 85, même si ses messages sont courts et simples ; au-dessus de 85 pour des réponses vraiment excellentes.
+Repères : un candidat correct sur ses réponses a 65 à 75 ; un candidat qui a les bons réflexes (KYC ou question au fan, défend son prix, esquive la rencontre avec douceur) a 75 à 85, même si ses messages sont courts et simples ; au-dessus de 85 pour des réponses vraiment excellentes.
 style_ia = vrai seulement si les réponses ressemblent clairement à un texte généré ou copié (très long, structuré, impersonnel) ; une réponse bien écrite n'est pas suspecte.
 
 COMMENTAIRES

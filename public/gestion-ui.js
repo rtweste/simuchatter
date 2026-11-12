@@ -563,7 +563,9 @@ function candTest(a) {
       <div class="cvd ${g.regles_ok === false ? "bad" : ""}">${g.regles_ok === false ? "⚠ " : ""}${esc(g.verdict || "")}</div>
       ${(g.points_forts || []).length || (g.a_ameliorer || []).length ? `<div class="cpm">${(g.points_forts || []).map(x => `<span class="p">+ ${esc(x)}</span>`).join("")}${(g.a_ameliorer || []).map(x => `<span class="m">− ${esc(x)}</span>`).join("")}</div>` : ""}`
     : a.gradePending ? `<div class="cvd">⏳ Correction en cours par l'IA… (quelques secondes)</div>` : `<div class="cvd">${a.gradeErr ? "La correction n'a pas pu se faire." : "Pas encore corrigé."} <button class="gbtn" data-a="rg" style="margin-left:6px">Corriger maintenant</button></div>`;
-  return head + a.test.map(t => { const pr = g && (g.par_reponse || []).find(x => x.id === t.id);
+  // questions de chatting (nouveau test) : bonne ou mauvaise réponse pour chacune
+  const qz = a.quiz ? `<div class="cchat" style="margin-top:10px"><div class="cwho">Questions de chatting<span>${a.quiz.correct} / ${a.quiz.total} bonnes réponses</span></div>${a.quiz.items.map(q => `<div style="padding:8px 0;border-top:1px solid #1f1f1f;font-size:13px;line-height:1.45"><b style="color:${q.ok ? "#5fd3a2" : "#ff8a7a"}">${q.ok ? "✓" : "✗"}</b> ${esc(q.q)}<div style="color:${q.ok ? "#cfcfcf" : "#ff8a7a"};margin-top:3px">→ ${esc(q.answer || "—")}</div>${q.ok ? "" : `<div style="color:#8a8a8a;margin-top:2px">Bonne réponse : ${esc(q.good)}</div>`}</div>`).join("")}</div>` : "";
+  return head + qz + a.test.map(t => { const pr = g && (g.par_reponse || []).find(x => x.id === t.id);
     return `<div class="cchat" style="margin-top:10px"><div class="cwho">${esc(t.who || t.id)}<span>${esc(t.goal || "")}</span></div>${(t.fan || []).map(m => `<div class="fan">${esc(m)}</div>`).join("")}<div class="me">${esc(t.text)}</div>
       <div class="cmt">⏱ ${fmtMs(t.ms)}${t.paste ? ' · <b style="color:#ffd23f">📋 réponse collée</b>' : ""}${pr ? ` · <b style="color:${scColor(pr.note * 10)}">${pr.note}/10</b> · ${esc(pr.commentaire)}` : ""}</div></div>`; }).join("");
 }

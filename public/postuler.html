@@ -268,6 +268,22 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
 .th-go{background:#f2f2f2;color:#0a0a0a;box-shadow:none}.th-go::after{background:linear-gradient(90deg,transparent,rgba(0,0,0,.12),transparent)}
 @keyframes cardPing{0%{box-shadow:0 0 0 0 rgba(255,255,255,.35),0 50px 120px -30px rgba(0,0,0,.9)}100%{box-shadow:0 0 0 28px rgba(255,255,255,0),0 50px 120px -30px rgba(0,0,0,.9)}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.in,.sec .r,.done .r{opacity:1;transform:none}}
+
+/* questions de chatting */
+.qz{display:flex;flex-direction:column;gap:14px}
+.qz-hd{display:flex;align-items:center;justify-content:space-between;font-size:11px;letter-spacing:.16em;color:#8a8a8a;font-weight:800}
+.qz-hd .cpg{display:flex;gap:5px}.qz-hd .cpg i{width:18px;height:3px;border-radius:2px;background:#2a2a2a}.qz-hd .cpg i.ok{background:#f2f2f2}.qz-hd .cpg i.on{background:#8a8a8a}
+.qz-q{margin:0;font-size:21px;font-weight:900;letter-spacing:-.03em;line-height:1.25;color:#f5f5f5}
+.qz .opt{line-height:1.4}
+/* résultat du test après l'envoi */
+.res{margin-top:18px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.res-wait{display:flex;align-items:center;gap:10px;font-size:13.5px;color:#9a9a9a;font-weight:700}
+.res-sp{width:16px;height:16px;border-radius:50%;border:2px solid #2a2a2a;border-top-color:#f2f2f2;animation:resSp .8s linear infinite}
+@keyframes resSp{to{transform:rotate(360deg)}}
+.res-wa{display:inline-flex;align-items:center;gap:10px;height:54px;padding:0 22px;border-radius:15px;background:#25d366;color:#04140a;font:900 15.5px Inter;text-decoration:none;box-shadow:0 14px 40px -12px rgba(37,211,102,.6);animation:resIn .6s cubic-bezier(.2,1.4,.4,1)}
+.res-wa:hover{filter:brightness(1.06)}
+@keyframes resIn{from{opacity:0;transform:scale(.85) translateY(8px)}}
+.res small{font-size:12.5px;color:#8a8a8a;font-weight:700}.res-no{max-width:340px;text-align:center;line-height:1.5}
 </style>
 </head>
 <body>
@@ -322,7 +338,7 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
     el.innerHTML = `<span class="inv-av">${esc(n[0])}<i><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7"/></svg></i></span><div><b><em>${esc(n)}</em> t'invite à rejoindre l'équipe</b><small>${r.manager ? "Manager chez StellADS" : r.months >= 1 ? `Chatter chez StellADS depuis ${r.months} mois` : "Chatter chez StellADS"}</small></div>`;
     const ey = document.querySelector(".hero .ey"); if (ey) ey.parentNode.insertBefore(el, ey);
     window.__REFNAME = n; }).catch(() => {});
-  const A = { firstName: "", age: "", contactType: "whatsapp", contact: "", slots: [], exp: "", motivation: "", answers: [], testOn: false, consent: false };
+  const A = { firstName: "", age: "", contactType: "whatsapp", contact: "", slots: [], exp: "", motivation: "", answers: [], quiz: [], testOn: false, consent: false };
   let C = null, cur = 0;
   const STEPS = [
     { name: "Toi", html: () => `<h2 class="r" style="--d:0">Faisons <em>connaissance</em></h2><p class="hint r" style="--d:1">Ça prend 2 minutes. On te recontacte par le moyen de ton choix.</p>
@@ -346,7 +362,7 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
       wire: s => { s.querySelectorAll("[data-e]").forEach(b => b.onclick = () => { A.exp = b.dataset.e; s.querySelectorAll("[data-e]").forEach(x => x.classList.toggle("on", x === b)); }); const mo = s.querySelector("#mo"), fit = () => { mo.style.height = "auto"; mo.style.height = Math.max(96, Math.min(200, mo.scrollHeight + 2)) + "px"; }; fit(); mo.oninput = e => { A.motivation = e.target.value; fit(); }; },
       check: () => !A.exp ? "Indique ton expérience" : A.motivation.trim().length < 15 ? "Dis-nous en quelques mots pourquoi tu veux nous rejoindre" : "" },
     { name: "Test de chatting", html: () => `<div id="ctW"></div>`, wire: s => ctMount(s.querySelector("#ctW")),
-      check: () => A.answers.length < C.scenarios.length ? (A.testOn ? "Réponds aux 3 fans pour terminer le test" : "Lance le test de chatting") : "" },
+      check: () => !A.testOn ? "Lance le test de chatting" : A.quiz.length < (C.quiz || []).length ? "Réponds aux questions pour continuer le test" : A.answers.length < C.scenarios.length ? "Réponds au fan pour terminer le test" : "" },
     { name: "Envoi", html: () => `<h2 class="r" style="--d:0">On <em>vérifie</em> et on envoie</h2><p class="hint r" style="--d:1">Tu peux revenir en arrière pour modifier.</p>
       <div class="recap">${[["Prénom", `${esc(A.firstName)}, ${esc(A.age)} ans`], [C.contact[A.contactType], esc(A.contact)], ["Shifts", A.slots.map(esc).join(" · ")], ["Expérience", esc(C.exp[A.exp] || "")]].map((x, i) => `<div class="r" style="--d:${i + 2}"><small>${x[0]}</small><b>${x[1]}</b></div>`).join("")}</div>
       <div class="cons r${A.consent ? " on" : ""}" style="--d:6" id="cs" role="checkbox" aria-checked="${A.consent}" tabindex="0"><span class="bx"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>J'ai 18 ans ou plus et j'accepte que StellADS garde ces informations pour étudier ma candidature. Je peux demander leur suppression à tout moment.</span></div>`,
@@ -359,22 +375,36 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
   let ctTimer = null;
   function ctMount(w) {
     clearInterval(ctTimer); const SC = C.scenarios;
-    if (A.answers.length >= SC.length) {   // test terminé : récap
-      w.innerHTML = `<h2 class="r" style="--d:0">Test <em>terminé</em> ✓</h2><p class="hint r" style="--d:1">Bravo ! Tes réponses sont prêtes à être envoyées avec ta candidature.</p>
+    const QZ = C.quiz || [];
+    if (A.testOn && A.quiz.length < QZ.length) return qzScene(w, A.quiz.length);
+    if (A.answers.length >= SC.length && A.quiz.length >= QZ.length) {   // test terminé : récap
+      w.innerHTML = `<h2 class="r" style="--d:0">Test <em>terminé</em> ✓</h2><p class="hint r" style="--d:1">Bravo ! Tes ${QZ.length} réponses aux questions et ta réponse au fan sont prêtes à être envoyées.</p>
         <div class="ctd">${SC.map((sc, i) => { const a = A.answers.find(x => x.id === sc.id) || {}; return `<div class="r" style="--d:${i + 2}"><span class="av">${esc(sc.who[0])}</span><div><small>${esc(sc.who)} · ${fmtT(a.ms || 0)}</small><b>${esc(a.text || "")}</b></div></div>`; }).join("")}</div>
         <button type="button" class="ctre r" style="--d:6" id="ctRe">↺ Refaire le test</button>`;
-      w.querySelector("#ctRe").onclick = () => { A.answers = []; A.testOn = false; ctMount(w); requestAnimationFrame(() => w.closest(".sec").classList.add("show")); }; return; }
+      w.querySelector("#ctRe").onclick = () => { A.answers = []; A.quiz = []; A.testOn = false; ctMount(w); requestAnimationFrame(() => w.closest(".sec").classList.add("show")); }; return; }
     if (!A.testOn) {   // présentation
-      w.innerHTML = `<h2 class="r" style="--d:0">Le test de <em>chatting</em></h2><p class="hint r" style="--d:1">3 fans vont écrire à la créatrice. Réponds à sa place, comme sur la vraie messagerie : naturel, chaleureux, sans fautes.</p>
-        <div class="cti">${SC.map((sc, i) => `<div class="r" style="--d:${i + 2}"><span class="n">${i + 1}</span><span class="av">${esc(sc.who[0])}</span><div><b>${esc(sc.who.split(" · ")[0])}</b><small>${esc(sc.who.split(" · ")[1] || "")}</small></div></div>`).join("")}</div>
-        <div class="ctr r" style="--d:6"><span>⏱</span>Chaque réponse est chronométrée. Prends le temps de bien écrire, mais réponds comme en vrai.</div>
+      w.innerHTML = `<h2 class="r" style="--d:0">Le test de <em>chatting</em></h2><p class="hint r" style="--d:1">D'abord ${QZ.length} questions rapides sur le métier, puis un fan écrit à la créatrice : réponds à sa place, comme sur la vraie messagerie.</p>
+        <div class="cti"><div class="r" style="--d:2"><span class="n">1</span><span class="av">?</span><div><b>${QZ.length} questions de chatting</b><small>Choisis la meilleure réponse</small></div></div>${SC.map((sc, i) => `<div class="r" style="--d:${i + 3}"><span class="n">${i + 2}</span><span class="av">${esc(sc.who[0])}</span><div><b>Mise en situation · ${esc(sc.who.split(" · ")[0])}</b><small>${esc(sc.who.split(" · ")[1] || "")}</small></div></div>`).join("")}</div>
+        <div class="ctr r" style="--d:6"><span>⏱</span>Ta réponse au fan est chronométrée. Prends le temps de bien écrire, mais réponds comme en vrai.</div>
         <button type="button" class="ctgo r" style="--d:7" id="ctGo">Commencer le test</button>`;
-      w.querySelector("#ctGo").onclick = () => { A.testOn = true; A.answers = []; ctScene(w, 0); }; return; }
+      w.querySelector("#ctGo").onclick = () => { A.testOn = true; A.answers = []; A.quiz = []; QZ.length ? qzScene(w, 0) : ctScene(w, 0); }; return; }
     ctScene(w, A.answers.length);
+  }
+  function qzScene(w, k) {
+    const QZ = C.quiz, q = QZ[k], old = w.querySelector(".qz,.ctp,.cti");
+    const p = document.createElement("div"); p.className = "qz";
+    p.innerHTML = `<div class="qz-hd"><span>QUESTION ${k + 1} / ${QZ.length}</span><span class="cpg">${QZ.map((_, i) => `<i class="${i < k ? "ok" : i === k ? "on" : ""}"></i>`).join("")}</span></div>
+      <h3 class="qz-q">${esc(q.q)}</h3><div class="opts">${q.opts.map((o, i) => `<button type="button" class="opt" data-o="${i}"><i></i>${esc(o)}</button>`).join("")}</div>`;
+    if (old && !reduce && old.animate) { old.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateX(-50px)", filter: "blur(6px)" }], { duration: 260, fill: "forwards" }).onfinish = () => { w.innerHTML = ""; w.appendChild(p); p.animate([{ opacity: 0, transform: "translateX(60px)", filter: "blur(6px)" }, { opacity: 1, transform: "none", filter: "blur(0)" }], { duration: 480, easing: "cubic-bezier(.2,1,.3,1)" }); }; }
+    else { w.innerHTML = ""; w.appendChild(p); }
+    let done = false;
+    p.querySelectorAll("[data-o]").forEach(b => b.onclick = () => { if (done) return; done = true; b.classList.add("on");
+      A.quiz = A.quiz.filter(x => x.id !== q.id).concat([{ id: q.id, choice: +b.dataset.o }]);
+      setTimeout(() => k + 1 < QZ.length ? qzScene(w, k + 1) : ctScene(w, A.answers.length), reduce ? 150 : 420); });
   }
   function ctScene(w, k) {
     clearInterval(ctTimer); const SC = C.scenarios, sc = SC[k]; let t0 = 0, paste = false, sent = false;
-    const old = w.querySelector(".ctp");
+    const old = w.querySelector(".ctp") || w.querySelector(".qz");
     const p = document.createElement("div"); p.className = "ctp";
     p.innerHTML = `<div class="hd"><span class="av">${esc(sc.who[0])}<i></i></span><div><b>${esc(sc.who.split(" · ")[0])}</b><small id="ctSt">en train d'écrire…</small></div>
         <div class="cpg">${SC.map((_, i) => `<i class="${i < k ? "ok" : i === k ? "on" : ""}"></i>`).join("")}</div><div class="tm"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" class="b"/><circle cx="18" cy="18" r="15" class="f" id="ctF"/></svg><span id="ctT">0:00</span></div></div>
@@ -422,15 +452,30 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
     const e = STEPS[cur].check(); if (e) return fail(e);
     if (cur < STEPS.length - 1) return go(cur + 1);
     const b = $("next"); b.classList.add("busy"); b.disabled = true;
-    try { await api("/api/apply", { body: { ...A, source: SRC, ref: REF || undefined, website: $("website").value, t: Date.now() - T0 } }); success(); }
+    try { const r = await api("/api/apply", { body: { ...A, source: SRC, ref: REF || undefined, website: $("website").value, t: Date.now() - T0 } }); success(r && r.token); }
     catch (er) { fail(er.message); b.classList.remove("busy"); b.disabled = false; }
   };
   document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); $("next").click(); } });
-  function success() {
+  function success(token) {
     const via = { whatsapp: "sur WhatsApp", telegram: "sur Telegram", email: "par e-mail" }[A.contactType];
     $("doneTxt").textContent = `Merci ${A.firstName.trim()} ! On regarde ta candidature et on revient vers toi ${via} très vite.`;
+    if (token) result(token, via);
     document.querySelectorAll(".top,.stage,.ft").forEach(el => { if (!reduce && el.animate) el.animate([{ opacity: 1 }, { opacity: 0, filter: "blur(6px)" }], { duration: 350, fill: "forwards" }); else el.style.opacity = 0; });
     setTimeout(() => { $("done").classList.add("on"); confetti(); }, 300);
+  }
+  // résultat du test : si le score est bon, le WhatsApp de la manager se débloque
+  function result(token, via) {
+    const box = document.createElement("div"); box.className = "res r"; box.style.setProperty("--d", 2);
+    box.innerHTML = `<div class="res-wait"><span class="res-sp"></span>On corrige ton test…</div>`; $("done").appendChild(box);
+    const t0 = Date.now();
+    const tick = async () => { let r = null; try { r = await api("/api/apply/result/" + token, { noRedirect: true }); } catch (e) { r = { state: "done" }; }
+      if (r.state === "pending" && Date.now() - t0 < 90e3) return setTimeout(tick, 2500);
+      if (r.unlock) { $("done").querySelector("h2").innerHTML = "Test <em>réussi</em> 🎉";
+        $("doneTxt").textContent = `Bravo ${A.firstName.trim()} ! Tu as débloqué le contact de ta future manager. Écris-lui directement sur WhatsApp pour la suite.`;
+        box.innerHTML = `<a class="res-wa" href="${r.unlock.link}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.5 14.1c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1a17 17 0 0 1-1.7-.6 13.4 13.4 0 0 1-5.1-4.5 5.8 5.8 0 0 1-1.2-3.1c0-1.5.8-2.2 1.1-2.5.3-.3.6-.4.8-.4h.6c.2 0 .4 0 .7.5l1 2.3c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7a9 9 0 0 0 1.7 2.1 8.3 8.3 0 0 0 2.4 1.5c.3.1.5.1.7-.1l1-1.2c.2-.3.4-.3.7-.2l2.2 1c.3.2.5.2.6.4.1.1.1.8-.2 1.5z"/></svg>Écrire à ma manager sur WhatsApp</a><small>${esc(r.unlock.whatsapp)}</small>`;
+        confetti(); }
+      else box.innerHTML = `<small class="res-no">Ta candidature est bien arrivée. On revient vers toi ${via} très vite.</small>`; };
+    setTimeout(tick, 2500);
   }
   function confetti() {
     if (reduce) return; const cv = document.querySelector("canvas.fx"), card = document.querySelector(".card"), r = card.getBoundingClientRect(), d = devicePixelRatio || 1; cv.width = r.width * d; cv.height = r.height * d; const x = cv.getContext("2d"); x.scale(d, d);
