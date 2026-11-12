@@ -52,6 +52,8 @@
         ${top}${kinds}
         ${on ? `<div class="pf-row"><button type="button" class="pf-b" id="test">Envoyer une notification test</button></div>` : ""}
       </section>
+      ${ME.role === "chatter" ? `<section class="pf-sec"><div class="pf-sh"><span class="ic">${SV("M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM10 8.5v7l5.5-3.5z")}</span><div><h3>Présentation du site</h3><small>Tout StellADS expliqué en 2 minutes 30</small></div></div>
+        <div class="pf-row"><button type="button" class="pf-b w" id="replay">Revoir la présentation</button></div></section>` : ""}
       <section class="pf-sec"><div class="pf-sh"><span class="ic">${SV(IC.phone)}</span><div><h3>Appareils reliés</h3><small>${DEV.length} appareil${DEV.length > 1 ? "s" : ""} reçoi${DEV.length > 1 ? "vent" : "t"} tes notifications</small></div></div>
         <div class="pf-expl"><span class="ic">${SV(IC.info)}</span><span>Chaque téléphone ou ordinateur où tu as activé les notifications apparaît ici. C'est là que tes alertes arrivent : messages privés, rappels de shift, renforts… <b>Si tu as changé de téléphone ou utilisé un ordinateur qui n'est pas le tien, retire-le</b> pour qu'il ne reçoive plus rien.</span></div>
         <div>${devs}</div>
@@ -65,6 +67,7 @@
       await load(); };
     root.querySelectorAll("[data-k]").forEach(b => b.onclick = async () => { const on = !b.classList.contains("on"); b.classList.toggle("on", on); b.setAttribute("aria-checked", on); INFO.prefs[b.dataset.k] = on;
       try { await api("/api/push/prefs", { method: "PUT", body: INFO.prefs }); } catch (e) { b.classList.toggle("on", !on); INFO.prefs[b.dataset.k] = !on; notify("Pas enregistré", e.message, "err"); } });
+    const rp = $("replay"); if (rp) rp.onclick = () => INTRO.show(ME, { replay: true });
     const t = $("test"); if (t) t.onclick = async () => { t.disabled = true; try { await api("/api/push/test", { body: {} }); notify("Test envoyé", "Il arrive dans quelques secondes", "ok"); } catch (e) { notify("Test", e.message, "err"); } t.disabled = false; };
     root.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => { const id = +b.dataset.rm, d = DEV.find(x => x.id === id), mine = MYEP && d && d.endpoint === MYEP; b.disabled = true;
       try { if (mine) await PUSH.disable(); await api(`/api/push/devices/${id}`, { method: "DELETE" });

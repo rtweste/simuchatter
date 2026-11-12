@@ -284,3 +284,6 @@ body:has(#chatScreen:not(.hidden)) .main-area{padding-bottom:0}
   .sidebar nav a{padding-top:7px;padding-bottom:7px}
   .sidebar .sec{padding-top:10px;padding-bottom:6px}
 }
+
+/* compte en bas du menu : un nom trop long se coupe proprement au lieu de pousser les boutons hors du menu */
+@media (min-width:861px){.sidebar .me>div{flex:1 1 auto;min-width:0}.sidebar .me>div b,.sidebar .me>div small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sidebar .me>div+button{margin-left:0}.sidebar .me{gap:8px}.sidebar .me button{width:30px;height:30px;padding:4px}.sidebar .me button+button{margin-left:-4px}}
