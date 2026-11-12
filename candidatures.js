@@ -20,7 +20,9 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const items = SCEN.map(sc => { const a = ans.find(x => x.id === sc.id) || {}; return { ...sc, text: a.text || "", ms: a.ms || 0, paste: !!a.paste }; });
     try { const g = await ai.gradeApplicant(items, { app: id });
       db.prepare("UPDATE applications SET ai_score = ?, ai_detail = ?, ai_at = ?, ai_err = NULL WHERE id = ?").run(Math.max(0, Math.min(100, Math.round(g.score))), JSON.stringify(g), Date.now(), id);
-    } catch (e) { db.prepare("UPDATE applications SET ai_err = ? WHERE id = ?").run(String(e.message || e).slice(0, 200), id); }
+    } catch (e) { console.error("correction candidature", id, e.message || e);
+      // une re-correction ratée ne fait pas disparaître la note d'avant
+      if (!r.ai_detail) db.prepare("UPDATE applications SET ai_err = ? WHERE id = ?").run(String(e.message || e).slice(0, 200), id); }
   }
   // nouveau barème (KYC = point fort, gestes commerciaux sur le prix acceptés, esquive douce de la rencontre) : on re-note une fois les candidatures des 60 derniers jours
   setTimeout(async () => { try {
@@ -30,6 +32,14 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     for (const id of ids) { await grade(id); await new Promise(r => setTimeout(r, 1500)); }
     if (ids.length) console.log(`Candidatures re-notées : ${ids.length}`);
   } catch (e) { console.error("re-notation", e.message); } }, 20e3);
+  // rattrapage : les candidatures dont la correction a échoué ou manque (60 derniers jours) sont corrigées à nouveau, une fois
+  setTimeout(async () => { try {
+    if (db.prepare("SELECT 1 FROM settings WHERE key = 'apply_grade_fix1'").get()) return;
+    db.prepare("INSERT INTO settings (key, value) VALUES ('apply_grade_fix1', '1') ON CONFLICT(key) DO UPDATE SET value = excluded.value").run();
+    const ids = db.prepare("SELECT id FROM applications WHERE test_answers IS NOT NULL AND (ai_detail IS NULL OR ai_err IS NOT NULL) AND at > ? ORDER BY id DESC").all(Date.now() - 60 * 864e5).map(r => r.id);
+    for (const id of ids) { db.prepare("UPDATE applications SET ai_err = NULL, ai_tries = 0 WHERE id = ?").run(id); await grade(id); await new Promise(r => setTimeout(r, 1500)); }
+    if (ids.length) console.log(`Candidatures corrigées à nouveau : ${ids.length}`);
+  } catch (e) { console.error("rattrapage corrections", e.message); } }, 45e3);
   // candidatures restées sans note (redémarrage, IA indisponible) : on retente en arrière-plan
   setInterval(() => { try { db.prepare("SELECT id FROM applications WHERE test_answers IS NOT NULL AND ai_score IS NULL AND ai_tries < 3 AND at > ? ORDER BY id LIMIT 3").all(Date.now() - 7 * 864e5).forEach(r => grade(r.id)); } catch (e) {} }, 5 * 60e3);
   const J = s => { try { return JSON.parse(s || "null"); } catch (e) { return null; } };

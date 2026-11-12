@@ -327,9 +327,17 @@ COMMENTAIRES
 En français, ton neutre et bienveillant, phrases courtes.
 
 ${conv}`;
-  const res = await ask(prompt, MODEL_EVAL, 1200, { ...(tag || {}), kind: "apply" }, { tools: [APPLY_TOOL], tool_choice: { type: "tool", name: "note_candidat" } });
-  const tu = res.content.find(c => c.type === "tool_use"); if (!tu || typeof tu.input?.score !== "number") throw new Error("Note du candidat illisible");
-  return tu.input;
+  // modèle d'évaluation d'abord (2 essais), puis le modèle rapide en secours : la note ne doit jamais manquer
+  let last = null;
+  for (const model of [MODEL_EVAL, MODEL_EVAL, MODEL_HINT]) {
+    try {
+      const res = await ask(prompt, model, 3000, { ...(tag || {}), kind: "apply" }, { tools: [APPLY_TOOL], tool_choice: { type: "tool", name: "note_candidat" } });
+      const tu = res.content.find(c => c.type === "tool_use"), g = tu && tu.input;
+      if (g && typeof g.score === "number" && g.criteres && g.verdict) return g;
+      last = new Error(res.stop_reason === "max_tokens" ? "Correction coupée (trop longue)" : "Note du candidat illisible");
+    } catch (e) { last = e; }
+  }
+  throw last || new Error("Note du candidat illisible");
 }
 
 module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead, assistant, gradeApplicant };
