@@ -6,7 +6,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   db.exec(`CREATE TABLE IF NOT EXISTS applications (id INTEGER PRIMARY KEY, at INTEGER NOT NULL, first_name TEXT NOT NULL, age INTEGER NOT NULL,
     contact_type TEXT NOT NULL, contact TEXT NOT NULL, slots TEXT NOT NULL DEFAULT '[]', exp TEXT, motivation TEXT, test_reply TEXT,
     source TEXT, status TEXT NOT NULL DEFAULT 'new', user_id INTEGER, decided_at INTEGER, decided_by INTEGER, ip_hash TEXT, seen INTEGER NOT NULL DEFAULT 0)`);
-  for (const [c, t] of [["test_answers", "TEXT"], ["ai_score", "INTEGER"], ["ai_detail", "TEXT"], ["ai_at", "INTEGER"], ["ai_err", "TEXT"]])
+  for (const [c, t] of [["test_answers", "TEXT"], ["ai_score", "INTEGER"], ["ai_detail", "TEXT"], ["ai_at", "INTEGER"], ["ai_err", "TEXT"], ["ai_tries", "INTEGER NOT NULL DEFAULT 0"]])
     if (!db.prepare("PRAGMA table_info(applications)").all().some(x => x.name === c)) db.exec(`ALTER TABLE applications ADD COLUMN ${c} ${t}`);
   // test de chatting : 3 situations de fans
   const SCEN = [
@@ -16,6 +16,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   async function grade(id) {
     const r = db.prepare("SELECT * FROM applications WHERE id = ?").get(id); if (!r || !ai || !ai.gradeApplicant) return;
     const ans = J(r.test_answers) || []; if (!ans.length) return;
+    db.prepare("UPDATE applications SET ai_tries = ai_tries + 1 WHERE id = ?").run(id);
     const items = SCEN.map(sc => { const a = ans.find(x => x.id === sc.id) || {}; return { ...sc, text: a.text || "", ms: a.ms || 0, paste: !!a.paste }; });
     try { const g = await ai.gradeApplicant(items, { app: id });
       db.prepare("UPDATE applications SET ai_score = ?, ai_detail = ?, ai_at = ?, ai_err = NULL WHERE id = ?").run(Math.max(0, Math.min(100, Math.round(g.score))), JSON.stringify(g), Date.now(), id);
@@ -30,7 +31,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     if (ids.length) console.log(`Candidatures re-notées : ${ids.length}`);
   } catch (e) { console.error("re-notation", e.message); } }, 20e3);
   // candidatures restées sans note (redémarrage, IA indisponible) : on retente en arrière-plan
-  setInterval(() => { try { db.prepare("SELECT id FROM applications WHERE test_answers IS NOT NULL AND ai_score IS NULL AND at > ? ORDER BY id LIMIT 3").all(Date.now() - 7 * 864e5).forEach(r => grade(r.id)); } catch (e) {} }, 5 * 60e3);
+  setInterval(() => { try { db.prepare("SELECT id FROM applications WHERE test_answers IS NOT NULL AND ai_score IS NULL AND ai_tries < 3 AND at > ? ORDER BY id LIMIT 3").all(Date.now() - 7 * 864e5).forEach(r => grade(r.id)); } catch (e) {} }, 5 * 60e3);
   const J = s => { try { return JSON.parse(s || "null"); } catch (e) { return null; } };
   const slots = () => (gest.agency().slots || []).map(s => ({ id: s[0], start: s[1], end: s[2] }));
   const EXP = { chat: "Oui, déjà chatter", sales: "Vente ou service client", none: "Aucune expérience" };
@@ -89,7 +90,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       sources: Object.entries(src).map(([k, v]) => ({ source: k, ...v })).sort((a, b) => b.n - a.n), link: "/postuler" });
   });
   app.post("/api/admin/applications/:id/regrade", auth, admin, async (req, res) => {
-    const id = parseInt(req.params.id, 10); db.prepare("UPDATE applications SET ai_err = NULL, ai_score = NULL WHERE id = ?").run(id); await grade(id);
+    const id = parseInt(req.params.id, 10); db.prepare("UPDATE applications SET ai_err = NULL, ai_score = NULL, ai_tries = 0 WHERE id = ?").run(id); await grade(id);
     const r = db.prepare("SELECT * FROM applications WHERE id = ?").get(id); if (!r) return res.status(404).json({ error: "Introuvable" }); res.json({ ok: true, item: view(r) });
   });
   app.get("/api/admin/applications/count", auth, admin, (req, res) => res.json({ new: db.prepare("SELECT COUNT(*) n FROM applications WHERE status = 'new'").get().n }));
