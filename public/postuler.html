@@ -362,8 +362,7 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
   const A = { firstName: "", age: "", contactType: "whatsapp", contact: "", slots: [], exp: "", motivation: "", answers: [], quiz: [], testOn: false, consent: false };
   let C = null, cur = 0;
   const STEPS = [
-    { name: "Toi", html: () => `<h2 class="r" style="--d:0">Faisons <em>connaissance</em></h2><p class="hint r" style="--d:1">Ça prend 2 minutes. On te recontacte par le moyen de ton choix.</p>
-      <div class="row r" style="--d:2"><div><label class="l" for="fn">PRÉNOM</label><input class="f" id="fn" maxlength="40" autocomplete="given-name" value="${esc(A.firstName)}"></div><div><label class="l" for="ag">ÂGE</label><input class="f" id="ag" inputmode="numeric" maxlength="2" value="${esc(A.age)}"></div></div>
+    { name: "Toi", html: () => `<h2 class="r" style="--d:0">Faisons <em>connaissance</em></h2><div class="row r" style="--d:2"><div><label class="l" for="fn">PRÉNOM</label><input class="f" id="fn" maxlength="40" autocomplete="given-name" value="${esc(A.firstName)}"></div><div><label class="l" for="ag">ÂGE</label><input class="f" id="ag" inputmode="numeric" maxlength="2" value="${esc(A.age)}"></div></div>
       <label class="l r" style="--d:3">ON TE CONTACTE SUR</label><div class="seg r" style="--d:3" id="ct"><span class="th"></span>${Object.entries(C.contact).map(([k, l]) => `<button type="button" data-k="${k}" class="${A.contactType === k ? "on" : ""}">${l}</button>`).join("")}</div>
       <input class="f r" style="--d:4;margin-top:10px" id="co" value="${esc(A.contact)}">`,
       wire: s => { const ph = { whatsapp: ["Ton numéro WhatsApp", "tel"], telegram: ["Ton pseudo Telegram (ex. @prenom)", "text"], email: ["Ton adresse e-mail", "email"] };
