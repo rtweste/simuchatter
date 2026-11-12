@@ -383,9 +383,8 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
         <button type="button" class="ctre r" style="--d:6" id="ctRe">↺ Refaire le test</button>`;
       w.querySelector("#ctRe").onclick = () => { A.answers = []; A.quiz = []; A.testOn = false; ctMount(w); requestAnimationFrame(() => w.closest(".sec").classList.add("show")); }; return; }
     if (!A.testOn) {   // présentation
-      w.innerHTML = `<h2 class="r" style="--d:0">Le test de <em>chatting</em></h2><p class="hint r" style="--d:1">D'abord ${QZ.length} questions rapides sur le métier, puis un fan écrit à la créatrice : réponds à sa place, comme sur la vraie messagerie.</p>
+      w.innerHTML = `<h2 class="r" style="--d:0">Le test de <em>chatting</em></h2><p class="hint r" style="--d:1">D'abord ${QZ.length} questions rapides sur le métier, puis un fan écrit à la créatrice : réponds à sa place, comme sur la vraie messagerie. Ta réponse est chronométrée.</p>
         <div class="cti"><div class="r" style="--d:2"><span class="n">1</span><span class="av">?</span><div><b>${QZ.length} questions de chatting</b><small>Choisis la meilleure réponse</small></div></div>${SC.map((sc, i) => `<div class="r" style="--d:${i + 3}"><span class="n">${i + 2}</span><span class="av">${esc(sc.who[0])}</span><div><b>Mise en situation · ${esc(sc.who.split(" · ")[0])}</b><small>${esc(sc.who.split(" · ")[1] || "")}</small></div></div>`).join("")}</div>
-        <div class="ctr r" style="--d:6"><span>⏱</span>Ta réponse au fan est chronométrée. Prends le temps de bien écrire, mais réponds comme en vrai.</div>
         <button type="button" class="ctgo r" style="--d:7" id="ctGo">Commencer le test</button>`;
       w.querySelector("#ctGo").onclick = () => { A.testOn = true; A.answers = []; A.quiz = []; QZ.length ? qzScene(w, 0) : ctScene(w, 0); }; return; }
     ctScene(w, A.answers.length);
@@ -474,7 +473,7 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
         $("doneTxt").textContent = `Bravo ${A.firstName.trim()} ! Tu as débloqué le contact de ta future manager. Écris-lui directement sur WhatsApp pour la suite.`;
         box.innerHTML = `<a class="res-wa" href="${r.unlock.link}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.5 14.1c-.2.7-1.4 1.3-2 1.4-.5.1-1.2.1-1.9-.1a17 17 0 0 1-1.7-.6 13.4 13.4 0 0 1-5.1-4.5 5.8 5.8 0 0 1-1.2-3.1c0-1.5.8-2.2 1.1-2.5.3-.3.6-.4.8-.4h.6c.2 0 .4 0 .7.5l1 2.3c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7a9 9 0 0 0 1.7 2.1 8.3 8.3 0 0 0 2.4 1.5c.3.1.5.1.7-.1l1-1.2c.2-.3.4-.3.7-.2l2.2 1c.3.2.5.2.6.4.1.1.1.8-.2 1.5z"/></svg>Écrire à ma manager sur WhatsApp</a><small>${esc(r.unlock.whatsapp)}</small>`;
         confetti(); }
-      else box.innerHTML = `<small class="res-no">Ta candidature est bien arrivée. On revient vers toi ${via} très vite.</small>`; };
+      else box.remove(); };   // le message « on revient vers toi » est déjà affiché au-dessus
     setTimeout(tick, 2500);
   }
   function confetti() {

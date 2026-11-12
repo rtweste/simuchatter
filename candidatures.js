@@ -72,7 +72,8 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     quiz: QUIZ.map(({ id, q, opts }) => ({ id, q, opts })) }));
   // résultat du test : le WhatsApp du manager n'est donné que si le score atteint le seuil choisi dans les Réglages
   const unlockOf = r => { const ag = gest.agency() || {}, wa = String(ag.applyWhatsapp || "").replace(/[^\d]/g, ""), min = Number.isFinite(+ag.applyUnlock) && ag.applyUnlock !== "" && ag.applyUnlock != null ? +ag.applyUnlock : 70;
-    return wa.length >= 9 && r.ai_score != null && r.ai_score >= min ? { whatsapp: "+" + wa, link: `https://wa.me/${wa}?text=${encodeURIComponent(`Bonjour, je suis ${r.first_name}, je viens de réussir le test de chatting StellADS 🙂`)}` } : null; };
+    const g = J(r.ai_detail) || {};   // une faute sur la règle de la rencontre ne débloque jamais le contact
+    return wa.length >= 9 && r.ai_score != null && r.ai_score >= min && g.regles_ok !== false ? { whatsapp: "+" + wa, link: `https://wa.me/${wa}?text=${encodeURIComponent(`Bonjour, je suis ${r.first_name}, je viens de réussir le test de chatting StellADS 🙂`)}` } : null; };
   app.get("/api/apply/result/:token", (req, res) => {
     const t = String(req.params.token || ""); if (!/^[a-f0-9]{24}$/.test(t)) return res.status(404).json({ error: "Introuvable" });
     const r = db.prepare("SELECT * FROM applications WHERE pub_token = ?").get(t); if (!r || Date.now() - r.at > 3600e3) return res.status(404).json({ error: "Introuvable" });
