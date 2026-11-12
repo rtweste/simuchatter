@@ -72,7 +72,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   const C = { msg: max("chat_messages"), help: max("help_requests"), tip: max("team_tips"), asg: max("sim_assignments"), rev: Date.now() };
   function chatScan() {
     if (!has("chat_messages")) return;
-    const rows = db.prepare(`SELECT m.id, m.channel_id, m.user_id, m.body, m.kind, m.meta, m.thread_root, u.username, c.kind ch_kind, c.name ch_name, c.slug FROM chat_messages m
+    const rows = db.prepare(`SELECT m.id, m.channel_id, m.user_id, m.body, m.kind, m.meta, m.thread_root, u.username, u.role u_role, c.kind ch_kind, c.name ch_name, c.slug FROM chat_messages m
       JOIN chat_channels c ON c.id = m.channel_id LEFT JOIN users u ON u.id = m.user_id WHERE m.id > ? AND m.deleted_at IS NULL ORDER BY m.id LIMIT 200`).all(C.msg);
     rows.forEach(m => {
       C.msg = Math.max(C.msg, m.id);
@@ -86,6 +86,11 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       if (m.slug === "informations" && (meta.level === "urgent" || meta.level === "important")) {
         const ids = activeIds("role = 'chatter'").filter(u => !done.has(u)); ids.forEach(u => done.add(u));
         pushMany(ids, "announce", { title: meta.level === "urgent" ? "Annonce urgente" : "Annonce importante", body: (m.username ? m.username + " : " : "") + cut(m.body, 140), url: "/home", tag: "ann-" + m.id, urgent: meta.level === "urgent", ttl: 86400 });
+      }
+      // un manager écrit dans #formation : les élèves sont prévenus
+      if (m.ch_kind === "training" && m.u_role === "admin" && !m.thread_root) {
+        const ids = activeIds("role = 'trainee'").filter(u => !done.has(u)); ids.forEach(u => done.add(u));
+        pushMany(ids, "announce", { title: `${m.username || "Ton manager"} dans #formation`, body: txt, url, tag: "form-" + m.channel_id });
       }
       (meta.mentions || []).forEach(u => { if (done.has(u)) return; done.add(u);
         push(u, "mention", { title: `${m.username || "Quelqu'un"} t'a mentionné${m.ch_kind === "dm" ? "" : " dans #" + m.ch_name}`, body: txt, url, tag: "men-" + m.channel_id }).catch(() => {}); });

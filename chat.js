@@ -35,6 +35,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
     ensure("informations", "informations", { readonly: 1, emoji: "📣", position: 0, topic: "Annonces de l'équipe de direction · seuls les managers écrivent ici" });
     ensure("general", "général", { emoji: "💬", position: 10, topic: "Tout et rien, entre nous" });
     ensure("ventes", "ventes", { emoji: "💸", position: 20, topic: "Chaque vente validée arrive ici automatiquement" });
+    ensure("formation", "formation", { kind: "training", emoji: "🎓", position: 5, topic: "Le salon des élèves en formation · seuls les élèves et les managers le voient" });
     ensure("problemes-techniques", "problèmes-techniques", { emoji: "🛠️", position: 30, topic: "Un bug, un accès qui ne marche pas, Twizz qui rame ? C'est ici" });
     db.prepare("SELECT id, name FROM models ORDER BY name").all().forEach((m, i) => {
       const ex = db.prepare("SELECT id FROM chat_channels WHERE model_id = ?").get(m.id);
@@ -47,10 +48,13 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
 
   /* ---------- temps réel ---------- */
   const CL = new Map();   // user_id -> Set(res)
+  const ROLE = new Map(); // user_id -> rôle (pour savoir qui reçoit quoi)
   const send = (res, ev, data) => { try { res.write(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`); } catch (e) {} };
   const members = ch => ch.kind === "dm" ? db.prepare("SELECT user_id FROM chat_members WHERE channel_id = ?").all(ch.id).map(r => r.user_id) : null;
+  // qui reçoit les événements d'un salon : membres d'un privé ; élèves + managers pour #formation ; tout le monde sauf les élèves ailleurs
+  const hears = (ch, uid, m) => ch.kind === "dm" ? m.includes(uid) : ch.kind === "training" ? ["trainee", "admin"].includes(ROLE.get(uid)) : ROLE.get(uid) !== "trainee";
   function emit(ch, ev, data) {
-    const m = members(ch); for (const [uid, set] of CL) { if (m && !m.includes(uid)) continue; set.forEach(r => send(r, ev, data)); } }
+    const m = members(ch); for (const [uid, set] of CL) { if (!hears(ch, uid, m)) continue; set.forEach(r => send(r, ev, data)); } }
   const emitAll = (ev, data) => { for (const set of CL.values()) set.forEach(r => send(r, ev, data)); };
   const online = () => [...CL.keys()];
   function statusOf(uid) {
@@ -59,7 +63,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
     return CL.has(uid) ? "online" : "offline";
   }
   app.get("/api/chat/stream", auth, (req, res) => {
-    if (req.user.role === "trainee") return res.status(403).end();
+    ROLE.set(req.user.id, req.user.role);
     res.set({ "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no" }); res.flushHeaders?.();
     res.write("retry: 3000\n\n");
     const uid = req.user.id, first = !CL.has(uid); if (!CL.has(uid)) CL.set(uid, new Set()); CL.get(uid).add(res);
@@ -72,9 +76,14 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
   setInterval(() => { try { db.prepare("SELECT id FROM users WHERE active = 1 AND role <> 'trainee'").all().forEach(u => { const s = statusOf(u.id); if (lastSt[u.id] && lastSt[u.id] !== s) emitAll("presence", { user_id: u.id, status: s }); lastSt[u.id] = s; }); } catch (e) {} }, 15e3);
 
   /* ---------- règles ---------- */
-  const noTrainee = (req, res, next) => req.user.role === "trainee" ? res.status(403).json({ error: "Le chat est réservé aux chatters" }) : next();
+  // les élèves n'ont accès qu'à #formation (vérifié par canSee) ; messages privés et shifts : chatters et managers seulement
+  const noTrainee = (req, res, next) => next();
+  const staffOnly = (req, res, next) => req.user.role === "trainee" ? res.status(403).json({ error: "Réservé aux chatters" }) : next();
   const chOf = id => db.prepare("SELECT * FROM chat_channels WHERE id = ?").get(id);
-  function canSee(ch, u) { if (!ch) return false; if (ch.kind !== "dm") return true; return !!db.prepare("SELECT 1 FROM chat_members WHERE channel_id = ? AND user_id = ?").get(ch.id, u.id); }
+  function canSee(ch, u) { if (!ch) return false;
+    if (ch.kind === "training") return u.role === "trainee" || u.role === "admin";
+    if (u.role === "trainee") return false;
+    if (ch.kind !== "dm") return true; return !!db.prepare("SELECT 1 FROM chat_members WHERE channel_id = ? AND user_id = ?").get(ch.id, u.id); }
   const muted = uid => { const m = db.prepare("SELECT until FROM chat_mutes WHERE user_id = ?").get(uid); return m && m.until > now() ? m.until : null; };
   // filtre infos perso : numéros, e-mails, comptes de réseaux sociaux
   const PERSO = [
@@ -94,7 +103,8 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
     const thr = db.prepare(`SELECT thread_root, COUNT(*) n, MAX(created_at) last, GROUP_CONCAT(DISTINCT user_id) us FROM chat_messages WHERE thread_root IN (${q}) AND deleted_at IS NULL GROUP BY thread_root`).all(...ids);
     const votes = db.prepare(`SELECT v.message_id, v.opt, v.user_id, u.username FROM chat_votes v JOIN users u ON u.id = v.user_id WHERE v.message_id IN (${q})`).all(...ids);
     const acks = db.prepare(`SELECT a.message_id, a.user_id, a.at, u.username FROM chat_acks a JOIN users u ON u.id = a.user_id WHERE a.message_id IN (${q}) ORDER BY a.at`).all(...ids);
-    const teamN = db.prepare("SELECT COUNT(*) n FROM users WHERE active = 1 AND role = 'chatter'").get().n;
+    const chk = (db.prepare("SELECT kind FROM chat_channels WHERE id = ?").get(rows[0].channel_id) || {}).kind;
+    const teamN = db.prepare(`SELECT COUNT(*) n FROM users WHERE active = 1 AND role = '${chk === "training" ? "trainee" : "chatter"}'`).get().n;
     const reps = rows.filter(r => r.reply_to).map(r => r.reply_to), rmap = {};
     if (reps.length) db.prepare(`SELECT m.id, m.body, m.kind, m.deleted_at, u.username FROM chat_messages m LEFT JOIN users u ON u.id = m.user_id WHERE m.id IN (${reps.map(() => "?").join(",")})`).all(...reps).forEach(r => rmap[r.id] = r);
     return rows.map(r => {
@@ -120,7 +130,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
 
   function post(ch, uid, body, kind = "text", meta = {}, reply_to = null, thread_root = null) {
     const ment = new Set(); const ids = [];
-    if (body) { const names = db.prepare("SELECT id, username FROM users WHERE active = 1 AND role <> 'trainee'").all();
+    if (body) { const names = db.prepare(ch.kind === "training" ? "SELECT id, username FROM users WHERE active = 1 AND role IN ('trainee','admin')" : "SELECT id, username FROM users WHERE active = 1 AND role <> 'trainee'").all();
       for (const m of body.matchAll(/@([\wÀ-ÿ.\-]+)/g)) { const n = m[1].toLowerCase();
         if (n === "shift") db.prepare("SELECT DISTINCT user_id FROM clocks WHERE end_at IS NULL").all().forEach(r => ment.add(r.user_id));
         else if (n === "tous" || n === "everyone") names.forEach(x => ment.add(x.id));
@@ -137,7 +147,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
   function channelsFor(u) {
     const isAdmin = u.role === "admin";
     const rows = db.prepare(`SELECT c.* FROM chat_channels c WHERE c.kind <> 'dm' OR EXISTS (SELECT 1 FROM chat_members cm WHERE cm.channel_id = c.id AND cm.user_id = ?) ORDER BY c.position, c.name`).all(u.id);
-    return rows.map(c => {
+    return rows.filter(c => canSee(c, u)).map(c => {
       const rd = db.prepare("SELECT last_id FROM chat_reads WHERE user_id = ? AND channel_id = ?").get(u.id, c.id), lr = rd ? rd.last_id : 0;
       const unread = db.prepare("SELECT COUNT(*) n FROM chat_messages WHERE channel_id = ? AND id > ? AND thread_root IS NULL AND deleted_at IS NULL AND (user_id IS NULL OR user_id <> ?)").get(c.id, lr, u.id).n;
       const ment = db.prepare("SELECT COUNT(*) n FROM chat_messages WHERE channel_id = ? AND id > ? AND deleted_at IS NULL AND meta LIKE ?").get(c.id, lr, `%"mentions":[%`).n ? db.prepare("SELECT meta FROM chat_messages WHERE channel_id = ? AND id > ? AND deleted_at IS NULL AND meta LIKE '%mentions%'").all(c.id, lr).filter(r => (J(r.meta, {}).mentions || []).includes(u.id)).length : 0;
@@ -148,11 +158,10 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
     });
   }
   app.get("/api/chat/boot", auth, noTrainee, (req, res) => {
-    const users = db.prepare("SELECT id, username, role FROM users WHERE active = 1 AND role <> 'trainee' ORDER BY username").all().map(u => ({ ...u, status: statusOf(u.id) }));
+    const users = db.prepare(req.user.role === "trainee" ? "SELECT id, username, role FROM users WHERE active = 1 AND role IN ('trainee','admin') ORDER BY username" : "SELECT id, username, role FROM users WHERE active = 1 AND role <> 'trainee' ORDER BY username").all().map(u => ({ ...u, status: statusOf(u.id) }));
     res.json({ me: { id: req.user.id, username: req.user.username, role: req.user.role, muted: muted(req.user.id) }, channels: channelsFor(req.user), users, quick: QUICK });
   });
   app.get("/api/chat/unread", auth, (req, res) => {
-    if (req.user.role === "trainee") return res.json({ n: 0, mentions: 0 });
     const cs = channelsFor(req.user); res.json({ n: cs.reduce((t, c) => t + c.unread, 0), mentions: cs.reduce((t, c) => t + c.mentions, 0) });
   });
   app.get("/api/chat/c/:id/messages", auth, noTrainee, (req, res) => {
@@ -187,7 +196,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
     else if (!body) return res.status(400).json({ error: "Message vide" });
     if (req.user.role !== "admin") { const hit = persoHit(body + " " + (meta.fan || "") + " " + (meta.options || []).join(" ")); if (hit) return res.status(400).json({ error: `Message bloqué : il contient ${hit}. Pas d'infos perso dans le chat.`, blocked: true }); }
     if (req.user.role === "admin" && (b.announce || ch.readonly)) meta.announce = true;
-    if (meta.announce && ["important", "urgent"].includes(b.level)) meta.level = b.level;   // bandeau sur l'accueil / écran bloquant
+    if (meta.announce && ch.kind !== "training" && ["important", "urgent"].includes(b.level)) meta.level = b.level;   // bandeau sur l'accueil / écran bloquant
     const id = post(ch, req.user.id, body, kind, meta, reply ? reply.id : null, root ? root.id : null);
     if (meta.announce) db.prepare("UPDATE chat_messages SET pinned = 1 WHERE id = ?").run(id);
     if (ch.readonly) log(req.user.id, "a", `a publié une annonce${meta.level === "urgent" ? " urgente" : meta.level === "important" ? " importante" : ""} dans **#${ch.name}**`, body.slice(0, 120));
@@ -262,7 +271,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
   const typing = new Map();
   app.post("/api/chat/typing", auth, noTrainee, (req, res) => { const ch = chOf(+req.body?.channel_id); if (!canSee(ch, req.user)) return res.json({ ok: false });
     const k = req.user.id + ":" + ch.id; if (now() - (typing.get(k) || 0) > 2500) { typing.set(k, now()); emit(ch, "typing", { channel_id: ch.id, user_id: req.user.id, username: req.user.username, thread: +req.body?.thread || null }); } res.json({ ok: true }); });
-  app.post("/api/chat/dm", auth, noTrainee, (req, res) => {
+  app.post("/api/chat/dm", auth, staffOnly, (req, res) => {
     const o = user(+req.body?.user_id); if (!o || !o.active || o.role === "trainee" || o.id === req.user.id) return res.status(400).json({ error: "Destinataire invalide" });
     const ex = db.prepare("SELECT c.id FROM chat_channels c JOIN chat_members a ON a.channel_id = c.id AND a.user_id = ? JOIN chat_members b ON b.channel_id = c.id AND b.user_id = ? WHERE c.kind = 'dm'").get(req.user.id, o.id);
     if (ex) return res.json({ id: ex.id });
@@ -272,12 +281,12 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
   });
 
   /* ---------- remplacement de shift depuis le chat ---------- */
-  app.get("/api/chat/myshifts", auth, noTrainee, (req, res) => {
+  app.get("/api/chat/myshifts", auth, staffOnly, (req, res) => {
     const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" });
     const rows = planning.decorate(db.prepare(`${planning.SHIFT_SQL} WHERE s.user_id = ? AND s.date >= ? ORDER BY s.date, s.start LIMIT 12`).all(req.user.id, today)).filter(s => s.start_ms > now());
     res.json({ shifts: rows.map(s => ({ id: s.id, date: s.date, start: s.start, end: s.end, model_name: s.model_name, start_ms: s.start_ms, busy: !!db.prepare("SELECT 1 FROM shift_swaps WHERE shift_id = ? AND status IN ('open','requested')").get(s.id) })) });
   });
-  app.post("/api/chat/swap", auth, noTrainee, (req, res) => {
+  app.post("/api/chat/swap", auth, staffOnly, (req, res) => {
     const ch = chOf(+req.body?.channel_id); if (!guard(req, res, ch)) return;
     const s = db.prepare("SELECT s.*, m.name model_name FROM shifts s JOIN models m ON m.id = s.model_id WHERE s.id = ?").get(+req.body?.shift_id);
     if (!s || s.user_id !== req.user.id) return res.status(404).json({ error: "Shift introuvable" });
@@ -289,7 +298,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
     log(req.user.id, "pl", `**${req.user.username}** cherche un remplaçant dans le chat`, `${s.date} ${s.start}–${s.end} · ${s.model_name}`);
     res.json({ ok: true, message: one(id, req.user.id, req.user.role === "admin") });
   });
-  app.post("/api/chat/m/:id/swap", auth, noTrainee, (req, res) => {
+  app.post("/api/chat/m/:id/swap", auth, staffOnly, (req, res) => {
     const m = msgFor(req, res); if (!m || m.kind !== "swap") return m && res.status(400).json({ error: "Message invalide" });
     const w = db.prepare("SELECT * FROM shift_swaps WHERE id = ?").get(J(m.meta, {}).swap_id); if (!w) return res.status(404).json({ error: "Échange introuvable" });
     const a = req.body?.action, isAdmin = req.user.role === "admin";

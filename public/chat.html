@@ -55,11 +55,13 @@ function renderRail() {
     return `<button class="ct-ch ${c.id === CUR ? "on" : ""} ${c.unread ? "un" : ""} ${c.slug === "informations" ? "prio" : ""}" data-c="${c.id}">${c.kind === "dm" ? av(c.name, st) : `<span class="e">${esc(c.emoji || "#")}</span>`}
       <span class="n">${c.kind === "dm" ? esc(c.name) : esc(c.name)}${c.kind === "dm" ? `<small>${st ? ST_LBL[st] : ""}${c.last ? " · " + esc(strip(c.last.body)) : ""}</small>` : c.last && c.unread ? `<small>${esc(c.last.username || "")}${c.last.username ? " : " : ""}${esc(strip(c.last.body))}</small>` : ""}</span>
       ${c.mentions ? `<span class="b m">@${c.mentions}</span>` : c.unread ? `<span class="b">${c.unread > 99 ? "99+" : c.unread}</span>` : ""}</button>`; };
-  const pr = C.filter(c => c.slug === "informations"), pub = C.filter(c => c.kind === "public" && c.slug !== "informations"), mo = C.filter(c => c.kind === "model"), dm = C.filter(c => c.kind === "dm").sort((a, b) => (b.last?.at || 0) - (a.last?.at || 0));
-  $("rail").innerHTML = `${pr.length ? `<div class="ct-sec">Prioritaire</div>${pr.map(row).join("")}` : ""}<div class="ct-sec">Salons</div>${pub.map(row).join("")}
+  const pr = C.filter(c => c.slug === "informations"), pub = C.filter(c => c.kind === "public" && c.slug !== "informations"), mo = C.filter(c => c.kind === "model"), tr = C.filter(c => c.kind === "training"), TR = B.me.role === "trainee", dm = C.filter(c => c.kind === "dm").sort((a, b) => (b.last?.at || 0) - (a.last?.at || 0));
+  $("rail").innerHTML = TR ? `<div class="ct-sec">Formation</div>${tr.map(row).join("")}<div style="font-size:12.5px;color:#666;padding:8px 10px;line-height:1.45">Le salon des élèves et des managers. Le reste du chat s'ouvre quand tu deviens chatter.</div>`
+    : `${pr.length ? `<div class="ct-sec">Prioritaire</div>${pr.map(row).join("")}` : ""}<div class="ct-sec">Salons</div>${pub.map(row).join("")}
+    ${tr.length ? `<div class="ct-sec">Formation · élèves et managers</div>${tr.map(row).join("")}` : ""}
     ${mo.length ? `<div class="ct-sec">Créatrices</div>${mo.map(row).join("")}` : ""}<div class="ct-sec">Messages privés <button id="newDm" aria-label="Nouveau message privé">+</button></div>${dm.map(row).join("") || `<div style="font-size:12.5px;color:#555;padding:4px 10px">Aucune conversation privée</div>`}`;
   $("rail").querySelectorAll("[data-c]").forEach(b => b.onclick = () => openCh(+b.dataset.c));
-  $("newDm").onclick = dmSheet;
+  if ($("newDm")) $("newDm").onclick = dmSheet;
   updateBadge(B.channels.reduce((t, c) => t + c.unread, 0), "chat");
 }
 const chan = id => B.channels.find(c => c.id === id);
@@ -193,7 +195,7 @@ function bindMsgs(root, inThread) {
 }
 // toucher un nom ou une photo ouvre sa carte de profil (shift en cours, créatrices…)
 document.addEventListener("click", e => { const t = e.target.closest(".ct-m [data-uid]"); if (!t || !window.PCARD) return; e.stopPropagation();
-  PCARD.open(+t.dataset.uid, t, { self: +t.dataset.uid === B.me.id, dm: async c => { try { const r = await api("/api/chat/dm", { body: { user_id: c.id } }); await refreshBoot(); openCh(r.id); } catch (x) { notify("Message privé", x.message, "err"); } } }); }, true);
+  PCARD.open(+t.dataset.uid, t, { self: +t.dataset.uid === B.me.id || B.me.role === "trainee" || USERS[+t.dataset.uid]?.role === "trainee", dm: async c => { try { const r = await api("/api/chat/dm", { body: { user_id: c.id } }); await refreshBoot(); openCh(r.id); } catch (x) { notify("Message privé", x.message, "err"); } } }); }, true);
 document.addEventListener("click", e => { if (!e.target.closest(".ct-m")) document.querySelectorAll(".ct-m.act-on").forEach(x => x.classList.remove("act-on")); });
 function countUp(el) { if (el.dataset.done || reduce) return; el.dataset.done = 1; const to = +el.dataset.cnt, s = performance.now(); (function f(t) { const p = Math.min(1, (t - s) / 1100); el.textContent = eur(Math.round(to * (1 - Math.pow(1 - p, 3)) * 100) / 100); if (p < 1) requestAnimationFrame(f); else el.textContent = eur(to); })(s); }
 
@@ -222,7 +224,7 @@ function menu(anchor, m) {
   if (mine && m.kind === "text") o.push(["✏️ Modifier", () => edit(m)]);
   if (chan(CUR)?.canWrite) o.push(["↩︎ Citer", () => setReply(TH && THM.includes(m) ? "t" : "m", m)]);
   if (m.body) o.push(["📋 Copier le texte", () => navigator.clipboard?.writeText(m.body).then(() => notify("Copié", "", "ok"))]);
-  if (m.user_id && !mine) o.push([`💬 Message privé à ${m.username}`, async () => { const r = await api("/api/chat/dm", { body: { user_id: m.user_id } }); await refreshBoot(); openCh(r.id); }]);
+  if (m.user_id && !mine && B.me.role !== "trainee" && USERS[m.user_id]?.role !== "trainee") o.push([`💬 Message privé à ${m.username}`, async () => { const r = await api("/api/chat/dm", { body: { user_id: m.user_id } }); await refreshBoot(); openCh(r.id); }]);
   if (adm) { o.push([m.pinned ? "📌 Désépingler" : "📌 Épingler", () => api(`/api/chat/m/${m.id}/pin`, { body: {} })]); o.push([m.hidden ? "👁️ Rendre visible" : "🙈 Masquer", () => api(`/api/chat/m/${m.id}/hide`, { body: {} })]);
     if (m.user_id && !mine && USERS[m.user_id]?.role !== "admin") { o.push([`🔇 Sourdine 1 h pour ${m.username}`, () => api("/api/chat/mute", { body: { user_id: m.user_id, minutes: 60 } }).then(() => notify("Sourdine 1 h", m.username, "ok"))]); o.push([`🔈 Lever la sourdine`, () => api("/api/chat/mute", { body: { user_id: m.user_id, minutes: 0 } }).then(() => notify("Sourdine levée", m.username, "ok"))]); } }
   if (mine || adm) o.push(["🗑️ Supprimer", () => api(`/api/chat/m/${m.id}`, { method: "DELETE" }), "dg"]);
@@ -267,6 +269,8 @@ function bindComposer(k) {
   document.addEventListener("click", e => { if (!e.target.closest("#pl" + k)) { pl.classList.remove("on"); pb.classList.remove("on"); } });
   pl.querySelectorAll("[data-pa]").forEach(b => b.onclick = () => { pl.classList.remove("on"); pb.classList.remove("on"); const a = b.dataset.pa; if (a === "img") $("fi" + k).click(); if (a === "poll") pollSheet(); if (a === "swap") swapSheet(); if (a === "sos") sosSheet(); });
   if (k === "t") pl.querySelectorAll('[data-pa="poll"],[data-pa="swap"],[data-pa="sos"]').forEach(b => b.remove());
+  if (chan(CUR)?.kind === "training") pl.querySelectorAll('[data-pa="swap"],[data-pa="sos"]').forEach(b => b.remove());
+  if (B.me.role === "trainee") pl.querySelectorAll('[data-pa="poll"]').forEach(b => b.remove());
   $("fi" + k).onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) uploadImg(k, f); };
   $("em" + k).onclick = e => { e.stopPropagation(); document.querySelector(".ct-ep")?.remove(); const p = document.createElement("div"); p.className = "ct-ep"; p.innerHTML = ["😂", "🔥", "💸", "👑", "🙏", "😏", "🥲", "💪", "👀", "❤️"].map(x => `<button>${x}</button>`).join(""); document.body.appendChild(p);
     const r = $("em" + k).getBoundingClientRect(); p.style.left = Math.max(8, Math.min(innerWidth - p.offsetWidth - 8, r.right - p.offsetWidth)) + "px"; p.style.top = (r.top - 58) + "px";
@@ -430,11 +434,10 @@ function dmSheet() {
 
 (async () => {
   const me = await api("/api/me"); renderShell("chat", me);
-  if (me.role === "trainee") return go("/home");
   await refreshBoot();
   $("meBar").innerHTML = `${av(B.me.username, USERS[B.me.id]?.status)}<div><b>${esc(B.me.username)}</b><div style="font-size:11.5px;color:#777">${ST_LBL[USERS[B.me.id]?.status === "offline" ? "online" : USERS[B.me.id]?.status] || "en ligne"}</div></div>`;
   $("q").oninput = renderRail; stream();
-  const q = +new URLSearchParams(location.search).get("c"); const first = q && chan(q) ? q : (B.channels.find(c => c.slug === "informations" && c.unread) || B.channels.find(c => c.slug === "general") || B.channels[0]).id;
+  const q = +new URLSearchParams(location.search).get("c"); const first = q && chan(q) ? q : (B.channels.find(c => c.slug === "informations" && c.unread) || B.channels.find(c => c.slug === (me.role === "trainee" ? "formation" : "general")) || B.channels[0]).id;
   if (!MOB() || q) openCh(first);
 })();
 </script>

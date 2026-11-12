@@ -147,7 +147,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const pq = planning.punctuality(u.id, periodOfDate(today));
     const sims = db.prepare("SELECT score FROM sims WHERE user_id = ? AND status = 'done' ORDER BY started_at DESC LIMIT 5").all(u.id);
     const su = planning.suspended(u.id);
-    return { id: u.id, username: u.username, role: u.role, active: !!u.active, created_at: u.created_at, purgeAt: !u.active && u.deactivated_at && u.role !== "admin" ? u.deactivated_at + 24 * 3600e3 : null,
+    return { id: u.id, username: u.username, role: u.role, rk: u.role === "admin" ? (u.grade === "founder" ? "founder" : u.grade === "assistant" ? "assistant" : "manager") : u.role, active: !!u.active, created_at: u.created_at, purgeAt: !u.active && u.deactivated_at && u.role !== "admin" ? u.deactivated_at + 24 * 3600e3 : null,
       rate: ch.rate || 10, sales: ch.sales || 0, salesCount: ch.salesCount || 0, pay: ch.pay || 0, paid: ch.paid || null, hours: ch.hours || 0, renfortHours: ch.renfortHours || 0,
       punctuality: pq.total ? pq.pct : null, late: pq.late, absent: pq.absent, lateMin: pq.lateMin,
       live: open.length ? open.map(o => o.name + (o.reinforce ? " (renfort)" : "")).join(" + ") : null,
@@ -158,7 +158,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   }
   app.get("/api/admin/team", auth, admin, (req, res) => {
     const C = compta.computeCompta(periodOfDate(parisDate(Date.now())));
-    const users = db.prepare("SELECT id, username, role, active, created_at, deactivated_at FROM users WHERE deleted_at IS NULL ORDER BY role DESC, username").all();
+    const users = db.prepare("SELECT id, username, role, grade, active, created_at, deactivated_at FROM users WHERE deleted_at IS NULL ORDER BY role DESC, username").all();
     const rows = users.filter(u => u.role !== "admin" || u.id !== req.user.id).map(u => teamRow(u, C));
     const act = rows.filter(r => r.active && r.role === "chatter"), pqs = act.filter(r => r.punctuality != null);
     res.json({ me: req.user.id, team: rows, models: db.prepare("SELECT id, name FROM models ORDER BY name").all(), warnAt: th().warnAt, windowDays: th().windowDays,
