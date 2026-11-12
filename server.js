@@ -255,21 +255,23 @@ app.post("/api/logout", (req, res) => {
 });
 // vidéo de présentation : vue une fois par chaque chatter (les comptes existants la voient aussi une fois)
 if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "intro_seen")) db.exec("ALTER TABLE users ADD COLUMN intro_seen INTEGER NOT NULL DEFAULT 0");
+if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "simu_intro_seen")) db.exec("ALTER TABLE users ADD COLUMN simu_intro_seen INTEGER NOT NULL DEFAULT 0");
 app.get("/api/me", auth, (req, res) => {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const used = db.prepare("SELECT COUNT(*) n FROM sims WHERE user_id = ? AND started_at >= ?").get(req.user.id, today.getTime()).n;
-  const intro = db.prepare("SELECT intro_seen FROM users WHERE id = ?").get(req.user.id)?.intro_seen ? 1 : 0;
+  const iu = db.prepare("SELECT intro_seen, simu_intro_seen FROM users WHERE id = ?").get(req.user.id) || {}, intro = iu.intro_seen ? 1 : 0;
   let deadline = null;
   if (req.user.role === "trainee" && GEST) { GEST.startDeadline(req.user.id); deadline = GEST.deadline(req.user.id);
     if (deadline.state === "rejected") return res.status(401).json({ error: "Session expirée" }); }
   const tl = req.user.team_lead ? db.prepare("SELECT id, username FROM users WHERE id = ? AND active = 1 AND grade = 'tl'").get(req.user.team_lead) : null;
   const ob = db.prepare("SELECT onboarded_at FROM users WHERE id = ?").get(req.user.id);
   res.json({ id: req.user.id, username: req.user.username, role: req.user.role, grade: req.user.grade || null, rk: req.user.rk, roleLabel: PERM.LABEL[req.user.rk], onboarded: !!(ob && ob.onboarded_at),
-    teamLead: tl ? { id: tl.id, username: tl.username } : null, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro, deadline });
+    teamLead: tl ? { id: tl.id, username: tl.username } : null, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro, simuIntroSeen: iu.simu_intro_seen ? 1 : 0, deadline });
 });
 // nouvelle version de la vidéo : les élèves déjà inscrits la regardent une fois (une seule réinitialisation)
 setTimeout(() => { try { const k = db.prepare("SELECT value FROM settings WHERE key = 'intro_version'").get();
   if (!k || k.value !== "2") { db.prepare("UPDATE users SET intro_seen = 0 WHERE role = 'trainee'").run(); db.prepare("INSERT INTO settings (key, value) VALUES ('intro_version', '2') ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(); } } catch (e) { console.error("intro v2", e.message); } }, 0);
+app.post("/api/me/simu-intro-seen", auth, (req, res) => { db.prepare("UPDATE users SET simu_intro_seen = 1 WHERE id = ?").run(req.user.id); res.json({ ok: true }); });
 app.post("/api/me/intro-seen", auth, (req, res) => { db.prepare("UPDATE users SET intro_seen = 1 WHERE id = ?").run(req.user.id); res.json({ ok: true }); });
 
 /* ----- Données de configuration ----- */

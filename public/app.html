@@ -584,6 +584,17 @@ async function init() {
   $("quota").textContent = me.role === "admin" ? "Compte manager : pas de limite quotidienne" :
     `Simulations aujourd'hui : ${me.usedToday} / ${me.dailyLimit}`;
   loadHistory();
+  simuVideo(me);
+}
+// vidéo « comment marche le Simu Chatter » : montrée une fois aux élèves, à leur première visite (après la présentation générale)
+const SIMU_VIDEO = "/video/simu-chatter.mp4";
+async function simuVideo(me, replay) {
+  if (!replay && (me.role !== "trainee" || me.simuIntroSeen || !me.introSeen || window._simuVid)) return;
+  window._simuVid = 1;
+  try { const r = await fetch(SIMU_VIDEO, { method: "HEAD" }); if (!r.ok) return; } catch (e) { return; }
+  INTRO.show(me, { src: SIMU_VIDEO, seen: "/api/me/simu-intro-seen", replay: !!replay, endSub: "À toi de jouer : lance ta première simulation.", eb: "SIMU CHATTER", title: "Comment ça <em>marche.</em>",
+    sub: replay ? "Tu peux avancer, revenir en arrière ou fermer quand tu veux." : "Une minute pour tout comprendre avant ta première simulation." });
+  if (!replay) me.simuIntroSeen = 1;
 }
 const FAN_COLORS = { nouveau: "#2c3a52", radin: "#3d3350", baleine: "#4a3b2a", froid: "#2d4440", agressif: "#4a2c32", fragile: "#3a3a46" };
 const fanColor = id => FAN_COLORS[id] || "#333";
