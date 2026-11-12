@@ -305,6 +305,10 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
 .w-steps .cu{color:#fff;border-color:#3a3a3a}.w-steps .cu i{background:#f2f2f2;color:#0a0a0a}
 .w-steps span{white-space:nowrap}
 @media(max-width:480px){.done.win{padding:22px 18px}.done.win h2{font-size:26px}.w-ring{width:100px;height:100px;margin-top:14px}.w-ring b{font-size:30px}.w-t{font-size:13px;margin:8px auto 14px}.done.win .res-wa{height:52px;padding:0 18px;font-size:14.5px;white-space:nowrap}.w-steps{gap:4px}.w-steps span{font-size:10.5px;padding:5px 8px 5px 5px}}
+
+.ferr{font-size:12.5px;font-weight:700;color:#ff8a7a;min-height:0;margin-top:6px}
+.ferr:empty{display:none}
+.f.bad{border-color:rgba(255,138,122,.6)!important;box-shadow:0 0 0 4px rgba(255,138,122,.08)}
 </style>
 </head>
 <body>
@@ -361,16 +365,25 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
     window.__REFNAME = n; }).catch(() => {});
   const A = { firstName: "", age: "", contactType: "whatsapp", contact: "", slots: [], exp: "", motivation: "", answers: [], quiz: [], testOn: false, consent: false };
   let C = null, cur = 0;
+  // mêmes règles que le serveur : l'erreur s'affiche dès la première étape
+  const badContact = () => { const v = A.contact.trim();
+    if (A.contactType === "whatsapp") return v.replace(/\D/g, "").length < 9 || /[^\d+\s.\-()]/.test(v) ? "Numéro WhatsApp invalide (ex. +33 6 12 34 56 78)" : "";
+    if (A.contactType === "telegram") return /^@?[\w]{4,32}$/.test(v.replace(/\s/g, "")) ? "" : "Pseudo Telegram invalide (ex. @prenom)";
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? "" : "Adresse e-mail invalide"; };
   const STEPS = [
     { name: "Toi", html: () => `<h2 class="r" style="--d:0">Faisons <em>connaissance</em></h2><div class="row r" style="--d:2"><div><label class="l" for="fn">PRÉNOM</label><input class="f" id="fn" maxlength="40" autocomplete="given-name" value="${esc(A.firstName)}"></div><div><label class="l" for="ag">ÂGE</label><input class="f" id="ag" inputmode="numeric" maxlength="2" value="${esc(A.age)}"></div></div>
       <label class="l r" style="--d:3">ON TE CONTACTE SUR</label><div class="seg r" style="--d:3" id="ct"><span class="th"></span>${Object.entries(C.contact).map(([k, l]) => `<button type="button" data-k="${k}" class="${A.contactType === k ? "on" : ""}">${l}</button>`).join("")}</div>
-      <input class="f r" style="--d:4;margin-top:10px" id="co" value="${esc(A.contact)}">`,
+      <input class="f r" style="--d:4;margin-top:10px" id="co" value="${esc(A.contact)}" aria-describedby="coErr"><div class="ferr" id="coErr" role="alert"></div>`,
       wire: s => { const ph = { whatsapp: ["Ton numéro WhatsApp", "tel"], telegram: ["Ton pseudo Telegram (ex. @prenom)", "text"], email: ["Ton adresse e-mail", "email"] };
         const co = s.querySelector("#co"), th = s.querySelector(".th"), bs = [...s.querySelectorAll("#ct button")];
         const place = () => { const i = bs.findIndex(b => b.dataset.k === A.contactType); th.style.transform = `translateX(calc(${i * 100}% + ${i * 4}px))`; th.classList.add("on"); co.placeholder = ph[A.contactType][0]; co.type = ph[A.contactType][1]; };
-        bs.forEach(b => b.onclick = () => { A.contactType = b.dataset.k; bs.forEach(x => x.classList.toggle("on", x === b)); place(); co.focus(); }); place();
+        const err = s.querySelector("#coErr"); let touched = !!A.contact;
+        const show = () => { const m = touched ? badContact() : ""; err.textContent = m; co.classList.toggle("bad", !!m); };
+        bs.forEach(b => b.onclick = () => { A.contactType = b.dataset.k; bs.forEach(x => x.classList.toggle("on", x === b)); place(); show(); co.focus(); }); place();
+        co.addEventListener("blur", () => { if (A.contact.trim()) touched = true; show(); });
+        co.addEventListener("input", () => { A.contact = co.value; if (A.contact.replace(/\D/g, "").length >= 9 || A.contact.length >= 12) touched = true; show(); }); show();
         s.querySelector("#fn").oninput = e => A.firstName = e.target.value; s.querySelector("#ag").oninput = e => { e.target.value = e.target.value.replace(/\D/g, ""); A.age = e.target.value; }; co.oninput = e => A.contact = e.target.value; },
-      check: () => A.firstName.trim().length < 2 ? "Indique ton prénom" : !(+A.age >= 18) ? "Il faut avoir 18 ans ou plus pour postuler" : A.contact.trim().length < 4 ? "Indique où on peut te contacter" : "" },
+      check: () => A.firstName.trim().length < 2 ? "Indique ton prénom" : !(+A.age >= 18) ? "Il faut avoir 18 ans ou plus pour postuler" : !A.contact.trim() ? "Indique où on peut te contacter" : badContact() },
     { name: "Tes dispos", html: () => `<h2 class="r" style="--d:0">Quand peux-tu <em>travailler</em> ?</h2><p class="hint r" style="--d:1">Coche tous les shifts que tu peux tenir régulièrement.</p>
       <div class="slots">${C.slots.map((x, i) => `<button type="button" class="slot r${A.slots.includes(x.id) ? " on" : ""}" style="--d:${i + 2}" data-s="${esc(x.id)}"><span class="tk"><svg viewBox="0 0 24 24" width="12" height="12"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><b>${esc(x.id)}</b><small>${x.start} → ${x.end}</small></button>`).join("")}</div>`,
       wire: s => s.querySelectorAll("[data-s]").forEach(b => b.onclick = e => { const r = b.getBoundingClientRect(); b.style.setProperty("--x", (e.clientX - r.left) + "px"); b.style.setProperty("--y", (e.clientY - r.top) + "px");
@@ -456,9 +469,12 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
   function bars() { $("bars").innerHTML = STEPS.map((_, i) => `<i class="${i <= cur ? "on" : ""}"></i>`).join(""); $("stepName").textContent = STEPS[cur].name.toUpperCase(); $("stepNum").textContent = `${cur + 1} / ${STEPS.length}`; }
   function paintBtn() { const last = cur === STEPS.length - 1; $("next").textContent = last ? "Envoyer ma candidature" : "Continuer"; $("next").classList.toggle("go", last && A.consent); $("prev").hidden = cur === 0; }
   function go(i, first) {
-    const dir = i >= cur ? 1 : -1, stage = $("stage"), old = stage.querySelector(".sec"); cur = i;
+    const dir = i >= cur ? 1 : -1, stage = $("stage"), olds = [...stage.querySelectorAll(".sec")]; cur = i;
     const s = document.createElement("div"); s.className = "sec"; s.innerHTML = STEPS[i].html(); stage.appendChild(s); STEPS[i].wire(s);
-    if (old) { if (!reduce && old.animate) old.animate([{ opacity: 1, transform: "none", filter: "blur(0)" }, { opacity: 0, transform: `translateX(${-40 * dir}px)`, filter: "blur(6px)" }], { duration: 260, fill: "forwards" }).onfinish = () => old.remove(); else old.remove(); }
+    // les étapes précédentes s'effacent (et celles déjà en train de partir disparaissent tout de suite)
+    olds.forEach(old => { if (old.dataset.out || reduce || !old.animate) return old.remove(); old.dataset.out = "1"; old.style.pointerEvents = "none"; old.setAttribute("aria-hidden", "true");
+      old.animate([{ opacity: 1, transform: "none", filter: "blur(0)" }, { opacity: 0, transform: `translateX(${-40 * dir}px)`, filter: "blur(6px)" }], { duration: 260, fill: "forwards" }).onfinish = () => old.remove();
+      setTimeout(() => old.remove(), 400); });
     if (!first && !reduce && s.animate) s.animate([{ opacity: 0, transform: `translateX(${60 * dir}px)`, filter: "blur(8px)" }, { opacity: 1, transform: "none", filter: "blur(0)" }], { duration: 520, easing: "cubic-bezier(.2,1,.3,1)" });
     requestAnimationFrame(() => s.classList.add("show")); $("err").textContent = ""; bars(); paintBtn();
     if (!first) { const f = s.querySelector("input.f,textarea"); if (f && innerWidth > 900) setTimeout(() => f.focus({ preventScroll: true }), 450); }
