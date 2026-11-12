@@ -26,7 +26,7 @@ window.ROLESUI = (() => {
   }
   const mb = p => `<div class="mb${sel === p.id ? " sel" : ""}" ${canEdit() ? 'draggable="true"' : ""} data-id="${p.id}" role="button" tabindex="0"><span class="gr">${canEdit() ? I("grip", 14, 2.6) : ""}</span><span class="av">${esc(p.username[0].toUpperCase())}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis">${esc(N(p.username))}</span>${rb(p.rk)}</div>`;
   function teamsBoard() {
-    const free = D.people.filter(p => (p.rk === "chatter" || p.rk === "trainee") && !D.teams.some(t => t.id === p.team));
+    const free = D.people.filter(p => p.rk === "chatter" && !D.teams.some(t => t.id === p.team));
     const cols = D.teams.map((t, i) => { const mem = t.members.map(P0).filter(Boolean);
       return `<div class="tc" data-team="${t.id}" style="animation-delay:${(.06 + i * .05).toFixed(2)}s"><div class="th2"><span class="av">${esc(t.username[0].toUpperCase())}</span><div style="min-width:0"><b>Équipe ${esc(N(t.username))}</b><small>${rb("tl", "Team Leader")}</small></div><span class="ct">${mem.length}</span></div>
         <div class="tk"><span>CA 7 jours<b>${E0(t.ca7)}</b></span><span>Ponctualité<b>${t.punct == null ? "—" : t.punct + " %"}</b></span></div>
@@ -123,7 +123,7 @@ window.ROLESUI = (() => {
     const dr = q("[data-rdr]"), p = P0(sel); if (!p) return;
     dr.querySelectorAll(".rc").forEach(c => c.classList.toggle("on", c.dataset.r === pick));
     dr.querySelector(".expl").innerHTML = (EXPL[pick] || "").replace("__PRIME__", `une prime de ${E0(D.prime)} quand une recrue atteint ${E0(D.target)} de ventes nettes sur une quinzaine`);
-    dr.querySelector(".tsec").style.display = pick === "chatter" || pick === "trainee" ? "" : "none";
+    dr.querySelector(".tsec").style.display = pick === "chatter" ? "" : "none";
     dr.querySelectorAll(".tlo button").forEach(b => b.classList.toggle("on", (+b.dataset.team || null) === team));
     const cf = dr.querySelector(".cfm span"); if (!cf) return;
     cf.textContent = pick !== p.rk ? (pick === "tl" ? "Nommer Team Leader" : pick === "assistant" ? "Nommer Assistante" : pick === "manager" ? "Nommer Manager" : "Repasser chatter") : (team !== (p.team || null) ? (team ? "Changer d’équipe" : "Retirer de son équipe") : "Enregistrer");

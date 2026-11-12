@@ -217,7 +217,7 @@
   /* ---------- rendu ---------- */
   function render() {
     if (!D.members.length) {
-      root.innerHTML = `<div class="hdr"><div><div class="eb">TEAM LEADER</div><h1 class="ttl">Mon <em>équipe.</em></h1></div></div><div class="card"><div class="emp">Ton équipe est vide pour l’instant. Un manager peut te rattacher des chatters et des élèves dans <b>Gestion › Rôles et équipes</b>.</div></div><div class="toast"></div>`; return; }
+      root.innerHTML = `<div class="hdr"><div><div class="eb">TEAM LEADER</div><h1 class="ttl">Mon <em>équipe.</em></h1></div></div><div class="card"><div class="emp">Ton équipe est vide pour l’instant. Un manager peut te rattacher des chatters dans <b>Gestion › Rôles et équipes</b>.</div></div><div class="toast"></div>`; return; }
     const hdr = `<div class="hdr"><div><div class="eb">TEAM LEADER · ÉQUIPE ${esc(D.leader.username.toUpperCase())}</div><h1 class="ttl">Mon <em>équipe.</em></h1></div>
       <div class="hbtns"><button class="gbtn" data-act="c">${I("msg", 16)}Conseil</button><button class="gbtn" data-act="e">${I("target", 16)}Entraînement</button><button class="wbtn" data-act="r">${I("plus", 17, 2.4)}Demander un renfort</button></div></div>`;
     const tabs = `<div class="card" style="--d:.08s"><div class="ch"><div class="tb2 main"><span class="ind"></span><button class="${(TL || "v") === "v" ? "on" : ""}" data-t="v">${I("trophy", 15)}Ventes</button><button class="${TL === "s" ? "on" : ""}" data-t="s">${I("clock", 15)}Shifts</button><button class="${TL === "f" ? "on" : ""}" data-t="f">${I("grad", 15)}Formation</button></div><span class="mut">Semaine en cours · touche un chatter pour sa fiche</span></div>

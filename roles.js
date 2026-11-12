@@ -35,7 +35,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   }
   app.get("/api/admin/roles", auth, admin, (req, res) => {
     const ps = people(), pkey = compta.periodOfDate(parisDate(Date.now()));
-    const teams = ps.filter(p => p.rk === "tl").map(t => { const mem = ps.filter(p => p.team === t.id && (p.rk === "chatter" || p.rk === "trainee"));
+    const teams = ps.filter(p => p.rk === "tl").map(t => { const mem = ps.filter(p => p.team === t.id && p.rk === "chatter");
       let on = 0, tot = 0; mem.forEach(m => { try { const x = planning.punctuality(m.id, pkey); on += x.onTime; tot += x.total; } catch (e) {} });
       return { id: t.id, username: t.username, members: mem.map(m => m.id), ca7: r2(mem.reduce((s, m) => s + m.ca7, 0)), punct: tot ? Math.round(on / tot * 100) : null }; });
     const log = db.prepare(`SELECT l.*, b.username by_name, u.username user_name FROM role_log l LEFT JOIN users b ON b.id = l.by_user LEFT JOIN users u ON u.id = l.user_id ORDER BY l.at DESC LIMIT 6`).all();
@@ -53,7 +53,8 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     if (from === "trainee" && to !== "trainee") return res.status(400).json({ error: "Valide d'abord sa formation dans l'onglet Équipe" });
     if (to === "trainee" && from !== "trainee") return res.status(400).json({ error: "Un chatter ne peut pas repasser élève" });
     let team = b.team === undefined ? u.team_lead : (b.team ? parseInt(b.team, 10) : null);
-    if (team && !["chatter", "trainee"].includes(to)) team = null;
+    if (b.team && to !== "chatter") return res.status(400).json({ error: "Seuls les chatters peuvent avoir un Team Leader" });
+    if (to !== "chatter" && to !== "trainee") team = null;
     if (team) { const t = user(team); if (!t || t.grade !== "tl" || !t.active || t.id === id) return res.status(400).json({ error: "Team Leader invalide" }); }
     const MAP = { chatter: ["chatter", null], tl: ["chatter", "tl"], assistant: ["admin", "assistant"], manager: ["admin", null], trainee: ["trainee", null] };
     const [role, grade] = MAP[to];
@@ -76,7 +77,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   });
 
   /* ===================== MON ÉQUIPE (Team Leader) ===================== */
-  function teamOf(lid) { return db.prepare("SELECT id, username, role, created_at FROM users WHERE team_lead = ? AND active = 1 AND deleted_at IS NULL AND role IN ('chatter','trainee') ORDER BY username COLLATE NOCASE").all(lid); }
+  function teamOf(lid) { return db.prepare("SELECT id, username, role, created_at FROM users WHERE team_lead = ? AND active = 1 AND deleted_at IS NULL AND role = 'chatter' AND (grade IS NULL OR grade <> 'tl') ORDER BY username COLLATE NOCASE").all(lid); }
   const persona = id => PERSONAS.find(p => p.id === id) || { name: id, label: id };
   function dashboard(lid) {
     const now = Date.now(), today = parisDate(now), a = AG(), pmax = +a.pauseMax || 15;
