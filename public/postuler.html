@@ -484,7 +484,10 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
   const fail = m => { $("err").textContent = m; const c = document.querySelector(".card"); c.classList.remove("shake"); void c.offsetWidth; c.classList.add("shake"); };
   $("prev").onclick = () => go(Math.max(0, cur - 1));
   $("next").onclick = async () => {
-    const e = STEPS[cur].check(); if (e) return fail(e);
+    const e = STEPS[cur].check();
+    // contact invalide : le message reste seulement sous le champ (pas en double en bas)
+    if (e && cur === 0 && e === badContact()) { const co = $("co"); co.dispatchEvent(new Event("blur")); $("err").textContent = ""; const c = document.querySelector(".card"); c.classList.remove("shake"); void c.offsetWidth; c.classList.add("shake"); co.focus(); return; }
+    if (e) return fail(e);
     if (cur < STEPS.length - 1) return go(cur + 1);
     const b = $("next"); b.classList.add("busy"); b.disabled = true;
     try { const r = await api("/api/apply", { body: { ...A, source: SRC, ref: REF || undefined, website: $("website").value, t: Date.now() - T0 } }); success(r && r.token); }
