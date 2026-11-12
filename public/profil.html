@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mon profil — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/pcard.css">
+<link rel="stylesheet" href="/profil.css">
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area">
+<div class="wrap pf" id="root"><div class="ld">Chargement de ton profil…</div></div>
+</main>
+</div>
+<div class="pf-bar" id="bar" role="status"><span><i></i><b id="barT">Non enregistré</b></span><button class="pf-b" type="button" id="undo">Annuler</button><button class="pf-b w sv" type="button" id="save"><span class="t">Enregistrer</span><span class="spin"></span></button></div>
+<script src="/common.js"></script>
+<script src="/pcard.js"></script>
+<script>
+(() => {
+  const root = $("root");
+  const SV = (d, s = 18, w = 1.9) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const IC = { id: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c.8-4.2 4-6.5 8-6.5s7.2 2.3 8 6.5", spark: "M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z",
+    wallet: "M3 7a2 2 0 0 1 2-2h13v4M3 7v10a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2zM16 14h1", lock: "M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4", cam: "M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+    warn: "M12 3l10 18H2zM12 10v5M12 18h.01", gear: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", check: "M5 12.5l4.5 4.5L19 7.5" };
+  let ME = null, P = null, F = null;
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const pick = p => ({ name: p.name === p.username ? "" : p.name, bio: p.bio, color: p.color, models: [...p.mine].sort((a, b) => a - b), pay: { ...p.pay } });
+  const dirty = () => JSON.stringify(F) !== JSON.stringify(pick(P));
+
+  // aperçu de la carte avec ce qui est en train d'être modifié
+  function preview() {
+    const names = P.allModels.filter(m => F.models.includes(m.id)).map(m => m.name), host = $("card"), pc = host.querySelector(".pcd");
+    const fresh = document.createElement("div"); fresh.innerHTML = PCARD.html({ ...P, name: F.name.trim() || P.username, bio: F.bio.trim(), color: F.color, models: names });
+    if (!pc) host.appendChild(fresh.firstElementChild);
+    else { // mise à jour sur place : les animations de la carte continuent sans sauter
+      const nw = fresh.firstElementChild; pc.style.setProperty("--ac", F.color);
+      [".pc-av", ".pc-b"].forEach(s => { const a = pc.querySelector(s), b = nw.querySelector(s); if (s === ".pc-av") { if (a.innerHTML !== b.innerHTML) { a.className = b.className; a.querySelector("span").replaceWith(b.querySelector("span")); const d1 = a.querySelector(".dot"), d2 = b.querySelector(".dot"); if (!!d1 !== !!d2) { d1 ? d1.remove() : a.appendChild(d2); } } } else a.innerHTML = b.innerHTML; });
+    }
+    root.style.setProperty("--ac", F.color);
+    $("bar").classList.toggle("on", dirty());
+  }
+
+  function draw() {
+    const pay = F.pay;
+    root.innerHTML = `<div class="pf-hd"><div><div class="eb">MON COMPTE</div><h1>Mon <em>profil</em></h1></div>
+      <div class="pf-row"><span class="pf-vis"><i></i>Visible par ton équipe</span><a class="pf-b" href="/parametres" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none">${SV("M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 2.9-1.2V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z", 16)}Paramètres</a></div></div>
+    <div class="pf-grid"><div class="pf-stick"><div id="card"></div><div class="pf-cap">C'est ce que ton équipe voit quand elle touche ton nom dans le chat. Ton shift se met à jour tout seul.</div></div>
+    <div>
+      <section class="pf-sec"><div class="pf-sh"><span class="ic">${SV(IC.id)}</span><div><h3>Identité</h3><small>Ta photo, ta couleur et comment tu apparais</small></div></div>
+        <div class="pf-photo"><label class="pf-drop${P.avatar ? " ph" : ""}" id="drop" ${P.avatar ? `style="background-image:url(${esc(P.avatar)})"` : ""} tabindex="0" aria-label="Choisir une photo">${SV(IC.cam, 22)}<span>Ajouter</span><input type="file" id="file" accept="image/*" hidden></label>
+          <div><div class="pf-btns"><button class="pf-b w" type="button" id="pick">${P.avatar ? "Changer la photo" : "Choisir une photo"}</button>${P.avatar ? `<button class="pf-b r" type="button" id="rmAv">Retirer</button>` : ""}</div><p class="pf-hint" style="margin:10px 0 0">Une photo carrée ou un visage bien centré. Tu pourras la recadrer avant de l'envoyer.</p></div></div>
+        <div><span class="pf-lab">MA COULEUR</span><div class="pf-sw" role="radiogroup" aria-label="Couleur">${P.colors.map(c => `<button type="button" role="radio" aria-checked="${c === F.color}" aria-label="Couleur ${c}" class="${c === F.color ? "on" : ""}" style="--c:${c}" data-c="${c}"></button>`).join("")}</div></div>
+        <div class="pf-two"><div><label class="pf-lab" for="fName">NOM AFFICHÉ</label><input class="pf-in" id="fName" maxlength="24" placeholder="${esc(P.username)}" value="${esc(F.name)}" autocomplete="nickname"><div class="pf-cnt"><span id="cName">${F.name.length}</span> / 24</div></div>
+          <div><label class="pf-lab">IDENTIFIANT</label><input class="pf-in" value="@${esc(P.username)}" disabled style="opacity:.55"><div class="pf-cnt">Pour te connecter, ne change pas</div></div></div>
+        <div><label class="pf-lab" for="fBio">PHRASE D'ACCROCHE</label><textarea class="pf-in" id="fBio" maxlength="80" placeholder="Ex. : Spécialiste des PPV du soir 🌙">${esc(F.bio)}</textarea><div class="pf-cnt"><span id="cBio">${F.bio.length}</span> / 80</div></div>
+      </section>
+      <section class="pf-sec"><div class="pf-sh"><span class="ic">${SV(IC.spark)}</span><div><h3>Mes créatrices</h3><small>Celles sur qui tu travailles le plus souvent. Ton accueil et tes renforts sont préparés pour elles.</small></div></div>
+        ${P.allModels.length ? `<div class="pf-chips">${P.allModels.map(m => `<button type="button" class="pf-chip${F.models.includes(m.id) ? " on" : ""}" aria-pressed="${F.models.includes(m.id)}" data-m="${m.id}"><span class="bx">${SV(IC.check, 14, 3)}</span>${esc(m.name)}</button>`).join("")}</div>` : `<div class="pf-empty">Aucune créatrice pour l'instant.</div>`}
+      </section>
+      <section class="pf-sec"><div class="pf-sh"><span class="ic">${SV(IC.wallet)}</span><div><h3>Recevoir ma paie</h3><small>Où on t'envoie ta paie à chaque fin de quinzaine</small></div><span class="lock">${SV(IC.lock, 13, 2.2)}Vu seulement par le fondateur</span></div>
+        <div class="pf-seg pf-seg3" role="tablist">${[["crypto", "Crypto"], ["iban", "Virement"], ["paypal", "PayPal"]].map(([k, l]) => `<button type="button" role="tab" aria-selected="${pay.method === k}" class="${pay.method === k ? "on" : ""}" data-pm="${k}">${l}</button>`).join("")}<span class="ind" style="transform:translateX(${["crypto", "iban", "paypal"].indexOf(pay.method) * 100}%)"></span></div>
+        <div class="pay-b" data-pb="crypto" ${pay.method === "crypto" ? "" : "hidden"}><span class="pf-lab">RÉSEAU</span><div class="pf-nets">${P.nets.map(n => `<button type="button" class="pf-net${pay.network === n ? " on" : ""}" data-net="${esc(n)}">${esc(n)}</button>`).join("")}</div>
+          <label class="pf-lab" for="fAddr" style="margin-top:14px">ADRESSE DE MON PORTEFEUILLE</label><input class="pf-in" id="fAddr" spellcheck="false" autocomplete="off" placeholder="Colle ton adresse ici" value="${esc(pay.address)}" style="font-family:ui-monospace,Menlo,monospace;font-size:13.5px">
+          <div class="pf-warn">${SV(IC.warn, 15, 2)}<span>Vérifie bien que l'adresse correspond au réseau choisi (<b id="netName">${esc(pay.network)}</b>). Un envoi sur le mauvais réseau est perdu.</span></div></div>
+        <div class="pay-b" data-pb="iban" ${pay.method === "iban" ? "" : "hidden"}><label class="pf-lab" for="fIban">IBAN</label><input class="pf-in" id="fIban" spellcheck="false" autocomplete="off" placeholder="FR76 …" value="${esc(pay.iban)}" style="font-family:ui-monospace,Menlo,monospace;letter-spacing:.04em"></div>
+        <div class="pay-b" data-pb="paypal" ${pay.method === "paypal" ? "" : "hidden"}><label class="pf-lab" for="fPp">ADRESSE E-MAIL PAYPAL</label><input class="pf-in" id="fPp" type="email" autocomplete="off" placeholder="toi@exemple.com" value="${esc(pay.paypal)}"></div>
+        <div class="pf-err" id="payErr"></div>
+      </section>
+      <section class="pf-sec"><div class="pf-sh"><span class="ic">${SV(IC.lock)}</span><div><h3>Sécurité</h3><small>Ton mot de passe et tes connexions</small></div></div>
+        <div class="pf-two"><div><label class="pf-lab" for="pw1">MOT DE PASSE ACTUEL</label><input class="pf-in" id="pw1" type="password" autocomplete="current-password"></div>
+          <div><label class="pf-lab" for="pw2">NOUVEAU (8 CARACTÈRES MIN.)</label><input class="pf-in" id="pw2" type="password" autocomplete="new-password" minlength="8"></div></div>
+        <div class="pf-row"><button class="pf-b w" type="button" id="pwGo">Changer le mot de passe</button><button class="pf-b" type="button" id="outAll">Déconnecter mes autres appareils</button></div>
+        <p class="pf-hint" style="margin:0">Changer ton mot de passe te déconnecte aussi partout ailleurs. Tu restes connecté ici.</p>
+      </section>
+    </div></div>`;
+    preview(); bind();
+  }
+
+  function bind() {
+    root.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { F.color = b.dataset.c; root.querySelectorAll("[data-c]").forEach(x => { x.classList.toggle("on", x === b); x.setAttribute("aria-checked", x === b); }); preview(); });
+    const tx = (id, key, cnt) => { const el = $(id); el.oninput = () => { F[key] = el.value; if (cnt) $(cnt).textContent = el.value.length; preview(); }; };
+    tx("fName", "name", "cName"); tx("fBio", "bio", "cBio");
+    root.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { const id = +b.dataset.m, on = !F.models.includes(id);
+      F.models = on ? [...F.models, id].sort((a, c) => a - c) : F.models.filter(x => x !== id); b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); preview(); });
+    root.querySelectorAll("[data-pm]").forEach((b, i) => b.onclick = () => { F.pay.method = b.dataset.pm;
+      root.querySelectorAll("[data-pm]").forEach(x => { x.classList.toggle("on", x === b); x.setAttribute("aria-selected", x === b); });
+      root.querySelector(".pf-seg .ind").style.transform = `translateX(${i * 100}%)`;
+      root.querySelectorAll("[data-pb]").forEach(x => x.hidden = x.dataset.pb !== F.pay.method); $("payErr").textContent = ""; preview(); });
+    root.querySelectorAll("[data-net]").forEach(b => b.onclick = () => { F.pay.network = b.dataset.net; root.querySelectorAll("[data-net]").forEach(x => x.classList.toggle("on", x === b)); $("netName").textContent = F.pay.network; preview(); });
+    [["fAddr", "address"], ["fIban", "iban"], ["fPp", "paypal"]].forEach(([id, k]) => { const el = $(id); el.oninput = () => { F.pay[k] = el.value.trim(); $("payErr").textContent = ""; preview(); }; });
+    // photo
+    const file = $("file"); $("pick").onclick = () => file.click(); $("drop").onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); file.click(); } };
+    file.onchange = () => { const f = file.files[0]; file.value = ""; if (f) crop(f); };
+    const rm = $("rmAv"); if (rm) rm.onclick = async () => { try { const c = await api("/api/profile/avatar", { body: { remove: true } }); P.avatar = c.avatar; side(); draw(); notify("Photo retirée", "", "ok"); } catch (e) { notify("Photo", e.message, "err"); } };
+    // sécurité
+    $("pwGo").onclick = async e => { const b = e.currentTarget, cur = $("pw1").value, nx = $("pw2").value;
+      if (nx.length < 8) return notify("Mot de passe", "Le nouveau doit faire au moins 8 caractères", "err");
+      b.disabled = true; try { await api("/api/profile/password", { body: { current: cur, next: nx } }); $("pw1").value = $("pw2").value = ""; notify("Mot de passe changé", "Tes autres appareils sont déconnectés", "ok"); } catch (x) { notify("Mot de passe", x.message, "err"); } b.disabled = false; };
+    $("outAll").onclick = async e => { const b = e.currentTarget; b.disabled = true;
+      try { const r = await api("/api/profile/logout-all", { body: {} }); notify("C'est fait", r.n ? `${r.n} connexion${r.n > 1 ? "s" : ""} fermée${r.n > 1 ? "s" : ""}` : "Tu n'étais connecté nulle part ailleurs", "ok"); } catch (x) { notify("Erreur", x.message, "err"); } b.disabled = false; };
+  }
+
+  // recadrage de la photo (rond, glisser pour placer, curseur pour zoomer)
+  function crop(f) {
+    if (!/^image\//.test(f.type)) return notify("Photo", "Choisis une image", "err");
+    const url = URL.createObjectURL(f), img = new Image();
+    img.onerror = () => { URL.revokeObjectURL(url); notify("Photo", "Cette image ne peut pas être ouverte", "err"); };
+    img.onload = () => {
+      const S = 280, base = Math.max(S / img.naturalWidth, S / img.naturalHeight); let z = 1, x = 0, y = 0;
+      const w = document.createElement("div"); w.className = "pf-crop"; w.style.setProperty("--ac", F.color);
+      w.innerHTML = `<div class="bx" role="dialog" aria-modal="true" aria-label="Recadrer la photo"><h3>Recadre ta photo</h3><div class="st"></div><input type="range" min="1" max="3" step="0.01" value="1" aria-label="Zoom"><div class="pf-hint">Glisse la photo pour la placer.</div><div class="pf-btns"><button class="pf-b" type="button" data-x>Annuler</button><button class="pf-b w" type="button" data-ok>Utiliser cette photo</button></div></div>`;
+      const st = w.querySelector(".st"); st.appendChild(img); document.body.appendChild(w); requestAnimationFrame(() => w.classList.add("on"));
+      const sc = () => base * z;
+      const clamp = () => { const iw = img.naturalWidth * sc(), ih = img.naturalHeight * sc(); x = Math.min(0, Math.max(S - iw, x)); y = Math.min(0, Math.max(S - ih, y)); };
+      const put = () => { clamp(); img.style.transform = `translate(${x}px,${y}px) scale(${sc()})`; };
+      x = (S - img.naturalWidth * base) / 2; y = (S - img.naturalHeight * base) / 2; put();
+      const rg = w.querySelector("input"); rg.oninput = () => { const cx = (S / 2 - x) / sc(), cy = (S / 2 - y) / sc(); z = +rg.value; x = S / 2 - cx * sc(); y = S / 2 - cy * sc(); put(); };
+      let drag = null; st.onpointerdown = e => { drag = { px: e.clientX, py: e.clientY, x, y }; st.setPointerCapture(e.pointerId); };
+      st.onpointermove = e => { if (!drag) return; x = drag.x + e.clientX - drag.px; y = drag.y + e.clientY - drag.py; put(); };
+      st.onpointerup = st.onpointercancel = () => drag = null;
+      st.onwheel = e => { e.preventDefault(); rg.value = Math.min(3, Math.max(1, z - e.deltaY / 400)); rg.oninput(); };
+      const close = () => { w.classList.remove("on"); setTimeout(() => { w.remove(); URL.revokeObjectURL(url); }, 250); };
+      w.querySelector("[data-x]").onclick = close; w.onclick = e => { if (e.target === w) close(); };
+      w.querySelector("[data-ok]").onclick = async e => { const b = e.currentTarget; b.disabled = true;
+        const O = 320, cv = document.createElement("canvas"); cv.width = cv.height = O; const g = cv.getContext("2d");
+        g.fillStyle = "#111"; g.fillRect(0, 0, O, O); g.imageSmoothingQuality = "high";
+        g.drawImage(img, -x / sc(), -y / sc(), S / sc(), S / sc(), 0, 0, O, O);
+        let q = .86, data = cv.toDataURL("image/jpeg", q); while (data.length * .75 > 56000 && q > .4) { q -= .08; data = cv.toDataURL("image/jpeg", q); }
+        try { const c = await api("/api/profile/avatar", { body: { data } }); P.avatar = c.avatar; close(); side(); draw(); notify("Photo mise à jour ✨", "", "ok"); }
+        catch (x2) { notify("Photo", x2.message, "err"); b.disabled = false; } };
+    };
+    img.src = url;
+  }
+
+  // la petite photo en bas de la barre latérale
+  function side() { const a = document.querySelector(".sidebar .me .av"); if (!a) return;
+    if (P.avatar) { a.style.background = `#111 url(${P.avatar}) center/cover`; a.style.fontSize = "0"; } else { a.style.background = ""; a.style.fontSize = ""; }
+    a.style.borderColor = P.color; const b = document.querySelector(".sidebar .me b"); if (b) b.textContent = P.name || P.username; }
+
+  $("undo").onclick = () => { F = clone(pick(P)); draw(); };
+  $("save").onclick = async () => {
+    const bar = $("bar"); if (bar.classList.contains("busy")) return; bar.classList.add("busy");
+    try { const c = await api("/api/profile", { method: "PUT", body: { name: F.name.trim(), bio: F.bio.trim(), color: F.color, models: F.models, pay: F.pay } });
+      Object.assign(P, c); P.mine = [...F.models]; P.pay = { ...F.pay }; F = clone(pick(P));
+      bar.classList.add("done"); $("barT").textContent = "Enregistré"; side();
+      setTimeout(() => { bar.classList.remove("on", "done"); $("barT").textContent = "Non enregistré"; }, 1100);
+      notify("Profil enregistré", "", "ok");
+    } catch (e) { const pe = /portefeuille|IBAN|PayPal/.test(e.message); if (pe && $("payErr")) $("payErr").textContent = e.message; notify("Pas enregistré", e.message, "err"); }
+    bar.classList.remove("busy");
+  };
+  addEventListener("beforeunload", e => { if (F && P && dirty()) { e.preventDefault(); e.returnValue = ""; } });
+
+  (async () => {
+    try { ME = await api("/api/me"); } catch (e) { return; }
+    if (ME.role === "trainee") return go("/home");
+    renderShell("profil", ME);
+    try { P = await api("/api/profile"); } catch (e) { root.innerHTML = `<div class="ld">${esc(e.message)}</div>`; return; }
+    F = clone(pick(P)); draw();
+    // le shift se met à jour sans recharger la page
+    setInterval(async () => { if (document.hidden) return; try { const c = await api(`/api/users/${P.id}/card`); P.shift = c.shift; P.sales = c.sales; P.wins = c.wins; preview(); } catch (e) {} }, 60000);
+  })();
+})();
+</script>
+</body>

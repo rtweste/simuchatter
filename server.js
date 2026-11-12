@@ -258,6 +258,9 @@ app.post("/api/logout", (req, res) => {
 if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "intro_seen")) db.exec("ALTER TABLE users ADD COLUMN intro_seen INTEGER NOT NULL DEFAULT 0");
 if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "mgr_intro_seen")) db.exec("ALTER TABLE users ADD COLUMN mgr_intro_seen INTEGER NOT NULL DEFAULT 0");
 if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "simu_intro_seen")) db.exec("ALTER TABLE users ADD COLUMN simu_intro_seen INTEGER NOT NULL DEFAULT 0");
+// nom affiché, couleur et photo de profil (pour le menu)
+function profBits(uid) { try { const u = db.prepare("SELECT display_name, color FROM users WHERE id = ?").get(uid) || {}, a = db.prepare("SELECT updated_at FROM user_avatars WHERE user_id = ?").get(uid);
+  return { name: u.display_name || null, color: u.color || null, avatar: a ? `/api/avatar/${uid}?v=${a.updated_at}` : null }; } catch (e) { return {}; } }
 app.get("/api/me", auth, (req, res) => {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const used = db.prepare("SELECT COUNT(*) n FROM sims WHERE user_id = ? AND started_at >= ?").get(req.user.id, today.getTime()).n;
@@ -268,7 +271,7 @@ app.get("/api/me", auth, (req, res) => {
   const tl = req.user.team_lead ? db.prepare("SELECT id, username FROM users WHERE id = ? AND active = 1 AND grade = 'tl'").get(req.user.team_lead) : null;
   const ob = db.prepare("SELECT onboarded_at FROM users WHERE id = ?").get(req.user.id);
   res.json({ id: req.user.id, username: req.user.username, role: req.user.role, grade: req.user.grade || null, rk: req.user.rk, roleLabel: PERM.LABEL[req.user.rk], onboarded: !!(ob && ob.onboarded_at),
-    teamLead: tl ? { id: tl.id, username: tl.username } : null, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro, simuIntroSeen: iu.simu_intro_seen ? 1 : 0, mgrIntroSeen: iu.mgr_intro_seen ? 1 : 0, deadline });
+    teamLead: tl ? { id: tl.id, username: tl.username } : null, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro, ...profBits(req.user.id), simuIntroSeen: iu.simu_intro_seen ? 1 : 0, mgrIntroSeen: iu.mgr_intro_seen ? 1 : 0, deadline });
 });
 // nouvelle version de la vidéo : les élèves déjà inscrits la regardent une fois (une seule réinitialisation)
 setTimeout(() => { try { const k = db.prepare("SELECT value FROM settings WHERE key = 'intro_version'").get();
@@ -497,7 +500,8 @@ CAND_CTX.referrals = require("./referrals")(app, db, auth, admin, { compta: COMP
 const ALERTS = require("./alerts")(app, db, auth, admin, { planning: PLAN, gest: GEST });
 require("./roles")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, gest: GEST, perms: PERM, alerts: ALERTS, PERSONAS });   // rôles, équipes des Team Leaders, réglages du Fondateur
 require("./purge")(app, db, auth, admin, { gest: GEST });
-require("./notify")(app, db, auth, admin, { bcrypt, PROD, gest: GEST, planning: PLAN });   // notifications sur le téléphone, invitations, premier lancement
+require("./notify")(app, db, auth, admin, { bcrypt, PROD, gest: GEST, planning: PLAN });
+require("./profile")(app, db, auth, { bcrypt, PERM });   // Mon profil, Paramètres, carte de profil dans le chat   // notifications sur le téléphone, invitations, premier lancement
 require("./announce")(app, db, auth, admin, { gest: GEST });   // annonces importantes / urgentes : bandeau, écran bloquant, suivi de lecture   // comptes désactivés depuis 24 h : supprimés (historique gardé)   // alertes du shift en cours (cloche manager, salle de contrôle)
 /* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */
 LIVE = require("./simlive")(app, db, auth, admin, { loadSim, publicSim, PERSONAS, busy });

@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#0a0a0a">
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/chat.css">
+<link rel="stylesheet" href="/pcard.css">
 </head>
 <body>
 <div class="shell">
@@ -24,6 +25,7 @@
 <div class="ct-scrim" id="scrim"></div><div class="ct-sh" id="sheet" role="dialog" aria-modal="true"></div>
 <canvas class="ct-fx" id="fx"></canvas>
 <script src="/common.js"></script>
+<script src="/pcard.js"></script>
 <script>
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches, MOB = () => innerWidth < 900;
 let B = null, CUR = null, MSGS = [], TH = null, THM = [], USERS = {}, PINS = [], NEWAT = 0, TYP = {}, SEEN = 0, LOADING = false;
@@ -133,8 +135,8 @@ function msgHTML(m, prev, inThread) {
   if (m.kind === "system") return `<div class="ct-sys" data-id="${m.id}">${fmt(m.body).replace(/\*\*/g, "")}</div>`;
   const cont = prev && prev.user_id === m.user_id && m.kind === "text" && prev.kind === "text" && m.created_at - prev.created_at < 5 * 60e3 && !m.reply && !prev.deleted && !m.meta?.level;
   const mine = m.user_id === B.me.id, ment = (m.meta?.mentions || []).includes(B.me.id), name = m.user_id ? m.username : "StellADS";
-  return `<div class="ct-m ${cont ? "cont" : ""} ${mine ? "mine" : ""} ${ment ? "ment" : ""}" data-id="${m.id}"><div class="gut" data-t="${tm(m.created_at)}">${m.user_id ? av(name, USERS[m.user_id]?.status) : `<span class="ct-av" style="background:linear-gradient(135deg,#5fd3a2,#7dd3fc)">✦</span>`}</div>
-    <div style="min-width:0"><div class="who"><b>${esc(name)}</b>${m.role === "admin" ? `<span class="rl">MANAGER</span>` : ""}${m.meta?.level === "urgent" ? `<span class="rl lv-u">URGENTE</span>` : m.meta?.level === "important" ? `<span class="rl lv-i">IMPORTANTE</span>` : ""}<small>${tm(m.created_at)}</small>${m.pinned ? `<small>📌</small>` : ""}${m.hidden ? `<small style="color:#ff8a8a">masqué</small>` : ""}</div>
+  return `<div class="ct-m ${cont ? "cont" : ""} ${mine ? "mine" : ""} ${ment ? "ment" : ""}" data-id="${m.id}"><div class="gut" data-t="${tm(m.created_at)}"${m.user_id ? ` data-uid="${m.user_id}"` : ""}>${m.user_id ? av(name, USERS[m.user_id]?.status) : `<span class="ct-av" style="background:linear-gradient(135deg,#5fd3a2,#7dd3fc)">✦</span>`}</div>
+    <div style="min-width:0"><div class="who"><b${m.user_id ? ` data-uid="${m.user_id}" class="pc-n"` : ""}>${esc(name)}</b>${m.role === "admin" ? `<span class="rl">MANAGER</span>` : ""}${m.meta?.level === "urgent" ? `<span class="rl lv-u">URGENTE</span>` : m.meta?.level === "important" ? `<span class="rl lv-i">IMPORTANTE</span>` : ""}<small>${tm(m.created_at)}</small>${m.pinned ? `<small>📌</small>` : ""}${m.hidden ? `<small style="color:#ff8a8a">masqué</small>` : ""}</div>
       ${m.reply ? `<div class="ct-rq" data-jump="${m.reply.id}"><b>${esc(m.reply.username || "")}</b><span>${esc(m.reply.body)}</span></div>` : ""}
       ${body(m)}${reacts(m)}${!inThread && m.thread ? `<button class="ct-thl" data-th="${m.id}"><span class="ct-stk">${m.thread.users.map(u => av(USERS[u]?.username || "?")).join("")}</span>${m.thread.n} réponse${m.thread.n > 1 ? "s" : ""}<small>· ${tm(m.thread.last)}</small></button>` : ""}</div>
     ${m.deleted ? "" : actions(m, inThread)}</div>`;
@@ -189,6 +191,9 @@ function bindMsgs(root, inThread) {
     el.addEventListener("touchend", () => clearTimeout(t)); el.addEventListener("touchmove", () => clearTimeout(t), { passive: true }); });
   root.querySelectorAll(".ct-sale [data-cnt]").forEach(countUp);
 }
+// toucher un nom ou une photo ouvre sa carte de profil (shift en cours, créatrices…)
+document.addEventListener("click", e => { const t = e.target.closest(".ct-m [data-uid]"); if (!t || !window.PCARD) return; e.stopPropagation();
+  PCARD.open(+t.dataset.uid, t, { self: +t.dataset.uid === B.me.id, dm: async c => { try { const r = await api("/api/chat/dm", { body: { user_id: c.id } }); await refreshBoot(); openCh(r.id); } catch (x) { notify("Message privé", x.message, "err"); } } }); }, true);
 document.addEventListener("click", e => { if (!e.target.closest(".ct-m")) document.querySelectorAll(".ct-m.act-on").forEach(x => x.classList.remove("act-on")); });
 function countUp(el) { if (el.dataset.done || reduce) return; el.dataset.done = 1; const to = +el.dataset.cnt, s = performance.now(); (function f(t) { const p = Math.min(1, (t - s) / 1100); el.textContent = eur(Math.round(to * (1 - Math.pow(1 - p, 3)) * 100) / 100); if (p < 1) requestAnimationFrame(f); else el.textContent = eur(to); })(s); }
 

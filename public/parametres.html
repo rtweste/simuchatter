@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Paramètres — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/profil.css">
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area">
+<div class="wrap pf" id="root" style="max-width:860px"><div class="ld">Chargement…</div></div>
+</main>
+</div>
+<script src="/common.js"></script>
+<script>
+(() => {
+  const root = $("root");
+  const SV = (d, s = 18, w = 1.9) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const IC = { bell: "M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0", phone: "M7 2h10a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM11 18h2",
+    desk: "M3 4h18v12H3zM8 20h8M12 16v4", info: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v5M12 8h.01", back: "M15 18l-6-6 6-6" };
+  let ME = null, INFO = null, DEV = [], MYEP = null, ST = "off";
+  const when = ms => { if (!ms) return "jamais"; const d = Math.round((Date.now() - ms) / 864e5); return d < 1 ? "aujourd'hui" : d < 2 ? "hier" : d < 30 ? `il y a ${d} jours` : new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }); };
+
+  async function load() {
+    await new Promise(r => loadPush(r));
+    try { INFO = await api("/api/push/key"); } catch (e) { INFO = null; }
+    try { DEV = await api("/api/push/devices"); } catch (e) { DEV = []; }
+    try { ST = await PUSH.state(); const r = await navigator.serviceWorker?.getRegistration(), s = r && await r.pushManager.getSubscription(); MYEP = s ? s.endpoint : null; } catch (e) { MYEP = null; }
+    draw();
+  }
+
+  function draw() {
+    const D = PUSH.env().desk, on = ST === "on", here = D ? "cet ordinateur" : "ce téléphone";
+    const top = ST === "ios-install" ? PUSH.iosSteps() : ST === "unsupported" ? `<div class="pf-empty">Ce navigateur ne gère pas les notifications. ${D ? "Utilise Chrome, Edge, Firefox ou Safari à jour." : "Utilise Chrome ou l'appli installée."}</div>`
+      : ST === "denied" ? `<div class="pf-empty" style="border-color:rgba(255,138,122,.35);color:#ffb3a8">${PUSH.blocked()}</div>`
+      : `<div class="pf-tg"><span><b style="display:block">${on ? "Activées sur " + here : "Désactivées sur " + here}</b><small style="color:#8f8f8f;font-weight:600">${on ? "Tu reçois les alertes même quand StellADS est fermé" : "Active-les pour être prévenu même quand StellADS est fermé"}</small></span><button type="button" class="pf-sw2${on ? " on" : ""}" id="here" role="switch" aria-checked="${on}" aria-label="Notifications sur ${here}"></button></div>`;
+    const kinds = INFO ? `<span class="pf-lab" style="margin-top:6px">CE QUE JE REÇOIS</span><div>${Object.entries(INFO.kinds).map(([k, l]) => `<div class="pf-tg"><span>${esc(l)}</span><button type="button" class="pf-sw2${INFO.prefs[k] ? " on" : ""}" role="switch" aria-checked="${!!INFO.prefs[k]}" aria-label="${esc(l)}" data-k="${k}"></button></div>`).join("")}</div>` : "";
+    const devs = DEV.length ? DEV.map(d => { const me = MYEP && d.endpoint === MYEP;
+      return `<div class="pf-dv" data-d="${d.id}"><span class="ic2">${SV(d.phone ? IC.phone : IC.desk, 22)}</span><div class="mid"><b>${esc(d.os)}${d.br ? " · " + esc(d.br) : ""}${d.app ? ` <small style="font-weight:800">· appli installée</small>` : ""}${me ? '<span class="pf-me">CET APPAREIL</span>' : ""}</b><small>Relié ${when(d.created_at)} · dernière notification reçue ${when(d.last_ok)}</small></div><button type="button" class="pf-b r rm" data-rm="${d.id}">Retirer</button></div>`; }).join("")
+      : `<div class="pf-empty">Aucun appareil relié pour l'instant. Active les notifications ci-dessus et ${here} apparaîtra ici.</div>`;
+    root.innerHTML = `<div class="pf-hd"><div><div class="eb">MON COMPTE</div><h1><em>Paramètres</em></h1></div><a class="pf-b" href="/profil" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none">${SV(IC.back, 16, 2.2)}Mon profil</a></div>
+      <section class="pf-sec"><div class="pf-sh"><span class="ic">${SV(IC.bell)}</span><div><h3>Notifications</h3><small>Choisis ce qui te prévient sur ton téléphone ou ton ordinateur</small></div></div>
+        ${top}${kinds}
+        ${on ? `<div class="pf-row"><button type="button" class="pf-b" id="test">Envoyer une notification test</button></div>` : ""}
+      </section>
+      <section class="pf-sec"><div class="pf-sh"><span class="ic">${SV(IC.phone)}</span><div><h3>Appareils reliés</h3><small>${DEV.length} appareil${DEV.length > 1 ? "s" : ""} reçoi${DEV.length > 1 ? "vent" : "t"} tes notifications</small></div></div>
+        <div class="pf-expl"><span class="ic">${SV(IC.info)}</span><span>Chaque téléphone ou ordinateur où tu as activé les notifications apparaît ici. C'est là que tes alertes arrivent : messages privés, rappels de shift, renforts… <b>Si tu as changé de téléphone ou utilisé un ordinateur qui n'est pas le tien, retire-le</b> pour qu'il ne reçoive plus rien.</span></div>
+        <div>${devs}</div>
+      </section>`;
+    bind();
+  }
+
+  function bind() {
+    const h = $("here"); if (h) h.onclick = async () => { h.disabled = true;
+      try { if (ST === "on") { await PUSH.disable(); notify("Notifications désactivées", "sur cet appareil", "ok"); } else { await PUSH.enable(); notify("Notifications activées ✨", "", "ok"); } } catch (e) { notify("Notifications", e.message, "err"); }
+      await load(); };
+    root.querySelectorAll("[data-k]").forEach(b => b.onclick = async () => { const on = !b.classList.contains("on"); b.classList.toggle("on", on); b.setAttribute("aria-checked", on); INFO.prefs[b.dataset.k] = on;
+      try { await api("/api/push/prefs", { method: "PUT", body: INFO.prefs }); } catch (e) { b.classList.toggle("on", !on); INFO.prefs[b.dataset.k] = !on; notify("Pas enregistré", e.message, "err"); } });
+    const t = $("test"); if (t) t.onclick = async () => { t.disabled = true; try { await api("/api/push/test", { body: {} }); notify("Test envoyé", "Il arrive dans quelques secondes", "ok"); } catch (e) { notify("Test", e.message, "err"); } t.disabled = false; };
+    root.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => { const id = +b.dataset.rm, d = DEV.find(x => x.id === id), mine = MYEP && d && d.endpoint === MYEP; b.disabled = true;
+      try { if (mine) await PUSH.disable(); await api(`/api/push/devices/${id}`, { method: "DELETE" });
+        const row = root.querySelector(`[data-d="${id}"]`); row.classList.add("gone"); notify("Appareil retiré", "Il ne recevra plus tes notifications", "ok");
+        setTimeout(load, 450); } catch (e) { b.disabled = false; notify("Erreur", e.message, "err"); } });
+  }
+
+  (async () => {
+    try { ME = await api("/api/me"); } catch (e) { return; }
+    if (ME.role === "trainee") return go("/home");
+    renderShell("parametres", ME);
+    if (ME.color) root.style.setProperty("--ac", ME.color);
+    load();
+  })();
+})();
+</script>
+</body>

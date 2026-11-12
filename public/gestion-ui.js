@@ -114,6 +114,13 @@ async function fiche(id) {
       <div class="nchips"><button class="on">Remarque</button><button>Point fort</button><button>À travailler</button></div><div class="nin"><input placeholder="Ajouter une note sur ${esc(c.username)}…" maxlength="600"><button class="sb w" data-a="note" style="height:40px">Ajouter</button></div></div>`, () => { if (dirtyTeam) { dirtyTeam = false; loadTeam(true); } });
   let dirtyTeam = false;
   const pw = dr.querySelector(".pw"); tlLoad(c);
+  // où recevoir sa paie (rempli par le chatter dans Mon profil) : visible par le fondateur seulement
+  api(`/api/admin/users/${c.id}/pay`).then(p => { const ns = dr.querySelector("[data-notes]")?.closest(".sec"); if (!ns) return;
+    const row = (l, val) => `<div class="ln"><span>${l}</span></div><div class="pw" style="display:flex"><code style="word-break:break-all">${esc(val)}</code><button class="sb" data-paycp>Copier</button></div>`;
+    const v = p.method === "crypto" && p.address ? row("Crypto · " + esc(p.network || ""), p.address) : p.method === "iban" && p.iban ? row("Virement", p.iban) : p.method === "paypal" && p.paypal ? row("PayPal", p.paypal) : "";
+    const sec = document.createElement("div"); sec.className = "sec"; sec.innerHTML = `<span class="lab">RECEVOIR SA PAIE · VISIBLE PAR TOI SEULEMENT</span>${v || '<div class="mut">Pas encore renseigné dans son profil.</div>'}`;
+    ns.before(sec); const cp = sec.querySelector("[data-paycp]"); if (cp) cp.onclick = () => { navigator.clipboard?.writeText(sec.querySelector("code").textContent).then(() => { cp.textContent = "Copié"; setTimeout(() => cp.textContent = "Copier", 1400); }).catch(() => {}); };
+  }).catch(() => {});
   dr.querySelectorAll(".nchips button").forEach(b => b.onclick = () => dr.querySelectorAll(".nchips button").forEach(x => x.classList.toggle("on", x === b)));
   dr.querySelectorAll("[data-crea] button").forEach(b => b.onclick = async () => { b.classList.toggle("on"); S.tick();
     try { await api(`/api/admin/team/${c.id}/creators`, { method: "PUT", body: { models: [...dr.querySelectorAll("[data-crea] button.on")].map(x => +x.dataset.m) } }); dirtyTeam = true; } catch (e) { fail(e); } });

@@ -27,6 +27,8 @@ async function api(path, opts = {}) {
    Pour ajouter une rubrique : ajoutez une ligne ici et créez la page correspondante.
    roles : qui la voit ("admin", "chatter"). */
 const ICONS = {
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4.2 4-6.5 8-6.5s7.2 2.3 8 6.5"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
   home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
   chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/>',
   team: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/>',
@@ -76,7 +78,11 @@ const MODULES = [
   { id: "admin", label: "Gestion", href: "/admin", icon: "team", section: "Manager", roles: ["admin"],
     desc: "Équipe, créatrices et résultats des simulations." },
   { id: "fondateur", label: "Réglages fondateur", short: "Fondateur", href: "/fondateur", icon: "crown", section: "Fondateur", roles: ["admin"], only: ["founder"], nodock: ["admin"],
-    desc: "Paliers de commission, part des créatrices, clôture des quinzaines et managers." }
+    desc: "Paliers de commission, part des créatrices, clôture des quinzaines et managers." },
+  { id: "profil", label: "Mon profil", short: "Profil", href: "/profil", icon: "user", section: "Mon compte", roles: ["admin", "chatter"], nodock: ["admin", "chatter"],
+    desc: "Ta photo, ton nom affiché, tes créatrices et où recevoir ta paie." },
+  { id: "parametres", label: "Paramètres", href: "/parametres", icon: "gear", section: "Mon compte", roles: ["admin", "chatter"], nodock: ["admin", "chatter"],
+    desc: "Tes notifications et les appareils reliés." }
 ];
 // rubriques visibles selon le rôle fin (Fondateur, Manager, Assistante, Team Leader…)
 const RKOF = me => me.rk || (me.role === "admin" ? "manager" : me.role);
@@ -153,7 +159,7 @@ function renderShell(active, me) {
     if (m.section && m.section !== sec) { sec = m.section; html += `<div class="sec">${esc(sec)}</div>`; }
     html += `<a href="${m.href}" style="--i:${i}" data-tip="${esc(m.label)}" class="${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""}>${icon(m.icon)}<span class="lb">${chars(m.label)}</span><span class="sr">${esc(m.label)}</span>${badge(m) ? `<em class="navbadge hidden" data-badge="${m.id}"></em>` : ""}</a>`;
   });
-  html += `<span class="nv-line" aria-hidden="true"></span></nav><div class="me"><span class="av">${esc(me.username[0])}</span><div><b>${esc(me.username)}</b><small>${esc(me.roleLabel || (me.role === "admin" ? "Manager" : me.role === "trainee" ? "En formation" : "Chatter"))}</small></div>
+  html += `<span class="nv-line" aria-hidden="true"></span></nav><div class="me">${me.role === "trainee" ? `<span class="av">${esc(me.username[0])}</span>` : `<a class="av" href="/profil" title="Mon profil" aria-label="Mon profil" style="text-decoration:none;color:inherit;${me.avatar ? `background:#111 url(${me.avatar}) center/cover;font-size:0;` : me.color ? `border-color:${me.color};` : ""}">${esc((me.name || me.username)[0])}</a>`}<div><b>${esc(me.name || me.username)}</b><small>${esc(me.roleLabel || (me.role === "admin" ? "Manager" : me.role === "trainee" ? "En formation" : "Chatter"))}</small></div>
     ${me.role !== "admin" && INTRO_ON ? `<button onclick="INTRO.show(ME_SHELL,{replay:true})" title="Revoir la présentation" aria-label="Revoir la présentation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg></button>` : ""}${me.role === "trainee" ? "" : `<button onclick="openPush()" title="${IS_DESK ? "Notifications" : "Notifications sur le téléphone"}" aria-label="${IS_DESK ? "Notifications" : "Notifications sur le téléphone"}" ${me.role !== "admin" && INTRO_ON ? 'style="margin-left:0"' : ""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IS_DESK ? '<path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0"/>' : '<rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M10.5 18.5h3"/><circle cx="17.5" cy="5.5" r="3" fill="currentColor" stroke="none" opacity=".9"/>'}</svg></button>`}<button onclick="logout()" title="Déconnexion" aria-label="Déconnexion" style="margin-left:0">${icon("logout")}</button></div>`;
   el.innerHTML = html;
   if (me.role === "admin") loadAlerts("mountBell");   // cloche des alertes du shift
