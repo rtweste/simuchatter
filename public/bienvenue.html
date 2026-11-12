@@ -158,7 +158,7 @@ h1 em{font-style:italic;background:linear-gradient(100deg,#fff,#9be8c6 45%,#ffd2
       el.querySelector("[data-go]").onclick = go; p2.onkeydown = e => { if (e.key === "Enter") go(); }; } });
   /* ---------- 1 bis. session d'entretien : créer son compte formation ---------- */
   const STEP_JOIN = { html: () => `<div><div class="eb">TA FORMATION STELLADS</div><h1>Crée ton <em>compte.</em></h1></div>
-      <p class="sub">Indique ton prénom et choisis un mot de passe. Ton identifiant de connexion s'affichera juste après : note-le bien.</p>
+      <p class="sub">Indique ton prénom et choisis un mot de passe. Ton identifiant de connexion s'affichera juste après : note-le bien, puis tu commences ta formation.</p>
       <div class="card"><div class="fld"><label for="fn">PRÉNOM</label><div class="inp"><input id="fn" autocomplete="given-name" maxlength="40" placeholder="Ton prénom" style="padding-right:16px"></div></div>
         <div class="fld" style="margin-top:12px"><label for="p1">MOT DE PASSE</label><div class="inp"><input id="p1" type="password" autocomplete="new-password" placeholder="8 caractères minimum"><button type="button" aria-label="Afficher le mot de passe" data-eye>${SV(P.eye)}</button></div>
         <div class="meter" id="mt"><i></i><i></i><i></i><i></i></div></div>
@@ -174,7 +174,7 @@ h1 em{font-style:italic;background:linear-gradient(100deg,#fff,#9be8c6 45%,#ffd2
       el.querySelector("[data-go]").onclick = go; p2.onkeydown = e => { if (e.key === "Enter") go(); }; } };
   // l'identifiant à retenir, mis en avant avant la suite
   const idCard = u => `<div class="fin"><span class="av" style="width:84px;height:84px;font-size:34px;border-radius:26px">${esc(u[0].toUpperCase())}</span><div class="eb">COMPTE CRÉÉ</div><h1>Ton identifiant : <em>${esc(u)}</em></h1>
-      <p class="sub">Tu te connecteras avec <b>${esc(u)}</b> et ton mot de passe. Fais une capture d'écran si besoin.</p><button class="go" onclick="this.disabled=true;window._jboot()">J'ai noté, on continue</button></div>`;
+      <p class="sub">Tu te connecteras avec <b>${esc(u)}</b> et ton mot de passe. Fais une capture d'écran si besoin.</p><button class="go" onclick="this.disabled=true;window._jboot()">J'ai noté, je commence ma formation</button></div>`;
   window._jboot = () => boot(true);
 
   /* ---------- 2. créatrices ---------- */
@@ -239,6 +239,8 @@ h1 em{font-style:italic;background:linear-gradient(100deg,#fff,#9be8c6 45%,#ffd2
   async function boot(afterPw) {
     try { ME = await api("/api/me", { noRedirect: true }); } catch (e) { ME = null; }
     if (!ME) { if (!T && !JT) { location.href = "/"; return; } return; }
+    // élèves en formation : pas d'appli ni de notifications, direction la formation
+    if (ME.role === "trainee") { await api("/api/onboarding/done", { body: {} }).catch(() => {}); location.href = "/home"; return; }
     OB = await api("/api/onboarding").catch(() => ({ models: [], mine: [] }));
     pick = new Set(OB.mine || []);
     if (ME.role === "chatter") { try { const c = await api("/api/creators"); CR = c.creators.map(x => ({ id: x.id, name: x.name, photo: x.photos[0] || null, fo: (x.focus[0] || [50, 35]).map(v => v + "%").join(" ") })); } catch (e) { CR = (OB.models || []).map(m => ({ id: m.id, name: m.name })); } }
