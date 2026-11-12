@@ -828,11 +828,15 @@ async function act(path, body, before) {
     typing(false);
     await showTurn(turn);
     refreshRt();
-  } catch (e) { typing(false); sys("⚠️ " + e.message); }
+  } catch (e) { typing(false); sys("⚠️ " + e.message); if (path !== "retry" && /pas pu répondre/.test(e.message)) retryBtn(); }
   setBusy(false);
   if (!SIM.left) $("input").focus();
 }
 
+// bouton pour relancer le fan sans renvoyer son message
+function retryBtn() { document.querySelectorAll(".cq-retry").forEach(b => b.remove()); const b = document.createElement("button"); b.className = "cq-retry"; b.textContent = "Relancer le fan";
+  b.style.cssText = "align-self:center;margin:6px auto;height:40px;padding:0 18px;border-radius:12px;border:1px solid #2a2a2a;background:#161616;color:#fff;font:inherit;font-weight:800;font-size:13px;cursor:pointer;display:block";
+  b.onclick = () => { b.remove(); act("retry", {}); }; $("msgs").appendChild(b); b.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
 function send() {
   const text = $("input").value.trim(); if (!text || busy) return;
   FX.unlock();

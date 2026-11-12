@@ -95,6 +95,12 @@ const DIFF = {
 };
 
 /* ---------- Tour du fan ---------- */
+const FAN_TOOL = { name: "reponse_fan", description: "Enregistre la prochaine réponse du fan.",
+  input_schema: { type: "object", required: ["replies", "interest", "left"], properties: {
+    replies: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 3, description: "1 à 3 messages très courts du fan" },
+    interest: { type: "integer", minimum: 0, maximum: 100 },
+    ppv_decision: { type: ["string", "null"], enum: ["buy", "refuse", "negotiate", null], description: "seulement si un PPV est en attente, sinon null" },
+    left: { type: "boolean" } } } };
 async function fanTurn(sim, persona) {
   const pending = sim.pending_ppv
     ? `\nUN PPV EST EN ATTENTE DE TA DÉCISION : "${sim.pending_ppv.desc}" à ${sim.pending_ppv.price} €. Décide maintenant (buy / refuse / negotiate) selon ton intérêt, ton budget restant, ton profil et la cohérence prix/valeur.`
@@ -137,7 +143,23 @@ ${transcript(sim.log) || "(aucun message — tu ouvres la conversation)"}
       left: false
     };
   }
-  return askJSON(prompt, MODEL_FAN, 600, { sim: sim.id, user: sim.user_id, kind: "fan" });
+  // réponse imposée par un outil : toujours un objet valide (plus d'erreur « réponse illisible » en pleine conversation)
+  const tag = { sim: sim.id, user: sim.user_id, kind: "fan" };
+  const ok = r => r && Array.isArray(r.replies) && r.replies.some(x => typeof x === "string" && x.trim());
+  for (let k = 0; k < 2; k++) {
+    try {
+      const res = await ask(prompt.replace("RÉPONDS UNIQUEMENT EN JSON :", "Réponds avec l'outil « reponse_fan », en suivant cette structure :"), MODEL_FAN, 900, tag,
+        { tools: [FAN_TOOL], tool_choice: { type: "tool", name: "reponse_fan" } });
+      const tu = res.content.find(c => c.type === "tool_use");
+      if (ok(tu && tu.input)) return tu.input;
+      console.error("Réponse du fan incomplète, nouvel essai :", res.stop_reason);
+    } catch (e) { if (e.status && e.status !== 400) throw e; console.error("Réponse du fan par outil échouée :", e.message); }
+  }
+  // dernier recours : texte libre, on en tire au moins un message
+  const text = await ask(prompt, MODEL_FAN, 900, tag);
+  try { const r = extractJSON(text); if (ok(r)) return r; } catch (e) {}
+  const lines = String(text || "").replace(/```[a-z]*|```/g, "").split(/\n+/).map(x => x.trim()).filter(x => x && !/^[{}\[\]"]/.test(x)).slice(0, 2);
+  return { replies: lines.length ? lines : ["?"], interest: sim.interest, ppv_decision: null, left: false };
 }
 
 /* ---------- Conseil du coach ---------- */

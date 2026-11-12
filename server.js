@@ -117,7 +117,7 @@ function publicSim(s) {
 
 // Verrou : une requête IA à la fois par simulation
 const busy = new Set();
-async function withLock(id, res, fn) {
+async function withLock(id, res, fn, what) {
   if (busy.has(id)) return res.status(429).json({ error: "Patientez, le fan est en train de répondre." });
   busy.add(id);
   try { await fn(); }
@@ -129,6 +129,7 @@ async function withLock(id, res, fn) {
     if (m.includes("credit") || m.includes("billing") || m.includes("balance")) msg = "Crédit de l'API Anthropic épuisé : rechargez le compte sur console.anthropic.com.";
     else if (st === 401 || st === 403) msg = "Clé d'API refusée : vérifiez ANTHROPIC_API_KEY dans Railway.";
     else if (st === 429 || st === 529 || st >= 500) msg = "L'IA est surchargée en ce moment. Réessayez dans une minute.";
+    else if (what === "fan") msg = "Le fan n'a pas pu répondre. Touche « Relancer le fan » pour réessayer.";
     else if (m.includes("json")) msg = "Réponse de l'IA illisible. Cliquez à nouveau sur Évaluer.";
     res.status(502).json({ error: msg });
   } finally { busy.delete(id); }
@@ -335,7 +336,7 @@ app.post("/api/sims/:id/message", auth, async (req, res) => {
     sim.log.push({ who: "chatter", text, at: Date.now() });
     saveSim(sim);
     res.json(await playFan(sim));
-  });
+  }, "fan");
 });
 
 app.post("/api/sims/:id/ppv", auth, async (req, res) => {
@@ -357,7 +358,14 @@ app.post("/api/sims/:id/ppv", auth, async (req, res) => {
     saveSim(sim);
     const turn = await playFan(sim);
     res.json({ ...turn, ppvId: ppv.id });
-  });
+  }, "fan");
+});
+
+app.post("/api/sims/:id/retry", auth, async (req, res) => {
+  const sim = ownSim(req, res); if (!sim || !canAct(sim, res)) return;
+  const last = sim.log[sim.log.length - 1];
+  if (!last || last.who === "fan") return res.status(400).json({ error: "Le fan a déjà répondu." });
+  await withLock(sim.id, res, async () => res.json(await playFan(sim)), "fan");
 });
 
 app.post("/api/sims/:id/hint", auth, async (req, res) => {
