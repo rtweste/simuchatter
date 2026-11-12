@@ -1,9 +1,10 @@
-// Notifications sur le téléphone : activer / désactiver sur cet appareil, choisir quoi recevoir, tester
+// Notifications (téléphone ou ordinateur) : activer / désactiver sur cet appareil, choisir quoi recevoir, tester
 window.PUSH = (() => {
   const env = () => { const ua = navigator.userAgent || "";
     const ios = /iP(hone|ad|od)/.test(ua) || (ua.includes("Mac") && "ontouchend" in document);
     const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-    return { ios, android: /Android/i.test(ua), standalone, supported: "serviceWorker" in navigator && "PushManager" in window && "Notification" in window }; };
+    const android = /Android/i.test(ua);
+    return { ios, android, desk: !ios && !android && !/Mobi|Tablet/i.test(ua), standalone, supported: "serviceWorker" in navigator && "PushManager" in window && "Notification" in window }; };
   let KEY = null, INFO = null;
   const b64 = s => { const p = "=".repeat((4 - s.length % 4) % 4), r = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from([...r].map(c => c.charCodeAt(0))); };
   async function info(force) { if (!INFO || force) { INFO = await api("/api/push/key"); KEY = INFO.key; } return INFO; }
@@ -17,7 +18,7 @@ window.PUSH = (() => {
   async function enable() {
     const e = env(); if (!e.supported) throw new Error(e.ios ? "Ajoute d'abord StellADS à ton écran d'accueil" : "Ce navigateur ne gère pas les notifications");
     await info(); if (!KEY) throw new Error("Les notifications ne sont pas encore disponibles sur le site");
-    const p = await Notification.requestPermission(); if (p !== "granted") throw new Error(p === "denied" ? "Notifications bloquées : autorise-les dans les réglages du téléphone" : "Notifications pas autorisées");
+    const p = await Notification.requestPermission(); if (p !== "granted") throw new Error(p === "denied" ? (e.desk ? "Notifications bloquées : clique sur le cadenas à gauche de l'adresse pour les autoriser" : "Notifications bloquées : autorise-les dans les réglages du téléphone") : "Notifications pas autorisées");
     const r = await reg(); let s = await r.pushManager.getSubscription();
     if (!s) s = await r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(KEY) });
     await api("/api/push/sub", { body: { sub: s.toJSON(), standalone: e.standalone } }); return true;
@@ -32,7 +33,7 @@ window.PUSH = (() => {
   function iosSteps() { return `<div class="ps-ios"><b>Sur iPhone, une étape avant :</b><ol><li><span class="ps-i">${SV(SHARE)}</span><span>Touche <b>Partager</b> en bas de Safari</span></li><li><span class="ps-i">${SV(PLUS)}</span><span>Choisis <b>Sur l'écran d'accueil</b></span></li><li><span class="ps-i">✦</span><span>Ouvre StellADS depuis l'icône, puis reviens ici</span></li></ol></div>`; }
   async function sheet() {
     document.querySelector(".ps-wrap")?.remove();
-    const w = document.createElement("div"); w.className = "ps-wrap"; w.innerHTML = `<div class="ps-scrim"></div><div class="ps" role="dialog" aria-modal="true" aria-label="Notifications"><div class="ps-h"><span class="ps-bell">${SV(BELL)}</span><div><b>Notifications</b><small>Sur ce téléphone ou cet ordinateur</small></div><button class="ps-x" aria-label="Fermer">✕</button></div><div class="ps-body"><div class="ps-ld">…</div></div></div>`;
+    const D = env().desk, w = document.createElement("div"); w.className = "ps-wrap"; w.innerHTML = `<div class="ps-scrim"></div><div class="ps" role="dialog" aria-modal="true" aria-label="Notifications"><div class="ps-h"><span class="ps-bell">${SV(BELL)}</span><div><b>Notifications</b><small>${D ? "Sur cet ordinateur" : "Sur ce téléphone"}</small></div><button class="ps-x" aria-label="Fermer">✕</button></div><div class="ps-body"><div class="ps-ld">…</div></div></div>`;
     document.body.appendChild(w); requestAnimationFrame(() => w.classList.add("on"));
     const close = () => { w.classList.remove("on"); setTimeout(() => w.remove(), 400); };
     w.querySelector(".ps-scrim").onclick = close; w.querySelector(".ps-x").onclick = close;
@@ -40,9 +41,9 @@ window.PUSH = (() => {
     const draw = async () => {
       let st = await state(), d = null; try { d = await info(true); } catch (e) {}
       const on = st === "on";
-      const top = st === "ios-install" ? iosSteps() : st === "unsupported" ? `<div class="ps-note">Ce navigateur ne gère pas les notifications. Utilise Chrome ou l'appli installée.</div>`
+      const top = st === "ios-install" ? iosSteps() : st === "unsupported" ? `<div class="ps-note">Ce navigateur ne gère pas les notifications. ${D ? "Utilise Chrome, Edge, Firefox ou Safari à jour." : "Utilise Chrome ou l'appli installée."}</div>`
         : st === "denied" ? `<div class="ps-note r">${blocked()}</div>`
-        : `<button class="ps-dev${on ? " on" : ""}" data-dev><span class="ps-pulse"></span><span class="ps-dt"><b>${on ? "Activées sur cet appareil" : "Désactivées sur cet appareil"}</b><small>${on ? "Tu reçois les alertes même site fermé" : "Touche pour les activer"}</small></span><span class="ps-tg"></span></button>`;
+        : `<button class="ps-dev${on ? " on" : ""}" data-dev><span class="ps-pulse"></span><span class="ps-dt"><b>${on ? "Activées sur cet " + (D ? "ordinateur" : "appareil") : "Désactivées sur cet " + (D ? "ordinateur" : "appareil")}</b><small>${on ? (D ? "Tu reçois les alertes même onglet fermé, tant que ton navigateur est ouvert" : "Tu reçois les alertes même site fermé") : D ? "Clique pour les activer" : "Touche pour les activer"}</small></span><span class="ps-tg"></span></button>`;
       body.innerHTML = top + (d ? `<div class="ps-lab">CE QUE JE REÇOIS</div><div class="ps-list">${Object.entries(d.kinds).map(([k, l]) => `<button class="ps-row${d.prefs[k] ? " on" : ""}" data-k="${k}"><span>${l}</span><span class="ps-tg"></span></button>`).join("")}</div>
         <div class="ps-ft"><span>${d.devices} appareil${d.devices > 1 ? "s" : ""} relié${d.devices > 1 ? "s" : ""}</span>${on ? '<button class="ps-test" data-test>Envoyer un test</button>' : ""}</div>` : "");
       body.querySelector("[data-dev]")?.addEventListener("click", async e => { const b = e.currentTarget; b.classList.add("busy");
@@ -64,8 +65,8 @@ window.PUSH = (() => {
   async function nudge(host) {
     try { if (!host || localStorage.getItem("stPushNo") > Date.now()) return; } catch (e) {}
     const st = await state(); if (st === "on" || st === "unsupported") return;
-    const c = document.createElement("div"); c.className = "ps-nudge";
-    c.innerHTML = `<span class="ps-bell">${SV(BELL)}</span><div><b>Active les notifications</b><small>${st === "ios-install" ? "Ajoute StellADS à ton écran d'accueil pour recevoir messages, annonces et rappels de shift" : st === "denied" ? "Elles sont bloquées : touche pour voir comment les autoriser" : "Messages privés, annonces, rappels de shift et renforts, même site fermé"}</small></div><button class="ps-go">Activer</button><button class="ps-no" aria-label="Plus tard">✕</button>`;
+    const D = env().desk, c = document.createElement("div"); c.className = "ps-nudge";
+    c.innerHTML = `<span class="ps-bell">${SV(BELL)}</span><div><b>Active les notifications${D ? " sur ton ordinateur" : ""}</b><small>${st === "ios-install" ? "Ajoute StellADS à ton écran d'accueil pour recevoir messages, annonces et rappels de shift" : st === "denied" ? `Elles sont bloquées : ${D ? "clique" : "touche"} pour voir comment les autoriser` : D ? "Messages privés, annonces, rappels de shift et renforts, même quand StellADS n'est pas ouvert" : "Messages privés, annonces, rappels de shift et renforts, même site fermé"}</small></div><button class="ps-go">Activer</button><button class="ps-no" aria-label="Plus tard">✕</button>`;
     host.parentNode.insertBefore(c, host);
     c.querySelector(".ps-go").onclick = () => sheet();
     c.querySelector(".ps-no").onclick = () => { try { localStorage.setItem("stPushNo", Date.now() + 3 * 864e5); } catch (e) {} c.remove(); };

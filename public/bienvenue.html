@@ -195,18 +195,19 @@ h1 em{font-style:italic;background:linear-gradient(100deg,#fff,#9be8c6 45%,#ffd2
       <button class="${e.standalone ? "go" : "skip"}" data-go>${e.standalone ? "Continuer" : "Je le ferai plus tard"}</button>`; },
     bind: el => { el.querySelector("[data-go]").onclick = next;
       const ib = el.querySelector("[data-install]"); if (ib) ib.onclick = async () => { if (!deferred) return; deferred.prompt(); const r = await deferred.userChoice; deferred = null; if (r.outcome === "accepted") { ib.outerHTML = '<div class="ok3" style="margin-top:14px"><i>✓</i>Installé : tu le trouveras sur ton écran d\'accueil</div>'; } }; } };
+  const INST = () => PUSH.env().desk ? [] : [STEP_INST];   // sur ordinateur : pas d'appli à installer
   /* ---------- 4. notifications ---------- */
   const STEP_NOT = { html: () => `<div><div class="eb">ÉTAPE · NOTIFICATIONS</div><h1>Ne rate <em>plus rien.</em></h1></div>
       <div class="bellw"><span class="ring"></span><span class="ring"></span><span class="ring"></span><span class="b">${SV(P.bell)}</span><span class="bd">3</span></div>
       <div class="nl"><div style="animation-delay:.1s"><span>💬</span>Messages privés et mentions</div><div style="animation-delay:.18s"><span>📣</span>Annonces importantes de l'équipe</div><div style="animation-delay:.26s"><span>⏰</span>Rappel avant ton shift</div><div style="animation-delay:.34s"><span>⚡</span>Demandes de renfort</div></div>
-      <div id="nst"></div><button class="go" data-go>Activer les notifications</button><button class="skip" data-skip>Plus tard</button>`,
+      <div id="nst"></div>${PUSH.env().desk ? '<p class="hint" style="margin:0">Sur ton téléphone aussi : ouvre stellads.fr, connecte-toi et active-les depuis le menu.</p>' : ""}<button class="go" data-go>Activer les notifications</button><button class="skip" data-skip>Plus tard</button>`,
     bind: async el => { const st = await PUSH.state(), b = el.querySelector("[data-go]"), box = el.querySelector("#nst");
       el.querySelector("[data-skip]").onclick = next;
-      if (st === "on") { box.innerHTML = '<div class="ok3"><i>✓</i>Déjà activées sur ce téléphone</div>'; b.textContent = "Continuer"; b.onclick = next; return; }
+      if (st === "on") { box.innerHTML = `<div class="ok3"><i>✓</i>Déjà activées sur ${PUSH.env().desk ? "cet ordinateur" : "ce téléphone"}</div>`; b.textContent = "Continuer"; b.onclick = next; return; }
       if (st === "ios-install") { box.innerHTML = `<div class="card">${PUSH.iosSteps()}</div>`; b.textContent = "Continuer"; b.onclick = next; return; }
       if (st === "denied") { box.innerHTML = `<div class="ps-note r">${PUSH.blocked()}</div>`; b.textContent = "Continuer"; b.onclick = next; return; }
       if (st === "unsupported") { box.innerHTML = '<div class="ps-note">Ce navigateur ne gère pas les notifications. Ouvre StellADS dans Chrome ou depuis l\'appli installée.</div>'; b.textContent = "Continuer"; b.onclick = next; return; }
-      b.onclick = async () => { b.disabled = true; b.textContent = "Autorise sur ton téléphone…";
+      b.onclick = async () => { b.disabled = true; b.textContent = PUSH.env().desk ? "Autorise dans la fenêtre du navigateur…" : "Autorise sur ton téléphone…";
         try { await PUSH.enable(); box.innerHTML = '<div class="ok3"><i>✓</i>C\'est activé : tu vas recevoir un test</div>'; api("/api/push/test", { body: {} }).catch(() => {}); b.disabled = false; b.textContent = "Continuer"; b.onclick = next; }
         catch (e) { b.disabled = false; b.textContent = "Réessayer"; box.innerHTML = `<div class="ps-note r">${esc(e.message)}</div>`; } }; } };
   /* ---------- 5. visite ---------- */
@@ -245,19 +246,19 @@ h1 em{font-style:italic;background:linear-gradient(100deg,#fff,#9be8c6 45%,#ffd2
     pick = new Set(OB.mine || []);
     if (ME.role === "chatter") { try { const c = await api("/api/creators"); CR = c.creators.map(x => ({ id: x.id, name: x.name, photo: x.photos[0] || null, fo: (x.focus[0] || [50, 35]).map(v => v + "%").join(" ") })); } catch (e) { CR = (OB.models || []).map(m => ({ id: m.id, name: m.name })); } }
     const first = T || JT;
-    STEPS = [...(first ? [{ html: () => "" }] : []), ...(ME.role === "chatter" && CR.length ? [STEP_CR] : []), STEP_INST, STEP_NOT, STEP_TOUR, STEP_END];
+    STEPS = [...(first ? [{ html: () => "" }] : []), ...(ME.role === "chatter" && CR.length ? [STEP_CR] : []), ...INST(), STEP_NOT, STEP_TOUR, STEP_END];
     show(first ? 1 : 0);
   }
   (async () => {
     if (JT) {
       try { await api("/api/join/" + encodeURIComponent(JT), { noRedirect: true }); }
       catch (e) { stage.innerHTML = `<div class="st on"><div class="eb">SESSION D'ENTRETIEN</div><h1>Oups, <em>ce lien ne marche plus.</em></h1><p class="sub">${esc(e.message)}</p><a class="go" href="/" style="display:flex;align-items:center;justify-content:center;text-decoration:none">Aller à la connexion</a></div>`; return; }
-      STEPS = [STEP_JOIN, STEP_INST, STEP_NOT, STEP_TOUR, STEP_END]; show(0); return;
+      STEPS = [STEP_JOIN, ...INST(), STEP_NOT, STEP_TOUR, STEP_END]; show(0); return;
     }
     if (T) {
       let inv = null; try { inv = await api("/api/invite/" + encodeURIComponent(T), { noRedirect: true }); }
       catch (e) { stage.innerHTML = `<div class="st on"><div class="eb">LIEN D'INVITATION</div><h1>Oups, <em>ce lien ne marche plus.</em></h1><p class="sub">${esc(e.message)}</p><a class="go" href="/" style="display:flex;align-items:center;justify-content:center;text-decoration:none">Aller à la connexion</a></div>`; return; }
-      STEPS = [STEP_PW(inv), STEP_INST, STEP_NOT, STEP_TOUR, STEP_END]; show(0);
+      STEPS = [STEP_PW(inv), ...INST(), STEP_NOT, STEP_TOUR, STEP_END]; show(0);
     } else boot();
   })();
 })();
