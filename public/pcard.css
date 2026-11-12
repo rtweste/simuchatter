@@ -39,3 +39,5 @@
 .pc-pop.on{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.pcd *,.pc-pop{animation:none!important;transition:none!important}}
 .pc-n,.ct-m .gut[data-uid] .ct-av{cursor:pointer}.pc-n:hover{text-decoration:underline}
+.pc-x{position:absolute;right:12px;top:12px;z-index:3;width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.45);color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.pc-x:hover{background:rgba(0,0,0,.7)}

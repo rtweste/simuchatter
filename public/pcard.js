@@ -23,23 +23,29 @@ window.PCARD = (() => {
         ${o.stats === false ? "" : `<div class="pc-st"><div><small>VENTES · 15 J</small><b>${c.sales || 0}</b></div><div><small>ANCIENNETÉ</small><b>${c.months || 0}<span> mois</span></b></div><div><small>DÉFIS GAGNÉS</small><b>${c.wins || 0}</b></div></div>`}
         ${o.actions || ""}</div></div>`;
   }
-  // fenêtre au-dessus du chat
-  let pop = null;
+  // fenêtre au-dessus du chat : une seule à la fois, même si on clique vite plusieurs fois
+  let pop = null, cur = 0, seq = 0;
   async function open(uid, anchor, opts = {}) {
-    close(); let c; try { c = await api(`/api/users/${uid}/card`); } catch (er) { return; }
+    if (pop && cur === uid) return close();          // re-toucher le même nom referme la carte
+    close(); const my = ++seq; cur = uid; let c;
+    try { c = await api(`/api/users/${uid}/card`); } catch (er) { return; }
+    if (my !== seq) return;                            // un autre clic est arrivé entre-temps
+    document.querySelectorAll(".pc-pop").forEach(x => x.remove());
     pop = document.createElement("div"); pop.className = "pc-pop"; pop.setAttribute("role", "dialog"); pop.setAttribute("aria-label", "Profil de " + c.name);
     const acts = opts.dm && !opts.self ? `<div class="pc-act"><button type="button" data-dm>Message privé</button></div>` : "";
-    pop.innerHTML = html(c, { actions: acts });
+    pop.innerHTML = html(c, { actions: acts }) + `<button type="button" class="pc-x" aria-label="Fermer">✕</button>`;
     document.body.appendChild(pop);
     const r = anchor.getBoundingClientRect(), w = Math.min(340, innerWidth - 24), h = pop.offsetHeight;
     let x = r.left, y = r.bottom + 8; if (x + w > innerWidth - 12) x = innerWidth - 12 - w; if (y + h > innerHeight - 12) y = Math.max(12, r.top - h - 8);
     Object.assign(pop.style, { left: x + "px", top: y + "px", width: w + "px" });
-    requestAnimationFrame(() => pop && pop.classList.add("on"));
+    const me = pop; requestAnimationFrame(() => me.isConnected && me.classList.add("on"));
+    pop.querySelector(".pc-x").onclick = close;
     const dm = pop.querySelector("[data-dm]"); if (dm) dm.onclick = () => { close(); opts.dm(c); };
-    setTimeout(() => { document.addEventListener("pointerdown", outside); document.addEventListener("keydown", esc_); }, 0);
+    setTimeout(() => { if (pop !== me) return; window.addEventListener("pointerdown", outside, true); window.addEventListener("keydown", esc_, true); addEventListener("resize", close); }, 0);
   }
-  const outside = ev => { if (pop && !pop.contains(ev.target)) close(); };
+  const outside = ev => { if (pop && !pop.contains(ev.target) && !(ev.target.closest && ev.target.closest(`[data-uid="${cur}"]`))) close(); };
   const esc_ = ev => { if (ev.key === "Escape") close(); };
-  function close() { if (!pop) return; const p = pop; pop = null; p.classList.remove("on"); setTimeout(() => p.remove(), 250); document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", esc_); }
+  function close() { seq++; window.removeEventListener("pointerdown", outside, true); window.removeEventListener("keydown", esc_, true); removeEventListener("resize", close);
+    if (!pop) return; const p = pop; pop = null; cur = 0; p.classList.remove("on"); setTimeout(() => p.remove(), 250); }
   return { html, shift, open, close };
 })();
