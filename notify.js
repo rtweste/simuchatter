@@ -216,7 +216,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
         (SELECT expires_at FROM invites i WHERE i.user_id = u.id AND i.used_at IS NULL ORDER BY created_at DESC LIMIT 1) inv_exp,
         (SELECT COUNT(*) FROM push_subs p WHERE p.user_id = u.id) devices, (SELECT MAX(standalone) FROM push_subs p WHERE p.user_id = u.id) installed,
         (SELECT COUNT(*) FROM tokens t WHERE t.user_id = u.id AND t.expires_at > ?) sessions
-      FROM users u WHERE u.active = 1 AND u.deleted_at IS NULL AND u.role IN ('chatter','trainee') ORDER BY u.username COLLATE NOCASE`).all(now);
+      FROM users u WHERE u.active = 1 AND u.deleted_at IS NULL AND u.role = 'chatter' ORDER BY u.username COLLATE NOCASE`).all(now);
     const people = rows.map(r => ({ id: r.id, username: r.username, role: r.role, tl: r.grade === "tl", invitedAt: r.inv_at, joined: !r.pending, joinedAt: r.used_at, onboarded: !!r.onboarded_at,
       notifs: r.devices > 0, installed: !!r.installed, online: r.sessions > 0, expired: r.pending && r.inv_exp && r.inv_exp < now, noInvite: r.pending && !r.inv_exp }));
     res.json({ people, totals: { accounts: people.length, joined: people.filter(p => p.joined).length, onboarded: people.filter(p => p.onboarded).length, notifs: people.filter(p => p.notifs).length, installed: people.filter(p => p.installed).length }, push: !!VAPID });
