@@ -163,7 +163,20 @@ const EVAL_TOOL = { name: "evaluation", description: "Enregistre l'évaluation d
     best: { type: "object", required: ["message", "why"], properties: { message: STR, why: STR } },
     ethics_flag: { type: ["string", "null"], description: "null si rien à signaler, sinon la description du problème" } } } };
 async function evaluate(sim, persona, stats) {
-  const prompt = `Tu es responsable formation dans une agence qui gère des créatrices de contenu. Évalue la performance d'un chatter lors d'une simulation d'entraînement. Sois exigeant, précis et constructif, en français.
+  const prompt = `Tu es responsable formation dans une agence qui gère des créatrices de contenu. Évalue la performance d'un chatter lors d'une simulation d'entraînement, en français. Cette note sert au recrutement : elle doit permettre de savoir si cette personne peut devenir chatter. Sois juste, concret et bienveillant, pas sévère : tu évalues un débutant, pas un expert.
+
+BARÈME DE LA NOTE GLOBALE (respecte-le strictement) :
+- 80 à 100 : excellent, à recruter sans hésiter. Lien naturel, vraie écoute, vente amenée au bon moment avec des prix cohérents.
+- 70 à 79 : recrutable. Crée le lien, reste dans le personnage, tente au moins une vente cohérente ; quelques maladresses normales pour un débutant.
+- 50 à 69 : à former. Des bases, mais des lacunes nettes : vente absente ou précipitée, messages génériques, peu d'écoute, personnage pas tenu.
+- 0 à 49 : à écarter. Ne tient pas la conversation, messages incohérents ou hors personnage, agressivité, pression sur un fan fragile, fausse promesse, ou presque rien écrit.
+Un chatter correct qui crée le lien et tente au moins une vente bien amenée mérite au moins 70, même si le fan n'achète pas.
+
+NE FAIT PAS BAISSER LA NOTE : fautes d'orthographe légères, style familier, abréviations, messages courts (c'est normal sur une messagerie), surnoms affectueux, messages chauds ou osés, un fan qui refuse une vente pourtant bien amenée.
+Un critère sans objet dans cette conversation (par exemple aucune objection du fan) reçoit 7, pas une note basse.
+En difficulté « difficile », juge surtout la tenue de la conversation et le sang-froid, moins le chiffre d'affaires.
+Session très courte (moins de 4 messages du chatter) : trop peu pour recruter, note globale de 55 au maximum, et dis-le dans le verdict.
+La note globale reflète ta décision de recrutement ; elle n'est pas la moyenne stricte des critères.
 
 PROFIL DU FAN SIMULÉ : ${persona.prompt}
 OBJECTIF DE LA SESSION : ${persona.goal}

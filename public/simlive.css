@@ -188,6 +188,7 @@ body:has(#watchScreen:not(.hidden)) .dock{display:none}
 .gx-flt{display:flex;gap:6px;flex-wrap:wrap}
 .gx-flt select{height:32px;border-radius:10px;border:1px solid #262626;background:#151515;color:#e6e6e6;font:inherit;font-size:12px;font-weight:800;padding:0 8px;width:auto;max-width:200px}
 .gx-pill.r{background:rgba(224,122,122,.12);color:#e07a7a}
+.gx-pill.w{background:rgba(255,177,74,.12);color:#ffb14a}
 .gx-all{max-height:560px;overflow:auto;padding-right:2px}
 .gx-row.eth{border-color:rgba(224,122,122,.25)}
 .gx-row.eth .gx-av{width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-weight:900}

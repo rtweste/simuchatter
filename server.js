@@ -378,6 +378,8 @@ app.post("/api/sims/:id/end", auth, async (req, res) => {
     const raw = Math.max(0, Math.min(100, Math.round(Number(report.score) || 0)));
     report.rawScore = raw;
     sim.score = Math.max(0, raw - sim.hints * HINT_PENALTY);
+    // décision de recrutement, d'après le barème de l'évaluation
+    report.decision = sim.score >= 80 ? "excellent" : sim.score >= 70 ? "recrutable" : sim.score >= 50 ? "former" : "ecarter";
     sim.report = JSON.stringify(report);
     sim.status = "done"; sim.ended_at = Date.now(); sim.pending_ppv = null;
     saveSim(sim);

@@ -113,11 +113,12 @@ const EVAL = (() => {
   /* ================= rapport ================= */
   function page(root, sim, opts = {}) {
     const M = model(sim, opts), { r, score, crs, prev, ppvs, bought } = M, sc = scCol(score), C = 2 * Math.PI * 72;
-    const lvl = score >= 80 ? "Excellent" : score >= 70 ? "Objectif atteint" : score >= 55 ? "Presque l'objectif" : score >= 40 ? "À consolider" : "À retravailler";
-    const big = score >= 80 ? "Excellent <em>travail.</em>" : score >= 70 ? "Très bon <em>travail.</em>" : score >= 55 ? "Bon <em>travail.</em>" : score >= 40 ? "Peut mieux <em>faire.</em>" : "À <em>retravailler.</em>";
+    const lvl = score >= 80 ? "Excellent" : score >= 70 ? "Objectif atteint" : score >= 50 ? "À consolider" : "À retravailler";
+    const big = score >= 80 ? "Excellent <em>travail.</em>" : score >= 70 ? "Très bon <em>travail.</em>" : score >= 60 ? "Bon <em>travail.</em>" : score >= 50 ? "Peut mieux <em>faire.</em>" : "À <em>retravailler.</em>";
     const delta = prev ? score - prev.score : null;
     const pills = [delta == null ? `<span class="ev-pl">Première simu</span>` : `<span class="ev-pl ${delta > 0 ? "g" : delta < 0 ? "r" : ""}">${delta > 0 ? ICO.up : delta < 0 ? ICO.down : ""}${delta > 0 ? "+" : delta < 0 ? "−" : "="}${Math.abs(delta) || ""} vs dernière simu</span>`,
       score >= 70 ? `<span class="ev-pl g">${ICO.chk}Objectif 70 atteint</span>` : `<span class="ev-pl w">Plus que ${70 - score} pt${70 - score > 1 ? "s" : ""} pour 70</span>`,
+      window.ME_SHELL && ME_SHELL.role === "admin" ? `<span class="ev-pl ${score >= 70 ? "g" : score >= 50 ? "w" : "r"}">${score >= 80 ? "À recruter sans hésiter" : score >= 70 ? "Recrutable" : score >= 50 ? "À former" : "À écarter"}</span>` : "",
       sim.hints ? `<span class="ev-pl">Score brut ${esc(r.rawScore)} − ${sim.hints} conseil${sim.hints > 1 ? "s" : ""}</span>` : ""].filter(Boolean).map((p, i) => p.replace('class="ev-pl', `style="--dl:${(2.5 + i * .12).toFixed(2)}s" class="ev-pl`)).join("");
     const rt = sim.avgRt, rtTxt = rt == null ? "" : rt <= 60 ? ["Rapide", "g"] : rt <= 120 ? ["Correct", "w"] : ["Lent", "r"];
     const dRev = prev ? sim.revenue - (prev.revenue || 0) : null;
