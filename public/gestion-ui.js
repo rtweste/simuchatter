@@ -593,6 +593,9 @@ return { tab, loadSanc };
   const me = await api("/api/me");
   if (me.role !== "admin") { location.href = "/home"; return; }
   renderShell("admin", me);
+  // vidéo « côté manager » : montrée une fois aux managers et au fondateur à leur première visite de Gestion
+  if (!me.mgrIntroSeen && me.rk !== "assistant") fetch("/video/manager.mp4", { method: "HEAD" }).then(r => { if (r.ok) INTRO.show(me, { src: "/video/manager.mp4", seen: "/api/me/mgr-intro-seen", eb: "CÔTÉ MANAGER",
+    title: "Tout piloter <em>de A à Z.</em>", sub: "Deux minutes pour voir comment gérer l'équipe, du recrutement jusqu'à la paie.", endSub: "Tout est là. À toi de piloter." }); }).catch(() => {});
   const h = (location.hash || "").slice(1);
   GE.tab(["team", "crea", "reg", "jour", "sanc", "cand", "roles"].includes(h) && !(me.rk === "assistant" && ["cand", "reg", "sanc"].includes(h)) ? h : "team");
   if (h !== "cand" && me.rk !== "assistant") api("/api/admin/applications/count").then(c => { $("nCand").textContent = c.new || ""; }).catch(() => {});

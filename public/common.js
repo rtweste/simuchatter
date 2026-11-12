@@ -405,10 +405,10 @@ const PLANREM = (() => {
 /* =====================================================================
    Vidéo de présentation : obligatoire une fois, à la première connexion d'un chatter
    ===================================================================== */
-// vidéo d'accueil : obligatoire pour les élèves, revisionnable à tout moment (fichier /video/presentation-chatters-v2.mp4)
+// vidéo d'accueil : obligatoire pour les élèves, revisionnable à tout moment (fichier /video/presentation-v3.mp4)
 const INTRO_ON = true;
 const INTRO = window.INTRO = (() => {
-  const SRC = "/video/presentation-chatters-v2.mp4";
+  const SRC = "/video/presentation-v3.mp4";
   let box = null;
   const css = `
   .in-ov{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(5,5,5,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);opacity:0;transition:opacity .5s}
@@ -443,8 +443,8 @@ const INTRO = window.INTRO = (() => {
     const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
     box = document.createElement("div"); box.className = "in-ov"; box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true"); box.setAttribute("aria-label", "Vidéo de présentation");
     box.innerHTML = `<div class="in-w">
-      <div class="in-hd"><div><div class="in-eb">${opts.eb || (opts.replay ? "PRÉSENTATION" : "BIENVENUE")}</div><div class="in-t">${opts.title || (opts.replay ? "Tout StellADS en <em>3 minutes.</em>" : `Salut <em>${esc(me.username)}.</em>`)}</div></div>
-        <div class="in-sub">${opts.sub || (opts.replay ? "Tu peux avancer, revenir en arrière ou fermer quand tu veux." : "Avant de commencer, regarde cette présentation de 3 minutes : elle t'explique tout le site.")}</div></div>
+      <div class="in-hd"><div><div class="in-eb">${opts.eb || (opts.replay ? "PRÉSENTATION" : "BIENVENUE")}</div><div class="in-t">${opts.title || (opts.replay ? "Tout StellADS en <em>2 minutes 30.</em>" : `Salut <em>${esc(me.username)}.</em>`)}</div></div>
+        <div class="in-sub">${opts.sub || (opts.replay ? "Tu peux avancer, revenir en arrière ou fermer quand tu veux." : "Avant de commencer, regarde cette présentation de 2 minutes 30 : elle t'explique tout le site.")}</div></div>
       <div class="in-v"><video playsinline preload="auto" src="${src}"></video>
         <div class="in-ps"><svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></div>
         <div class="in-cv" data-start><button class="in-play" aria-label="Lancer la présentation"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12.5-7.5z"/></svg></button><b>Lancer la présentation</b><small>Monte le son 🔊</small></div>
