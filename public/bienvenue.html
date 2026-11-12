@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bienvenue — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StellADS">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/push.css">
+<style>
+html,body{background:#050506;min-height:100%}
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#f5f5f5;overflow-x:hidden}
+.bw{position:relative;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding:28px 20px calc(30px + env(safe-area-inset-bottom))}
+.aur{position:fixed;inset:-20%;z-index:0;pointer-events:none;filter:blur(60px);opacity:.75}
+.aur i{position:absolute;border-radius:50%;mix-blend-mode:screen;animation:bwDrift 18s ease-in-out infinite alternate}
+.aur i:nth-child(1){width:46vmax;height:46vmax;left:8%;top:6%;background:radial-gradient(circle,rgba(95,211,162,.32),transparent 65%)}
+.aur i:nth-child(2){width:40vmax;height:40vmax;right:4%;top:28%;background:radial-gradient(circle,rgba(184,164,255,.22),transparent 65%);animation-duration:23s;animation-delay:-6s}
+.aur i:nth-child(3){width:36vmax;height:36vmax;left:30%;bottom:-4%;background:radial-gradient(circle,rgba(255,210,63,.14),transparent 65%);animation-duration:27s;animation-delay:-11s}
+@keyframes bwDrift{0%{transform:translate(0,0) scale(1)}50%{transform:translate(6%,-5%) scale(1.12)}100%{transform:translate(-5%,6%) scale(.94)}}
+.stars{position:fixed;inset:0;z-index:0;pointer-events:none}
+.stars span{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;opacity:0;animation:bwTw 4s ease-in-out infinite}
+@keyframes bwTw{50%{opacity:.8}}
+.top{position:relative;z-index:2;width:100%;max-width:520px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.top .lg{width:132px}.top .lg svg{display:block;width:100%;height:auto;overflow:visible}
+.dots{display:flex;gap:6px}.dots i{width:8px;height:8px;border-radius:5px;background:#2a2a2a;transition:all .5s cubic-bezier(.3,1.4,.5,1)}
+.dots i.on{width:26px;background:#ededed}.dots i.ok{background:#5fd3a2}
+.stage{position:relative;z-index:2;width:100%;max-width:520px;flex:1;display:flex;flex-direction:column;justify-content:center;padding:24px 0}
+.st{display:none;flex-direction:column;gap:16px}
+.st.on{display:flex;animation:bwIn .7s cubic-bezier(.2,.9,.2,1) both}
+.st.out{display:flex;animation:bwOut .35s cubic-bezier(.4,0,.6,1) both}
+@keyframes bwIn{from{opacity:0;transform:translateX(40px);filter:blur(8px)}to{opacity:1;transform:none;filter:none}}
+@keyframes bwOut{to{opacity:0;transform:translateX(-40px);filter:blur(8px)}}
+.eb{font-size:11.5px;letter-spacing:.2em;color:#5fd3a2;font-weight:800}
+h1{margin:0;font-weight:900;font-size:clamp(34px,8vw,46px);letter-spacing:-.045em;line-height:1.02}
+h1 em{font-style:italic;background:linear-gradient(100deg,#fff,#9be8c6 45%,#ffd23f 90%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.08em}
+.sub{margin:0;color:#a3a3a3;font-size:15px;line-height:1.55;font-weight:500}
+.sub b{color:#fff}
+.card{background:rgba(17,17,17,.82);border:1px solid #232323;border-radius:22px;padding:18px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.fld{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+.fld label{font-size:11px;font-weight:800;letter-spacing:.12em;color:#7a7a7a}
+.inp{position:relative}
+.inp input{width:100%;height:54px;border-radius:16px;border:1px solid #2a2a2a;background:#141414;color:#fff;font:700 16px Inter,sans-serif;padding:0 52px 0 16px;outline:none;transition:border-color .25s,box-shadow .25s;box-sizing:border-box}
+.inp input:focus{border-color:#5fd3a2;box-shadow:0 0 0 4px rgba(95,211,162,.14)}
+.inp button{position:absolute;right:8px;top:8px;width:38px;height:38px;border-radius:11px;border:0;background:transparent;color:#8a8a8a;cursor:pointer}
+.meter{display:flex;gap:4px;margin-top:2px}.meter i{flex:1;height:5px;border-radius:3px;background:#262626;transition:background .35s}
+.meter.s1 i:nth-child(1){background:#e07a7a}.meter.s2 i:nth-child(-n+2){background:#f2b84b}.meter.s3 i:nth-child(-n+3){background:#9be8c6}.meter.s4 i{background:#5fd3a2}
+.hint{font-size:12px;color:#7a7a7a;font-weight:600}
+.err{color:#f0a3a3;font-size:13px;font-weight:700;min-height:18px}
+.go{position:relative;overflow:hidden;width:100%;height:58px;border-radius:18px;border:0;background:#ededed;color:#0a0a0a;font:900 16px Inter,sans-serif;cursor:pointer;box-shadow:0 14px 40px -14px rgba(255,255,255,.45);transition:transform .2s}
+.go:active{transform:scale(.98)}.go[disabled]{opacity:.5}
+.go::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.7) 50%,transparent 60%);background-size:250% 100%;animation:bwSh 3.2s ease-in-out infinite}
+@keyframes bwSh{0%{background-position:130% 0}60%,100%{background-position:-60% 0}}
+.skip{background:none;border:0;color:#8a8a8a;font:700 13.5px Inter,sans-serif;cursor:pointer;padding:10px;align-self:center}
+.hello{display:flex;align-items:center;gap:14px}
+.av{width:58px;height:58px;border-radius:19px;background:linear-gradient(135deg,#2e2e2e,#141414);border:1px solid #3a3a3a;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:24px;position:relative;flex-shrink:0}
+.av::after{content:"";position:absolute;inset:-5px;border-radius:23px;border:2px solid rgba(95,211,162,.6);animation:bwRip 2.6s cubic-bezier(.2,.6,.3,1) infinite}
+@keyframes bwRip{from{transform:scale(.9);opacity:1}to{transform:scale(1.35);opacity:0}}
+/* créatrices */
+.cg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.cr{position:relative;aspect-ratio:3/4;border-radius:18px;overflow:hidden;border:2px solid #232323;background:#141414;cursor:pointer;padding:0;color:#fff;transition:transform .35s cubic-bezier(.3,1.4,.5,1),border-color .3s,box-shadow .3s;animation:bwPop .6s cubic-bezier(.3,1.4,.5,1) both}
+@keyframes bwPop{from{opacity:0;transform:scale(.85) translateY(10px)}to{opacity:1;transform:none}}
+.cr img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(.9) brightness(.8);transition:filter .3s,transform .6s}
+.cr .ini{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:900;color:#3a3a3a}
+.cr span{position:absolute;left:0;right:0;bottom:0;padding:24px 10px 9px;background:linear-gradient(transparent,rgba(0,0,0,.85));font-weight:900;font-size:14px;text-align:left}
+.cr .ck{position:absolute;right:8px;top:8px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.5);border:2px solid rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center;transition:all .35s cubic-bezier(.3,1.6,.5,1)}
+.cr .ck svg{width:14px;height:14px;transform:scale(0);transition:transform .35s cubic-bezier(.3,1.6,.5,1)}
+.cr.on{border-color:#5fd3a2;box-shadow:0 14px 40px -16px rgba(95,211,162,.7);transform:translateY(-3px)}
+.cr.on img{filter:none;transform:scale(1.05)}.cr.on .ck{background:#5fd3a2;border-color:#5fd3a2;color:#0a0a0a}.cr.on .ck svg{transform:scale(1)}
+/* installer */
+.dev{position:relative;display:flex;justify-content:center;padding:10px 0 4px}
+.phone{position:relative;width:150px;height:280px;border-radius:30px;border:2px solid #2e2e2e;background:#0d0d0d;box-shadow:0 30px 60px -20px rgba(0,0,0,.8),inset 0 0 0 6px #050506;overflow:hidden}
+.phone .grid{position:absolute;inset:44px 18px auto;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.phone .grid i{aspect-ratio:1;border-radius:9px;background:#1c1c1c}
+.phone .app{position:absolute;left:50%;top:150px;width:48px;height:48px;margin-left:-24px;border-radius:13px;background:#000 url(/icon-192.png) center/cover;box-shadow:0 0 0 2px #5fd3a2,0 0 30px rgba(95,211,162,.6);animation:bwApp 2.8s cubic-bezier(.3,1.4,.5,1) infinite}
+@keyframes bwApp{0%,15%{transform:scale(0);opacity:0}30%,85%{transform:scale(1);opacity:1}100%{transform:scale(1);opacity:0}}
+.phone .bar{position:absolute;left:0;right:0;bottom:0;height:46px;background:#141414;border-top:1px solid #262626;display:flex;align-items:center;justify-content:center;color:#5fd3a2}
+.phone .bar svg{width:20px;height:20px;animation:bwBob 1.4s ease-in-out infinite}
+@keyframes bwBob{50%{transform:translateY(-4px)}}
+.ok3{display:flex;align-items:center;gap:12px;padding:14px;border-radius:16px;background:rgba(95,211,162,.1);border:1px solid rgba(95,211,162,.4);font-weight:800;font-size:14px}
+.ok3 i{width:30px;height:30px;border-radius:50%;background:#5fd3a2;color:#0a0a0a;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:900;flex-shrink:0}
+/* notifications */
+.bellw{position:relative;width:132px;height:132px;margin:6px auto 2px;display:flex;align-items:center;justify-content:center}
+.bellw .ring{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(95,211,162,.4);animation:bwRip2 2.4s cubic-bezier(.2,.6,.3,1) infinite}
+.bellw .ring:nth-child(2){animation-delay:.8s}.bellw .ring:nth-child(3){animation-delay:1.6s}
+@keyframes bwRip2{from{transform:scale(.5);opacity:1}to{transform:scale(1.3);opacity:0}}
+.bellw .b{width:76px;height:76px;border-radius:24px;background:#ededed;color:#0a0a0a;display:flex;align-items:center;justify-content:center;animation:bwRing 2.6s ease-in-out infinite;box-shadow:0 20px 50px -14px rgba(255,255,255,.5)}
+.bellw .b svg{width:36px;height:36px}
+@keyframes bwRing{0%,60%,100%{transform:none}66%{transform:rotate(16deg)}72%{transform:rotate(-13deg)}78%{transform:rotate(8deg)}84%{transform:rotate(-4deg)}}
+.bellw .bd{position:absolute;right:24px;top:22px;min-width:26px;height:26px;border-radius:13px;background:#e07a7a;color:#0a0a0a;font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;animation:bwPop .5s 1s cubic-bezier(.3,1.6,.5,1) both}
+.nl{display:flex;flex-direction:column;gap:7px}
+.nl div{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:14px;background:#141414;border:1px solid #1f1f1f;font-size:13.5px;font-weight:700;color:#d6d6d6;animation:bwIn .5s both}
+.nl div span{width:30px;height:30px;border-radius:10px;background:#1f1f1f;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+/* visite */
+.tour{position:relative;height:300px}
+.tc{position:absolute;inset:0;border-radius:24px;padding:22px;background:radial-gradient(120% 120% at 0% 0%,var(--c,rgba(95,211,162,.18)),#111 62%);border:1px solid #262626;display:flex;flex-direction:column;justify-content:flex-end;opacity:0;transform:translateX(30px) scale(.96);transition:all .5s cubic-bezier(.2,.9,.2,1);pointer-events:none}
+.tc.on{opacity:1;transform:none;pointer-events:auto}.tc.past{opacity:0;transform:translateX(-30px) scale(.96)}
+.tc .ic{position:absolute;left:22px;top:22px;width:62px;height:62px;border-radius:20px;background:#ededed;color:#0a0a0a;display:flex;align-items:center;justify-content:center;box-shadow:0 18px 40px -14px rgba(255,255,255,.4)}
+.tc .ic svg{width:30px;height:30px}
+.tc .n{position:absolute;right:22px;top:24px;font-size:12px;font-weight:800;color:#6a6a6a;letter-spacing:.1em}
+.tc h2{margin:0;font-size:26px;font-weight:900;letter-spacing:-.035em}.tc h2 em{font-style:italic}
+.tc p{margin:8px 0 0;color:#b5b5b5;font-size:14.5px;line-height:1.55;font-weight:500}
+.tnav{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tnav .pd{display:flex;gap:5px}.tnav .pd i{width:7px;height:7px;border-radius:4px;background:#2a2a2a;transition:all .4s}.tnav .pd i.on{width:20px;background:#5fd3a2}
+.fin{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px}
+.burst{position:fixed;inset:0;pointer-events:none;z-index:5}
+.burst i{position:absolute;width:8px;height:8px;border-radius:2px}
+.full{text-align:center;color:#a3a3a3}
+</style>
+</head>
+<body>
+<div class="aur" aria-hidden="true"><i></i><i></i><i></i></div><div class="stars" id="stars" aria-hidden="true"></div>
+<div class="bw">
+  <div class="top"><div class="lg" id="lg"></div><div class="dots" id="dots"></div></div>
+  <div class="stage" id="stage"><div class="full">Chargement…</div></div>
+</div>
+<script src="/common.js"></script>
+<script src="/push-ui.js"></script>
+<script>
+(() => {
+  $("lg").innerHTML = logoHTML();
+  const S = $("stars"); for (let i = 0; i < 40; i++) { const s = document.createElement("span"); s.style.left = Math.random() * 100 + "%"; s.style.top = Math.random() * 100 + "%"; s.style.animationDelay = (Math.random() * 4) + "s"; S.appendChild(s); }
+  const SV = (d, w = 1.9) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  const P = { eye: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6", check: "M5 12.5l4.5 4.5L19 7.5", share: "M12 3v12M8 7l4-4 4 4M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6",
+    bell: "M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0", clock: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2", receipt: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6",
+    cal: "M3.5 5h17v15.5h-17zM3.5 10h17M8 3v4M16 3v4", chat: "M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z", grad: "M2 9l10-5 10 5-10 5zM6 11v5c3 2 9 2 12 0v-5", target: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z", down: "M12 4v12M7 11l5 5 5-5M5 20h14" };
+  const T = new URLSearchParams(location.search).get("t");
+  let ME = null, OB = null, STEPS = [], cur = -1, deferred = null;
+  addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferred = e; const b = document.querySelector("[data-install]"); if (b) b.style.display = ""; });
+  const stage = $("stage");
+  function dots() { $("dots").innerHTML = STEPS.map((s, i) => `<i class="${i === cur ? "on" : i < cur ? "ok" : ""}"></i>`).join(""); }
+  function show(i) { const old = stage.querySelector(".st.on"); cur = i; dots();
+    const nx = () => { stage.innerHTML = `<div class="st on">${STEPS[i].html()}</div>`; STEPS[i].bind && STEPS[i].bind(stage.querySelector(".st")); window.scrollTo({ top: 0, behavior: "smooth" }); };
+    if (old) { old.classList.remove("on"); old.classList.add("out"); setTimeout(nx, 320); } else nx(); }
+  const next = () => show(Math.min(STEPS.length - 1, cur + 1));
+  const fail = (el, m) => { el.textContent = m; el.animate([{ transform: "translateX(0)" }, { transform: "translateX(-6px)" }, { transform: "translateX(6px)" }, { transform: "translateX(0)" }], { duration: 350 }); };
+
+  /* ---------- 1. mot de passe ---------- */
+  const STEP_PW = (inv) => ({ html: () => `<div class="hello"><span class="av">${esc(inv.username[0].toUpperCase())}</span><div><div class="eb">BIENVENUE CHEZ STELLADS</div><h1>Salut <em>${esc(inv.username)}.</em></h1></div></div>
+      <p class="sub">Ton compte est prêt. Choisis ton mot de passe : tu te connecteras avec <b>${esc(inv.username)}</b> et ce mot de passe.</p>
+      <div class="card"><div class="fld"><label for="p1">MOT DE PASSE</label><div class="inp"><input id="p1" type="password" autocomplete="new-password" minlength="8" placeholder="8 caractères minimum"><button type="button" aria-label="Afficher le mot de passe" data-eye>${SV(P.eye)}</button></div>
+        <div class="meter" id="mt"><i></i><i></i><i></i><i></i></div><span class="hint" id="mh">Mélange lettres, chiffres et un signe pour un mot de passe solide</span></div>
+        <div class="fld" style="margin-top:12px"><label for="p2">CONFIRME-LE</label><div class="inp"><input id="p2" type="password" autocomplete="new-password" placeholder="Le même, une seconde fois"></div></div></div>
+      <div class="err" id="er" role="alert"></div><button class="go" data-go>Créer mon mot de passe</button>`,
+    bind: el => { const p1 = el.querySelector("#p1"), p2 = el.querySelector("#p2"), mt = el.querySelector("#mt"), mh = el.querySelector("#mh"), er = el.querySelector("#er"); setTimeout(() => p1.focus(), 500);
+      el.querySelector("[data-eye]").onclick = () => { const t = p1.type === "password" ? "text" : "password"; p1.type = t; p2.type = t; };
+      p1.oninput = () => { const v = p1.value; let s = 0; if (v.length >= 8) s++; if (/[A-Z]/.test(v) && /[a-z]/.test(v)) s++; if (/\d/.test(v)) s++; if (/[^\w]/.test(v) || v.length >= 12) s++; mt.className = "meter s" + (v ? Math.max(1, s) : 0);
+        mh.textContent = !v ? "Mélange lettres, chiffres et un signe pour un mot de passe solide" : v.length < 8 ? `Encore ${8 - v.length} caractère${8 - v.length > 1 ? "s" : ""}` : ["", "Un peu court", "Correct", "Bien", "Solide"][s] || "Solide"; };
+      const go = async () => { er.textContent = ""; if (p1.value.length < 8) return fail(er, "Au moins 8 caractères"); if (p1.value !== p2.value) return fail(er, "Les deux mots de passe ne sont pas pareils");
+        const b = el.querySelector("[data-go]"); b.disabled = true; b.textContent = "Création…";
+        try { await api("/api/invite/" + encodeURIComponent(T), { body: { password: p1.value } }); await boot(true); } catch (e) { b.disabled = false; b.textContent = "Créer mon mot de passe"; fail(er, e.message); } };
+      el.querySelector("[data-go]").onclick = go; p2.onkeydown = e => { if (e.key === "Enter") go(); }; } });
+  /* ---------- 2. créatrices ---------- */
+  let CR = [], pick = new Set();
+  const STEP_CR = { html: () => `<div><div class="eb">ÉTAPE · TES CRÉATRICES</div><h1>Avec qui tu <em>chattes ?</em></h1></div><p class="sub">Choisis les créatrices sur lesquelles tu travailles. Ton accueil et tes ventes seront préparés pour elles. Tu pourras changer plus tard.</p>
+      <div class="cg">${CR.map((c, i) => `<button class="cr${pick.has(c.id) ? " on" : ""}" data-c="${c.id}" style="animation-delay:${(i * .06).toFixed(2)}s" aria-pressed="${pick.has(c.id)}">${c.photo ? `<img src="${esc(c.photo)}" alt="" style="object-position:${c.fo}">` : `<span class="ini">${esc(c.name[0])}</span>`}<span>${esc(c.name)}</span><i class="ck">${SV(P.check, 3.2)}</i></button>`).join("") || '<div class="hint">Aucune créatrice pour le moment.</div>'}</div>
+      <button class="go" data-go>${pick.size ? `Continuer avec ${pick.size} créatrice${pick.size > 1 ? "s" : ""}` : "Continuer"}</button>`,
+    bind: el => { el.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { const id = +b.dataset.c; pick.has(id) ? pick.delete(id) : pick.add(id); b.classList.toggle("on"); b.setAttribute("aria-pressed", pick.has(id));
+        el.querySelector("[data-go]").textContent = pick.size ? `Continuer avec ${pick.size} créatrice${pick.size > 1 ? "s" : ""}` : "Continuer"; });
+      el.querySelector("[data-go]").onclick = async () => { try { await api("/api/onboarding/models", { method: "PUT", body: { models: [...pick] } }); } catch (e) {} next(); }; } };
+  /* ---------- 3. installer ---------- */
+  const STEP_INST = { html: () => { const e = PUSH.env();
+      const body = e.standalone ? `<div class="ok3"><i>✓</i>StellADS est installé sur ce téléphone.</div>`
+        : e.ios ? `<div class="card">${PUSH.iosSteps().replace('<b>Sur iPhone, une étape avant :</b>', "<b>Dans Safari :</b>").replace("puis reviens ici", "et connecte-toi")}</div>`
+        : `<div class="card"><p class="sub" style="margin:0">${e.android ? "Ton téléphone peut installer StellADS comme une vraie appli." : "Sur ordinateur, tu peux installer StellADS depuis la barre d'adresse du navigateur."}</p><button class="go" data-install style="margin-top:14px;${deferred ? "" : "display:none"}">${SV(P.down)} Installer l'appli</button>${!deferred && e.android ? '<p class="hint" style="margin:12px 0 0">Menu ⋮ du navigateur → « Installer l\'application » ou « Ajouter à l\'écran d\'accueil ».</p>' : ""}</div>`;
+      return `<div><div class="eb">ÉTAPE · L'APPLI</div><h1>StellADS sur ton <em>écran d'accueil.</em></h1></div><p class="sub">Une icône comme une vraie appli : plein écran, plus rapide, et indispensable pour recevoir les notifications sur iPhone.</p>
+      <div class="dev"><div class="phone"><div class="grid">${"<i></i>".repeat(12)}</div><div class="app"></div><div class="bar">${SV(P.share)}</div></div></div>${body}
+      <button class="${e.standalone ? "go" : "skip"}" data-go>${e.standalone ? "Continuer" : "Je le ferai plus tard"}</button>`; },
+    bind: el => { el.querySelector("[data-go]").onclick = next;
+      const ib = el.querySelector("[data-install]"); if (ib) ib.onclick = async () => { if (!deferred) return; deferred.prompt(); const r = await deferred.userChoice; deferred = null; if (r.outcome === "accepted") { ib.outerHTML = '<div class="ok3" style="margin-top:14px"><i>✓</i>Installé : tu le trouveras sur ton écran d\'accueil</div>'; } }; } };
+  /* ---------- 4. notifications ---------- */
+  const STEP_NOT = { html: () => `<div><div class="eb">ÉTAPE · NOTIFICATIONS</div><h1>Ne rate <em>plus rien.</em></h1></div>
+      <div class="bellw"><span class="ring"></span><span class="ring"></span><span class="ring"></span><span class="b">${SV(P.bell)}</span><span class="bd">3</span></div>
+      <div class="nl"><div style="animation-delay:.1s"><span>💬</span>Messages privés et mentions</div><div style="animation-delay:.18s"><span>📣</span>Annonces importantes de l'équipe</div><div style="animation-delay:.26s"><span>⏰</span>Rappel avant ton shift</div><div style="animation-delay:.34s"><span>⚡</span>Demandes de renfort</div></div>
+      <div id="nst"></div><button class="go" data-go>Activer les notifications</button><button class="skip" data-skip>Plus tard</button>`,
+    bind: async el => { const st = await PUSH.state(), b = el.querySelector("[data-go]"), box = el.querySelector("#nst");
+      el.querySelector("[data-skip]").onclick = next;
+      if (st === "on") { box.innerHTML = '<div class="ok3"><i>✓</i>Déjà activées sur ce téléphone</div>'; b.textContent = "Continuer"; b.onclick = next; return; }
+      if (st === "ios-install") { box.innerHTML = `<div class="card">${PUSH.iosSteps()}</div>`; b.textContent = "Continuer"; b.onclick = next; return; }
+      if (st === "denied") { box.innerHTML = '<div class="ps-note r">Les notifications sont bloquées pour StellADS : autorise-les dans les réglages du téléphone.</div>'; b.textContent = "Continuer"; b.onclick = next; return; }
+      if (st === "unsupported") { box.innerHTML = '<div class="ps-note">Ce navigateur ne gère pas les notifications. Ouvre StellADS dans Chrome ou depuis l\'appli installée.</div>'; b.textContent = "Continuer"; b.onclick = next; return; }
+      b.onclick = async () => { b.disabled = true; b.textContent = "Autorise sur ton téléphone…";
+        try { await PUSH.enable(); box.innerHTML = '<div class="ok3"><i>✓</i>C\'est activé : tu vas recevoir un test</div>'; api("/api/push/test", { body: {} }).catch(() => {}); b.disabled = false; b.textContent = "Continuer"; b.onclick = next; }
+        catch (e) { b.disabled = false; b.textContent = "Réessayer"; box.innerHTML = `<div class="ps-note r">${esc(e.message)}</div>`; } }; } };
+  /* ---------- 5. visite ---------- */
+  const TOUR_C = [["clock", "Ton <em>shift</em>", "Sur l'accueil, fais glisser le bouton pour commencer ton shift, prendre une pause et le terminer. Ton Team Leader et les managers voient qui est en ligne.", "rgba(95,211,162,.2)"],
+    ["receipt", "Tes <em>ventes</em>", "Chaque vente se déclare avec sa capture d'écran. Une fois validée, elle compte dans ta paie, tes paliers et le classement.", "rgba(255,210,63,.16)"],
+    ["cal", "Ton <em>planning</em>", "Tes shifts de la semaine, les échanges avec les autres chatters et les renforts. Tu reçois un rappel avant chaque shift.", "rgba(184,164,255,.2)"],
+    ["chat", "Le <em>chat d'équipe</em>", "Comme sur Discord : salons, messages privés, annonces dans #informations et aide fan quand tu bloques sur une conversation.", "rgba(124,196,255,.18)"]];
+  const TOUR_T = [["grad", "Ta <em>formation</em>", "Ton accueil te montre les critères à remplir pour devenir chatter. Quand tout est vert, ton manager valide ta formation.", "rgba(95,211,162,.2)"],
+    ["target", "Le <em>Simu Chatter</em>", "Entraîne-toi face à des fans simulés et reçois une note détaillée après chaque session.", "rgba(255,210,63,.16)"],
+    ["clock", "Tes <em>tests</em>", "Un test de connexion et un test de frappe, une minute chacun.", "rgba(184,164,255,.2)"]];
+  let ti = 0;
+  const STEP_TOUR = { html: () => { const C = ME.role === "trainee" ? TOUR_T : TOUR_C; ti = 0;
+      return `<div><div class="eb">ÉTAPE · LA VISITE</div><h1>Ce qui change <em>pour toi.</em></h1></div>
+      <div class="tour">${C.map((c, i) => `<div class="tc${i === 0 ? " on" : ""}" style="--c:${c[3]}"><span class="ic">${SV(P[c[0]])}</span><span class="n">${i + 1} / ${C.length}</span><h2>${c[1]}</h2><p>${c[2]}</p></div>`).join("")}</div>
+      <div class="tnav"><div class="pd">${C.map((_, i) => `<i class="${i === 0 ? "on" : ""}"></i>`).join("")}</div><button class="go" data-go style="width:auto;padding:0 26px">Suivant</button></div>`; },
+    bind: el => { const cards = [...el.querySelectorAll(".tc")], pd = [...el.querySelectorAll(".pd i")], b = el.querySelector("[data-go]");
+      const set = k => { ti = k; cards.forEach((c, i) => { c.classList.toggle("on", i === k); c.classList.toggle("past", i < k); }); pd.forEach((p, i) => p.classList.toggle("on", i === k)); b.textContent = k === cards.length - 1 ? "Terminer" : "Suivant"; };
+      b.onclick = () => ti < cards.length - 1 ? set(ti + 1) : next();
+      let x0 = null; const tour = el.querySelector(".tour"); tour.addEventListener("touchstart", e => x0 = e.touches[0].clientX, { passive: true });
+      tour.addEventListener("touchend", e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) set(Math.max(0, Math.min(cards.length - 1, ti + (dx < 0 ? 1 : -1)))); x0 = null; }); } };
+  /* ---------- 6. c'est parti ---------- */
+  const STEP_END = { html: () => `<div class="fin"><span class="av" style="width:84px;height:84px;font-size:34px;border-radius:26px">✦</span><div class="eb">TOUT EST PRÊT</div><h1>C'est parti, <em>${esc(ME.username)}.</em></h1>
+      <p class="sub">Ton espace StellADS t'attend. Retrouve ces réglages à tout moment avec la cloche dans le menu.</p><button class="go" data-go>Ouvrir mon espace</button></div>`,
+    bind: el => { confetti(); api("/api/onboarding/done", { body: {} }).catch(() => {}); el.querySelector("[data-go]").onclick = () => { location.href = "/home"; }; } };
+  function confetti() { const w = document.createElement("div"); w.className = "burst"; document.body.appendChild(w); const C = ["#5fd3a2", "#ffd23f", "#b8a4ff", "#ededed", "#9be8c6"];
+    for (let i = 0; i < 70; i++) { const p = document.createElement("i"); p.style.background = C[i % C.length]; p.style.left = "50%"; p.style.top = "40%"; w.appendChild(p);
+      const a = Math.random() * Math.PI * 2, d = 120 + Math.random() * 280; p.animate([{ transform: "translate(-50%,-50%) rotate(0)", opacity: 1 }, { transform: `translate(calc(-50% + ${Math.cos(a) * d}px), calc(-50% + ${Math.sin(a) * d + 180}px)) rotate(${Math.random() * 720}deg)`, opacity: 0 }], { duration: 1400 + Math.random() * 900, easing: "cubic-bezier(.2,.7,.3,1)", delay: Math.random() * 200 }); }
+    setTimeout(() => w.remove(), 2800); }
+
+  async function boot(afterPw) {
+    try { ME = await api("/api/me", { noRedirect: true }); } catch (e) { ME = null; }
+    if (!ME) { if (!T) { location.href = "/"; return; } return; }
+    OB = await api("/api/onboarding").catch(() => ({ models: [], mine: [] }));
+    pick = new Set(OB.mine || []);
+    if (ME.role === "chatter") { try { const c = await api("/api/creators"); CR = c.creators.map(x => ({ id: x.id, name: x.name, photo: x.photos[0] || null, fo: (x.focus[0] || [50, 35]).map(v => v + "%").join(" ") })); } catch (e) { CR = (OB.models || []).map(m => ({ id: m.id, name: m.name })); } }
+    STEPS = [...(T ? [{ html: () => "" }] : []), ...(ME.role === "chatter" && CR.length ? [STEP_CR] : []), STEP_INST, STEP_NOT, STEP_TOUR, STEP_END];
+    show(T ? 1 : 0);
+  }
+  (async () => {
+    if (T) {
+      let inv = null; try { inv = await api("/api/invite/" + encodeURIComponent(T), { noRedirect: true }); }
+      catch (e) { stage.innerHTML = `<div class="st on"><div class="eb">LIEN D'INVITATION</div><h1>Oups, <em>ce lien ne marche plus.</em></h1><p class="sub">${esc(e.message)}</p><a class="go" href="/" style="display:flex;align-items:center;justify-content:center;text-decoration:none">Aller à la connexion</a></div>`; return; }
+      STEPS = [STEP_PW(inv), STEP_INST, STEP_NOT, STEP_TOUR, STEP_END]; show(0);
+    } else boot();
+  })();
+})();
+</script>
+</body>
+</html>

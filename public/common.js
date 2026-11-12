@@ -100,8 +100,22 @@ function loadChallenges(mode, host) {
   const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/challenge.css"; document.head.appendChild(l);
   const sc = document.createElement("script"); sc.src = "/challenge-ui.js"; sc.onload = run; document.body.appendChild(sc);
 }
+// notifications sur le téléphone : chargées à la demande
+function loadPush(cb) {
+  if (window.PUSH) return cb && cb();
+  if (!document.querySelector('link[href="/push.css"]')) { const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/push.css"; document.head.appendChild(l); }
+  const sc = document.createElement("script"); sc.src = "/push-ui.js"; sc.onload = () => { try { cb && cb(); } catch (e) {} }; document.body.appendChild(sc);
+}
+function openPush() { loadPush(() => PUSH.sheet()); }
 function renderShell(active, me) {
   if (me && me.role === "chatter") PLANREM.start();
+  if (me && !EMBED) setTimeout(() => loadPush(() => PUSH.sync()), 2500);
+  // accueil : configurer son compte (premier lancement), puis activer les notifications
+  if (me && active === "home" && !EMBED) setTimeout(() => { const h = document.getElementById("hm"); if (!h) return;
+    if (!me.onboarded && me.role === "chatter") { if (document.querySelector(".ob-nudge")) return; const c = document.createElement("a"); c.className = "ps-nudge ob-nudge"; c.href = "/bienvenue"; c.style.textDecoration = "none";
+      c.innerHTML = '<span class="ps-bell">✦</span><div><b>Configure ton compte en 1 minute</b><small>Tes créatrices, l’appli sur ton téléphone et les notifications</small></div><span class="ps-go" style="display:inline-flex;align-items:center">C’est parti</span>';
+      loadPush(() => h.parentNode.insertBefore(c, h)); }
+    else loadPush(() => PUSH.nudge(h)); }, 1400);
   if (me) { document.documentElement.classList.add("rk-" + RKOF(me)); window.RK = RKOF(me); }
   // pages réservées : l'Assistante n'a ni salle de contrôle, ni ventes, ni Studio, ni défis
   if (me && ((RKOF(me) === "assistant" && ["salle", "studio", "ventes", "defis", "fondateur", "parrainage", "simu", "tests"].includes(active)) || (active === "equipe" && !["tl", "founder", "manager"].includes(RKOF(me))) || (active === "fondateur" && !["founder", "manager"].includes(RKOF(me))))) {
@@ -139,7 +153,7 @@ function renderShell(active, me) {
     html += `<a href="${m.href}" style="--i:${i}" data-tip="${esc(m.label)}" class="${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""}>${icon(m.icon)}<span class="lb">${chars(m.label)}</span><span class="sr">${esc(m.label)}</span>${badge(m) ? `<em class="navbadge hidden" data-badge="${m.id}"></em>` : ""}</a>`;
   });
   html += `<span class="nv-line" aria-hidden="true"></span></nav><div class="me"><span class="av">${esc(me.username[0])}</span><div><b>${esc(me.username)}</b><small>${esc(me.roleLabel || (me.role === "admin" ? "Manager" : me.role === "trainee" ? "En formation" : "Chatter"))}</small></div>
-    ${me.role !== "admin" && INTRO_ON ? `<button onclick="INTRO.show(ME_SHELL,{replay:true})" title="Revoir la présentation" aria-label="Revoir la présentation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg></button>` : ""}<button onclick="logout()" title="Déconnexion" aria-label="Déconnexion" ${me.role !== "admin" && INTRO_ON ? 'style="margin-left:0"' : ""}>${icon("logout")}</button></div>`;
+    ${me.role !== "admin" && INTRO_ON ? `<button onclick="INTRO.show(ME_SHELL,{replay:true})" title="Revoir la présentation" aria-label="Revoir la présentation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg></button>` : ""}<button onclick="openPush()" title="Notifications sur le téléphone" aria-label="Notifications sur le téléphone" ${me.role !== "admin" && INTRO_ON ? 'style="margin-left:0"' : ""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M10.5 18.5h3"/><circle cx="17.5" cy="5.5" r="3" fill="currentColor" stroke="none" opacity=".9"/></svg></button><button onclick="logout()" title="Déconnexion" aria-label="Déconnexion" style="margin-left:0">${icon("logout")}</button></div>`;
   el.innerHTML = html;
   if (me.role === "admin") loadAlerts("mountBell");   // cloche des alertes du shift
   // mode réduit (ordinateur) : mémorisé d'une page à l'autre

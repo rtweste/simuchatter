@@ -229,6 +229,7 @@ app.post("/api/login", (req, res) => {
     if (GEST.refusedByInterview(u.id)) return res.status(403).json({ error: "Merci pour ton entretien : ta candidature n'a pas été retenue." });
     if (GEST.deadline(u.id).state === "rejected") return res.status(403).json({ error: "Le délai de 24 h pour terminer ta formation est dépassé : ta candidature n'a pas été retenue." });
   }
+  if (u && u.active && u.pass_hash === "!" && !u.deleted_at) return res.status(401).json({ error: "Ton compte n'est pas encore activé : ouvre le lien d'invitation envoyé par ton manager" });
   if (!u || !u.active || !bcrypt.compareSync(String(password || ""), u.pass_hash)) {
     a.n++; attempts.set(ip, a);
     return res.status(401).json({ error: "Identifiant ou mot de passe incorrect" });
@@ -255,7 +256,8 @@ app.get("/api/me", auth, (req, res) => {
   if (req.user.role === "trainee" && GEST) { GEST.startDeadline(req.user.id); deadline = GEST.deadline(req.user.id);
     if (deadline.state === "rejected") return res.status(401).json({ error: "Session expirée" }); }
   const tl = req.user.team_lead ? db.prepare("SELECT id, username FROM users WHERE id = ? AND active = 1 AND grade = 'tl'").get(req.user.team_lead) : null;
-  res.json({ id: req.user.id, username: req.user.username, role: req.user.role, grade: req.user.grade || null, rk: req.user.rk, roleLabel: PERM.LABEL[req.user.rk],
+  const ob = db.prepare("SELECT onboarded_at FROM users WHERE id = ?").get(req.user.id);
+  res.json({ id: req.user.id, username: req.user.username, role: req.user.role, grade: req.user.grade || null, rk: req.user.rk, roleLabel: PERM.LABEL[req.user.rk], onboarded: !!(ob && ob.onboarded_at),
     teamLead: tl ? { id: tl.id, username: tl.username } : null, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro, deadline });
 });
 // nouvelle version de la vidéo : les élèves déjà inscrits la regardent une fois (une seule réinitialisation)
@@ -473,6 +475,7 @@ CAND_CTX.referrals = require("./referrals")(app, db, auth, admin, { compta: COMP
 const ALERTS = require("./alerts")(app, db, auth, admin, { planning: PLAN, gest: GEST });
 require("./roles")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, gest: GEST, perms: PERM, alerts: ALERTS, PERSONAS });   // rôles, équipes des Team Leaders, réglages du Fondateur
 require("./purge")(app, db, auth, admin, { gest: GEST });
+require("./notify")(app, db, auth, admin, { bcrypt, PROD, gest: GEST, planning: PLAN });   // notifications sur le téléphone, invitations, premier lancement
 require("./announce")(app, db, auth, admin, { gest: GEST });   // annonces importantes / urgentes : bandeau, écran bloquant, suivi de lecture   // comptes désactivés depuis 24 h : supprimés (historique gardé)   // alertes du shift en cours (cloche manager, salle de contrôle)
 /* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */
 LIVE = require("./simlive")(app, db, auth, admin, { loadSim, publicSim, PERSONAS, busy });

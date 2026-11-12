@@ -45,6 +45,7 @@ function tab(t) {
   qa(".tabs button").forEach(x => x.classList.toggle("on", x.dataset.t === t)); qa(".pane").forEach(p => p.classList.toggle("on", p.dataset.p === t));
   try { history.replaceState(null, "", "#" + t); } catch (e) {}
   ({ team: loadTeam, crea: loadCrea, reg: loadReg, jour: loadJour, sanc: loadSanc, cand: loadCand, roles: () => ROLESUI.load() })[t]();
+  if (t === "team") LAUNCHUI.load();
 }
 qa(".tabs button").forEach(b => b.addEventListener("click", () => { S.tick(); tab(b.dataset.t); }));
 
