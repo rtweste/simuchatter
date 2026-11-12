@@ -22,10 +22,10 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       db.prepare("UPDATE applications SET ai_score = ?, ai_detail = ?, ai_at = ?, ai_err = NULL WHERE id = ?").run(Math.max(0, Math.min(100, Math.round(g.score))), JSON.stringify(g), Date.now(), id);
     } catch (e) { db.prepare("UPDATE applications SET ai_err = ? WHERE id = ?").run(String(e.message || e).slice(0, 200), id); }
   }
-  // nouveau barème (esquiver une rencontre = bonne réponse) : on re-note une fois les candidatures des 60 derniers jours
+  // nouveau barème (KYC = point fort, gestes commerciaux sur le prix acceptés, esquive douce de la rencontre) : on re-note une fois les candidatures des 60 derniers jours
   setTimeout(async () => { try {
-    if (db.prepare("SELECT 1 FROM settings WHERE key = 'apply_grade_v2'").get()) return;
-    db.prepare("INSERT INTO settings (key, value) VALUES ('apply_grade_v2', '1') ON CONFLICT(key) DO UPDATE SET value = excluded.value").run();
+    if (db.prepare("SELECT 1 FROM settings WHERE key = 'apply_grade_v3'").get()) return;
+    db.prepare("INSERT INTO settings (key, value) VALUES ('apply_grade_v3', '1') ON CONFLICT(key) DO UPDATE SET value = excluded.value").run();
     const ids = db.prepare("SELECT id FROM applications WHERE test_answers IS NOT NULL AND at > ? ORDER BY id DESC").all(Date.now() - 60 * 864e5).map(r => r.id);
     for (const id of ids) { await grade(id); await new Promise(r => setTimeout(r, 1500)); }
     if (ids.length) console.log(`Candidatures re-notées : ${ids.length}`);

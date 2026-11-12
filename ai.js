@@ -295,23 +295,39 @@ async function gradeApplicant(items, tag) {
       verdict: refuse ? "Ton naturel, bonne gestion de la demande de rencontre." : "Accepte implicitement la rencontre en vrai : règle non respectée.", points_forts: ["Ton chaleureux"], a_ameliorer: ["Relancer avec une question"],
       par_reponse: items.map(x => ({ id: x.id, note: 6, commentaire: "Commentaire de test." })) }; }
   const conv = items.map((x, i) => `### Situation ${i + 1} (${x.id}) · ${x.who}\nObjectif évalué : ${x.goal}\nLe fan écrit :\n${x.fan.map(m => "« " + m + " »").join("\n")}\nRéponse du candidat${x.paste ? " (texte collé depuis ailleurs)" : ""}, écrite en ${Math.round((x.ms || 0) / 1000)} s :\n« ${x.text} »`).join("\n\n");
-  const prompt = `Tu recrutes des chatters pour une agence française qui gère la messagerie de créatrices de contenu sur une plateforme d'abonnement (Twizz). Le chatter écrit aux fans à la place de la créatrice, à la première personne, pour créer du lien et vendre des contenus (photos, vidéos), sans contenu explicite.
-Règles de l'agence, non négociables : jamais de rendez-vous fixé ni de rencontre promise, jamais d'appel ni d'échange de contacts perso (numéro, Snap, Insta, WhatsApp, adresse) ; jamais de fausse promotion ni de mensonge sur le contenu ; rester respectueux.
+  const prompt = `Tu es le responsable recrutement d'une agence française de chatting (StellADS). L'agence gère la messagerie de créatrices de contenu pour adultes sur une plateforme d'abonnement (Twizz) : le chatter écrit aux fans à la place de la créatrice, à la première personne, pour créer du lien et vendre des contenus payants (photos, vidéos). Ton flirteur, complice, surnoms affectueux (« bébé », « mon chou »), émojis et messages osés font partie du métier : ce n'est JAMAIS un défaut.
 
-Comment l'agence gère une demande de rencontre : on ne casse pas le fan. Esquiver, temporiser, rester flou ou repousser avec légèreté est la BONNE méthode : « on verra plus tard », « pas tout de suite », « apprenons d'abord à nous connaître ici », « peut-être un jour, en attendant… », « je suis timide », changer de sujet avec une question ou ramener vers le contenu. Ces réponses respectent les règles (regles_ok = vrai) et sont bien notées. Un refus net mais gentil est aussi accepté. La règle n'est enfreinte QUE si le candidat accepte clairement (« oui », « avec plaisir », « samedi à 20 h »), fixe un lieu ou une date, demande ou donne un moyen de contact hors de la plateforme, ou propose un appel : là seulement regles = 0 à 2 et regles_ok = faux.
+Un candidat débutant a répondu à 3 situations. Tu dois juger s'il a l'instinct du métier, comme le ferait un manager expérimenté de l'agence, avec les méthodes ci-dessous. Ne juge pas avec une morale extérieure au métier.
 
-Note le test d'un candidat sur 3 situations. Ce sont des débutants qui postulent : juge leur instinct et leur ton, pas un niveau de professionnel. Des messages courts sont normaux dans un chat : une ou deux phrases naturelles et pertinentes suffisent pour une bonne note. Critères (0 à 10) :
-- ecriture : clarté et ton naturel à l'écrit (style SMS, abréviations et émojis acceptés ; seules les fautes qui gênent la lecture comptent) ;
-- chaleur : créer du lien, être sympa, personnaliser, relancer avec une question ;
-- vente : face à l'objection prix, garder le fan sans brader ni mentir (valoriser le contenu, rassurer, faire une contre-proposition honnête, rester détendu : tout cela est bien) ;
-- regles : la demande de rencontre, selon la méthode ci-dessus.
-Barème : une réponse correcte et pertinente vaut 6 à 7, une bonne réponse 8 à 9, 10 si elle est vraiment excellente ; en dessous de 5 seulement si la réponse est à côté du sujet, vide, grossière ou enfreint une règle. Un candidat correct sur les 3 situations doit avoir au moins 60.
-Score global sur 100 : pondère regles 30 %, chaleur 25 %, vente 25 %, ecriture 20 %. Si regles_ok est faux, le score ne dépasse pas 45.
-style_ia = vrai seulement si les réponses ressemblent clairement à un texte généré ou copié (très long, structuré, impersonnel) ; une réponse simplement bien écrite n'est pas suspecte.
-Sois juste et bienveillant. Commentaires courts et concrets, en français, sur un ton neutre.
+MÉTHODE DE L'AGENCE
+
+1. Nouvel abonné (accroche) : on accueille chaleureusement et on QUALIFIE le fan dès le début. Demander son prénom, son âge, d'où il est, ce qu'il fait, ce qu'il aime, c'est le KYC (« know your customer ») : c'est une très bonne pratique, attendue par l'agence (vérifier qu'il est majeur, personnaliser, repérer son potentiel). Une question KYC est toujours un POINT FORT, jamais une maladresse ni une source de méfiance, même dès le premier message et même formulée simplement. Rebondir sur sa question (« tu fais quoi ce soir ? ») avec un petit teasing est un bonus ; ne pas y répondre est au pire un petit manque (−1), pas un problème.
+
+2. Objection sur le prix : on garde la valeur du contenu et on garde le fan. Sont de BONNES techniques : rester détendue et joueuse, valoriser le contenu (exclusif, fait pour lui, rien à voir avec les autres comptes), faire sentir au fan qu'il est privilégié, un « prix spécial rien que pour toi » ou un ancrage (« normalement c'est X, pour toi c'est Y »), proposer un pack ou un bonus, ou une contre-proposition. Ces gestes commerciaux sont la pratique normale du métier : ne les traite PAS comme un mensonge ou une fausse promotion. Les vraies fautes : brader tout de suite au prix du fan sans rien défendre, supplier, être sèche ou agressive, dénigrer le fan, mentir sur ce que contient la vidéo.
+
+3. Demande de rencontre : on ne casse pas le fan et on garde son désir, sans jamais rien promettre. La bonne méthode est d'esquiver avec douceur : montrer que l'idée plaît (« j'aimerais bien », « ça me tente ») PUIS ramener la relation ici (« apprenons d'abord à nous connaître ici », « on verra plus tard », « je suis timide », une question, ou le contenu). Exemple : « j'aimerais bien ça mais pour commencer on se fait connaissance ici » est une TRÈS BONNE réponse (8 à 9) : elle ne promet rien. Dire que l'idée plaît n'est pas une promesse. Un refus net mais gentil est correct (6 à 7). La règle n'est enfreinte QUE si le candidat accepte clairement (« oui », « avec plaisir », « carrément, samedi ? »), fixe un lieu, une date ou une heure, demande ou donne un contact hors plateforme (numéro, Snap, Insta, WhatsApp, adresse) ou propose un appel : là seulement regles = 0 à 2 et regles_ok = faux.
+
+Règles non négociables (regles_ok = faux seulement dans ces cas) : rencontre acceptée ou organisée, contact perso échangé ou demandé, appel proposé, insulte ou mépris envers le fan, mensonge grave sur le contenu.
+
+NOTATION (chaque critère sur 10)
+- ecriture : lisible et naturelle comme un vrai message (style SMS, abréviations, émojis, fautes légères acceptés ; seules les fautes qui gênent la lecture comptent). Messages courts normaux.
+- chaleur : accueil, complicité, personnalisation, questions au fan (le KYC compte ici comme un plus).
+- vente : situation 2, selon la méthode ci-dessus.
+- regles : situation 3, selon la méthode ci-dessus.
+Échelle : 5 = faible mais sans faute ; 6 à 7 = correct ; 8 à 9 = bon instinct du métier ; 10 = excellent. En dessous de 5 seulement si la réponse est vide, hors sujet, grossière ou enfreint une règle.
+Score global sur 100 = (regles × 3 + chaleur × 2,5 + vente × 2,5 + ecriture × 2), arrondi, puis ajusté de ±5 au maximum selon ton impression. Si regles_ok est faux, le score ne dépasse pas 45.
+Repères : un candidat correct sur les 3 situations a 65 à 75 ; un candidat qui a les bons réflexes (KYC ou question au fan, défend son prix, esquive la rencontre avec douceur) a 75 à 85, même si ses messages sont courts et simples ; au-dessus de 85 pour des réponses vraiment excellentes.
+style_ia = vrai seulement si les réponses ressemblent clairement à un texte généré ou copié (très long, structuré, impersonnel) ; une réponse bien écrite n'est pas suspecte.
+
+COMMENTAIRES
+- verdict : une phrase de synthèse, juste et cohérente avec le score (pas « en difficulté » au-dessus de 60).
+- points_forts : 2 à 4 points concrets, en citant ce que le candidat a bien fait.
+- a_ameliorer : 1 à 3 conseils utiles seulement, sans inventer de défaut et sans contredire la méthode ci-dessus (ne reproche jamais une question KYC, un geste commercial sur le prix ou une esquive douce de la rencontre).
+- par_reponse : pour chaque situation, une note sur 10 et un commentaire d'une phrase.
+En français, ton neutre et bienveillant, phrases courtes.
 
 ${conv}`;
-  const res = await ask(prompt, MODEL_HINT, 900, { ...(tag || {}), kind: "apply" }, { tools: [APPLY_TOOL], tool_choice: { type: "tool", name: "note_candidat" } });
+  const res = await ask(prompt, MODEL_EVAL, 1200, { ...(tag || {}), kind: "apply" }, { tools: [APPLY_TOOL], tool_choice: { type: "tool", name: "note_candidat" } });
   const tu = res.content.find(c => c.type === "tool_use"); if (!tu || typeof tu.input?.score !== "number") throw new Error("Note du candidat illisible");
   return tu.input;
 }
