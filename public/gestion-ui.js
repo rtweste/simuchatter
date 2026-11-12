@@ -51,14 +51,18 @@ qa(".tabs button").forEach(b => b.addEventListener("click", () => { S.tick(); ta
 
 /* =================== ÉQUIPE =================== */
 let T = null, F = "chat";
-const avatar = (n, live, cls = "") => `<span class="av ${cls}">${esc((n || "?")[0].toUpperCase())}${live ? '<i class="dot"></i>' : ""}</span>`;
+const avatar = (n, live, cls = "", pr) => `<span class="av ${cls}">${esc((n || "?")[0].toUpperCase())}${live ? '<i class="dot"></i>' : pr ? `<i class="dot ${pr}"></i>` : ""}</span>`;
+// en ligne : une activité sur le site dans les 2 dernières minutes
+const presOf = c => !c.active ? null : c.seen && Date.now() - c.seen < 150e3 ? "on" : "off";
+const presTxt = c => { if (!c.active) return ""; if (c.live) return ""; if (c.seen && Date.now() - c.seen < 150e3) return '<span class="prs on">En ligne</span>';
+  if (!c.seen) return '<span class="prs">Hors ligne</span>'; const m = Math.round((Date.now() - c.seen) / 60e3); return `<span class="prs">Vu il y a ${m < 60 ? m + " min" : Math.floor(m / 60) + " h"}</span>`; };
 const warnOf = c => c.role === "chatter" && (c.points >= (T?.warnAt || 3) || (c.punctuality != null && c.punctuality < 80));
 const CK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 const sinceTxt = ms => { const d = Math.floor((Date.now() - ms) / 864e5); return d < 1 ? "aujourd'hui" : d === 1 ? "1 j" : d + " j"; };
 // carte d'un stagiaire
 function tcard(c, i) {
   const tr = c.training || { done: 0, total: 6, ready: false, stats: {} }, s = tr.stats || {};
-  return `<div class="pc${tr.ready ? " ready" : ""}${c.active ? "" : " off"}${c.isNew ? " new" : ""}" data-id="${c.id}" tabindex="0" role="button" style="animation-delay:${.04 + i * .04}s"><div class="r1">${avatar(c.username, false)}<div><b>${esc(c.username)}</b><small>En formation depuis ${sinceTxt(c.created_at)}</small></div>${tr.deadline && tr.deadline.state === "rejected" ? '<span class="tag w">Candidature refusée</span>' : !c.active ? '<span class="tag w">Désactivé</span>' : tr.ready ? '<span class="tag v"><i></i>Prêt</span>' : tr.deadline && tr.deadline.state === "running" ? dlTag(tr.deadline) : '<span class="tag f">En formation</span>'}</div>
+  return `<div class="pc${tr.ready ? " ready" : ""}${c.active ? "" : " off"}${c.isNew ? " new" : ""}" data-id="${c.id}" tabindex="0" role="button" style="animation-delay:${.04 + i * .04}s"><div class="r1">${avatar(c.username, false, "", presOf(c))}<div><b>${esc(c.username)}</b><small>${presTxt(c)}En formation depuis ${sinceTxt(c.created_at)}</small></div>${tr.deadline && tr.deadline.state === "rejected" ? '<span class="tag w">Candidature refusée</span>' : !c.active ? '<span class="tag w">Désactivé</span>' : tr.ready ? '<span class="tag v"><i></i>Prêt</span>' : tr.deadline && tr.deadline.state === "running" ? dlTag(tr.deadline) : '<span class="tag f">En formation</span>'}</div>
     <div class="st"><div><small>SCORE MOYEN</small><b style="color:${s.avg5 >= 70 ? "#5fd3a2" : "#fff"}">${s.avg5 ?? "—"}</b></div><div><small>SESSIONS</small><b>${s.sessions ?? 0}</b></div><div><small>CRITÈRES</small><b>${tr.done} / ${tr.total}</b></div></div>
     <div class="pg"><span class="t"><i style="width:${tr.total ? Math.round(tr.done / tr.total * 100) : 0}%"></i></span><b>${tr.ready ? "Prêt · " : ""}${tr.done} / ${tr.total}</b></div></div>`;
 }
@@ -71,7 +75,7 @@ function card(c, i) {
   const st = !c.active ? (c.purgeAt ? `Désactivé · supprimé dans ${Math.max(1, Math.ceil((c.purgeAt - Date.now()) / 3600e3))} h` : "Compte désactivé · suppression dans 24 h") : c.pause ? `En pause depuis ${pzm} min${pzm > c.pauseMax ? " · dépassement" : ""}` : c.live ? "En shift · " + c.live : c.next[0] ? "Prochain : " + nextTxt(c.next[0]) : "Pas de shift prévu";
   const tag = !c.active ? '<span class="tag w">Désactivé</span>' : c.suspendedUntil ? '<span class="tag r"><i></i>Suspendu</span>' : warnOf(c) ? '<span class="tag r"><i></i>À surveiller</span>' : c.pause ? `<span class="tag ${pzm > c.pauseMax ? "r" : "w"}"><i></i>☕ En pause</span>` : c.live ? '<span class="tag v live"><i></i>En shift</span>' : "";
   const pc = c.punctuality;
-  return `<div class="pc${c.active ? "" : " off"}${c.isNew ? " new" : ""}" data-id="${c.id}" tabindex="0" role="button" style="animation-delay:${.04 + i * .04}s"><div class="r1">${avatar(c.username, c.live)}<div><b>${esc(c.username)} ${c.role === "admin" ? `<span class="tier">${c.rk === "founder" ? "Fondateur" : c.rk === "assistant" ? "Assistant" : "Manager"}</span>` : `<span class="tier ${c.rate >= 15 ? "top" : ""}">${c.rate} %</span>`}</b><small>${esc(st)}</small></div>${tag}</div>
+  return `<div class="pc${c.active ? "" : " off"}${c.isNew ? " new" : ""}" data-id="${c.id}" tabindex="0" role="button" style="animation-delay:${.04 + i * .04}s"><div class="r1">${avatar(c.username, c.live, "", presOf(c))}<div><b>${esc(c.username)} ${c.role === "admin" ? `<span class="tier">${c.rk === "founder" ? "Fondateur" : c.rk === "assistant" ? "Assistant" : "Manager"}</span>` : `<span class="tier ${c.rate >= 15 ? "top" : ""}">${c.rate} %</span>`}</b><small>${presTxt(c)}${esc(st)}</small></div>${tag}</div>
     <div class="st"><div><small>VENTES NETTES</small><b>${E(c.sales)}</b></div><div><small>PAIE</small><b>${E(c.pay)}</b></div><div><small>PONCTUALITÉ</small><b style="color:${pc == null ? "#fff" : pc >= 90 ? "#5fd3a2" : pc >= 80 ? "#fff" : "#e07a7a"}">${pc == null ? "—" : pc + " %"}</b></div></div>
     <div class="ft"><div class="chips">${c.creators.map(x => `<span>${esc(x.name)}</span>`).join("")}</div><span>${c.points ? `<span class="pts ${c.points >= (T.warnAt || 3) ? "" : "w"}" style="margin-right:6px">${c.points} pt${c.points > 1 ? "s" : ""}</span>` : ""}${hrs(c.hours)}</span></div></div>`;
 }
@@ -92,6 +96,11 @@ function renderTeam() {
   $("nTeam").textContent = T.team.filter(c => c.active && c.role === "chatter").length;
 }
 qa("#teamSeg button").forEach(b => b.addEventListener("click", () => { qa("#teamSeg button").forEach(x => x.classList.toggle("on", x === b)); F = b.dataset.v; S.tick(); renderTeam(); }));
+// la présence se met à jour toute seule tant que la Gestion est ouverte
+setInterval(async () => { if (document.hidden || !T || !document.getElementById("teamGrid")) return; try { const n = await api("/api/admin/team"); const by = Object.fromEntries(n.team.map(x => [x.id, x]));
+  T.team.forEach(c => { if (by[c.id]) { c.seen = by[c.id].seen; c.live = by[c.id].live; } }); document.querySelectorAll("#teamGrid .pc[data-id]").forEach(el => { const c = T.team.find(x => x.id === +el.dataset.id); if (!c) return;
+    const av = el.querySelector(".r1 .av"); if (av) { av.querySelector(".dot")?.remove(); const pr = c.live ? "" : presOf(c); if (c.live || pr) av.insertAdjacentHTML("beforeend", `<i class="dot ${pr || ""}"></i>`); }
+    const sm = el.querySelector(".r1 small"); if (sm) { sm.querySelector(".prs")?.remove(); sm.insertAdjacentHTML("afterbegin", presTxt(c)); } }); } catch (e) {} }, 45e3);
 async function loadTeam(force) { loadRadar(); if (T && !force) return renderTeam(); try { T = await api("/api/admin/team"); renderTeam(); } catch (e) { fail(e); } }
 
 async function fiche(id) {

@@ -351,3 +351,9 @@
 .cwho{display:flex;justify-content:space-between;gap:8px;font:800 11px Inter;color:#888;letter-spacing:.04em}.cwho span{font-weight:600;color:#666}
 .cmt{font-size:11.5px;color:#888;line-height:1.45}
 #candSort{margin-left:auto}
+/* présence sur les cartes : vert = en shift, bleu = en ligne, gris = hors ligne */
+.ge .av .dot.on{background:#5aa9ff;animation:none;box-shadow:0 0 8px rgba(90,169,255,.6)}
+.ge .av .dot.off{background:#2a2a2a;animation:none}
+.ge .pc small .prs{display:inline;padding:0;background:none;border:0;font-style:normal;font-weight:800;color:#7a7a7a;margin-right:6px}
+.ge .pc small .prs.on{color:#5aa9ff}
+.ge .pc small .prs::after{content:"·";margin-left:6px;color:#4a4a4a;font-weight:600}

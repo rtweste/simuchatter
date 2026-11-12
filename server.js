@@ -197,13 +197,15 @@ app.use((req, res, next) => {
 });
 
 // Authentification
+// présence : dernière activité de chaque compte sur le site (en mémoire)
+const PRESENCE = new Map(); global.PRESENCE = PRESENCE;
 function auth(req, res, next) {
   const tok = req.cookies.tok;
   if (!tok) return res.status(401).json({ error: "Non connecté" });
   const row = db.prepare(`SELECT u.id, u.username, u.role, u.active, u.grade, u.team_lead, t.expires_at FROM tokens t
     JOIN users u ON u.id = t.user_id WHERE t.token = ?`).get(tok);
   if (!row || row.expires_at < Date.now() || !row.active) return res.status(401).json({ error: "Session expirée" });
-  row.rk = PERM.rk(row); req.user = row;
+  row.rk = PERM.rk(row); req.user = row; PRESENCE.set(row.id, Date.now());
   if (row.grade === "assistant" && req.path === "/api/home") PERM.stripMargin(res);
   if (row.role === "trainee" && TRAINEE_BLOCK.test(req.path)) return res.status(403).json({ error: "Réservé aux chatters : termine ta formation d'abord" });
   next();
@@ -278,6 +280,7 @@ setTimeout(() => { try { const k = db.prepare("SELECT value FROM settings WHERE 
   if (!k || k.value !== "3") { db.prepare("UPDATE users SET intro_seen = 0 WHERE role = 'trainee'").run(); db.prepare("INSERT INTO settings (key, value) VALUES ('intro_version', '3') ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(); } } catch (e) { console.error("intro v2", e.message); } }, 0);
 // vidéo de présentation à la première connexion des comptes chatter : les chatters déjà là sont considérés comme l'ayant vue
 setTimeout(() => { try { if (!db.prepare("SELECT 1 FROM settings WHERE key = 'intro_chatters'").get()) { db.prepare("UPDATE users SET intro_seen = 1 WHERE role = 'chatter'").run(); db.prepare("INSERT INTO settings (key, value) VALUES ('intro_chatters', '1')").run(); } } catch (e) { console.error("intro chatters", e.message); } }, 800);
+app.get("/api/ping", auth, (req, res) => res.json({ ok: 1 }));
 app.post("/api/me/mgr-intro-seen", auth, (req, res) => { db.prepare("UPDATE users SET mgr_intro_seen = 1 WHERE id = ?").run(req.user.id); res.json({ ok: true }); });
 app.post("/api/me/simu-intro-seen", auth, (req, res) => { db.prepare("UPDATE users SET simu_intro_seen = 1 WHERE id = ?").run(req.user.id); res.json({ ok: true }); });
 app.post("/api/me/intro-seen", auth, (req, res) => { db.prepare("UPDATE users SET intro_seen = 1 WHERE id = ?").run(req.user.id); res.json({ ok: true }); });

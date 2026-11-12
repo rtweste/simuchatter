@@ -151,6 +151,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       rate: ch.rate || 10, sales: ch.sales || 0, salesCount: ch.salesCount || 0, pay: ch.pay || 0, paid: ch.paid || null, hours: ch.hours || 0, renfortHours: ch.renfortHours || 0,
       punctuality: pq.total ? pq.pct : null, late: pq.late, absent: pq.absent, lateMin: pq.lateMin,
       live: open.length ? open.map(o => o.name + (o.reinforce ? " (renfort)" : "")).join(" + ") : null,
+      seen: (global.PRESENCE && global.PRESENCE.get(u.id)) || null,
       pause: (() => { try { const p = db.prepare("SELECT start_at FROM pauses WHERE user_id = ? AND end_at IS NULL").get(u.id); return p ? p.start_at : null; } catch (e) { return null; } })(), pauseMax: agency().pauseMax,
       next: nextShifts.map(s => ({ date: s.date, start: s.start, end: s.end, model: s.model_name, start_ms: s.start_ms, state: s.state })),
       simu: sims.length ? Math.round(sims.reduce((t, x) => t + x.score, 0) / sims.length) : null, simuN: sims.length,

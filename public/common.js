@@ -146,6 +146,9 @@ function renderShell(active, me) {
   if (me && me.role === "trainee" && !["home", "simu", "tests", "chat"].includes(active)) {
     addEventListener("unhandledrejection", e => { if (e.reason && e.reason.redirect) e.preventDefault(); });
     go("/home"); throw Object.assign(new Error("Redirection vers l'accueil"), { redirect: true }); }
+  // présence : un petit signal toutes les 45 s tant que la page est ouverte et visible (le manager voit qui est en ligne)
+  if (me && !window.__ping) { window.__ping = 1; const ping = () => { if (!document.hidden && !document.prerendering) fetch("/api/ping", { credentials: "same-origin" }).catch(() => {}); };
+    setInterval(ping, 45e3); document.addEventListener("visibilitychange", ping); }
   window.ME_SHELL = me; PG_ON().then(() => setTimeout(() => { try { INTRO.check(me); } catch (e) {} }, 0));
   if (me && me.role === "trainee") setTimeout(() => { try { DEADLINE.mount(me.deadline); } catch (e) {} }, 0);
   // assistant « Demande à StellADS » pour les chatters et les élèves (pas dans le simulateur, où il gênerait la saisie)
@@ -476,14 +479,14 @@ const INTRO = window.INTRO = (() => {
     const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
     box = document.createElement("div"); box.className = "in-ov"; box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true"); box.setAttribute("aria-label", "Vidéo de présentation");
     box.innerHTML = `<div class="in-w">
-      <div class="in-hd"><div><div class="in-eb">${opts.eb || (opts.replay ? "PRÉSENTATION" : "BIENVENUE")}</div><div class="in-t">${opts.title || (opts.replay ? "Tout StellADS en <em>2 minutes 30.</em>" : `Salut <em>${esc(me.username)}.</em>`)}</div></div>
+      <div class="in-hd"><div><div class="in-eb">${opts.eb || (opts.replay ? "PRÉSENTATION" : "BIENVENUE")}</div><div class="in-t">${opts.title || (opts.replay ? "Tout StellADS en <em>2 minutes 30.</em>" : `Salut <em>${esc(me.name || me.username)}.</em>`)}</div></div>
         <div class="in-sub">${opts.sub || (opts.replay ? "Tu peux avancer, revenir en arrière ou fermer quand tu veux." : "Avant de commencer, regarde cette présentation de 2 minutes 30 : elle t'explique tout le site.")}</div></div>
       <div class="in-v"><video playsinline preload="auto" src="${src}"></video>
         <div class="in-ps"><svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></div>
         <div class="in-cv" data-start><button class="in-play" aria-label="Lancer la présentation"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12.5-7.5z"/></svg></button><b>Lancer la présentation</b><small>Monte le son 🔊</small></div>
         <div class="in-cv off" data-end><b style="font-size:24px">Tu es prêt.</b><small>${opts.endSub || "Tu peux la revoir quand tu veux depuis le menu."}</small><div style="display:flex;gap:10px;margin-top:6px"><button class="in-ghost" data-again>Revoir</button><button class="in-go" data-go>C'est parti</button></div></div>
         <div class="in-cv off" data-err><b>La vidéo ne se charge pas</b><small>Vérifie ta connexion. Tu pourras la regarder plus tard depuis le menu.</small><button class="in-go" data-go>Continuer</button></div></div>
-      <div class="in-ft"><span class="in-bar"><i></i></span><span class="in-tm">—</span>${opts.replay ? '<button class="in-ghost" data-close>Fermer</button>' : ""}</div></div>`;
+      <div class="in-ft"><span class="in-bar"><i></i></span><span class="in-tm">—</span>${opts.replay ? '<button class="in-ghost" data-close>Fermer</button>' : opts.skip ? '<button class="in-ghost" data-skip>Passer la vidéo</button>' : ""}</div></div>`;
     document.body.appendChild(box); document.body.style.overflow = "hidden";
     requestAnimationFrame(() => box.classList.add("on"));
     const v = box.querySelector("video"), bar = box.querySelector(".in-bar i"), tm = box.querySelector(".in-tm"), ps = box.querySelector(".in-ps");
@@ -494,13 +497,15 @@ const INTRO = window.INTRO = (() => {
     if (!opts.replay) v.play().then(() => { box.querySelector("[data-start]").classList.add("off"); started = true; }).catch(() => {});
     v.addEventListener("timeupdate", () => { if (!v.seeking) maxT = Math.max(maxT, v.currentTime); bar.style.width = (v.currentTime / (v.duration || 1) * 100) + "%"; tm.textContent = v.duration ? `${fmt(v.duration - v.currentTime)} restantes` : "—"; });
     // pas d'avance rapide : on revient au plus loin déjà regardé
-    v.addEventListener("seeking", () => { if (!opts.replay && v.currentTime > maxT + .5) v.currentTime = maxT; });
+    v.addEventListener("seeking", () => { if (!opts.replay && !opts.skip && v.currentTime > maxT + .5) v.currentTime = maxT; });
     v.addEventListener("click", () => { if (!started) return; if (v.paused) v.play(); else v.pause(); });
     v.addEventListener("pause", () => { if (!v.ended) ps.classList.add("on"); }); v.addEventListener("play", () => ps.classList.remove("on"));
     v.addEventListener("ended", () => { box.querySelector("[data-end]").classList.remove("off"); if (!opts.replay) api(seen, { body: {} }).catch(() => {}); });
     v.addEventListener("error", () => box.querySelector("[data-err]").classList.remove("off"));
     box.querySelector("[data-again]").onclick = () => { v.currentTime = 0; start(); };
     box.querySelectorAll("[data-go], [data-close]").forEach(b => b.onclick = close);
+    // chatter : il peut passer la vidéo (elle compte comme vue) ; un élève doit la regarder en entier
+    const sk = box.querySelector("[data-skip]"); if (sk) sk.onclick = () => { api(seen, { body: {} }).catch(() => {}); close(); };
     document.addEventListener("keydown", key);
   }
   function key(e) { if (!box) return; const v = box.querySelector("video"); if (e.key === " " && !box.querySelector("[data-start]").classList.contains("off")) return;
@@ -509,7 +514,7 @@ const INTRO = window.INTRO = (() => {
   // manager ou fondateur : la vidéo « côté manager », une seule fois, à la première connexion
   const mgr = me => fetch("/video/manager.mp4", { method: "HEAD" }).then(r => { if (r.ok) show(me, { src: "/video/manager.mp4", seen: "/api/me/mgr-intro-seen", eb: "CÔTÉ MANAGER",
     title: "Tout piloter <em>de A à Z.</em>", sub: "Deux minutes pour voir comment gérer l'équipe, du recrutement jusqu'à la paie.", endSub: "Tout est là. À toi de piloter." }); }).catch(() => {});
-  return { show, check: me => { if (!INTRO_ON || !me) return; if ((me.role === "trainee" || me.role === "chatter") && !me.introSeen) show(me);
+  return { show, check: me => { if (!INTRO_ON || !me) return; if ((me.role === "trainee" || me.role === "chatter") && !me.introSeen) show(me, me.role === "chatter" ? { skip: true } : {});
     else if (me.role === "admin" && ["founder", "manager"].includes(me.rk) && !me.mgrIntroSeen) mgr(me); } };
 })();
 
