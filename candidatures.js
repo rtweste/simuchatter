@@ -78,9 +78,12 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const t = String(req.params.token || ""); if (!/^[a-f0-9]{24}$/.test(t)) return res.status(404).json({ error: "Introuvable" });
     const r = db.prepare("SELECT * FROM applications WHERE pub_token = ?").get(t); if (!r || Date.now() - r.at > 3600e3) return res.status(404).json({ error: "Introuvable" });
     if (r.ai_score == null && !r.ai_err && Date.now() - r.at < 120e3) return res.json({ state: "pending" });
-    const ag = gest.agency() || {}, min = ag.applyUnlock ?? 70, g = J(r.ai_detail) || {};
+    const ag = gest.agency() || {}, min = ag.applyUnlock != null && ag.applyUnlock !== "" && Number.isFinite(+ag.applyUnlock) ? +ag.applyUnlock : 70, g = J(r.ai_detail) || {};
     // passed : test réussi (même si le WhatsApp n'est pas encore renseigné) · graded : la correction a pu se faire
-    res.json({ state: "done", unlock: unlockOf(r), graded: r.ai_score != null, passed: r.ai_score != null && r.ai_score >= min && g.regles_ok !== false }); });
+    // score + seuil renvoyés aussi en cas de refus : l'écran « Presque » affiche la jauge et l'écart au seuil
+    const graded = r.ai_score != null;
+    res.json({ state: "done", unlock: unlockOf(r), graded, passed: graded && r.ai_score >= min && g.regles_ok !== false,
+      score: graded ? Math.round(r.ai_score) : null, min: graded ? +min : null, rule: graded && g.regles_ok === false }); });
   const hits = new Map();
   app.post("/api/apply", (req, res) => {
     const b = req.body || {}, ip = crypto.createHash("sha256").update(String(req.ip) + "stellads").digest("hex").slice(0, 16), now = Date.now();
