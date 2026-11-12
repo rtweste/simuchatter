@@ -352,9 +352,10 @@ function fillReg() {
   qa("[data-st]").forEach(i => i.value = AG[i.dataset.st] || "");
   drawTiers(); drawSlots(); calc(); $("regBar").classList.remove("on");
   // paliers et part des créatrices : réservés au Fondateur
-  if (window.RK !== "founder") { qa("#tiers input, #tiers button").forEach(x => { x.disabled = true; }); $("addTier").style.display = "none";
-    const ci = document.querySelector('[data-s="creatorPct"]'); if (ci) { ci.disabled = true; ci.title = "Réservé au Fondateur"; }
-    const h = $("tiers").closest(".card").querySelector(".ch"); if (h && !h.querySelector(".lockbadge")) h.insertAdjacentHTML("beforeend", '<span class="lockbadge">Modifiable par le Fondateur</span>'); }
+  // les paliers se modifient seulement dans Réglages fondateur : ici, lecture et simulateur
+  qa("#tiers input, #tiers button").forEach(x => { x.disabled = true; }); qa("#tiers .del").forEach(x => x.style.display = "none"); $("addTier").style.display = "none";
+  const h = $("tiers").closest(".card").querySelector(".ch"); if (h && !h.querySelector(".lockbadge")) h.insertAdjacentHTML("beforeend", window.RK === "founder" ? '<a class="lockbadge" href="/fondateur" style="text-decoration:none">Modifier dans Réglages fondateur →</a>' : '<span class="lockbadge">Modifiable par le Fondateur</span>');
+  if (window.RK !== "founder") { const ci = document.querySelector('[data-s="creatorPct"]'); if (ci) { ci.disabled = true; ci.title = "Réservé au Fondateur"; } }
 }
 qa("[data-s]").forEach(i => i.addEventListener("input", regDirty)); qa("[data-st]").forEach(i => i.addEventListener("input", regDirty));
 async function loadReg(force) { if (AG && !force) return; try { AG = await api("/api/admin/agency"); fillReg(); } catch (e) { fail(e); } }
