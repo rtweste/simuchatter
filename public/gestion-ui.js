@@ -279,7 +279,7 @@ function crea(c) {
     <div class="sec"><span class="lab">VENTES PAR CHATTER</span>${c.chatters.length ? `<div class="bars">${c.chatters.map(x => `<div><span>${esc(x.username)}</span><span class="t"><i data-w="${x.amount / mx * 100}"></i></span><b>${E(x.amount)}</b></div>`).join("")}</div>` : '<div class="mut">Aucune vente validée sur la quinzaine.</div>'}</div>
     <div class="sec"><span class="lab">SES CRÉNEAUX CETTE SEMAINE</span>${c.slots.length ? `<div class="slots">${c.slots.map(slot).join("")}</div>` : '<div class="mut">Aucun shift prévu sur 7 jours.</div>'}</div>`}
     <div class="sec"><span class="lab">NOM</span><input class="fi" data-f="name" value="${esc(c.name)}" placeholder="Nom de la créatrice" maxlength="40"></div>
-    <div class="sec"><span class="lab">POURCENTAGE REVERSÉ${window.RK !== "founder" ? ' · RÉSERVÉ AU FONDATEUR' : ""}</span><div class="unit" style="width:max-content"><input data-f="pct" value="${c.creator_pct}" inputmode="decimal" ${window.RK !== "founder" ? "disabled" : ""}> % du CA net</div></div>
+    <div class="sec"><span class="lab">POURCENTAGE REVERSÉ · ${window.RK === "founder" ? '<a href="/fondateur" style="color:#ffd23f">SE MODIFIE DANS RÉGLAGES FONDATEUR</a>' : "RÉSERVÉ AU FONDATEUR"}</span><div class="unit" style="width:max-content"><input data-f="pct" value="${c.creator_pct}" inputmode="decimal" disabled> % du CA net</div></div>
     <div class="sec"><span class="lab">STYLE D'ÉCRITURE ET PERSONNALITÉ</span><textarea class="ta" data-f="style" placeholder="Âge, centres d'intérêt, ton, emojis, tics d'écriture…">${esc(c.style)}</textarea></div>
     <div class="sec"><span class="lab">GRILLE DE PRIX</span><input class="fi" data-f="prices" value="${esc(c.prices)}" placeholder="Photos : 8–15 € · Vidéo : 20–40 €"></div>
     <div class="mut" style="margin-top:8px">Le style et les prix servent aussi au simulateur pour faire jouer cette créatrice.</div>
@@ -355,7 +355,8 @@ function fillReg() {
   // les paliers se modifient seulement dans Réglages fondateur : ici, lecture et simulateur
   qa("#tiers input, #tiers button").forEach(x => { x.disabled = true; }); qa("#tiers .del").forEach(x => x.style.display = "none"); $("addTier").style.display = "none";
   const h = $("tiers").closest(".card").querySelector(".ch"); if (h && !h.querySelector(".lockbadge")) h.insertAdjacentHTML("beforeend", window.RK === "founder" ? '<a class="lockbadge" href="/fondateur" style="text-decoration:none">Modifier dans Réglages fondateur →</a>' : '<span class="lockbadge">Modifiable par le Fondateur</span>');
-  if (window.RK !== "founder") { const ci = document.querySelector('[data-s="creatorPct"]'); if (ci) { ci.disabled = true; ci.title = "Réservé au Fondateur"; } }
+  const ci = document.querySelector('[data-s="creatorPct"]'); if (ci) { ci.disabled = true; ci.title = window.RK === "founder" ? "Se modifie dans Réglages fondateur" : "Réservé au Fondateur";
+    const st = ci.closest(".set"); if (st && !st.querySelector(".lockbadge")) st.querySelector("small")?.insertAdjacentHTML("afterend", window.RK === "founder" ? '<a class="lockbadge" href="/fondateur" style="text-decoration:none;margin-top:5px">Modifier dans Réglages fondateur →</a>' : '<span class="lockbadge" style="margin-top:5px">Modifiable par le Fondateur</span>'); }
 }
 qa("[data-s]").forEach(i => i.addEventListener("input", regDirty)); qa("[data-st]").forEach(i => i.addEventListener("input", regDirty));
 async function loadReg(force) { if (AG && !force) return; try { AG = await api("/api/admin/agency"); fillReg(); } catch (e) { fail(e); } }

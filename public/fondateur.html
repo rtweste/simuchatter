@@ -94,6 +94,8 @@
       ${D.models.map(m => `<div class="crow" data-m="${m.id}"><div class="crh"><span class="av">${esc(m.name[0])}</span><div><b>${esc(m.name)}</b><div class="mut">CA net de la quinzaine : ${E0(m.net)}</div></div><span class="pc2">${m.creator_pct} %</span></div>
         <div class="split"><i class="c1" style="width:${m.creator_pct}%"></i><i class="c2" style="width:${100 - m.creator_pct}%"></i></div><input type="range" min="0" max="100" step="1" value="${m.creator_pct}" aria-label="Part de ${esc(m.name)}">
         <div class="lg2"><span>Sur 1 000 € nets : ${esc(m.name)} <b data-a>${E0(m.creator_pct * 10)}</b></span><span>Agence <b data-b>${E0((100 - m.creator_pct) * 10)}</b></span></div></div>`).join("") || '<div class="emp">Aucune créatrice.</div>'}
+      <div class="crow dflt"><div class="crh"><span class="av" style="font-size:15px">+</span><div><b>Nouvelles créatrices</b><div class="mut">Part appliquée à la création d’une fiche</div></div>
+        <div class="stpr" style="margin-left:auto;width:132px"><button data-dp="-1" aria-label="Baisser">−</button><span data-dpv>${D.creatorPct} %</span><button data-dp="1" aria-label="Monter">+</button></div></div></div>
       ${lockov("Visible en lecture par les managers. Seul le Fondateur peut la changer.")}</div>`;
   }
   function closeCard() {
@@ -172,7 +174,9 @@
       try { await api("/api/admin/agency", { method: "PUT", body: { tiers: T.map(t => ({ from: t.from, rate: t.rate, prime: t.prime || 0 })) } }); P = T.map(t => ({ ...t })); dirty = false; q(".savebar").classList.remove("on"); toast2("Paliers enregistrés · la compta est recalculée", true); refreshLog(); }
       catch (x) { toast2(esc(x.message)); } e.target.disabled = false; });
     // part des créatrices
-    qa(".crow").forEach(r => { const i = r.querySelector("input"), up = () => { const v = +i.value; r.querySelector(".pc2").textContent = v + " %"; r.querySelector(".c1").style.width = v + "%"; r.querySelector(".c2").style.width = (100 - v) + "%"; r.querySelector("[data-a]").textContent = E0(v * 10); r.querySelector("[data-b]").textContent = E0((100 - v) * 10); };
+    let dpT = null; qa("[data-dp]").forEach(b => b.addEventListener("click", () => { D.creatorPct = Math.max(0, Math.min(100, D.creatorPct + (+b.dataset.dp))); const v = q("[data-dpv]"); v.textContent = D.creatorPct + " %"; v.classList.remove("fl3"); v.getBoundingClientRect(); v.classList.add("fl3");
+      clearTimeout(dpT); dpT = setTimeout(async () => { try { await api("/api/admin/agency", { method: "PUT", body: { creatorPct: D.creatorPct } }); toast2(`Part des nouvelles créatrices : ${D.creatorPct} %`, true); refreshLog(); } catch (x) { toast2(esc(x.message)); } }, 700); }));
+    qa(".crow:not(.dflt)").forEach(r => { const i = r.querySelector("input"), up = () => { const v = +i.value; r.querySelector(".pc2").textContent = v + " %"; r.querySelector(".c1").style.width = v + "%"; r.querySelector(".c2").style.width = (100 - v) + "%"; r.querySelector("[data-a]").textContent = E0(v * 10); r.querySelector("[data-b]").textContent = E0((100 - v) * 10); };
       i.addEventListener("input", up); i.addEventListener("change", async () => { try { await api(`/api/admin/models/${r.dataset.m}/pct`, { method: "PUT", body: { creator_pct: +i.value } }); toast2(`Part de ${esc(r.querySelector("b").textContent)} : ${i.value} %`, true); refreshLog(); } catch (x) { toast2(esc(x.message)); } }); });
     // clôture : maintenir le bouton
     const hb = q(".hold"); if (hb && !hb.disabled) { const fill = hb.querySelector(".fill"), lb = hb.querySelector("span"); let t0 = 0, raf = 0, done = false; const DUR = 1600;

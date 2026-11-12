@@ -208,7 +208,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const sum = x => x ? { brut: x.totals.brut, net: x.totals.net, creators: x.totals.creators, chatters: x.totals.chatters, margin: x.totals.margin, primes: (x.chatters || []).reduce((t, y) => t + (y.prime || 0) + (y.adjTotal || 0), 0) } : null;
     const pend = db.prepare("SELECT COUNT(*) n FROM sales WHERE status = 'pending'").get().n;
     const models = db.prepare("SELECT id, name, creator_pct FROM models ORDER BY name").all().map(m => ({ ...m, net: c ? r2(((c.models || []).find(x => x.id === m.id) || {}).net || 0) : 0 }));
-    res.json({ founder: req.user.rk === "founder", tiers: compta.getTiers(), models, period: { key: pkey, label: pi.label, locked: compta.isLocked(pkey), totals: sum(c) },
+    res.json({ founder: req.user.rk === "founder", tiers: compta.getTiers(), models, creatorPct: AG().creatorPct ?? 50, period: { key: pkey, label: pi.label, locked: compta.isLocked(pkey), totals: sum(c) },
       prevPeriod: prev ? { key: prev, label: compta.periodInfo(prev).label, locked: compta.isLocked(prev), totals: sum(pc) } : null, pendingSales: pend,
       managers: db.prepare("SELECT id, username, grade FROM users WHERE role = 'admin' AND active = 1 AND deleted_at IS NULL AND (grade IS NULL OR grade = 'founder') ORDER BY grade = 'founder' DESC, username").all(),
       log: db.prepare("SELECT f.at, f.text, u.username FROM founder_log f LEFT JOIN users u ON u.id = f.user_id ORDER BY f.at DESC LIMIT 8").all() });

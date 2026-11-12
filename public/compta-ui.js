@@ -208,7 +208,7 @@ function renderCreators() {
     } catch (e) { notify("Erreur", e.message, "err"); }
   });
   document.querySelectorAll("[data-src]").forEach(inp => inp.addEventListener("keydown", e => { if (e.key === "Enter") inp.blur(); }));
-  if (window.RK !== "founder") document.querySelectorAll("[data-cpct]").forEach(inp => { inp.disabled = true; inp.title = "Réservé au Fondateur"; });
+  document.querySelectorAll("[data-cpct]").forEach(inp => { inp.disabled = true; inp.title = window.RK === "founder" ? "Se modifie dans Réglages fondateur" : "Réservé au Fondateur"; });
   document.querySelectorAll("[data-cpct]").forEach(inp => inp.onchange = async () => { try { await api(`/api/admin/models/${inp.dataset.cpct}/pct`, { method: "PUT", body: { creator_pct: parseNum(inp.value) } }); await loadQ(); } catch (e) { notify("Erreur", e.message, "err"); } });
   document.querySelectorAll("[data-vers]").forEach(b => b.onclick = async () => { await api("/api/admin/creator-paid", { body: { period: PERIOD, model_id: +b.dataset.vers } }); VS.ok(); notify("Part versée", C.models.find(m => m.id === +b.dataset.vers).name, "ok"); loadQ(); });
   document.querySelectorAll("[data-unvers]").forEach(b => b.onclick = async () => { await api("/api/admin/creator-paid", { body: { period: PERIOD, model_id: +b.dataset.unvers, paid: false } }); loadQ(); });
