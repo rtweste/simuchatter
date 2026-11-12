@@ -225,6 +225,48 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
   .th-ov{padding:12px;padding-top:max(14px,env(safe-area-inset-top))}.th-w{width:100%;min-width:0}.th-v{border-radius:14px}.th-ui{padding:28px 10px 8px}.th-b{width:36px;height:36px}.th-cn{display:none}.th-hd h3{font-size:22px}
 }
 @media(prefers-reduced-motion:reduce){.vt::before,.vt-m::after,.vt-p{animation:none}}
+
+/* ===== style sobre : noir, blanc, une seule touche de vert pour les réussites ===== */
+.sky,.shoot{display:none}
+.halo{left:24%;top:30%;background:radial-gradient(circle,rgba(255,255,255,.055),rgba(255,255,255,0) 62%)}
+.pg::after{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,transparent 45%,rgba(0,0,0,.6))}
+.hero .ey{color:#8a8a8a;font-weight:800}.hero .ey i{background:#fff;width:34px}
+.hero h1{font-weight:900;letter-spacing:-.05em}
+.hero h1 em{font-weight:900;background:linear-gradient(100deg,#fff,#8a8a8a 55%,#e6e6e6);background-size:100% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:none;padding-right:.08em}
+.hero p.lead{color:#9a9a9a}
+.perk{background:#0c0c0c;border-color:#1d1d1d;-webkit-backdrop-filter:none;backdrop-filter:none;transition:border-color .3s,transform .4s var(--sp)}
+.perk:hover{border-color:#2e2e2e;transform:translateX(4px)}
+.perk .ic{background:#151515;border:1px solid #262626;color:#f2f2f2}
+.inv{background:#0c0c0c;border-color:#262626;-webkit-backdrop-filter:none;backdrop-filter:none}
+.inv-av{background:#f2f2f2;color:#0a0a0a}.inv-av i{background:#5fd3a2;border-color:#0c0c0c;color:#06261a}.inv b em{color:#fff}
+.card{background:#0a0a0a;border-color:#1d1d1d;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 50px 120px -30px rgba(0,0,0,.9)}
+.card::before{background:linear-gradient(140deg,rgba(255,255,255,.22),transparent 30%,transparent 70%,rgba(255,255,255,.08))}
+.steps i{background:#1c1c1c}.steps i::after{background:#f2f2f2}
+.meta{letter-spacing:.14em;font-weight:700;font-size:10.5px}.meta b{color:#fff}
+.sec h2{font-weight:900;letter-spacing:-.035em}.sec h2 em{color:transparent;background:linear-gradient(100deg,#fff,#8a8a8a 55%,#e6e6e6);-webkit-background-clip:text;background-clip:text;padding-right:.06em}
+.f:focus{border-color:#555;box-shadow:0 0 0 4px rgba(255,255,255,.05)}
+.opt.on{border-color:#f2f2f2;background:#141414}.opt i::after{background:#f2f2f2}.opt.on i{border-color:#f2f2f2}
+.av{background:#1d1d1d;color:#fff;border:1px solid #333}
+.ctr{background:#0f0f0f;border-color:#222}
+.ctgo{background:#f2f2f2;color:#0a0a0a;box-shadow:none;transition:transform .3s var(--sp)}.ctgo:hover{transform:translateY(-2px)}
+.ctp .hd small{color:#9a9a9a}.ctp .hd .av i{background:#5fd3a2}
+.ctp .cp button.on{background:#f2f2f2;color:#0a0a0a}
+.cons.on .bx{background:#f2f2f2;border-color:#f2f2f2}
+.bt.w.go::after{background:linear-gradient(90deg,transparent,rgba(0,0,0,.12),transparent)}
+.vt{background:#0c0c0c;-webkit-backdrop-filter:none;backdrop-filter:none}
+.vt::before{background:linear-gradient(140deg,rgba(255,255,255,.3),rgba(255,255,255,.05) 40%,rgba(255,255,255,.05) 60%,rgba(255,255,255,.2));animation:none}
+.vt::after{display:none}
+.vt-t small{color:#8a8a8a}.vt-t small i{background:#fff;box-shadow:0 0 8px rgba(255,255,255,.7)}
+.vt-t b em{color:#fff}
+.th-hd .e{color:#8a8a8a}.th-hd .e i{background:#fff}
+.th-hd h3 em{background:linear-gradient(100deg,#fff,#8a8a8a 55%,#e6e6e6);-webkit-background-clip:text;background-clip:text}
+.th-v{box-shadow:0 0 0 1px rgba(255,255,255,.08),0 50px 140px -30px rgba(0,0,0,.95)}
+.th-bar .pl{background:#f2f2f2;box-shadow:none}.th-bar .pl::after{box-shadow:0 0 0 4px rgba(255,255,255,.2)}
+.th-cn{color:#bdbdbd}.th-cn i{background:#fff;box-shadow:none}
+.th-ch button.on{border-color:#f2f2f2;color:#fff;background:#151515}.th-ch button.on b{color:#fff}.th-ch button i{background:#fff}
+.th-end{background:radial-gradient(circle at 50% 45%,rgba(18,18,18,.82),rgba(0,0,0,.94))}.th-end h4 em{color:#fff}
+.th-go{background:#f2f2f2;color:#0a0a0a;box-shadow:none}.th-go::after{background:linear-gradient(90deg,transparent,rgba(0,0,0,.12),transparent)}
+@keyframes cardPing{0%{box-shadow:0 0 0 0 rgba(255,255,255,.35),0 50px 120px -30px rgba(0,0,0,.9)}100%{box-shadow:0 0 0 28px rgba(255,255,255,0),0 50px 120px -30px rgba(0,0,0,.9)}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.in,.sec .r,.done .r{opacity:1;transform:none}}
 </style>
 </head>
@@ -392,7 +434,7 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
   }
   function confetti() {
     if (reduce) return; const cv = document.querySelector("canvas.fx"), card = document.querySelector(".card"), r = card.getBoundingClientRect(), d = devicePixelRatio || 1; cv.width = r.width * d; cv.height = r.height * d; const x = cv.getContext("2d"); x.scale(d, d);
-    const cols = ["#5fd3a2", "#f5f5f5", "#9be8c6", "#3fae80"], P = Array.from({ length: 140 }, () => { const a = -Math.PI / 2 + (Math.random() - .5) * 2.4, v = 6 + Math.random() * 9; return { x: r.width / 2, y: r.height * .38, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: Math.random() * 6, vr: (Math.random() - .5) * .4, w: 4 + Math.random() * 5, h: 7 + Math.random() * 7, c: cols[Math.random() * 4 | 0] }; });
+    const cols = ["#f5f5f5", "#bdbdbd", "#5fd3a2", "#ffffff"], P = Array.from({ length: 140 }, () => { const a = -Math.PI / 2 + (Math.random() - .5) * 2.4, v = 6 + Math.random() * 9; return { x: r.width / 2, y: r.height * .38, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: Math.random() * 6, vr: (Math.random() - .5) * .4, w: 4 + Math.random() * 5, h: 7 + Math.random() * 7, c: cols[Math.random() * 4 | 0] }; });
     const t0 = performance.now(); (function f(t) { const k = (t - t0) / 1800; x.clearRect(0, 0, r.width, r.height); P.forEach(p => { p.vy += .3; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.r += p.vr; x.save(); x.globalAlpha = Math.max(0, 1 - k); x.translate(p.x, p.y); x.rotate(p.r); x.fillStyle = p.c; x.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.r * 2))); x.restore(); }); if (k < 1) requestAnimationFrame(f); else x.clearRect(0, 0, r.width, r.height); })(t0);
   }
   api("/api/apply/config").then(c => { C = c; go(0, true); }).catch(() => { $("stage").innerHTML = '<div class="sec show"><p class="hint">Le formulaire est momentanément indisponible. Réessaie dans quelques minutes.</p></div>'; });
