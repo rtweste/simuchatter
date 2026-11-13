@@ -347,6 +347,12 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
 .done.lose .l-t{max-width:350px;margin:16px auto 0;font-size:13.5px;line-height:1.6;color:#a0a0a0}
 @media(max-width:480px){.done.lose,.done.ck{padding:22px 18px}.done.lose h2{font-size:26px}.l-gh b{font-size:30px}.done.lose .l-t{font-size:13px}}
 
+/* test déjà passé (un essai par mois) */
+.bl-ic{width:64px;height:64px;border-radius:20px;background:rgba(233,168,91,.08);border:1px solid rgba(233,168,91,.25);display:flex;align-items:center;justify-content:center;color:#e9a85b;margin-bottom:18px}
+.bl-ic svg{width:28px;height:28px}
+.bl-d{margin-top:18px;display:inline-block;font-size:13px;font-weight:700;color:#a0a0a0;padding:10px 16px;border-radius:12px;border:1px solid #232323;background:#0d0d0d}
+.bl-d b{color:#fff}
+
 .ferr{font-size:12.5px;font-weight:700;color:#ff8a7a;min-height:0;margin-top:6px}
 .ferr:empty{display:none}
 .f.bad{border-color:rgba(255,138,122,.6)!important;box-shadow:0 0 0 4px rgba(255,138,122,.08)}
@@ -529,11 +535,25 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
     // contact invalide : le message reste seulement sous le champ (pas en double en bas)
     if (e && cur === 0 && e === badContact()) { const co = $("co"); co.dispatchEvent(new Event("blur")); $("err").textContent = ""; const c = document.querySelector(".card"); c.classList.remove("shake"); void c.offsetWidth; c.classList.add("shake"); co.focus(); return; }
     if (e) return fail(e);
+    // un seul essai par mois (même contact ou même connexion) : on le dit dès la 1re étape
+    if (cur === 0) { try { const k = await api(`/api/apply/check?type=${encodeURIComponent(A.contactType)}&contact=${encodeURIComponent(A.contact)}`, { noRedirect: true }); if (k && k.blocked) return blockedView(k.blocked); } catch (er) {} }
     if (cur < STEPS.length - 1) return go(cur + 1);
     const b = $("next"); b.classList.add("busy"); b.disabled = true;
     try { const r = await api("/api/apply", { body: { ...A, source: SRC, ref: REF || undefined, website: $("website").value, t: Date.now() - T0 } }); success(r && r.token); }
-    catch (er) { fail(er.message); b.classList.remove("busy"); b.disabled = false; }
+    catch (er) { if (/^Tu as déjà passé le test/.test(er.message)) return blockedView(null, er.message); fail(er.message); b.classList.remove("busy"); b.disabled = false; }
   };
+  // écran « test déjà passé » : nouvel essai possible 30 jours après le précédent
+  function blockedView(until, msg) {
+    const D = $("done"), day = until ? new Date(until).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : null;
+    document.querySelectorAll(".top,.stage,.ft").forEach(el => { if (!reduce && el.animate) el.animate([{ opacity: 1 }, { opacity: 0, filter: "blur(6px)" }], { duration: 350, fill: "forwards" }); else el.style.opacity = 0; });
+    setTimeout(() => { D.className = "done lose bl";
+      D.innerHTML = `<div class="bl-ic r" style="--d:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/><path d="M9.5 14.5l5 0"/></svg></div>
+        <div class="l-eb r" style="--d:1"><i></i>TEST DÉJÀ PASSÉ</div>
+        <h2 class="r" style="--d:2">Reviens <em>bientôt.</em></h2>
+        <p class="l-t r" style="--d:3">${day ? "Tu as déjà passé le test il y a moins de 30 jours. Un seul essai par mois est possible, prends ce temps pour t'entraîner." : esc(msg || "")}</p>
+        ${day ? `<div class="bl-d r" style="--d:4">Nouvel essai possible le <b>${day}</b></div>` : ""}`;
+      void D.offsetWidth; D.classList.add("on"); }, 300);
+  }
   document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); $("next").click(); } });
   function success(token) {
     const via = { whatsapp: "sur WhatsApp", telegram: "sur Telegram", email: "par e-mail" }[A.contactType], D = $("done"), OK0 = D.innerHTML;
@@ -601,7 +621,7 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
     const cols = ["#f5f5f5", "#bdbdbd", "#5fd3a2", "#ffffff"], P = Array.from({ length: 140 }, () => { const a = -Math.PI / 2 + (Math.random() - .5) * 2.4, v = 6 + Math.random() * 9; return { x: r.width / 2, y: r.height * .38, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: Math.random() * 6, vr: (Math.random() - .5) * .4, w: 4 + Math.random() * 5, h: 7 + Math.random() * 7, c: cols[Math.random() * 4 | 0] }; });
     const t0 = performance.now(); (function f(t) { const k = (t - t0) / 1800; x.clearRect(0, 0, r.width, r.height); P.forEach(p => { p.vy += .3; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.r += p.vr; x.save(); x.globalAlpha = Math.max(0, 1 - k); x.translate(p.x, p.y); x.rotate(p.r); x.fillStyle = p.c; x.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.r * 2))); x.restore(); }); if (k < 1) requestAnimationFrame(f); else x.clearRect(0, 0, r.width, r.height); })(t0);
   }
-  api("/api/apply/config").then(c => { C = c; go(0, true); }).catch(() => { $("stage").innerHTML = '<div class="sec show"><p class="hint">Le formulaire est momentanément indisponible. Réessaie dans quelques minutes.</p></div>'; });
+  api("/api/apply/config").then(c => { C = c; if (c.blocked) return blockedView(c.blocked); go(0, true); }).catch(() => { $("stage").innerHTML = '<div class="sec show"><p class="hint">Le formulaire est momentanément indisponible. Réessaie dans quelques minutes.</p></div>'; });
 })();
 </script>
 <script>

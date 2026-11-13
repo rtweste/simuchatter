@@ -67,9 +67,28 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   const EXP = { chat: "Oui, déjà chatter", sales: "Vente ou service client", none: "Aucune expérience" };
   const CONTACT = { whatsapp: "WhatsApp", telegram: "Telegram", email: "E-mail" };
 
+  // ---------- un seul essai par mois : même adresse IP ou même contact (WhatsApp / Telegram / e-mail) ----------
+  const COOL = 30 * 864e5;
+  const ipOf = req => crypto.createHash("sha256").update(String(req.ip) + "stellads").digest("hex").slice(0, 16);
+  const normC = (ct, c) => { c = String(c || "").trim().toLowerCase(); return ct === "whatsapp" ? c.replace(/\D/g, "").slice(-9) : ct === "telegram" ? c.replace(/^@?/, "@").replace(/\s/g, "") : c; };
+  // les comptes de l'équipe (connectés) peuvent repasser le test autant qu'ils veulent pour le vérifier
+  const isStaff = req => { try { const t = req.cookies && req.cookies.tok; if (!t) return false;
+    const u = db.prepare("SELECT u.role, u.active, t.expires_at FROM tokens t JOIN users u ON u.id = t.user_id WHERE t.token = ?").get(t);
+    return !!(u && u.active && u.role === "admin" && u.expires_at > Date.now()); } catch (e) { return false; } };
+  // renvoie la date à partir de laquelle on peut retenter, ou null si rien ne bloque
+  const blockOf = (req, ct, contact) => { if (isStaff(req)) return null;
+    const ip = ipOf(req), n = ct && contact ? normC(ct, contact) : null;
+    const hit = db.prepare("SELECT at, ip_hash, contact_type, contact FROM applications WHERE at > ? ORDER BY at DESC").all(Date.now() - COOL)
+      .find(r => r.ip_hash === ip || (n && n.length >= 4 && r.contact_type === ct && normC(ct, r.contact) === n));
+    return hit ? hit.at + COOL : null; };
+  const frDate = t => new Date(t).toLocaleDateString("fr-FR", { day: "numeric", month: "long", timeZone: "Europe/Paris" });
+
   // ---------- public ----------
   app.get("/api/apply/config", (req, res) => res.json({ slots: slots(), exp: EXP, contact: CONTACT, scenarios: SCEN.filter(sc => LIVE.includes(sc.id)).map(({ id, who, fan }) => ({ id, who, fan })),
-    quiz: QUIZ.map(({ id, q, opts }) => ({ id, q, opts })) }));
+    quiz: QUIZ.map(({ id, q, opts }) => ({ id, q, opts })), blocked: blockOf(req) }));
+  // vérifié dès la 1re étape : inutile de faire tout le test pour être bloqué à la fin
+  app.get("/api/apply/check", (req, res) => { const ct = CONTACT[req.query.type] ? req.query.type : null;
+    res.json({ blocked: blockOf(req, ct, String(req.query.contact || "").slice(0, 80)) }); });
   // résultat du test : le WhatsApp du manager n'est donné que si le score atteint le seuil choisi dans les Réglages
   const unlockOf = r => { const ag = gest.agency() || {}, wa = String(ag.applyWhatsapp || "").replace(/[^\d]/g, ""), min = Number.isFinite(+ag.applyUnlock) && ag.applyUnlock !== "" && ag.applyUnlock != null ? +ag.applyUnlock : 70;
     const g = J(r.ai_detail) || {};   // une faute sur la règle de la rencontre ne débloque jamais le contact
@@ -99,6 +118,8 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     if (ct === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(contact)) return res.status(400).json({ error: "Adresse e-mail invalide" });
     if (ct === "whatsapp") { contact = contact.replace(/[^\d+]/g, ""); if (contact.replace(/\D/g, "").length < 9) return res.status(400).json({ error: "Numéro WhatsApp invalide" }); }
     if (ct === "telegram") { contact = contact.replace(/^@?/, "@").replace(/\s/g, ""); if (!/^@[\w]{4,32}$/.test(contact)) return res.status(400).json({ error: "Pseudo Telegram invalide (ex. @prenom)" }); }
+    const until = blockOf(req, ct, contact);
+    if (until) return res.status(429).json({ error: `Tu as déjà passé le test récemment. Tu pourras retenter ta chance à partir du ${frDate(until)}.`, until });
     const ids = slots().map(s => s.id), sl = (Array.isArray(b.slots) ? b.slots : []).filter(x => ids.includes(x));
     if (!sl.length) return res.status(400).json({ error: "Choisis au moins un créneau" });
     if (!EXP[b.exp]) return res.status(400).json({ error: "Indique ton expérience" });
