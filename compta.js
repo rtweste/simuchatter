@@ -573,7 +573,9 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       WHERE c.user_id = ? AND c.end_at IS NULL AND c.reinforce = 0`).get(uid) || null;
     const sims = db.prepare("SELECT user_id, score, started_at FROM sims WHERE status = 'done' AND started_at >= ?").all(week);
 
-    if (req.user.role !== "admin") {
+    // manager qui déclare ses ventes : ?self=1 donne sa propre vue (paliers, ventes et commission de la quinzaine)
+    const selfView = req.user.role === "admin" && req.query.self === "1" && !!(db.prepare("SELECT sells FROM users WHERE id = ?").get(req.user.id) || {}).sells;
+    if (req.user.role !== "admin" || selfView) {
       const u = db.prepare("SELECT commission_pct FROM users WHERE id = ?").get(req.user.id);
       const mine = db.prepare("SELECT amount, status, sold_at FROM sales WHERE user_id = ?").all(req.user.id).filter(s => inP(s.sold_at));
       const validated = mine.filter(s => s.status === "validated").reduce((t, s) => t + s.amount, 0);

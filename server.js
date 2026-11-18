@@ -259,6 +259,8 @@ app.post("/api/logout", (req, res) => {
 // vidéo de présentation : vue une fois par chaque chatter (les comptes existants la voient aussi une fois)
 if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "intro_seen")) db.exec("ALTER TABLE users ADD COLUMN intro_seen INTEGER NOT NULL DEFAULT 0");
 if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "mgr_intro_seen")) db.exec("ALTER TABLE users ADD COLUMN mgr_intro_seen INTEGER NOT NULL DEFAULT 0");
+// manager qui chatte aussi : peut déclarer ses propres ventes (option dans Gestion)
+if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "sells")) db.exec("ALTER TABLE users ADD COLUMN sells INTEGER NOT NULL DEFAULT 0");
 if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "simu_intro_seen")) db.exec("ALTER TABLE users ADD COLUMN simu_intro_seen INTEGER NOT NULL DEFAULT 0");
 // nom affiché, couleur et photo de profil (pour le menu)
 function profBits(uid) { try { const u = db.prepare("SELECT display_name, color FROM users WHERE id = ?").get(uid) || {}, a = db.prepare("SELECT updated_at FROM user_avatars WHERE user_id = ?").get(uid);
@@ -271,9 +273,10 @@ app.get("/api/me", auth, (req, res) => {
   if (req.user.role === "trainee" && GEST) { GEST.startDeadline(req.user.id); deadline = GEST.deadline(req.user.id);
     if (deadline.state === "rejected") return res.status(401).json({ error: "Session expirée" }); }
   const tl = req.user.team_lead ? db.prepare("SELECT id, username FROM users WHERE id = ? AND active = 1 AND grade = 'tl'").get(req.user.team_lead) : null;
-  const ob = db.prepare("SELECT onboarded_at FROM users WHERE id = ?").get(req.user.id);
+  const ob = db.prepare("SELECT onboarded_at, sells FROM users WHERE id = ?").get(req.user.id);
   res.json({ id: req.user.id, username: req.user.username, role: req.user.role, grade: req.user.grade || null, rk: req.user.rk, roleLabel: PERM.LABEL[req.user.rk], onboarded: !!(ob && ob.onboarded_at),
-    teamLead: tl ? { id: tl.id, username: tl.username } : null, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro, ...profBits(req.user.id), simuIntroSeen: iu.simu_intro_seen ? 1 : 0, mgrIntroSeen: iu.mgr_intro_seen ? 1 : 0, deadline });
+    teamLead: tl ? { id: tl.id, username: tl.username } : null, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro, ...profBits(req.user.id), simuIntroSeen: iu.simu_intro_seen ? 1 : 0, mgrIntroSeen: iu.mgr_intro_seen ? 1 : 0, deadline,
+    sells: req.user.role === "admin" && !!(ob && ob.sells) });
 });
 // nouvelle version de la vidéo : les élèves déjà inscrits la regardent une fois (une seule réinitialisation)
 setTimeout(() => { try { const k = db.prepare("SELECT value FROM settings WHERE key = 'intro_version'").get();
@@ -449,6 +452,7 @@ app.patch("/api/admin/users/:id", auth, admin, (req, res) => {
     if (!req.body.active) db.prepare("DELETE FROM tokens WHERE user_id = ?").run(id);
     else try { db.prepare("UPDATE trainee_deadline SET rejected_at = NULL, met_at = NULL, deadline_at = ? WHERE user_id = ? AND rejected_at IS NOT NULL").run(Date.now() + 24 * 3600e3, id); } catch (e) {}
   }
+  if (req.body?.sells !== undefined) db.prepare("UPDATE users SET sells = ? WHERE id = ?").run(req.body.sells ? 1 : 0, id);
   if (req.body?.role !== undefined) {
     if (id === req.user.id) return res.status(400).json({ error: "Tu ne peux pas changer ton propre rôle" });
     if (!["admin", "chatter", "trainee"].includes(req.body.role)) return res.status(400).json({ error: "Rôle invalide" });

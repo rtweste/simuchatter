@@ -512,7 +512,7 @@ function renderHero(h) {
 
 async function loadMine(opts = {}) {
   if (!MINE.length && !$("myList").children.length) $("myList").innerHTML = SK.line("100%", 64, 8).repeat(4);
-  const [d, h] = await Promise.all([api("/api/sales/mine"), api("/api/home").catch(() => null)]);
+  const [d, h] = await Promise.all([api("/api/sales/mine"), api("/api/home" + (ME0 && ME0.role === "admin" ? "?self=1" : "")).catch(() => null)]);
   if (opts.watch) {   // décisions du manager arrivées depuis le dernier passage
     const before = new Map(MINE.map(s => [s.id, s.status]));
     const changed = d.sales.filter(s => before.get(s.id) === "pending" && s.status !== "pending");
@@ -773,6 +773,7 @@ async function loadQueue() {
     Q.nv = today.filter(s => s.status === "validated").length; Q.nr = today.filter(s => s.status === "refused").length;
     countTo($("sVal"), Q.val, E, 900); countTo($("sNv"), Q.nv); countTo($("sNr"), Q.nr);
   }
+  if (ME0 && ME0.rk !== "founder") p.sales = p.sales.filter(s => s.user_id !== ME0.id);   // ses propres ventes : validées par un autre
   const ids = new Set(p.sales.map(s => s.id)), cur = qCur();
   if (!Q.loaded) { Q.list = p.sales; Q.loaded = true; qShow(); $("qStage").classList.add("in"); return; }
   // rafraîchissement : nouvelles ventes à la fin, ventes traitées ailleurs retirées
@@ -824,23 +825,40 @@ async function loadHist() {
   });
 }
 ["hStatus", "hUser", "hPeriod"].forEach(id => $(id).onchange = loadHist);
-document.querySelectorAll(".vt-tabs button").forEach(b => b.onclick = () => {
-  document.querySelectorAll(".vt-tabs button").forEach(x => x.classList.toggle("on", x === b));
+document.querySelectorAll("#adminView .vt-tabs button[data-t]").forEach(b => b.onclick = () => {
+  b.parentElement.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
   $("t-queue").classList.toggle("hidden", b.dataset.t !== "queue"); $("t-hist").classList.toggle("hidden", b.dataset.t !== "hist");
   if (b.dataset.t === "hist") loadHist(); else loadQueue();
 });
 
 /* ---------- Démarrage ---------- */
+let ME0 = null, MINE_ON = false;
+// vue « Mes ventes » (chatters, et managers qui déclarent leurs ventes)
+async function startMine() {
+  if (MINE_ON) return loadMine(); MINE_ON = true;
+  $("cuSlot").innerHTML = CUSTOM.formHTML(); CUSTOM.bindForm(); CUSTOM.mountMine($("cuMine")); await loadMine();
+  setInterval(() => { if (!document.hidden && !$("chatterView").classList.contains("hidden") && !$("sheet").classList.contains("on")) loadMine({ watch: true }).catch(() => {}); }, 20000);
+}
+// manager qui vend : onglets « À valider · Historique · Mes ventes » sur les deux vues
+function mineTabs() {
+  const t = document.querySelector("#adminView .vt-tabs"); t.insertAdjacentHTML("beforeend", '<button data-t="mine" id="tabMine">Mes ventes</button>');
+  $("tabMine").onclick = () => { VS.tick(); $("adminView").classList.add("hidden"); $("chatterView").classList.remove("hidden"); startMine(); };
+  const h = document.querySelector("#chatterView .vt-hdr");
+  h.querySelector(".eyebrow").textContent = "Manager";
+  h.insertAdjacentHTML("beforeend", '<div class="vt-tabs" role="tablist" style="margin-left:auto"><button data-back="queue">À valider</button><button data-back="hist">Historique</button><button class="on">Mes ventes</button></div>');
+  h.querySelectorAll("[data-back]").forEach(b => b.onclick = () => { VS.tick(); $("chatterView").classList.add("hidden"); $("adminView").classList.remove("hidden");
+    document.querySelector(`#adminView .vt-tabs [data-t="${b.dataset.back}"]`).click(); });
+}
 (async () => {
-  const me = await api("/api/me");
+  const me = ME0 = await api("/api/me");
   renderShell("ventes", me);
   if (me.role === "admin") {
     $("adminView").classList.remove("hidden"); loadQueue();
-    setInterval(() => { if (!document.hidden && !$("t-queue").classList.contains("hidden")) loadQueue().catch(() => {}); }, 20000);
+    if (me.sells) { mineTabs(); if (new URLSearchParams(location.search).has("declarer")) { $("tabMine").click(); openSheet(); } }
+    setInterval(() => { if (!document.hidden && !$("adminView").classList.contains("hidden") && !$("t-queue").classList.contains("hidden")) loadQueue().catch(() => {}); }, 20000);
   } else {
-    $("chatterView").classList.remove("hidden"); $("cuSlot").innerHTML = CUSTOM.formHTML(); CUSTOM.bindForm(); CUSTOM.mountMine($("cuMine")); await loadMine();
+    $("chatterView").classList.remove("hidden"); await startMine();
     if (new URLSearchParams(location.search).has("declarer")) openSheet();
-    setInterval(() => { if (!document.hidden && !$("sheet").classList.contains("on")) loadMine({ watch: true }).catch(() => {}); }, 20000);
   }
 })();
 </script>

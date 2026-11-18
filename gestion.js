@@ -169,7 +169,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   app.get("/api/admin/team/:id", auth, admin, (req, res) => {
     const u = user(parseInt(req.params.id, 10)); if (!u) return res.status(404).json({ error: "Introuvable" });
     const C = compta.computeCompta(periodOfDate(parisDate(Date.now())));
-    res.json({ ...teamRow(u, C), notes: db.prepare("SELECT n.*, u.username by_name FROM user_notes n LEFT JOIN users u ON u.id = n.created_by WHERE n.user_id = ? ORDER BY n.created_at DESC").all(u.id),
+    res.json({ ...teamRow(u, C), sells: !!(db.prepare("SELECT sells FROM users WHERE id = ?").get(u.id) || {}).sells, notes: db.prepare("SELECT n.*, u.username by_name FROM user_notes n LEFT JOIN users u ON u.id = n.created_by WHERE n.user_id = ? ORDER BY n.created_at DESC").all(u.id),
       sanctions: db.prepare("SELECT * FROM sanctions WHERE user_id = ? ORDER BY created_at DESC LIMIT 20").all(u.id) });
   });
   app.post("/api/admin/team/:id/notes", auth, admin, (req, res) => {

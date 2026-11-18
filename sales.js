@@ -121,6 +121,7 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     const sold_at = num(req.query.sold_at, 1e12, 1e13) || Date.now();
     const note = String(req.query.note || "").slice(0, 300);
     const mime = (req.headers["content-type"] || "").split(";")[0];
+    if (req.user.role === "admin" && !(db.prepare("SELECT sells FROM users WHERE id = ?").get(req.user.id) || {}).sells) return res.status(403).json({ error: "Active « Déclare ses propres ventes » sur ton compte dans Gestion" });
     if (!db.prepare("SELECT 1 FROM models WHERE id = ?").get(model_id)) return res.status(400).json({ error: "Choisissez une créatrice" });
     if (amount === null) return res.status(400).json({ error: "Montant invalide" });
     if (sold_at > Date.now() + 5 * 60e3) return res.status(400).json({ error: "La date de vente est dans le futur" });
@@ -192,6 +193,8 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     const s = db.prepare("SELECT * FROM sales WHERE id = ?").get(parseInt(req.params.id, 10));
     if (!s) return res.status(404).json({ error: "Vente introuvable" });
     if (locked(s.sold_at)) return res.status(400).json({ error: "Cette quinzaine est clôturée : rouvre-la dans la Compta pour modifier cette vente" });
+    // un manager qui déclare ses ventes ne les valide pas lui-même (un autre manager ou le fondateur s'en charge)
+    if (s.user_id === req.user.id && req.user.rk !== "founder") return res.status(403).json({ error: "C'est ta propre vente : un autre manager ou le fondateur doit la valider" });
     const decision = req.body?.decision;
     if (!["validated", "refused", "pending"].includes(decision)) return res.status(400).json({ error: "Décision invalide" });
     let amount = s.amount;
