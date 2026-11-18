@@ -19,6 +19,17 @@ function periodInfo(p) {
     label: `${d1} – ${d2} ${MONTHS[mo - 1]} ${y}`, prev, next };
 }
 const currentPeriod = () => periodOfDate(parisDate(Date.now()));
+/* ---------- Mois de compta : "2026-11" (la paie des chatters reste par quinzaine) ---------- */
+const MONTHS_L = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+function monthInfo(k) {
+  const m = /^(\d{4})-(\d{2})$/.exec(k || ""); if (!m) return null;
+  const y = +m[1], mo = +m[2]; if (mo < 1 || mo > 12) return null;
+  const pad = n => String(n).padStart(2, "0"), last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+  return { key: k, month: true, from: `${y}-${pad(mo)}-01`, to: `${y}-${pad(mo)}-${pad(last)}`, label: `${MONTHS_L[mo - 1]} ${y}`,
+    prev: mo === 1 ? `${y - 1}-12` : `${y}-${pad(mo - 1)}`, next: mo === 12 ? `${y + 1}-01` : `${y}-${pad(mo + 1)}`, halves: [`${k}-A`, `${k}-B`] };
+}
+const monthOfKey = k => monthInfo(k) ? k : (periodInfo(k) ? k.slice(0, 7) : null);   // un mois, ou le mois d'une quinzaine
+const currentMonth = () => parisDate(Date.now()).slice(0, 7);
 
 // Commission des chatters par paliers (sur le net de la période) : chaque taux ne s'applique qu'à sa tranche, primes cumulées
 // (modifiables dans Gestion → Réglages : enregistrés dans les réglages de l'agence)
@@ -69,6 +80,8 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   // CA par sources : chatting automatique (ventes validées) + entrées manuelles déjà nettes
   ["abo", "live", "coll", "push"].forEach(c => { if (!cols("revenues").includes(c)) db.exec(`ALTER TABLE revenues ADD COLUMN ${c} REAL`); });
   if (!cols("revenues").includes("v2")) db.exec("ALTER TABLE revenues ADD COLUMN v2 INTEGER NOT NULL DEFAULT 0");
+  // part « saisie d'un bloc » (ancien système) d'une quinzaine, gardée quand le mois est regroupé
+  if (!cols("revenues").includes("legacy_net")) db.exec("ALTER TABLE revenues ADD COLUMN legacy_net REAL");
   db.exec(`
   CREATE TABLE IF NOT EXISTS payouts (period TEXT NOT NULL, user_id INTEGER NOT NULL, amount REAL NOT NULL, paid_at INTEGER NOT NULL, paid_by INTEGER, PRIMARY KEY (period, user_id));
   CREATE TABLE IF NOT EXISTS pay_adjust (id INTEGER PRIMARY KEY, period TEXT NOT NULL, user_id INTEGER NOT NULL, amount REAL NOT NULL, reason TEXT, created_at INTEGER NOT NULL, created_by INTEGER);
@@ -79,6 +92,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   const lockOf = pkey => db.prepare("SELECT l.*, u.username closed_name FROM period_locks l LEFT JOIN users u ON u.id = l.closed_by WHERE l.period = ?").get(pkey);
   const isLocked = pkey => !!db.prepare("SELECT 1 FROM period_locks WHERE period = ?").get(pkey);
   const lockedMsg = { error: "Cette période est clôturée : rouvre-la dans la Compta pour la modifier" };
+  const lockedMonthMsg = { error: "Ce mois est clôturé : rouvre-le dans la Compta pour modifier le CA" };
   const getSetting = (k, d) => db.prepare("SELECT value FROM settings WHERE key = ?").get(k)?.value ?? d;
   try { const ag = JSON.parse(getSetting("agency", "{}")); if (ag.tiers) setTiers(ag.tiers); } catch (e) {}
   const hooks = {};   // branchés par gestion.js : perte de prime (sanction), dossier du chatter
@@ -207,14 +221,16 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     const mode = getSetting("attribution_mode", "ventes"); // "ventes" (ventes validées) ou "heures"
     const fee = Number(getSetting("platform_fee", "25"));
     const validated = validatedByPeriod ? validatedByPeriod(p.key) : {};
-    const models = db.prepare(`SELECT m.id, m.name, m.creator_pct, r.brut, r.net, r.abo, r.live, r.coll, r.push, r.v2 FROM models m
-      LEFT JOIN revenues r ON r.model_id = m.id AND r.period = ? ORDER BY m.name`).all(p.key);
+    // le CA saisi à la main est mensuel : la quinzaine en prend sa part au prorata des jours (sert au mode « heures »)
+    const mi = monthInfo(p.key.slice(0, 7)), share = (+p.to.slice(8) - +p.from.slice(8) + 1) / +mi.to.slice(8);
+    const models = db.prepare(`SELECT m.id, m.name, m.creator_pct, r.brut, r.net, r.abo, r.live, r.coll, r.push, r.v2, r.legacy_net FROM models m
+      LEFT JOIN revenues r ON r.model_id = m.id AND r.period = ? ORDER BY m.name`).all(mi.key);
     // chatting = ventes validées sur la créatrice (déclarées en brut)
     const chatBy = {}, chatN = {};
     Object.entries(validated).forEach(([k, v]) => { const mid = +k.split(":")[1]; chatBy[mid] = (chatBy[mid] || 0) + v; });
     db.prepare("SELECT model_id, sold_at FROM sales WHERE status = 'validated'").all().filter(x => periodOfDate(parisDate(x.sold_at)) === p.key)
       .forEach(x => chatN[x.model_id] = (chatN[x.model_id] || 0) + 1);
-    const paidC = {}; db.prepare("SELECT model_id, amount, paid_at FROM creator_paid WHERE period = ?").all(p.key).forEach(x => paidC[x.model_id] = x);
+    const paidC = {};   // les parts créatrices se versent au mois (voir computeMonth)
     const keep = fee < 100 ? 1 - fee / 100 : 1;
     const users = db.prepare("SELECT id, username, role, active, commission_pct FROM users ORDER BY username").all();
     // heures pointées par chatter et par créatrice (shifts terminés, rattachés à la période de leur début)
@@ -231,12 +247,12 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       const totalH = users.reduce((t, u) => t + (hours[u.id + ":" + m.id] || 0), 0);
       const chatBrut = r2(chatBy[m.id] || 0), chatNet = r2(chatBrut * keep);
       const legacy = !m.v2 && m.brut != null;   // CA saisi d'un bloc avant les sources
-      const manual = SRC.reduce((t, k) => t + (m[k] || 0), 0);
-      const net = legacy ? (m.net || 0) : r2(chatNet + manual), brut = legacy ? m.brut : chatBrut + manual / keep;
+      const manual = (SRC.reduce((t, k) => t + (m[k] || 0), 0) + (m.legacy_net || 0)) * share;
+      const net = legacy ? r2((m.net || 0) * share) : r2(chatNet + manual), brut = legacy ? m.brut * share : chatBrut + manual / keep;
       const missing = legacy ? [] : SRC.filter(k => m[k] == null);
       const creatorPay = r2(net * m.creator_pct / 100), cp = paidC[m.id];
       return { id: m.id, name: m.name, creator_pct: m.creator_pct, brut, net, legacy, chatBrut, chatNet, chatCount: chatN[m.id] || 0,
-        sources: { abo: m.abo, live: m.live, coll: m.coll, push: m.push }, missing,
+        sources: Object.fromEntries(SRC.map(k => [k, m[k] == null ? null : r2(m[k] * share)])), missing,
         totalHours: totalH, creatorPay, creatorPaid: cp ? cp.amount : 0, creatorPaidAt: cp ? cp.paid_at : null, agencyShare: net - creatorPay,
         commissionBase: base === "brut" ? brut : net };
     });
@@ -297,33 +313,78 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     c.locked = lk ? { at: lk.closed_at, by: lk.closed_name } : null;
     return c;
   }
+  /* ================= COMPTA DU MOIS ================= */
+  // CA (chatting automatique + entrées saisies au mois), parts créatrices et marge sur le mois entier ;
+  // la paie des chatters vient des deux quinzaines (calculées et clôturées à part)
+  function computeMonth(mkey) {
+    const mi = monthInfo(mkey); if (!mi) return null;
+    const base = getSetting("commission_base", "net"), mode = getSetting("attribution_mode", "ventes"), fee = Number(getSetting("platform_fee", "25"));
+    const keep = fee < 100 ? 1 - fee / 100 : 1, r2 = x => Math.round(x * 100) / 100;
+    const chatBy = {}, chatN = {};
+    mi.halves.forEach(h => Object.entries(validatedByPeriod ? validatedByPeriod(h) : {}).forEach(([k, v]) => { const mid = +k.split(":")[1]; chatBy[mid] = (chatBy[mid] || 0) + v; }));
+    db.prepare("SELECT model_id, sold_at FROM sales WHERE status = 'validated'").all().filter(x => parisDate(x.sold_at).slice(0, 7) === mkey)
+      .forEach(x => chatN[x.model_id] = (chatN[x.model_id] || 0) + 1);
+    const paidC = {}; db.prepare("SELECT model_id, amount, paid_at FROM creator_paid WHERE period = ?").all(mkey).forEach(x => paidC[x.model_id] = x);
+    const models = db.prepare(`SELECT m.id, m.name, m.creator_pct, r.brut, r.net, r.abo, r.live, r.coll, r.push, r.v2, r.legacy_net FROM models m
+      LEFT JOIN revenues r ON r.model_id = m.id AND r.period = ? ORDER BY m.name`).all(mkey).map(m => {
+      const chatBrut = r2(chatBy[m.id] || 0), chatNet = r2(chatBrut * keep);
+      const legacy = !m.v2 && m.brut != null;
+      const manual = SRC.reduce((t, k) => t + (m[k] || 0), 0) + (m.legacy_net || 0);
+      const net = legacy ? (m.net || 0) : r2(chatNet + manual), brut = legacy ? m.brut : r2(chatBrut + manual / keep);
+      const missing = legacy ? [] : SRC.filter(k => m[k] == null);
+      const creatorPay = r2(net * m.creator_pct / 100), cp = paidC[m.id];
+      return { id: m.id, name: m.name, creator_pct: m.creator_pct, brut, net, legacy, legacyNet: m.legacy_net || 0, chatBrut, chatNet, chatCount: chatN[m.id] || 0,
+        sources: { abo: m.abo, live: m.live, coll: m.coll, push: m.push }, missing,
+        creatorPay, creatorPaid: cp ? cp.amount : 0, creatorPaidAt: cp ? cp.paid_at : null, agencyShare: r2(net - creatorPay) };
+    });
+    const sum = (arr, f) => arr.reduce((t, x) => t + (f(x) || 0), 0);
+    const totals = { brut: r2(sum(models, m => m.brut)), net: r2(sum(models, m => m.net)), creators: r2(sum(models, m => m.creatorPay)), agencyShare: r2(sum(models, m => m.agencyShare)) };
+    totals.platform = r2(totals.brut - totals.net);
+    totals.sources = { chat: sum(models, m => m.legacy ? 0 : m.chatNet), legacy: sum(models, m => m.legacy ? m.net : m.legacyNet) };
+    SRC.forEach(k => totals.sources[k] = sum(models, m => m.legacy ? 0 : m.sources[k]));
+    return { period: mi, base, mode, fee, models, totals };
+  }
+  // le mois tel qu'affiché : CA figé à la clôture du mois, paie des chatters toujours lue sur les quinzaines
+  function comptaMonthOf(mkey) {
+    const mi = monthInfo(mkey); if (!mi) return null;
+    const lk = lockOf(mkey);
+    let c = null; if (lk && lk.snapshot) { try { c = JSON.parse(lk.snapshot); } catch (e) {} }
+    if (!c) c = computeMonth(mkey);
+    if (lk) { const pc = {}; db.prepare("SELECT * FROM creator_paid WHERE period = ?").all(mkey).forEach(x => pc[x.model_id] = x);
+      c.models.forEach(m => { m.creatorPaid = pc[m.id] ? pc[m.id].amount : 0; m.creatorPaidAt = pc[m.id] ? pc[m.id].paid_at : null; }); }
+    c.period = mi; c.locked = lk ? { at: lk.closed_at, by: lk.closed_name } : null;
+    const H = mi.halves.map(h => comptaOf(h)), ch = {};
+    H.forEach((hc, i) => hc.chatters.forEach(x => { const o = ch[x.id] = ch[x.id] || { id: x.id, username: x.username, active: x.active, pay: 0, sales: 0, salesCount: 0, halves: [null, null], paidAll: true };
+      o.pay += x.pay; o.sales += x.sales; o.salesCount += x.salesCount || 0; o.halves[i] = { key: hc.period.key, pay: x.pay, paid: !!x.paid, rate: x.rate };
+      if (x.pay > 0 && !x.paid) o.paidAll = false; }));
+    c.chatters = Object.values(ch).filter(x => x.pay || x.sales).sort((a, b) => b.pay - a.pay);
+    c.halves = H.map(hc => { const P = hc.chatters.filter(x => x.pay > 0);
+      return { key: hc.period.key, label: hc.period.label, from: hc.period.from, to: hc.period.to, locked: hc.locked, chatters: Math.round(P.reduce((t, x) => t + x.pay, 0) * 100) / 100,
+        sales: Math.round(hc.chatters.reduce((t, x) => t + x.sales, 0) * 100) / 100, paid: P.filter(x => x.paid).length, payable: P.length }; });
+    c.totals.chatters = Math.round(c.halves.reduce((t, h) => t + h.chatters, 0) * 100) / 100;
+    c.totals.margin = Math.round((c.totals.agencyShare - c.totals.chatters) * 100) / 100;
+    return c;
+  }
+  const monthElapsed = (mi, today) => Math.min(1, Math.max(1 / 31, (+today.slice(8)) / +mi.to.slice(8)));
+
   app.get("/api/admin/compta", auth, admin, (req, res) => {
-    const key = periodInfo(req.query.period) ? req.query.period : currentPeriod(), c = comptaOf(key), p = c.period;
-    const today = parisDate(Date.now());
-    const pend = db.prepare("SELECT amount, sold_at FROM sales WHERE status = 'pending'").all().filter(x => periodOfDate(parisDate(x.sold_at)) === key);
-    const prev = computeCompta(p.prev).totals;
-    const running = today >= p.from && today <= p.to, el = running ? periodElapsed(p, today) : 1;
-    res.json({ ...c, pending: { n: pend.length, total: pend.reduce((t, x) => t + x.amount, 0) }, prev: { brut: prev.brut, net: prev.net, margin: prev.margin },
-      running, elapsed: el, dayOf: running ? +today.slice(8) - +p.from.slice(8) + 1 : null, nDays: +p.to.slice(8) - +p.from.slice(8) + 1,
-      projection: running ? Math.round(c.totals.brut / el) : null,
-      goals: { ca: Number(getSetting("goal_ca", "20000")), chatter: Number(getSetting("goal_chatter", "300")) }, bands: BANDS.map(b => [b[0], b[1] === Infinity ? null : b[1], b[2]]) });
-  });
-  // récap d'un mois entier : les deux quinzaines additionnées
-  app.get("/api/admin/compta/month", auth, admin, (req, res) => {
-    const m = /^\d{4}-\d{2}$/.test(req.query.month || "") ? req.query.month : currentPeriod().slice(0, 7);
-    const [y, mo] = m.split("-").map(Number);
-    const halves = ["A", "B"].map(h => comptaOf(`${m}-${h}`));
-    const tot = {}; ["brut", "net", "creators", "chatters", "margin", "platform"].forEach(k => tot[k] = halves.reduce((t, c) => t + (c.totals[k] || 0), 0));
-    tot.sources = {}; ["chat", "legacy", ...SRC].forEach(k => tot.sources[k] = halves.reduce((t, c) => t + (c.totals.sources?.[k] || 0), 0));
-    const ch = {}; halves.forEach((c, i) => c.chatters.forEach(x => { const o = ch[x.id] = ch[x.id] || { id: x.id, username: x.username, pay: 0, sales: 0, halves: [null, null], paidAll: true };
-      o.pay += x.pay; o.sales += x.sales; o.halves[i] = { pay: x.pay, paid: !!x.paid }; if (x.pay > 0 && !x.paid) o.paidAll = false; }));
-    const md = {}; halves.forEach(c => c.models.forEach(x => { const o = md[x.id] = md[x.id] || { id: x.id, name: x.name, net: 0, brut: 0, creatorPay: 0, creatorPaid: 0 };
-      o.net += x.net; o.brut += x.brut; o.creatorPay += x.creatorPay; o.creatorPaid += x.creatorPaid; }));
-    const pm = mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, "0")}`, nm = mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, "0")}`;
-    const prevM = ["A", "B"].reduce((t, h) => t + computeCompta(`${pm}-${h}`).totals.brut, 0);
-    res.json({ month: m, label: new Date(Date.UTC(y, mo - 1, 15)).toLocaleDateString("fr-FR", { month: "long", year: "numeric", timeZone: "UTC" }), prev: pm, next: nm,
-      halves: halves.map(c => ({ key: c.period.key, label: c.period.label, totals: c.totals, locked: c.locked, paid: c.chatters.filter(x => x.paid).length, payable: c.chatters.filter(x => x.pay > 0).length })),
-      totals: tot, prevBrut: prevM, chatters: Object.values(ch).filter(x => x.pay || x.sales).sort((a, b) => b.pay - a.pay), models: Object.values(md) });
+    const today = parisDate(Date.now()), goals = { ca: Number(getSetting("goal_ca", "40000")), chatter: Number(getSetting("goal_chatter", "300")) };
+    const bands = BANDS.map(b => [b[0], b[1] === Infinity ? null : b[1], b[2]]);
+    // ?period=AAAA-MM-A|B : la paie d'une quinzaine
+    if (periodInfo(req.query.period)) {
+      const key = req.query.period, c = comptaOf(key), p = c.period;
+      const pend = db.prepare("SELECT amount, sold_at FROM sales WHERE status = 'pending'").all().filter(x => periodOfDate(parisDate(x.sold_at)) === key);
+      const running = today >= p.from && today <= p.to;
+      return res.json({ ...c, pending: { n: pend.length, total: pend.reduce((t, x) => t + x.amount, 0) }, running,
+        dayOf: running ? +today.slice(8) - +p.from.slice(8) + 1 : null, nDays: +p.to.slice(8) - +p.from.slice(8) + 1, goals, bands });
+    }
+    // sinon : la compta du mois (?month=AAAA-MM, le mois en cours par défaut)
+    const mkey = monthInfo(req.query.month) ? req.query.month : currentMonth(), c = comptaMonthOf(mkey), mi = c.period;
+    const pend = db.prepare("SELECT amount, sold_at FROM sales WHERE status = 'pending'").all().filter(x => parisDate(x.sold_at).slice(0, 7) === mkey);
+    const pv = comptaMonthOf(mi.prev).totals;
+    const running = today >= mi.from && today <= mi.to, el = running ? monthElapsed(mi, today) : 1;
+    res.json({ ...c, pending: { n: pend.length, total: pend.reduce((t, x) => t + x.amount, 0) }, prev: { brut: pv.brut, net: pv.net, margin: pv.margin },
+      running, elapsed: el, dayOf: running ? +today.slice(8) : null, nDays: +mi.to.slice(8), projection: running ? Math.round(c.totals.brut / el) : null, goals, bands });
   });
   /* ----- paie : paiements, primes / retenues ----- */
   app.post("/api/admin/payouts", auth, admin, (req, res) => {
@@ -348,18 +409,19 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     db.prepare("DELETE FROM pay_adjust WHERE id = ?").run(a.id); res.json({ ok: true });
   });
   app.post("/api/admin/creator-paid", auth, admin, (req, res) => {
-    const { period } = req.body || {}, model_id = parseInt(req.body?.model_id, 10);
-    if (!periodInfo(period) || !modelExists(model_id)) return res.status(400).json({ error: "Données invalides" });
+    const period = monthOfKey(req.body?.month || req.body?.period), model_id = parseInt(req.body?.model_id, 10);   // les créatrices sont payées au mois
+    if (!period || !modelExists(model_id)) return res.status(400).json({ error: "Données invalides" });
     if (req.body.paid === false) db.prepare("DELETE FROM creator_paid WHERE period = ? AND model_id = ?").run(period, model_id);
-    else { const m = comptaOf(period).models.find(x => x.id === model_id);
+    else { const m = comptaMonthOf(period).models.find(x => x.id === model_id);
       db.prepare(`INSERT INTO creator_paid (period, model_id, amount, paid_at) VALUES (?,?,?,?) ON CONFLICT(period, model_id) DO UPDATE SET amount = excluded.amount, paid_at = excluded.paid_at`).run(period, model_id, m ? m.creatorPay : 0, Date.now()); }
     res.json({ ok: true });
   });
   /* ----- clôture d'une période ----- */
   app.post("/api/admin/periods/:key/close", auth, admin, (req, res) => {
-    const key = req.params.key; if (!periodInfo(key)) return res.status(400).json({ error: "Période invalide" });
+    // AAAA-MM : clôture du mois (CA et parts créatrices figés) · AAAA-MM-A|B : clôture de la paie d'une quinzaine
+    const key = req.params.key; if (!periodInfo(key) && !monthInfo(key)) return res.status(400).json({ error: "Période invalide" });
     if (isLocked(key)) return res.json({ ok: true });
-    db.prepare("INSERT INTO period_locks (period, closed_at, closed_by, snapshot) VALUES (?,?,?,?)").run(key, Date.now(), req.user.id, JSON.stringify(computeCompta(key)));
+    db.prepare("INSERT INTO period_locks (period, closed_at, closed_by, snapshot) VALUES (?,?,?,?)").run(key, Date.now(), req.user.id, JSON.stringify(monthInfo(key) ? computeMonth(key) : computeCompta(key)));
     res.json({ ok: true });
   });
   app.post("/api/admin/periods/:key/reopen", auth, admin, (req, res) => {
@@ -378,22 +440,18 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       tiers: TIERS, bands: BANDS.map(([a, b, r]) => ({ from: a, to: b === Infinity ? null : b, rate: r, amount: Math.max(0, Math.min(me.sales, b) - a) * r / 100 })),
       pending: { n: pend.length, total: pend.reduce((t, x) => t + x.amount, 0) }, history: hist });
   });
-  // Historique pour les graphiques : totaux des N dernières périodes jusqu'à la période demandée
+  // Historique pour les graphiques : totaux des N derniers mois jusqu'au mois demandé
   app.get("/api/admin/compta/history", auth, admin, (req, res) => {
-    let key = periodInfo(req.query.period) ? req.query.period : currentPeriod();
-    const n = Math.max(2, Math.min(24, parseInt(req.query.n, 10) || 7)), out = [];
-    for (let i = 0; i < n; i++) {
-      const c = computeCompta(key), p = c.period;
-      out.unshift({ key: p.key, label: p.label, from: p.from, ...c.totals });
-      key = p.prev;
-    }
+    let key = monthInfo(req.query.month) ? req.query.month : currentMonth();
+    const n = Math.max(2, Math.min(24, parseInt(req.query.n, 10) || 6)), out = [];
+    for (let i = 0; i < n; i++) { const c = comptaMonthOf(key), p = c.period; out.unshift({ key: p.key, label: p.label, from: p.from, ...c.totals }); key = p.prev; }
     res.json({ periods: out });
   });
   // une entrée manuelle (montant net) : abonnements, live, collections ou média push
   app.put("/api/admin/revenue-source", auth, admin, (req, res) => {
-    const { period, source } = req.body || {}; const model_id = parseInt(req.body?.model_id, 10);
-    if (!periodInfo(period) || !modelExists(model_id) || !SRC.includes(source)) return res.status(400).json({ error: "Données invalides" });
-    if (isLocked(period)) return res.status(400).json(lockedMsg);
+    const { source } = req.body || {}, period = monthOfKey(req.body?.month || req.body?.period), model_id = parseInt(req.body?.model_id, 10);   // CA saisi au mois
+    if (!period || !modelExists(model_id) || !SRC.includes(source)) return res.status(400).json({ error: "Données invalides" });
+    if (isLocked(period)) return res.status(400).json(lockedMonthMsg);
     const empty = req.body.amount === "" || req.body.amount == null, v = empty ? null : num(String(req.body.amount).replace(",", "."), 0, 1e9);
     if (!empty && v === null) return res.status(400).json({ error: "Montant invalide" });
     db.prepare(`INSERT INTO revenues (period, model_id, v2, ${source}) VALUES (?,?,1,?) ON CONFLICT(period, model_id) DO UPDATE SET v2 = 1, ${source} = excluded.${source}`).run(period, model_id, v);
@@ -401,9 +459,9 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     res.json({ ok: true });
   });
   app.put("/api/admin/revenue", auth, admin, (req, res) => {
-    const { period } = req.body || {}; const model_id = parseInt(req.body?.model_id, 10);
-    if (!periodInfo(period) || !modelExists(model_id)) return res.status(400).json({ error: "Données invalides" });
-    if (isLocked(period)) return res.status(400).json(lockedMsg);
+    const period = monthOfKey(req.body?.month || req.body?.period), model_id = parseInt(req.body?.model_id, 10);
+    if (!period || !modelExists(model_id)) return res.status(400).json({ error: "Données invalides" });
+    if (isLocked(period)) return res.status(400).json(lockedMonthMsg);
     const empty = req.body.brut === "" || req.body.brut == null;
     const brut = empty ? null : num(req.body.brut, 0, 1e9);
     if (!empty && brut === null) return res.status(400).json({ error: "Montant invalide" });
@@ -458,7 +516,8 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       const f = num(req.body.platform_fee, 0, 90); if (f === null) return res.status(400).json({ error: "Pourcentage entre 0 et 90" });
       set("platform_fee", f);
       // recalcule le CA net de la période affichée avec le nouveau taux
-      if (periodInfo(req.body.period)) db.prepare("UPDATE revenues SET net = ROUND(brut * (1 - ? / 100.0), 2) WHERE period = ? AND brut IS NOT NULL").run(f, req.body.period);
+      const mk = monthOfKey(req.body.month || req.body.period);
+      if (mk) db.prepare("UPDATE revenues SET net = ROUND(brut * (1 - ? / 100.0), 2) WHERE period = ? AND brut IS NOT NULL").run(f, mk);
     }
     res.json({ ok: true });
   });
@@ -466,10 +525,10 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   /* ================= ACCUEIL : résumé selon le rôle ================= */
   // 7 derniers jours (heure de Paris), du plus ancien au plus récent
   // photo du CA brut total de la période, une par jour : sert à tracer la courbe de l'accueil
-  function snapCA(pkey) {
-    const p = periodInfo(pkey); if (!p) return;
+  function snapCA(key) {
+    const pkey = monthOfKey(key), p = monthInfo(pkey); if (!p) return;
     const today = parisDate(Date.now()), date = today > p.to ? p.to : today < p.from ? p.from : today;
-    const brut = computeCompta(pkey).totals.brut;
+    const brut = computeMonth(pkey).totals.brut;
     db.prepare(`INSERT INTO ca_snaps (period, date, brut) VALUES (?,?,?) ON CONFLICT(period, date) DO UPDATE SET brut = excluded.brut`).run(pkey, date, brut);
   }
   const lastDays = (n, now) => Array.from({ length: n }, (_, i) => parisDate(now - (n - 1 - i) * 864e5));
@@ -567,7 +626,8 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
         hours, simu: { last: last || null, week: my7.length, avg: my7.length ? Math.round(my7.reduce((t, x) => t + x.score, 0) / my7.length) : null },
         discipline: hooks.discipline ? (() => { try { return hooks.discipline(req.user.id); } catch (e) { console.error(e); return null; } })() : null });
     }
-    const c = computeCompta(p.key);
+    // manager : CA, objectif et marge sur le mois (la paie et le classement des chatters restent sur la quinzaine)
+    const mi = monthInfo(currentMonth()), c = comptaMonthOf(mi.key), mEl = monthElapsed(mi, today);
     const live = db.prepare(`SELECT c.start_at, u.username, m.name model_name FROM clocks c JOIN users u ON u.id = c.user_id
       JOIN models m ON m.id = c.model_id WHERE c.end_at IS NULL AND c.reinforce = 0 ORDER BY c.start_at`).all();
     const todayShifts = db.prepare(`SELECT s.start, s.end, u.username, m.name model_name FROM shifts s JOIN users u ON u.id = s.user_id
@@ -582,23 +642,23 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       pending: days.map(d => allSales.filter(x => parisDate(x.created_at) === d).length),
       shifts: days.map(d => new Set(allClocks.filter(k => parisDate(k.start_at) === d).map(k => k.user_id)).size)
     };
-    const prevMargin = computeCompta(p.prev).totals.margin;
+    const prevMargin = comptaMonthOf(mi.prev).totals.margin;
     const feed = feedOf();
     const activeChatters = db.prepare("SELECT COUNT(*) n FROM users WHERE role = 'chatter' AND active = 1").get().n;
-    const goal = Number(getSetting("goal_ca", "20000"));
-    // courbe du CA : photos du CA saisi, jour par jour sur la période
-    snapCA(p.key);
-    const nDays = +p.to.slice(8) - +p.from.slice(8) + 1;
-    const caPts = db.prepare("SELECT date, brut FROM ca_snaps WHERE period = ? ORDER BY date").all(p.key)
-      .map(x => ({ day: +x.date.slice(8) - +p.from.slice(8) + 1, date: x.date, brut: x.brut }));
-    // marge des périodes précédentes (barres)
-    const marginHist = []; let k = p.key;
-    for (let i = 0; i < 7; i++) { const pi = periodInfo(k); marginHist.unshift({ label: pi.label, margin: i === 0 ? c.totals.margin : computeCompta(k).totals.margin }); k = pi.prev; }
+    const goal = Number(getSetting("goal_ca", "40000"));
+    // courbe du CA : photos du CA saisi, jour par jour sur le mois
+    snapCA(mi.key);
+    const nDays = +mi.to.slice(8);
+    const caPts = db.prepare("SELECT date, brut FROM ca_snaps WHERE period = ? ORDER BY date").all(mi.key)
+      .map(x => ({ day: +x.date.slice(8), date: x.date, brut: x.brut }));
+    // marge des mois précédents (barres)
+    const marginHist = []; let k = mi.key;
+    for (let i = 0; i < 6; i++) { const pi = monthInfo(k); marginHist.unshift({ label: pi.label, margin: i === 0 ? c.totals.margin : comptaMonthOf(k).totals.margin }); k = pi.prev; }
     // prochain shift (si personne ne travaille)
     const hm = new Date(now).toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" });
     const nextShift = db.prepare(`SELECT s.date, s.start, s.end, u.username, m.name model_name FROM shifts s JOIN users u ON u.id = s.user_id
       JOIN models m ON m.id = s.model_id WHERE s.date > ? OR (s.date = ? AND s.start > ?) ORDER BY s.date, s.start LIMIT 1`).get(today, today, hm) || null;
-    res.json({ role: "admin", today, nDays, caPts, marginHist, nextShift, days, period: p, totals: c.totals, series, goal, elapsed, projection: Math.round(c.totals.brut / elapsed), prevMargin,
+    res.json({ role: "admin", today, nDays, caPts, marginHist, nextShift, days, period: mi, payPeriod: p, totals: c.totals, series, goal, elapsed: mEl, projection: Math.round(c.totals.brut / mEl), prevMargin,
       marginTrend: pctTrend(c.totals.margin, prevMargin), feed, activeChatters,
       missingRevenue: c.models.filter(m => m.missing && m.missing.length).map(m => m.name),
       pendingSales, live, todayShifts,
@@ -606,5 +666,49 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       simu: { week: sims.length, avg: sims.length ? Math.round(sims.reduce((t, x) => t + x.score, 0) / sims.length) : null } });
   });
 
-  return { periodInfo, periodOfDate, computeCompta, tierPay, setTiers, getTiers: () => TIERS, isLocked, hooks, comptaOf, parisDate };
+  /* ---------- Passage de la compta au mois (une seule fois) ---------- */
+  // CA saisi et parts créatrices versées par quinzaine → regroupés sur le mois (les lignes d'origine sont gardées, suffixées « #q »),
+  // mois dont les 2 quinzaines étaient clôturées → mois clôturé, objectif de CA doublé (il était par quinzaine)
+  if (getSetting("compta_monthly", null) == null) {
+    const setS = (k, v) => db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(k, String(v));
+    const fee = Number(getSetting("platform_fee", "25")), keep = fee < 100 ? 1 - fee / 100 : 1, r2 = x => Math.round(x * 100) / 100;
+    const halfRe = /^\d{4}-\d{2}-[AB]$/;
+    db.exec("BEGIN");
+    try {
+      const groups = {};
+      db.prepare("SELECT * FROM revenues").all().filter(r => halfRe.test(r.period)).forEach(r => { const g = r.period.slice(0, 7) + ":" + r.model_id; (groups[g] = groups[g] || []).push(r); });
+      const chatNetHalf = (h, mid) => r2(Object.entries(validatedByPeriod ? validatedByPeriod(h) : {}).filter(([k]) => +k.split(":")[1] === mid).reduce((t, [, v]) => t + v, 0) * keep);
+      Object.entries(groups).forEach(([g, rows]) => {
+        const [mk, mid] = [g.split(":")[0], +g.split(":")[1]];
+        const isLeg = r => !r.v2 && r.brut != null, used = rows.filter(r => r.v2 || r.brut != null);
+        const ex = db.prepare("SELECT * FROM revenues WHERE period = ? AND model_id = ?").get(mk, mid);
+        if (used.length && !ex) {
+          if (used.every(isLeg)) db.prepare("INSERT INTO revenues (period, model_id, brut, net, v2) VALUES (?,?,?,?,0)").run(mk, mid, r2(used.reduce((t, r) => t + r.brut, 0)), r2(used.reduce((t, r) => t + (r.net || 0), 0)));
+          else {
+            const v = {}; SRC.forEach(k => { const xs = used.filter(r => r.v2 && r[k] != null); v[k] = xs.length ? r2(xs.reduce((t, r) => t + r[k], 0)) : null; });
+            // quinzaine saisie d'un bloc (elle comprenait déjà son chatting) : on garde le reste, le chatting du mois est recalculé automatiquement
+            const leg = used.filter(isLeg), ln = leg.length ? r2(leg.reduce((t, r) => t + (r.net || 0) - chatNetHalf(r.period, mid), 0)) : null;
+            db.prepare("INSERT INTO revenues (period, model_id, abo, live, coll, push, v2, legacy_net) VALUES (?,?,?,?,?,?,1,?)").run(mk, mid, v.abo, v.live, v.coll, v.push, ln);
+          }
+        }
+        rows.forEach(r => db.prepare("UPDATE revenues SET period = ? WHERE period = ? AND model_id = ?").run(r.period + "#q", r.period, mid));
+      });
+      const cg = {};
+      db.prepare("SELECT * FROM creator_paid").all().filter(r => halfRe.test(r.period)).forEach(r => { const g = r.period.slice(0, 7) + ":" + r.model_id; (cg[g] = cg[g] || []).push(r); });
+      Object.entries(cg).forEach(([g, rows]) => {
+        const [mk, mid] = [g.split(":")[0], +g.split(":")[1]];
+        if (!db.prepare("SELECT 1 FROM creator_paid WHERE period = ? AND model_id = ?").get(mk, mid))
+          db.prepare("INSERT INTO creator_paid (period, model_id, amount, paid_at) VALUES (?,?,?,?)").run(mk, mid, r2(rows.reduce((t, r) => t + r.amount, 0)), Math.max(...rows.map(r => r.paid_at)));
+        rows.forEach(r => db.prepare("UPDATE creator_paid SET period = ? WHERE period = ? AND model_id = ?").run(r.period + "#q", r.period, mid));
+      });
+      const locks = db.prepare("SELECT * FROM period_locks").all(), lk = {}; locks.filter(l => halfRe.test(l.period)).forEach(l => { (lk[l.period.slice(0, 7)] = lk[l.period.slice(0, 7)] || []).push(l); });
+      Object.entries(lk).forEach(([mk, ls]) => { if (ls.length === 2 && !locks.some(l => l.period === mk))
+        db.prepare("INSERT INTO period_locks (period, closed_at, closed_by, snapshot) VALUES (?,?,?,NULL)").run(mk, Math.max(...ls.map(l => l.closed_at)), ls[0].closed_by); });
+      const g = db.prepare("SELECT value FROM settings WHERE key = 'goal_ca'").get(); if (g && Number(g.value) > 0) setS("goal_ca", Number(g.value) * 2);
+      setS("compta_monthly", Date.now());
+      db.exec("COMMIT");
+    } catch (e) { db.exec("ROLLBACK"); console.error("passage de la compta au mois", e); }
+  }
+
+  return { periodInfo, periodOfDate, monthInfo, computeMonth, comptaMonthOf, currentMonth, computeCompta, tierPay, setTiers, getTiers: () => TIERS, isLocked, hooks, comptaOf, parisDate };
 };

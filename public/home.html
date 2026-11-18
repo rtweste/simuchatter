@@ -768,7 +768,7 @@ function chartB(brut, ahead, o = {}) {
     return `<span class="hz" style="left:${(a / N * 100).toFixed(2)}%;width:${(w / N * 100).toFixed(2)}%"><span class="gl" style="left:100%"></span><span class="tt" style="left:100%">${esc(dlbl(p.date))} · <b>${eur0(p.brut)}</b></span></span>`; }).join("")
     + (brut > 0 && last.day < N ? `<span class="hz" style="left:${(last.day / N * 100).toFixed(2)}%;width:${((N - last.day) / N * 100).toFixed(2)}%"><span class="gl" style="left:100%"></span><span class="tt" style="left:auto;right:0;transform:none">Projection fin de période · <b style="color:${pc}">${eur0(PROJ)}</b></span></span>` : "");
   const d1 = +D.period.from.slice(8), d2 = +D.period.to.slice(8), mo = new Date(D.period.from + "T12:00").toLocaleDateString("fr-FR", { month: "short" });
-  return `<div class="chart"><div class="hd"><small>${o.label || "CA <em>de la période</em>"}</small><b>${odo(eur0(brut))}</b></div>
+  return `<div class="chart"><div class="hd"><small>${o.label || (D.period.month ? "CA <em>du mois</em>" : "CA <em>de la période</em>")}</small><b>${odo(eur0(brut))}</b></div>
     <div class="lg2"><span><i></i>${o.cum || "CA cumulé"}</span><span><i class="d"></i>${o.goalLbl || "rythme objectif"}</span>${brut > 0 ? `<span><i class="p ${ahead ? "" : "o"}"></i>projection</span>` : ""}</div>
     <div class="plot">${sv}${dot}${zones}</div>
     <div class="xax"><span>${d1} ${esc(mo)}</span><span>${Math.round((d1 + d2) / 2)}</span><span>${d2} ${esc(mo)}</span></div></div>`;
@@ -782,7 +782,7 @@ function heroAdm(line, brut, ahead) {
     + `<a class="act ${n ? "" : "hot"}" href="/compta">${icon("euro")}Saisir le CA</a>`
     + `<a class="act" href="/planning">${icon("calendar")}Planning</a>`;
   return `<div class="b hero a-hero" style="${wv("hero")}"><div class="stars">${stars()}</div><span class="glow"></span>
-    <div class="hero2"><div class="hl"><div class="eyebrow" style="position:relative;margin:0">${esc(date)}<span class="hp"> · période du ${esc(D.period.label.replace(/ \d{4}$/, ""))}</span></div>
+    <div class="hero2"><div class="hl"><div class="eyebrow" style="position:relative;margin:0">${esc(date)}<span class="hp"> · ${D.period.month ? "compta de " + esc(D.period.label.replace(/ \d{4}$/, "")) : "période du " + esc(D.period.label.replace(/ \d{4}$/, ""))}</span></div>
       <div class="hi ${ME.username.length > 11 ? "long" : ""}" id="hello">${hello} <em>${esc(ME.username.charAt(0).toUpperCase() + ME.username.slice(1))}.</em></div>
       <div class="hline">${line}</div><div class="acts">${chips}</div></div>
     ${chartB(brut, ahead)}</div></div>`;
@@ -793,7 +793,7 @@ function goalAdm(brut, ahead, pace) {
   const perDay = reste / left, rythme = brut / elapsed, c = brut <= 0 ? "" : ahead ? "g" : "o";
   const status = brut <= 0 ? `<div class="paceL n"><i></i>CA pas encore saisi · <a href="/compta">Compta →</a></div>`
     : `<div class="paceL ${ahead ? "" : "o"}"><i></i>${ahead ? "en avance sur le rythme" : "sous le rythme attendu"}</div>`;
-  return `<div class="b a-goal gC" style="${wv("goal")}"><h3>Objectif <em>CA</em> de la période</h3>
+  return `<div class="b a-goal gC" style="${wv("goal")}"><h3>Objectif <em>CA</em> ${D.period.month ? "du mois" : "de la période"}</h3>
     <div class="colw"><div class="col" role="img" aria-label="${Math.round(p * 100)} % de l'objectif"><span class="fill" data-h="${(p * 100).toFixed(1)}"></span>
       <span class="mk" style="bottom:25%"></span><span class="mk" style="bottom:50%"></span><span class="mk" style="bottom:75%"></span>
       <span class="pm ${ahead || brut <= 0 ? "" : "o"}" style="bottom:${(pace * 100).toFixed(1)}%"></span></div>
@@ -826,9 +826,9 @@ function renderAdmin() {
     : D.missingRevenue.length ? `CA brut à saisir pour <b>${D.missingRevenue.map(esc).join(", ")}</b>`
     : `Tout est à jour. Belle période !`;
   const NM = !D.marginHist;   // l'Assistante ne voit pas la marge : la carte montre la paie des chatters
-  const mh = D.marginHist || [], mt = NM ? ["quinzaine en cours", "nw"] : D.prevMargin > 0 ? trendTxt(D.marginTrend) : ["nouvelle période", "nw"];
-  const k1 = NM ? `<div class="days"><span style="text-align:left;text-transform:none">Commissions et primes de la quinzaine</span></div>` : barsB(mh.map(x => Math.max(0, x.margin)), mh.map(x => `${esc(x.label)} · <b>${eur(x.margin)}</b>`), null, 1.9)
-    + `<div class="days"><span style="text-align:left;text-transform:none">${mh.length} dernières périodes</span></div>`;
+  const mh = D.marginHist || [], mt = NM ? ["mois en cours", "nw"] : D.prevMargin > 0 ? trendTxt(D.marginTrend) : ["nouveau mois", "nw"];
+  const k1 = NM ? `<div class="days"><span style="text-align:left;text-transform:none">Commissions et primes du mois</span></div>` : barsB(mh.map(x => Math.max(0, x.margin)), mh.map(x => `${esc(x.label)} · <b>${eur(x.margin)}</b>`), null, 1.9)
+    + `<div class="days"><span style="text-align:left;text-transform:none">${mh.length} derniers mois</span></div>`;
   $("hm").className = "hm adm " + MODE;
   $("hm").innerHTML = heroAdm(line, brut, ahead)
     + goalAdm(brut, ahead, pace)

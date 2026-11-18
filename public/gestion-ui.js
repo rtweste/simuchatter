@@ -7,6 +7,7 @@ const dShort = ms => new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", 
 const hm = ms => new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
 const MONTHS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+const MON = (() => { const d = new Date(); return ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"][d.getMonth()]; })();
 const PER = (() => { const d = new Date(), m = MONTHS[d.getMonth()], last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); return d.getDate() <= 15 ? `1 – 15 ${m}` : `16 – ${last} ${m}`; })();
 const dayLbl = (d, ms) => { const t = new Date(), y = new Date(Date.now() - 864e5), same = (a, b) => a.toDateString() === b.toDateString();
   return same(d, t) ? "AUJOURD'HUI" : same(d, y) ? "HIER" : dShort(ms).toUpperCase(); };
@@ -294,7 +295,7 @@ function crea(c) {
   const mx = Math.max(1, ...c.chatters.map(x => x.amount));
   const slot = s => { const nx = s.end <= s.start; return `<span>${s.start.replace(":00", "")}–${s.end.replace(":00", "")}${nx ? " <sup>+1 j</sup>" : ""}</span>`; };
   openDr(`<div class="dh"><span class="av">${c.isNew ? "+" : esc(c.name[0])}</span><div style="min-width:0;flex:1"><b>${c.isNew ? "Nouvelle créatrice" : esc(c.name)}</b><small>${c.isNew ? "Elle apparaîtra dans la Compta, le Planning et le simulateur" : `Créatrice · ${c.creator_pct} % du net reversé`}</small></div><button class="x" aria-label="Fermer">✕</button></div>
-    ${c.isNew ? "" : `<div class="dk"><div><small>CA net · ${PER}</small><b>${E(c.net)}</b><em>chatting + entrées</em></div><div><small>Sa part</small><b style="color:#5fd3a2">${E(c.part)}</b><em>${c.creator_pct} % du net</em></div><div><small>Ventes validées</small><b>${c.sales}</b><em>sur la quinzaine</em></div><div><small>Chatters</small><b>${c.chatters.length}</b><em>${esc(c.chatters.map(x => x.username).join(", ") || "—")}</em></div></div>
+    ${c.isNew ? "" : `<div class="dk"><div><small>CA net · ${MON}</small><b>${E(c.net)}</b><em>chatting + entrées</em></div><div><small>Sa part</small><b style="color:#5fd3a2">${E(c.part)}</b><em>${c.creator_pct} % du net</em></div><div><small>Ventes validées</small><b>${c.sales}</b><em>sur la quinzaine</em></div><div><small>Chatters</small><b>${c.chatters.length}</b><em>${esc(c.chatters.map(x => x.username).join(", ") || "—")}</em></div></div>
     <div class="sec"><span class="lab">VENTES PAR CHATTER</span>${c.chatters.length ? `<div class="bars">${c.chatters.map(x => `<div><span>${esc(x.username)}</span><span class="t"><i data-w="${x.amount / mx * 100}"></i></span><b>${E(x.amount)}</b></div>`).join("")}</div>` : '<div class="mut">Aucune vente validée sur la quinzaine.</div>'}</div>
     <div class="sec"><span class="lab">SES CRÉNEAUX CETTE SEMAINE</span>${c.slots.length ? `<div class="slots">${c.slots.map(slot).join("")}</div>` : '<div class="mut">Aucun shift prévu sur 7 jours.</div>'}</div>`}
     <div class="sec"><span class="lab">NOM</span><input class="fi" data-f="name" value="${esc(c.name)}" placeholder="Nom de la créatrice" maxlength="40"></div>

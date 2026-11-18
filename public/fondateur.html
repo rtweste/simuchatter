@@ -91,7 +91,7 @@
     q("[data-sd]").textContent = `${E0(p.c)} de commission${p.pr ? ` + ${E0(p.pr)} de prime` : ""}${T[k + 1] ? ` · palier suivant dans ${E0(T[k + 1].from - v)}` : " · palier max"}`; }
   function creaCard() {
     return `<div class="card lockable" style="--d:.06s"><div class="ch"><h3>Part des <em>créatrices</em></h3><span class="mut">Sur le CA net de chaque créatrice</span></div>
-      ${D.models.map(m => `<div class="crow" data-m="${m.id}"><div class="crh"><span class="av">${esc(m.name[0])}</span><div><b>${esc(m.name)}</b><div class="mut">CA net de la quinzaine : ${E0(m.net)}</div></div><span class="pc2">${m.creator_pct} %</span></div>
+      ${D.models.map(m => `<div class="crow" data-m="${m.id}"><div class="crh"><span class="av">${esc(m.name[0])}</span><div><b>${esc(m.name)}</b><div class="mut">CA net du mois : ${E0(m.net)}</div></div><span class="pc2">${m.creator_pct} %</span></div>
         <div class="split"><i class="c1" style="width:${m.creator_pct}%"></i><i class="c2" style="width:${100 - m.creator_pct}%"></i></div><input type="range" min="0" max="100" step="1" value="${m.creator_pct}" aria-label="Part de ${esc(m.name)}">
         <div class="lg2"><span>Sur 1 000 € nets : ${esc(m.name)} <b data-a>${E0(m.creator_pct * 10)}</b></span><span>Agence <b data-b>${E0((100 - m.creator_pct) * 10)}</b></span></div></div>`).join("") || '<div class="emp">Aucune créatrice.</div>'}
       <div class="crow dflt"><div class="crh"><span class="av" style="font-size:15px">+</span><div><b>Nouvelles créatrices</b><div class="mut">Part appliquée à la création d’une fiche</div></div>
@@ -100,7 +100,7 @@
   }
   function closeCard() {
     const pp = D.prevPeriod, target = pp && !pp.locked ? pp : null, cur = D.period, t = (target || cur).totals || {};
-    const lines = [["Ventes nettes", t.net], ["Paie des chatters", t.chatters], ["Dont primes et ajustements", t.primes], ["Part des créatrices", t.creators]];
+    const lines = [["Ventes nettes des chatters", t.net], ["Paie des chatters", t.chatters], ["Dont primes et ajustements", t.primes]];
     return `<div class="card clo lockable" style="--d:.1s"><div class="ch"><h3>Clôture de la <em>quinzaine</em></h3><span class="tag ${target ? "a" : "w"}">${esc((target || cur).label)}</span></div>
       ${lines.map(([l, v]) => `<div class="pl2"><span>${l}</span><b>${E0(v)}</b></div>`).join("")}${t.margin != null ? `<div class="pl2 mg"><span>Marge de l’agence</span><b>${E0(t.margin)}</b></div>` : ""}
       <div class="pre">${target ? `<div class="${D.pendingSales ? "ko" : "ok"}"><i>${D.pendingSales ? "!" : "✓"}</i>${D.pendingSales ? `${D.pendingSales} vente${D.pendingSales > 1 ? "s" : ""} encore à valider` : "Toutes les ventes sont validées"}</div><div class="ok"><i>✓</i>La quinzaine est terminée</div>` : `<div class="ok"><i>✓</i>${pp && pp.locked ? `Quinzaine précédente (${esc(pp.label)}) déjà clôturée` : "Rien à clôturer"}</div><div class="ko"><i>…</i>La quinzaine en cours se clôture une fois terminée</div>`}</div>
@@ -116,7 +116,7 @@
     if (!RS) return `<div class="card rz" style="--d:.12s"><div class="ch"><h3>Remettre la compta <em>à zéro</em></h3></div><div class="ld" style="padding:20px">Chargement…</div></div>`;
     const t = RS.totals || {}, neg = (t.margin || 0) < 0;
     return `<div class="card rz" style="--d:.12s"><div class="ch"><h3>Remettre la compta <em>à zéro</em></h3><div class="seg">${[[cur, D.period.label], ...(prev ? [[prev, D.prevPeriod.label]] : [])].map(([k, l]) => `<button data-rp="${k}" class="${RS.key === k ? "on" : ""}">${esc(l)}</button>`).join("")}</div></div>
-      <div class="rzt"><span>CA brut <b>${E0(t.brut)}</b></span><span>Paie chatters <b>${E0(t.chatters)}</b></span><span class="${neg ? "neg" : ""}">Marge <b>${E0(t.margin)}</b></span></div>
+      <div class="rzt"><span>CA brut du mois <b>${E0(t.brut)}</b></span><span>Paie de la quinzaine <b>${E0(t.chatters)}</b></span><span class="${neg ? "neg" : ""}">Marge du mois <b>${E0(t.margin)}</b></span></div>
       <div class="mut" style="margin:10px 0 4px">Choisis ce qui repart à zéro sur cette quinzaine. Le reste n’est pas touché.</div>
       ${RS.parts.map(x => `<button class="rzp${x.on ? " on" : ""}${x.n ? "" : " off"}" data-rz="${x.k}" ${x.n ? "" : "disabled"}><span class="bx">${SV("M5 12.5l4.5 4.5L19 7.5", 13, 3.2)}</span><span style="flex:1;min-width:0"><b>${esc(x.label)}</b><small>${esc(x.sub)}</small></span>${x.n ? `<em>${E0(x.amount)}</em>` : ""}</button>`).join("")}
       <button class="hold rzh" data-rzgo ${RS.parts.some(x => x.on) ? "" : "disabled"}><i class="fill"></i>${SV("M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5", 18, 2)}<span>Maintenir pour remettre à zéro</span></button>

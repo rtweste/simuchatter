@@ -22,14 +22,14 @@
   <div class="c-hdr">
     <div><div class="eyebrow">Manager</div><h1 class="c-ttl">La <em>compta.</em></h1></div>
     <div class="c-hr">
-      <div class="c-seg" role="tablist"><button class="on" data-pm="q">Quinzaine</button><button data-pm="m">Mois</button></div>
-      <div class="c-pnav"><button id="prevP" aria-label="Précédent">‹</button><b><span id="pLab">…</span><span class="c-tag v c-lockchip" id="lockChip"><i></i>Clôturée</span></b><button id="nextP" aria-label="Suivant">›</button></div>
+      <div class="c-seg" role="tablist"><button class="on" data-pm="m">Mois</button><button data-pm="q">Paie des chatters</button></div>
+      <div class="c-pnav"><button id="prevP" aria-label="Précédent">‹</button><b><span id="pLab">…</span><span class="c-tag v c-lockchip" id="lockChip"><i></i>Clôturé</span></b><button id="nextP" aria-label="Suivant">›</button></div>
       <button class="c-gbtn" id="exportBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Exporter</button>
     </div>
   </div>
 
-  <!-- ============ QUINZAINE ============ -->
-  <div id="vQ">
+  <!-- ============ MOIS : CA, créatrices, marge ============ -->
+  <div id="vM">
     <div class="c-top">
       <div class="c-card c-hero">
         <div class="c-kp">
@@ -44,52 +44,58 @@
     </div>
     <div class="c-alerts" id="alerts"></div>
     <div class="c-card" style="--d:.1s;margin-bottom:14px">
-      <div class="c-ch"><h3>Paie des <em>chatters</em></h3><span class="c-mut">Touche une ligne pour voir la fiche</span></div>
-      <div id="payTable"></div>
-      <div class="c-paybar"><b id="paidN"></b><span class="c-ptrack"><i id="paidBar"></i></span><span class="c-mut" id="dueTxt"></span></div>
+      <div class="c-ch"><h3>Paie des chatters <em>du mois</em></h3><span class="c-mut" id="mPayTot"></span></div>
+      <div class="c-qz" id="mHalves" style="margin-top:0"></div>
+      <div class="c-mp" id="mPay" style="margin-top:14px"></div>
     </div>
     <div class="c-card" style="--d:.14s;margin-bottom:14px">
-      <div class="c-ch"><h3>Les <em>créatrices</em></h3><span class="c-mut">Chatting automatique (brut − <span class="feeTxt">25</span> %) · le reste se saisit en net</span></div>
+      <div class="c-ch"><h3>Les <em>créatrices</em></h3><span class="c-mut">Chatting automatique (brut − <span class="feeTxt">25</span> %) · le reste se saisit en net, pour le mois</span></div>
       <div class="c-crs" id="creators"></div>
     </div>
-    <div class="c-card c-close" style="--d:.18s" id="closeCard">
-      <div><h3>Clôturer la <em>période</em></h3><div class="c-mut" style="margin-top:4px">Une fois clôturée, plus aucune vente, pointage ou montant ne peut modifier cette quinzaine.</div><div class="c-chk" id="checks"></div></div>
-      <button class="c-wbtn" id="closeBtn">Clôturer la période</button>
+    <div class="c-card c-close" style="--d:.18s" id="closeCardM">
+      <div><h3>Clôturer le <em>mois</em></h3><div class="c-mut" style="margin-top:4px">Le CA et les parts des créatrices de ce mois seront figés. La paie des chatters se clôture à part, par quinzaine.</div><div class="c-chk" id="checksM"></div></div>
+      <button class="c-wbtn" id="closeBtnM">Clôturer le mois</button>
       <div class="c-lockfx"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#5fd3a2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="sh" d="M8 11V8a4 4 0 0 1 8 0v3"/><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M12 15v2"/></svg>
-        <div><b>Période clôturée</b><small id="lockTxt"></small></div><button class="c-sb" id="reopenBtn">Rouvrir</button></div>
+        <div><b>Mois clôturé</b><small id="lockTxtM"></small></div><button class="c-sb" id="reopenBtnM">Rouvrir</button></div>
     </div>
     <details class="c-card c-more" style="--d:.2s">
-      <summary><h3>Réglages et <em>détail</em></h3><span class="c-mut">Commission de la plateforme, calcul des commissions, corrections manuelles</span></summary>
+      <summary><h3>Réglages</h3><span class="c-mut">Commission de la plateforme, calcul des commissions, objectif</span></summary>
       <div class="c-set">
         <label>Commission de la plateforme sur le chatting (%)<input id="feeInp" inputmode="decimal"></label>
         <label>Ventes attribuées aux chatters<select id="modeSel"><option value="ventes">Ventes validées (captures)</option><option value="heures">Au prorata des heures pointées</option></select></label>
         <label>Commission des chatters calculée sur<select id="baseSel"><option value="net">Le net</option><option value="brut">Le brut</option></select></label>
-        <label>Objectif de CA brut par quinzaine (€)<input id="goalCa" inputmode="decimal"></label>
+        <label>Objectif de CA brut par mois (€)<input id="goalCa" inputmode="decimal"></label>
       </div>
-      <div class="c-lab" style="margin:18px 0 8px">Détail par chatter et par créatrice</div>
-      <div class="tablewrap" id="linesTable"></div>
-      <p class="c-mut" style="margin-top:8px">Laisse « Montant retenu » vide pour garder le calcul automatique, ou saisis un montant pour le remplacer.</p>
     </details>
   </div>
 
-  <!-- ============ MOIS ============ -->
-  <div id="vM" class="hidden">
-    <div class="c-top">
-      <div class="c-card c-hero">
-        <div class="c-kp">
-          <div><div class="c-lab">CA brut · <span id="mLab"></span><span class="c-trend" id="mTrend"></span></div><div class="c-big"><span id="mBrut">0</span><small>€</small></div></div>
-          <div class="c-sub"><small>CA NET</small><b id="mNet">—</b></div>
-          <div class="c-sub"><small>MARGE AGENCE</small><b id="mMargin" class="g">—</b></div>
-        </div>
-        <div class="c-flow"><div class="c-lab" style="margin-bottom:8px">D'où vient le CA net</div><div class="c-src" id="mSrc"></div></div>
-        <div class="c-flow"><div class="c-lab" style="margin-bottom:8px">Où va le chiffre d'affaires</div><div class="c-fbar" id="mFlow"></div><div class="c-fleg" id="mLeg"></div></div>
+  <!-- ============ PAIE DES CHATTERS : par quinzaine ============ -->
+  <div id="vQ" class="hidden">
+    <div class="c-card c-paytop" style="margin-bottom:14px">
+      <div class="c-kp">
+        <div><div class="c-lab">Paie des chatters · <span id="qLab"></span></div><div class="c-big"><span id="qPay">0</span><small>€</small></div></div>
+        <div class="c-sub"><small>VENTES NETTES</small><b id="qSales">—</b></div>
+        <div class="c-sub"><small>CHATTERS PAYÉS</small><b id="qPaid">—</b></div>
       </div>
-      <div class="c-card" style="--d:.06s"><div class="c-ch" style="margin-bottom:4px"><div class="c-lab">Les 2 quinzaines</div><span id="mState"></span></div><div class="c-qz" id="mHalves"></div></div>
+      <button class="c-sb" id="toMonth" style="margin-top:12px">← Compta du mois</button>
     </div>
-    <div class="c-g2">
-      <div class="c-card" style="--d:.1s"><div class="c-ch"><h3>Paie des chatters <em>sur le mois</em></h3><span class="c-mut" id="mPayTot"></span></div><div class="c-mp" id="mPay"></div></div>
-      <div class="c-card" style="--d:.14s"><div class="c-ch"><h3>Créatrices <em>sur le mois</em></h3></div><div id="mCreators"></div></div>
+    <div class="c-alerts" id="alertsQ"></div>
+    <div class="c-card" style="--d:.06s;margin-bottom:14px">
+      <div class="c-ch"><h3>Paie des <em>chatters</em></h3><span class="c-mut">Touche une ligne pour voir la fiche</span></div>
+      <div id="payTable"></div>
+      <div class="c-paybar"><b id="paidN"></b><span class="c-ptrack"><i id="paidBar"></i></span><span class="c-mut" id="dueTxt"></span></div>
     </div>
+    <div class="c-card c-close" style="--d:.1s" id="closeCard">
+      <div><h3>Clôturer la <em>paie</em></h3><div class="c-mut" style="margin-top:4px">Une fois clôturée, plus aucune vente, pointage, prime ou retenue ne peut modifier la paie de cette quinzaine.</div><div class="c-chk" id="checks"></div></div>
+      <button class="c-wbtn" id="closeBtn">Clôturer la paie</button>
+      <div class="c-lockfx"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#5fd3a2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="sh" d="M8 11V8a4 4 0 0 1 8 0v3"/><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M12 15v2"/></svg>
+        <div><b>Paie clôturée</b><small id="lockTxt"></small></div><button class="c-sb" id="reopenBtn">Rouvrir</button></div>
+    </div>
+    <details class="c-card c-more" style="--d:.14s">
+      <summary><h3>Détail et <em>corrections</em></h3><span class="c-mut">Ventes retenues par chatter et par créatrice</span></summary>
+      <div class="tablewrap" id="linesTable" style="margin-top:12px"></div>
+      <p class="c-mut" style="margin-top:8px">Laisse « Montant retenu » vide pour garder le calcul automatique, ou saisis un montant pour le remplacer.</p>
+    </details>
   </div>
 </div>
 </main>

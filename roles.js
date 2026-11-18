@@ -205,9 +205,11 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const now = Date.now(), pkey = compta.periodOfDate(parisDate(now)), pi = compta.periodInfo(pkey);
     let c = null; try { c = compta.computeCompta(pkey); } catch (e) {}
     const prev = pi.prev, pc = (() => { try { return compta.computeCompta(prev); } catch (e) { return null; } })();
-    const sum = x => x ? { brut: x.totals.brut, net: x.totals.net, creators: x.totals.creators, chatters: x.totals.chatters, margin: x.totals.margin, primes: (x.chatters || []).reduce((t, y) => t + (y.prime || 0) + (y.adjTotal || 0), 0) } : null;
+    // clôture de quinzaine = paie des chatters (le CA, les créatrices et la marge sont au mois)
+    const sum = x => x ? { net: (x.chatters || []).reduce((t, y) => t + (y.sales || 0), 0), chatters: x.totals.chatters, primes: (x.chatters || []).reduce((t, y) => t + (y.prime || 0) + (y.adjTotal || 0), 0) } : null;
+    let cm = null; try { cm = compta.computeMonth(compta.currentMonth()); } catch (e) {}
     const pend = db.prepare("SELECT COUNT(*) n FROM sales WHERE status = 'pending'").get().n;
-    const models = db.prepare("SELECT id, name, creator_pct FROM models ORDER BY name").all().map(m => ({ ...m, net: c ? r2(((c.models || []).find(x => x.id === m.id) || {}).net || 0) : 0 }));
+    const models = db.prepare("SELECT id, name, creator_pct FROM models ORDER BY name").all().map(m => ({ ...m, net: cm ? r2(((cm.models || []).find(x => x.id === m.id) || {}).net || 0) : 0 }));
     res.json({ founder: req.user.rk === "founder", tiers: compta.getTiers(), models, creatorPct: AG().creatorPct ?? 50, period: { key: pkey, label: pi.label, locked: compta.isLocked(pkey), totals: sum(c) },
       prevPeriod: prev ? { key: prev, label: compta.periodInfo(prev).label, locked: compta.isLocked(prev), totals: sum(pc) } : null, pendingSales: pend,
       managers: db.prepare("SELECT id, username, grade FROM users WHERE role = 'admin' AND active = 1 AND deleted_at IS NULL AND (grade IS NULL OR grade = 'founder') ORDER BY grade = 'founder' DESC, username").all(),
@@ -219,21 +221,23 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const pi = compta.periodInfo(pkey); if (!pi) return null;
     const inP = ms => compta.periodOfDate(parisDate(ms)) === pkey;
     const sales = db.prepare("SELECT id, amount, status, sold_at FROM sales").all().filter(x => inP(x.sold_at));
-    const rev = db.prepare("SELECT r.*, m.name FROM revenues r JOIN models m ON m.id = r.model_id WHERE r.period = ?").all(pkey)
+    const mk = pkey.slice(0, 7);   // CA saisi et parts créatrices : au mois
+    const rev = db.prepare("SELECT r.*, m.name FROM revenues r JOIN models m ON m.id = r.model_id WHERE r.period = ?").all(mk)
       .filter(r => ["brut", "net", "abo", "live", "coll", "push"].some(k => r[k] != null));
     const revTot = rev.reduce((t, r) => t + (r.v2 ? ["abo", "live", "coll", "push"].reduce((x, k) => x + (r[k] || 0), 0) : (r.brut || 0)), 0);
     const adj = db.prepare("SELECT a.amount, a.reason, u.username FROM pay_adjust a LEFT JOIN users u ON u.id = a.user_id WHERE a.period = ? ORDER BY a.created_at").all(pkey);
     const att = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(amount),0) s FROM attributions WHERE period = ?").get(pkey);
     const pay = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(amount),0) s FROM payouts WHERE period = ?").get(pkey);
-    const cpd = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(amount),0) s FROM creator_paid WHERE period = ?").get(pkey);
-    let t = null; try { t = compta.computeCompta(pkey).totals; } catch (e) {}
-    return { key: pkey, label: pi.label, locked: compta.isLocked(pkey), totals: t ? { brut: t.brut, net: t.net, chatters: t.chatters, creators: t.creators, margin: t.margin } : null,
+    const cpd = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(amount),0) s FROM creator_paid WHERE period = ?").get(mk);
+    // CA et marge : ceux du mois (la compta est mensuelle) · paie : celle de la quinzaine
+    let t = null, tm = null; try { t = compta.computeCompta(pkey).totals; tm = compta.comptaMonthOf(mk).totals; } catch (e) {}
+    return { key: pkey, label: pi.label, locked: compta.isLocked(pkey), totals: t && tm ? { brut: tm.brut, net: tm.net, chatters: t.chatters, creators: tm.creators, margin: tm.margin } : null,
       parts: [
-        { k: "revenues", label: "CA saisi à la main", sub: rev.length ? rev.map(r => r.name).join(", ") : "Aucun", n: rev.length, amount: r2(revTot), on: rev.length > 0 },
+        { k: "revenues", label: "CA saisi à la main (tout le mois)", sub: rev.length ? rev.map(r => r.name).join(", ") : "Aucun", n: rev.length, amount: r2(revTot), on: rev.length > 0 },
         { k: "adjust", label: "Ajustements et primes de paie", sub: adj.length ? adj.slice(0, 3).map(a => `${a.username || "?"} ${a.amount > 0 ? "+" : ""}${r2(a.amount)} € (${(a.reason || "").slice(0, 40)})`).join(" · ") + (adj.length > 3 ? ` · +${adj.length - 3}` : "") : "Aucun", n: adj.length, amount: r2(adj.reduce((x, a) => x + a.amount, 0)), on: adj.length > 0 },
         { k: "attrib", label: "Corrections manuelles de ventes par chatter", sub: att.n ? `${att.n} correction${att.n > 1 ? "s" : ""}` : "Aucune", n: att.n, amount: r2(att.s), on: att.n > 0 },
         { k: "payouts", label: "Paies marquées versées", sub: pay.n ? `${pay.n} chatter${pay.n > 1 ? "s" : ""}` : "Aucune", n: pay.n, amount: r2(pay.s), on: pay.n > 0 },
-        { k: "creatorpaid", label: "Parts créatrices marquées versées", sub: cpd.n ? `${cpd.n} créatrice${cpd.n > 1 ? "s" : ""}` : "Aucune", n: cpd.n, amount: r2(cpd.s), on: cpd.n > 0 },
+        { k: "creatorpaid", label: "Parts créatrices marquées versées (tout le mois)", sub: cpd.n ? `${cpd.n} créatrice${cpd.n > 1 ? "s" : ""}` : "Aucune", n: cpd.n, amount: r2(cpd.s), on: cpd.n > 0 },
         { k: "sales", label: "Ventes déclarées de la quinzaine", sub: sales.length ? `${sales.filter(x => x.status === "validated").length} validées · ${sales.filter(x => x.status === "pending").length} en attente · ${sales.filter(x => x.status === "refused").length} refusées` : "Aucune", n: sales.length, amount: r2(sales.filter(x => x.status !== "refused").reduce((x, y) => x + y.amount, 0)), on: false }
       ] };
   }
@@ -250,11 +254,11 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     db.exec("BEGIN");
     try {
       db.prepare("DELETE FROM period_locks WHERE period = ?").run(k);
-      if (parts.has("revenues")) db.prepare("DELETE FROM revenues WHERE period = ?").run(k);
+      if (parts.has("revenues")) { db.prepare("DELETE FROM revenues WHERE period = ?").run(k.slice(0, 7)); db.prepare("DELETE FROM period_locks WHERE period = ?").run(k.slice(0, 7)); }
       if (parts.has("adjust")) db.prepare("DELETE FROM pay_adjust WHERE period = ?").run(k);
       if (parts.has("attrib")) db.prepare("DELETE FROM attributions WHERE period = ?").run(k);
       if (parts.has("payouts")) db.prepare("DELETE FROM payouts WHERE period = ?").run(k);
-      if (parts.has("creatorpaid")) db.prepare("DELETE FROM creator_paid WHERE period = ?").run(k);
+      if (parts.has("creatorpaid")) db.prepare("DELETE FROM creator_paid WHERE period = ?").run(k.slice(0, 7));
       if (parts.has("sales")) { const ids = db.prepare("SELECT id, sold_at FROM sales").all().filter(x => inP(x.sold_at)).map(x => x.id);
         ids.forEach(id => { db.prepare("DELETE FROM sales WHERE id = ?").run(id); if (has("sale_kudos")) db.prepare("DELETE FROM sale_kudos WHERE sale_id = ?").run(id); }); }
       db.prepare("DELETE FROM ca_snaps WHERE period = ?").run(k);

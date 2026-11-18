@@ -186,10 +186,13 @@ module.exports = function mount(app, db, auth, admin, ctx) {
 
   /* =================== CRÉATRICES =================== */
   app.get("/api/admin/creators", auth, admin, (req, res) => {
-    const pk = periodOfDate(parisDate(Date.now())), C = compta.computeCompta(pk), today = parisDate(Date.now());
+    // CA et part de la créatrice sur le mois en cours (la compta est mensuelle)
+    const mk = compta.currentMonth(), C = compta.computeMonth(mk), today = parisDate(Date.now());
+    const lines = compta.monthInfo(mk).halves.flatMap(h => compta.computeCompta(h).lines);
     const ms = db.prepare("SELECT * FROM models ORDER BY name").all();
-    res.json({ creatorPct: agency().creatorPct, creators: ms.map(m => { const cm = C.models.find(x => x.id === m.id) || {};
-      const ch = C.lines.filter(l => l.model_id === m.id && l.validatedBrut > 0).sort((a, b) => b.validatedBrut - a.validatedBrut).map(l => ({ username: l.username, amount: l.validatedBrut }));
+    res.json({ creatorPct: agency().creatorPct, month: compta.monthInfo(mk).label, creators: ms.map(m => { const cm = C.models.find(x => x.id === m.id) || {};
+      const by = {}; lines.filter(l => l.model_id === m.id && l.validatedBrut > 0).forEach(l => by[l.username] = (by[l.username] || 0) + l.validatedBrut);
+      const ch = Object.entries(by).sort((a, b) => b[1] - a[1]).map(([username, amount]) => ({ username, amount }));
       const slots = db.prepare("SELECT DISTINCT start, end FROM shifts WHERE model_id = ? AND date BETWEEN ? AND ? ORDER BY start").all(m.id, today, parisDate(Date.now() + 7 * 864e5));
       return { id: m.id, name: m.name, style: m.style, prices: m.prices, creator_pct: m.creator_pct, net: cm.net || 0, part: cm.creatorPay || 0, sales: cm.chatCount || 0, chatters: ch, slots }; }) });
   });
