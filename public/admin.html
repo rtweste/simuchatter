@@ -71,6 +71,11 @@
         <div class="card" style="--d:.06s"><div class="ch"><h3>Créneaux <em>du planning</em></h3><span class="mut">Proposés quand tu ajoutes un shift</span></div>
           <div class="slots" id="slots"></div>
           <div class="slotadd" id="slotAdd"><input id="slName" placeholder="ex. 22–4" maxlength="12" aria-label="Nom du créneau"><input type="time" id="slA" value="22:00" aria-label="Début"><input type="time" id="slB" value="04:00" aria-label="Fin"><button class="sb w" id="slOk">Ajouter</button><button class="sb" id="slNo">Annuler</button></div></div>
+        <div class="card" style="--d:.1s"><div class="ch"><h3>Catégories de <em>vente</em></h3><span class="mut">Le chatter en choisit au moins une à chaque déclaration</span></div>
+          <div class="scats" id="scats"></div>
+          <button class="sb" id="addCat" style="margin-top:10px">+ Ajouter une catégorie</button>
+          <div class="mut" style="margin-top:10px">Prix minimum par photo, par vidéo ou par minute (vide = pas de minimum). Une vente en dessous arrive dans la file avec une alerte.</div>
+          <div class="set" style="margin-top:4px;border-bottom:0"><span>Déclaration en retard<small>Badge dans la file quand la vente est déclarée plus tard que ça</small></span><div class="unit"><input data-s="lateHours" inputmode="decimal">h</div></div></div>
       </div>
       <div class="scol">
         <div class="card" style="--d:.04s"><div class="ch"><h3>Compta</h3></div>

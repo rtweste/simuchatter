@@ -46,6 +46,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   const setSet = (k, v) => db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(k, String(v));
   // les sanctions automatiques ne regardent que ce qui arrive après leur mise en service
   if (!getSet("sanctions_since", null)) setSet("sanctions_since", Date.now());
+  const SALECATS = require("./salecats");
   const AG = () => { try { return JSON.parse(getSet("agency", "{}")); } catch (e) { return {}; } };
   const rules = () => { const a = AG(), r = Array.isArray(a.rules) ? a.rules : [], tol = a.tolerance ?? 5;
     return DEFAULT_RULES.map(d => ({ ...d, ...(r.find(x => x.key === d.key) || {}), ...(d.key === "late" ? { label: `Retard de plus de ${tol} min` } : {}) })); };
@@ -55,7 +56,8 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     tiers: compta.getTiers(), tolerance: a.tolerance ?? 5, missedAlert: a.missedAlert ?? 10, reminder: a.reminder ?? 30, creatorPct: a.creatorPct ?? 50,
     slots: a.slots || [["3–9", "03:00", "09:00"], ["9–15", "09:00", "15:00"], ["15–21", "15:00", "21:00"], ["21–3", "21:00", "03:00"]],
     fee: Number(getSet("platform_fee", "25")), goalCa: Number(getSet("goal_ca", "20000")), goalChatter: Number(getSet("goal_chatter", "300")),
-    rules: rules(), thresholds: th(), training: trCfg(), tlPrime: a.tlPrime ?? 30, assistantInfo: a.assistantInfo || "", pauseMax: a.pauseMax ?? 15, pauseCount: a.pauseCount ?? 2, applyWhatsapp: a.applyWhatsapp || "", applyUnlock: a.applyUnlock ?? 70 }; };
+    rules: rules(), thresholds: th(), training: trCfg(), tlPrime: a.tlPrime ?? 30, assistantInfo: a.assistantInfo || "", pauseMax: a.pauseMax ?? 15, pauseCount: a.pauseCount ?? 2, applyWhatsapp: a.applyWhatsapp || "", applyUnlock: a.applyUnlock ?? 70,
+    saleCats: SALECATS.cats(db), lateHours: SALECATS.lateHours(db) }; };
   const user = id => db.prepare("SELECT id, username, role, active, created_at FROM users WHERE id = ?").get(id);
   const model = id => db.prepare("SELECT id, name FROM models WHERE id = ?").get(id);
 
@@ -65,6 +67,8 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   const ROUTES = [
     ["POST", /^\/api\/admin\/sales\/(\d+)\/review$/, (req, m) => { const s = db.prepare("SELECT s.*, u.username, mo.name model_name FROM sales s JOIN users u ON u.id = s.user_id JOIN models mo ON mo.id = s.model_id WHERE s.id = ?").get(+m[1]); if (!s) return;
       const d = req.body?.decision; return d === "validated" ? ["v", `a validé une vente de **${E(s.amount)}**${s.com_amount != null ? (s.com_amount > 0 ? ` (${E(s.com_amount)} pour le chatter)` : " (hors commission)") : ""}`, `${s.username} · ${s.model_name}${s.com_reason ? " · « " + s.com_reason + " »" : s.note ? " · " + s.note : ""}`] : d === "refused" ? ["v", `a refusé une vente de **${E(s.amount)}**`, `${s.username} · ${s.model_name}${s.reason ? " · « " + s.reason + " »" : ""}`] : ["v", `a remis en attente une vente de **${E(s.amount)}**`, `${s.username} · ${s.model_name}`]; }],
+    ["POST", /^\/api\/admin\/sales\/(\d+)\/edit$/, (req, m) => { const e = db.prepare("SELECT e.detail, s.amount, u.username, mo.name model_name FROM sale_events e JOIN sales s ON s.id = e.sale_id JOIN users u ON u.id = s.user_id JOIN models mo ON mo.id = s.model_id WHERE e.sale_id = ? AND e.action = 'edited' AND e.at > ? ORDER BY e.id DESC LIMIT 1").get(+m[1], Date.now() - 10e3); if (!e) return;
+      return ["v", `a modifié une vente de **${E(e.amount)}**`, `${e.username} · ${e.model_name} · ${e.detail}`]; }],
     ["POST", /^\/api\/admin\/payouts$/, req => { const u = user(+req.body?.user_id); if (!u) return; const p = db.prepare("SELECT amount FROM payouts WHERE period = ? AND user_id = ?").get(req.body.period, u.id);
       return req.body.paid === false ? ["p", `a annulé le paiement de **${u.username}**`, `Paie du ${req.body.period}`] : ["p", `a payé **${u.username}**`, `Paie du ${req.body.period}${p ? " · " + E(p.amount) : ""}`]; }],
     ["POST", /^\/api\/admin\/adjustments$/, req => { const u = user(+req.body?.user_id); if (!u) return; const a = +req.body.amount;
@@ -114,6 +118,8 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       if (t.some(x => x.from === null || x.rate === null || x.prime === null)) return res.status(400).json({ error: "Palier invalide" });
       a.tiers = t.map(x => ({ from: x.from, rate: x.rate, ...(x.prime ? { prime: x.prime } : {}) })); compta.setTiers(a.tiers);
     }
+    if (b.saleCats !== undefined) { try { a.saleCats = SALECATS.clean(b.saleCats); } catch (e) { return res.status(400).json({ error: e.message }); } }
+    if (b.lateHours !== undefined) { const v = num(b.lateHours, 1, 24 * 30); if (v === null) return res.status(400).json({ error: "Délai de retard invalide (en heures)" }); a.lateHours = v; }
     if (b.assistantInfo !== undefined) a.assistantInfo = String(b.assistantInfo || "").slice(0, 4000);
     if (b.applyWhatsapp !== undefined) { const w = String(b.applyWhatsapp || "").replace(/[^\d+]/g, "").slice(0, 20); if (w && w.replace(/\D/g, "").length < 9) return res.status(400).json({ error: "Numéro WhatsApp du recrutement invalide (avec l'indicatif, ex. +33 6…)" }); a.applyWhatsapp = w; }
     for (const [k, lo, hi] of [["applyUnlock", 0, 100], ["tolerance", 0, 120], ["missedAlert", 1, 240], ["reminder", 5, 240], ["creatorPct", 0, 100], ["tlPrime", 0, 1000], ["pauseMax", 1, 180], ["pauseCount", 0, 10]]) if (b[k] !== undefined) { const v = num(b[k], lo, hi); if (v === null) return res.status(400).json({ error: "Valeur invalide : " + k }); a[k] = v; }

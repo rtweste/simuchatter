@@ -120,6 +120,14 @@
 .ge .sg{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;align-items:start}
 .ge .scol{display:flex;flex-direction:column;gap:14px;min-width:0}
 .ge .tiers{display:flex;flex-direction:column;gap:6px}
+.ge .scats{display:flex;flex-direction:column;gap:6px}
+.ge .scats .scr{display:grid;grid-template-columns:1fr 128px 132px 28px;gap:6px;align-items:center;animation:geUp .4s both}
+.ge .scats .scr.new{animation:geIn .6s cubic-bezier(.3,1.4,.5,1) both}
+.ge .scats input,.ge .scats select{height:36px;border-radius:10px;border:1px solid #262626;background:#151515;color:#eee;font:700 13px Inter;padding:0 9px;min-width:0;width:100%;box-sizing:border-box;margin:0}
+.ge .scats .pm{display:flex;align-items:center;gap:5px;height:36px;border-radius:10px;border:1px solid #262626;background:#151515;padding:0 8px;font-size:11px;color:#6a6a6a;font-weight:800;white-space:nowrap}
+.ge .scats .pm input{border:0;background:transparent;height:30px;padding:0;width:42px;text-align:right}
+.ge .scats .del{width:28px;height:28px;border-radius:8px;border:0;background:#1d1d1d;color:#8a8a8a;font-size:11px}
+@media(max-width:560px){.ge .scats .scr{grid-template-columns:1fr 1fr 28px}.ge .scats .scr input.nm{grid-column:1/-1}}
 .ge .tr{display:grid;grid-template-columns:auto 1fr 1fr 34px;gap:8px;align-items:center;animation:geUp .4s both}
 .ge .tr.new{animation:geIn .6s cubic-bezier(.3,1.4,.5,1) both}
 .ge .tr .n{width:26px;height:26px;border-radius:8px;background:#1a1a1a;border:1px solid #262626;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#8a8a8a}

@@ -326,7 +326,21 @@ function crea(c) {
 }
 
 /* =================== RÉGLAGES =================== */
-let AG = null, TI = [], SL = [];
+let AG = null, TI = [], SL = [], SC = [];
+// catégories de vente : nom, quantité demandée (photos, vidéos, minutes) et prix minimum par unité
+const SCU = [["photo", "Photos", "/ photo"], ["video", "Vidéos", "/ vidéo"], ["min", "Minutes", "/ min"], ["", "Sans quantité", "/ vente"]];
+function drawCats(nw) {
+  $("scats").innerHTML = SC.map((c, k) => `<div class="scr${nw && k === SC.length - 1 ? " new" : ""}"><input class="nm" data-f="l" value="${esc(c.l)}" maxlength="40" placeholder="Nom" aria-label="Nom de la catégorie">
+    <select data-f="u" aria-label="Quantité demandée">${SCU.map(u => `<option value="${u[0]}"${(c.u || "") === u[0] ? " selected" : ""}>${u[1]}</option>`).join("")}</select>
+    <span class="pm">min<input data-f="min" value="${c.min ? String(c.min).replace(".", ",") : ""}" inputmode="decimal" placeholder="—" aria-label="Prix minimum">€ ${(SCU.find(u => u[0] === (c.u || "")) || SCU[3])[2]}</span>
+    <button class="del" aria-label="Retirer ${esc(c.l)}">✕</button></div>`).join("");
+  qa("#scats .scr").forEach((r, k) => {
+    r.querySelectorAll("[data-f]").forEach(i => i.addEventListener(i.tagName === "SELECT" ? "change" : "input", () => { const f = i.dataset.f;
+      SC[k][f] = f === "min" ? (num(i.value) || null) : f === "u" ? (i.value || null) : i.value; regDirty(); if (f === "u") drawCats(); }));
+    r.querySelector(".del").onclick = () => { if (SC.length <= 1) return toast("Garde au moins une catégorie"); SC.splice(k, 1); drawCats(); regDirty(); };
+  });
+}
+$("addCat").onclick = () => { SC.push({ k: "", l: "", u: "photo", min: null }); drawCats(true); regDirty(); S.tick(); const i = qa("#scats .scr input.nm"); i[i.length - 1].focus(); };
 const regDirty = () => $("regBar").classList.add("on");
 function drawTiers(nw) {
   $("tiers").innerHTML = TI.map((t, k) => `<div class="tr${nw && k === TI.length - 1 ? " new" : ""}"><span class="n">${k + 1}</span><label>DÈS<input data-k="from" value="${t.from}" inputmode="decimal" ${k === 0 ? "disabled" : ""}>€</label>
@@ -375,7 +389,8 @@ function fillReg() {
   TI = AG.tiers.map(t => t.prime ? { from: t.from, prime: t.prime } : { from: t.from, rate: t.rate }); SL = AG.slots.map(s => [...s]);
   qa("[data-s]").forEach(i => i.value = String(AG[i.dataset.s] ?? "").replace(".", ","));
   qa("[data-st]").forEach(i => i.value = AG[i.dataset.st] || "");
-  drawTiers(); drawSlots(); calc(); $("regBar").classList.remove("on");
+  SC = (AG.saleCats || []).map(c => ({ ...c }));
+  drawTiers(); drawSlots(); drawCats(); calc(); $("regBar").classList.remove("on");
   // paliers et part des créatrices : réservés au Fondateur
   // les paliers se modifient seulement dans Réglages fondateur : ici, lecture et simulateur
   qa("#tiers input, #tiers button").forEach(x => { x.disabled = true; }); qa("#tiers .del").forEach(x => x.style.display = "none"); $("addTier").style.display = "none";
@@ -389,7 +404,7 @@ $("regCancel").onclick = () => { fillReg(); toast("Modifications annulées"); };
 $("regSave").onclick = async () => {
   const sorted = TI.map(t => ({ ...t })).sort((a, b) => a.from - b.from); let cur = 0;
   const tiers = sorted.map(t => { if (!t.prime) cur = t.rate; return { from: t.from, rate: t.prime ? cur : t.rate, prime: t.prime || 0 }; });
-  const body = { tiers, slots: SL, training: readTr() }; qa("[data-s]").forEach(i => body[i.dataset.s] = num(i.value)); qa("[data-st]").forEach(i => body[i.dataset.st] = i.value);
+  const body = { tiers, slots: SL, training: readTr(), saleCats: SC }; qa("[data-s]").forEach(i => body[i.dataset.s] = num(i.value)); qa("[data-st]").forEach(i => body[i.dataset.st] = i.value);
   try { const r = await api("/api/admin/agency", { method: "PUT", body }); AG = r.agency; fillReg(); toast("Réglages enregistrés · la compta est recalculée", true); S.ok(); T = null; CR = null; }
   catch (e) { fail(e); }
 };

@@ -6,6 +6,11 @@ const fs = require("fs");
 const TZ = "Europe/Paris";
 const parisDate = ms => new Date(ms).toLocaleDateString("sv-SE", { timeZone: TZ });
 const periodOfDate = d => { const [y, m, day] = d.split("-"); return `${y}-${m}-${Number(day) <= 15 ? "A" : "B"}`; };
+// "2026-11-18T14:32" (heure de Paris) → timestamp
+const parisMs = str => { const m = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)/.exec(str || ""); if (!m) return null;
+  const utc = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  const off = (new Date(utc).toLocaleString("en-US", { timeZone: TZ, timeZoneName: "shortOffset" }).match(/GMT([+-]\d+)/) || [])[1];
+  return utc - (off ? +off : 1) * 3600e3; };
 const MIME = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/heic": "heic", "image/heif": "heif", "image/gif": "gif" };
 
 module.exports = function mount(app, db, auth, admin, dataDir) {
@@ -63,7 +68,7 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
   // lecture des captures par l'IA : montant et état du média (Accepté / En attente)
   const AI = require("./ai");
   // com_amount : part de la vente qui compte pour le chatter (null = toute la vente) ; le CA garde toujours le montant entier
-  for (const [c, t] of [["ai_amount", "REAL"], ["ai_status", "TEXT"], ["ai_sale", "INTEGER"], ["ai_note", "TEXT"], ["ai_at", "INTEGER"], ["com_amount", "REAL"], ["com_reason", "TEXT"], ["declared_by", "INTEGER"]])
+  for (const [c, t] of [["ai_amount", "REAL"], ["ai_status", "TEXT"], ["ai_sale", "INTEGER"], ["ai_note", "TEXT"], ["ai_at", "INTEGER"], ["com_amount", "REAL"], ["com_reason", "TEXT"], ["declared_by", "INTEGER"], ["items", "TEXT"], ["ai_when", "INTEGER"]])
     if (!db.prepare("PRAGMA table_info(sales)").all().some(x => x.name === c)) db.exec(`ALTER TABLE sales ADD COLUMN ${c} ${t}`);
   const scans = new Map();   // empreinte de l'image → lecture déjà faite pendant que le chatter remplissait le formulaire
   const shaOf = buf => require("crypto").createHash("sha256").update(buf).digest("hex");
@@ -73,8 +78,10 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     const r = await AI.readSale(buf, mime, tag); if (r) { scans.set(k, { r, t: Date.now() }); if (scans.size > 500) scans.delete(scans.keys().next().value); }
     return r;
   }
-  const saveAi = (id, r) => db.prepare("UPDATE sales SET ai_amount = ?, ai_status = ?, ai_sale = ?, ai_note = ?, ai_at = ? WHERE id = ?")
-    .run(r && typeof r.amount === "number" ? Math.round(r.amount * 100) / 100 : null, r ? r.status : "unread", r ? (r.is_sale ? 1 : 0) : null, r ? String(r.notes || "").slice(0, 200) || null : null, Date.now(), id);
+  // heure lue sur la capture : gardée seulement si elle est plausible (pas dans le futur, moins de 60 jours)
+  const whenOf = r => { const t = r && parisMs(r.heure_achat); return t && t < Date.now() + 3600e3 && t > Date.now() - 60 * 864e5 ? t : null; };
+  const saveAi = (id, r) => db.prepare("UPDATE sales SET ai_amount = ?, ai_status = ?, ai_sale = ?, ai_note = ?, ai_at = ?, ai_when = ? WHERE id = ?")
+    .run(r && typeof r.amount === "number" ? Math.round(r.amount * 100) / 100 : null, r ? r.status : "unread", r ? (r.is_sale ? 1 : 0) : null, r ? String(r.notes || "").slice(0, 200) || null : null, Date.now(), whenOf(r), id);
   async function analyze(id, buf, mime, uid) { try { saveAi(id, await scan(buf, mime, { user: uid })); } catch (e) { console.error("lecture capture", id, e.message); try { saveAi(id, null); } catch (_) {} } }
   // verdict pour le manager
   const aiInfo = s => {
@@ -98,10 +105,25 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     return o ? { kind: s.dup_kind, dist: s.dup_dist, id: o.id, username: o.username, sameUser: o.user_id === s.user_id, amount: o.amount, sold_at: o.sold_at, status: o.status, model_name: o.model_name } : null; };
   const locked = ms => { try { return !!db.prepare("SELECT 1 FROM period_locks WHERE period = ?").get(periodOfDate(parisDate(ms))); } catch (e) { return false; } };
   const num = (v, min, max) => { const n = Number(v); return Number.isFinite(n) && n >= min && n <= max ? n : null; };
+  /* ---------- Catégories, retard et historique des actions sur chaque vente ---------- */
+  const SC = require("./salecats");
+  db.exec(`CREATE TABLE IF NOT EXISTS sale_events (id INTEGER PRIMARY KEY, sale_id INTEGER NOT NULL, at INTEGER NOT NULL, by_id INTEGER, action TEXT NOT NULL, detail TEXT, from_user INTEGER, to_user INTEGER);
+    CREATE INDEX IF NOT EXISTS sale_events_sale ON sale_events(sale_id, at);`);
+  const logEv = (saleId, by, action, detail, from, to) => { try { db.prepare("INSERT INTO sale_events (sale_id, at, by_id, action, detail, from_user, to_user) VALUES (?,?,?,?,?,?,?)").run(saleId, Date.now(), by || null, action, detail || null, from || null, to || null); } catch (e) { console.error("journal vente", e.message); } };
+  const euro = n => String(Math.round(n * 100) / 100).replace(".", ",") + " €";
+  const UNIT_TXT = { photo: ["photo", "photos"], video: ["vidéo", "vidéos"], min: ["min", "min"] };
+  const itemsOf = s => { try { const a = JSON.parse(s.items || "null"); return Array.isArray(a) ? a : null; } catch (e) { return null; } };
+  // prix minimum attendu pour le contenu vendu (réglages actuels) ; null si aucune catégorie n'a de minimum
+  const minOf = items => { if (!items) return null; const C = SC.cats(db); let t = 0, any = false;
+    items.forEach(it => { const c = C.find(x => x.k === it.k); if (c && c.min) { any = true; t += c.min * (c.u ? it.q || 1 : 1); } });
+    return any ? Math.round(t * 100) / 100 : null; };
+  const lateOf = s => { const h = (s.created_at - s.sold_at) / 3.6e6; return h > SC.lateHours(db) ? Math.round(h) : null; };
+  const whenOff = s => s.ai_when && Math.abs(s.ai_when - s.sold_at) > 3 * 3.6e6 ? s.ai_when : null;
   const pub = s => ({ id: s.id, user_id: s.user_id, username: s.username, model_id: s.model_id, model_name: s.model_name,
     amount: s.amount, declared_amount: s.declared_amount, sold_at: s.sold_at, note: s.note, status: s.status, reason: s.reason,
     com_amount: s.status === "validated" ? s.com_amount ?? null : null, com_reason: s.status === "validated" ? s.com_reason || null : null,
-    declared_by: s.declared_by || null, reviewer: s.reviewer, declarer: s.declared_by && s.declared_by !== s.user_id ? s.declarer || null : null, reviewed_at: s.reviewed_at, created_at: s.created_at, period: periodOfDate(parisDate(s.sold_at)), dup: dupInfo(s), ai: aiInfo(s) });
+    declared_by: s.declared_by || null, reviewer: s.reviewer, declarer: s.declared_by && s.declared_by !== s.user_id ? s.declarer || null : null, reviewed_at: s.reviewed_at, created_at: s.created_at, period: periodOfDate(parisDate(s.sold_at)), dup: dupInfo(s), ai: aiInfo(s),
+    items: itemsOf(s), min_total: minOf(itemsOf(s)), late_h: lateOf(s), ai_when: s.ai_when || null, when_off: whenOff(s) });
   const SELECT = `SELECT s.*, u.username, m.name model_name, r.username reviewer, dd.username declarer FROM sales s
     JOIN users u ON u.id = s.user_id JOIN models m ON m.id = s.model_id LEFT JOIN users r ON r.id = s.reviewed_by LEFT JOIN users dd ON dd.id = s.declared_by`;
 
@@ -115,6 +137,8 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     try { const r = await scan(req.body, mime, { user: req.user.id }); res.json({ ok: !!r, read: r || null }); }
     catch (e) { res.json({ ok: false }); }
   });
+
+  app.get("/api/sales/cats", auth, (req, res) => res.json({ cats: SC.cats(db), lateHours: SC.lateHours(db) }));
 
   /* ---------- Déclarer une vente pour un autre chatter : fondateur et managers qui vendent ---------- */
   const canDeclareFor = u => u.role === "admin" && (u.rk === "founder" || !!(db.prepare("SELECT sells FROM users WHERE id = ?").get(u.id) || {}).sells);
@@ -141,6 +165,15 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     if (!other && req.user.role === "admin" && !(db.prepare("SELECT sells FROM users WHERE id = ?").get(req.user.id) || {}).sells) return res.status(403).json({ error: "Active « Déclare ses propres ventes » sur ton compte dans Gestion" });
     if (!db.prepare("SELECT 1 FROM models WHERE id = ?").get(model_id)) return res.status(400).json({ error: "Choisissez une créatrice" });
     if (amount === null) return res.status(400).json({ error: "Montant invalide" });
+    // ce qui a été vendu : au moins une catégorie, avec sa quantité (photos, vidéos, minutes)
+    let items; try { items = JSON.parse(String(req.query.items || "[]")); } catch (e) { items = []; }
+    const C = SC.cats(db);
+    if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: "Choisis ce qui a été vendu (catégorie). Si tu ne vois pas les catégories, recharge la page." });
+    const seenK = new Set(); items = items.slice(0, 12).map(it => { const c = C.find(x => x.k === String(it.k)); if (!c || seenK.has(c.k)) return null; seenK.add(c.k);
+      const q = c.u ? Math.round(Number(it.q)) : null; if (c.u && !(q >= 1 && q <= 1000)) return { bad: c }; return { k: c.k, l: c.l, u: c.u, q }; });
+    if (items.some(x => !x)) return res.status(400).json({ error: "Catégorie inconnue : recharge la page" });
+    const badQ = items.find(x => x.bad); if (badQ) return res.status(400).json({ error: `Indique le nombre de ${UNIT_TXT[badQ.bad.u][1]} pour « ${badQ.bad.l} »` });
+    if (items.some(x => x.k === "autre") && !note.trim()) return res.status(400).json({ error: "Pour « Autre », précise dans la note ce qui a été vendu" });
     if (sold_at > Date.now() + 5 * 60e3) return res.status(400).json({ error: "La date de vente est dans le futur" });
     if (locked(sold_at)) return res.status(400).json({ error: "Cette quinzaine est clôturée : la vente ne peut plus être ajoutée" });
     if (!MIME[mime] || !Buffer.isBuffer(req.body) || req.body.length < 100) return res.status(400).json({ error: "Ajoutez une capture d'écran (image)" });
@@ -149,8 +182,9 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     if (fp) { const mine = db.prepare("SELECT amount, sold_at FROM sales WHERE sha = ? AND user_id = ? AND status <> 'refused' ORDER BY id DESC LIMIT 1").get(fp.sha, uid);
       if (mine && other) return res.status(409).json({ error: `Cette capture est déjà déclarée pour ${target.username} (vente de ${String(mine.amount).replace(".", ",")} €).` });
       if (mine) return res.status(409).json({ error: `Tu as déjà déclaré cette capture (vente de ${String(mine.amount).replace(".", ",")} € du ${new Date(mine.sold_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", timeZone: "Europe/Paris" })}). Si c'est une autre vente, prends une nouvelle capture.` }); }
-    const info = db.prepare(`INSERT INTO sales (user_id, model_id, amount, declared_amount, sold_at, note, mime, created_at, declared_by)
-      VALUES (?,?,?,?,?,?,?,?,?)`).run(uid, model_id, amount, amount, sold_at, note, mime, Date.now(), other ? req.user.id : null);
+    const info = db.prepare(`INSERT INTO sales (user_id, model_id, amount, declared_amount, sold_at, note, mime, created_at, declared_by, items)
+      VALUES (?,?,?,?,?,?,?,?,?,?)`).run(uid, model_id, amount, amount, sold_at, note, mime, Date.now(), other ? req.user.id : null, JSON.stringify(items));
+    logEv(info.lastInsertRowid, req.user.id, "declared", `${euro(amount)}${other ? " pour " + target.username : ""}`, null, other ? uid : null);
     const file = `sale-${info.lastInsertRowid}-${Date.now().toString(36)}.${MIME[mime]}`;
     fs.writeFileSync(path.join(UP, file), req.body);
     db.prepare("UPDATE sales SET image = ? WHERE id = ?").run(file, info.lastInsertRowid);
@@ -176,6 +210,7 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     if (!isAdmin && (s.user_id !== req.user.id || s.status !== "pending")) return res.status(403).json({ error: "Seules vos ventes en attente peuvent être supprimées" });
     if (s.image) fs.rm(path.join(UP, s.image), { force: true }, () => {});
     db.prepare("DELETE FROM sales WHERE id = ?").run(s.id);
+    logEv(s.id, req.user.id, "deleted", euro(s.amount), s.user_id);
     res.json({ ok: true });
   });
 
@@ -233,7 +268,46 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     db.prepare("UPDATE sales SET status = ?, amount = ?, reason = ?, reviewed_by = ?, reviewed_at = ?, com_amount = ?, com_reason = ? WHERE id = ?")
       .run(decision, amount, decision === "refused" ? String(req.body.reason || "").slice(0, 300) : null,
         decision === "pending" ? null : req.user.id, decision === "pending" ? null : Date.now(), com, comWhy, s.id);
+    logEv(s.id, req.user.id, decision, decision === "validated" ? `${euro(amount)}${amount !== s.amount ? ` (déclarée ${euro(s.amount)})` : ""}${com !== null ? ` · ${com > 0 ? euro(com) + " pour le chatter" : "hors commission"} · ${comWhy}` : ""}`
+      : decision === "refused" ? (String(req.body.reason || "").slice(0, 200) || null) : `était ${s.status === "validated" ? "validée" : s.status === "refused" ? "refusée" : "en attente"}`);
     res.json({ ok: true });
+  });
+
+  /* ---------- Modifier une vente : chatter, créatrice, date (réattribution) ---------- */
+  const people = () => db.prepare("SELECT id, username, role FROM users WHERE active = 1 AND (role = 'chatter' OR (role = 'admin' AND sells = 1)) ORDER BY username COLLATE NOCASE").all();
+  app.get("/api/admin/sales/people", auth, admin, (req, res) => res.json({ users: people(), models: db.prepare("SELECT id, name FROM models ORDER BY name").all() }));
+  app.post("/api/admin/sales/:id/edit", auth, admin, (req, res) => {
+    const s = db.prepare(`${SELECT} WHERE s.id = ?`).get(parseInt(req.params.id, 10));
+    if (!s) return res.status(404).json({ error: "Vente introuvable" });
+    const b = req.body || {}, founder = req.user.rk === "founder";
+    const uid = b.user_id ? parseInt(b.user_id, 10) : s.user_id, mid = b.model_id ? parseInt(b.model_id, 10) : s.model_id;
+    const at = b.sold_at ? num(b.sold_at, 1e12, 1e13) : s.sold_at;
+    if (!at) return res.status(400).json({ error: "Date invalide" });
+    if (at > Date.now() + 5 * 60e3) return res.status(400).json({ error: "La date de vente est dans le futur" });
+    if (!founder && (s.user_id === req.user.id || uid === req.user.id)) return res.status(403).json({ error: "Une vente qui te concerne est modifiée par un autre manager ou le fondateur" });
+    if (locked(s.sold_at) || locked(at)) return res.status(400).json({ error: "Cette quinzaine est clôturée : rouvre-la dans la Compta pour modifier cette vente" });
+    const u = uid === s.user_id ? { id: s.user_id, username: s.username } : people().find(x => x.id === uid);
+    if (!u) return res.status(400).json({ error: "Chatter introuvable ou inactif" });
+    const m = db.prepare("SELECT id, name FROM models WHERE id = ?").get(mid); if (!m) return res.status(400).json({ error: "Créatrice introuvable" });
+    const ch = [];
+    if (u.id !== s.user_id) ch.push(`chatter : ${s.username} → ${u.username}`);
+    if (m.id !== s.model_id) ch.push(`créatrice : ${s.model_name} → ${m.name}`);
+    const dfmt = ms => new Date(ms).toLocaleString("fr-FR", { timeZone: TZ, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    if (Math.abs(at - s.sold_at) >= 60e3) ch.push(`date : ${dfmt(s.sold_at)} → ${dfmt(at)}`);
+    if (!ch.length) return res.json({ ok: true, changed: false, sale: pub(s) });
+    db.prepare("UPDATE sales SET user_id = ?, model_id = ?, sold_at = ? WHERE id = ?").run(u.id, m.id, at, s.id);
+    logEv(s.id, req.user.id, "edited", ch.join(" · "), u.id !== s.user_id ? s.user_id : null, u.id !== s.user_id ? u.id : null);
+    res.json({ ok: true, changed: true, sale: pub(db.prepare(`${SELECT} WHERE s.id = ?`).get(s.id)) });
+  });
+  // historique d'une vente (qui a fait quoi et quand)
+  const ACT = { declared: "Déclarée", validated: "Validée", refused: "Refusée", pending: "Remise en attente", edited: "Modifiée", deleted: "Supprimée" };
+  app.get("/api/admin/sales/:id/events", auth, admin, (req, res) => {
+    const id = parseInt(req.params.id, 10), s = db.prepare(`${SELECT} WHERE s.id = ?`).get(id);
+    let ev = db.prepare("SELECT e.at, e.action, e.detail, u.username who FROM sale_events e LEFT JOIN users u ON u.id = e.by_id WHERE e.sale_id = ? ORDER BY e.at, e.id").all(id);
+    // ventes d'avant l'historique : on reconstitue ce qu'on sait
+    if (s && !ev.some(e => e.action === "declared")) ev.unshift({ at: s.created_at, action: "declared", detail: euro(s.declared_amount), who: s.declarer || s.username, old: true });
+    if (s && !ev.some(e => e.action !== "declared") && s.reviewed_at && s.status !== "pending") ev.push({ at: s.reviewed_at, action: s.status, detail: s.status === "refused" ? s.reason : euro(s.amount), who: s.reviewer, old: true });
+    res.json({ events: ev.map(e => ({ ...e, label: ACT[e.action] || e.action })) });
   });
 
   /* ---------- Pour la compta : ventes validées par chatter et créatrice sur une période ---------- */

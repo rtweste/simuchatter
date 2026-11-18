@@ -69,7 +69,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
 
   /* ---------- déclencheurs (balayage toutes les 5 s, sans renvoyer l'historique au démarrage) ---------- */
   const max = (t, c = "id") => has(t) ? (db.prepare(`SELECT MAX(${c}) m FROM ${t}`).get().m || 0) : 0;
-  const C = { msg: max("chat_messages"), help: max("help_requests"), tip: max("team_tips"), asg: max("sim_assignments"), rev: Date.now() };
+  const C = { msg: max("chat_messages"), help: max("help_requests"), tip: max("team_tips"), asg: max("sim_assignments"), rev: Date.now(), sev: max("sale_events") };
   function chatScan() {
     if (!has("chat_messages")) return;
     const rows = db.prepare(`SELECT m.id, m.channel_id, m.user_id, m.body, m.kind, m.meta, m.thread_root, u.username, u.role u_role, c.kind ch_kind, c.name ch_name, c.slug FROM chat_messages m
@@ -107,6 +107,13 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       C.tip = Math.max(C.tip, t.id); push(t.recruit_id, "coach", { title: `Conseil de ${t.username}`, body: cut(t.text, 140), url: "/home", tag: "tip-" + t.id }).catch(() => {}); });
     if (has("sim_assignments")) db.prepare("SELECT a.*, u.username FROM sim_assignments a LEFT JOIN users u ON u.id = a.created_by WHERE a.id > ? ORDER BY a.id").all(C.asg).forEach(a => {
       C.asg = Math.max(C.asg, a.id); push(a.user_id, "coach", { title: "Nouvel entraînement à faire", body: `${a.username || "Ton manager"} t'assigne une simulation · objectif ${a.goal}`, url: "/app", tag: "asg-" + a.id }).catch(() => {}); });
+    // vente déclarée pour un chatter par un manager, ou transférée d'un chatter à un autre
+    if (has("sale_events")) db.prepare("SELECT e.*, u.username who, s.amount, m.name model FROM sale_events e LEFT JOIN users u ON u.id = e.by_id LEFT JOIN sales s ON s.id = e.sale_id LEFT JOIN models m ON m.id = s.model_id WHERE e.id > ? AND e.to_user IS NOT NULL ORDER BY e.id").all(C.sev).forEach(e => {
+      C.sev = Math.max(C.sev, e.id); const amt = e.amount != null ? eur(e.amount) : "";
+      if (e.action === "declared") push(e.to_user, "sales", { title: `${e.who || "Un manager"} a déclaré une vente pour toi`, body: `${amt}${e.model ? " · " + e.model : ""} · en attente de validation`, url: "/ventes", tag: "sale-" + e.sale_id }).catch(() => {});
+      if (e.action === "edited") { push(e.to_user, "sales", { title: "Une vente t'a été attribuée", body: `${amt}${e.model ? " · " + e.model : ""} · par ${e.who || "un manager"}`, url: "/ventes", tag: "sale-" + e.sale_id }).catch(() => {});
+        if (e.from_user) { const to = db.prepare("SELECT username FROM users WHERE id = ?").get(e.to_user); push(e.from_user, "sales", { title: `Vente transférée à ${to ? to.username : "un autre chatter"}`, body: `${amt}${e.model ? " · " + e.model : ""} · par ${e.who || "un manager"}`, url: "/ventes", tag: "sale-" + e.sale_id }).catch(() => {}); } }
+    });
     if (has("sales")) { db.prepare("SELECT s.id, s.user_id, s.amount, s.com_amount, s.com_reason, s.status, s.reason, s.reviewed_at, m.name model FROM sales s JOIN models m ON m.id = s.model_id WHERE s.reviewed_at > ? AND s.status IN ('validated','refused') ORDER BY s.reviewed_at").all(C.rev).forEach(s => {
       C.rev = Math.max(C.rev, s.reviewed_at); if (!once("sale:" + s.id + ":" + s.status)) return;
       push(s.user_id, "sales", s.status === "validated" && s.com_amount != null ? { title: s.com_amount > 0 ? `Vente validée · ${eur(s.com_amount)} pour toi` : "Vente validée · hors commission", body: `${s.model} · ${eur(s.amount)} au CA${s.com_reason ? " · " + cut(s.com_reason, 90) : ""}`, url: "/ventes", tag: "sale-" + s.id }

@@ -110,6 +110,17 @@
 .vt-chips button:active{transform:scale(.95)}
 .vt-chips button.on{background:#ededed;color:#0a0a0a;border-color:#ededed}
 .vt-for{display:none}.vt-for.on{display:block}
+.vt-cq{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.vt-cq .r{display:flex;align-items:center;gap:8px;background:#141414;border:1px solid #232323;border-radius:13px;padding:6px 8px 6px 12px;animation:vtUp .3s both}
+.vt-cq .r b{flex:1;font-size:13px}
+.vt-cq .r button{width:32px;height:32px;border-radius:10px;border:1px solid #2a2a2a;background:#1a1a1a;color:#e6e6e6;font-weight:900;font-size:16px}
+.vt-cq .r input{width:54px;height:32px;border-radius:10px;border:1px solid #2a2a2a;background:#0e0e0e;color:#fff;font:inherit;font-weight:900;font-size:15px;text-align:center}
+.vt-cq .r input.err{border-color:#e07a7a}
+.vt-cq .r small{width:46px;font-size:11.5px;color:#8a8a8a;font-weight:700}
+.vt-cmin{font-size:12px;color:#8a8a8a;text-align:center;margin-top:7px;min-height:0}.vt-cmin b{color:#e6e6e6}.vt-cmin.w{color:#e8c27a}.vt-cmin.w b{color:#f3d9a4}
+.vt-when{display:none;align-items:center;gap:8px;font-size:12.5px;color:#cfcfcf;background:rgba(232,194,122,.07);border:1px solid rgba(232,194,122,.28);border-radius:12px;padding:8px 10px;margin-top:8px}.vt-when.on{display:flex}
+.vt-when span{flex:1}.vt-when button{height:28px;border-radius:9px;border:1px solid #3a3a3a;background:#1a1a1a;color:#fff;font-weight:800;font-size:11.5px;padding:0 9px;white-space:nowrap}
+#whenChips.need button{border-color:rgba(224,122,122,.6)}
 .vt-for .vt-chips{max-height:116px;overflow:auto}
 .vt-for .hn{font-size:11.5px;color:#8a8a8a;text-align:center;margin-top:6px}.vt-for .hn b{color:#e8c27a}
 .vt-by{color:#e8c27a}
@@ -154,6 +165,20 @@
 .vt-am .cur{font-size:22px;font-weight:900;color:#6f6f6f}
 .vt-hint{font-size:11.5px;color:#7a7a7a;text-align:center;margin-top:-4px}
 .vt-hint b{color:#e6e6e6}
+.vt-flags{display:flex;flex-direction:column;gap:6px}.vt-flags:empty{display:none}
+.vt-its{display:flex;flex-wrap:wrap;gap:5px}.vt-its span{height:26px;display:inline-flex;align-items:center;border-radius:8px;background:#1b1b1b;border:1px solid #2a2a2a;font-size:12px;font-weight:800;padding:0 9px;color:#e6e6e6}.vt-its span i{font-style:normal;color:#8a8a8a;font-weight:700;margin-left:5px}
+.vt-flag{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#d9d9d9;background:#151515;border:1px solid #262626;border-radius:12px;padding:8px 10px}.vt-flag span{flex:1}
+.vt-flag.w{background:rgba(224,122,122,.07);border-color:rgba(224,122,122,.35);color:#f0c4c4}.vt-flag.w b{color:#fff}
+.vt-flag.o{background:rgba(232,194,122,.07);border-color:rgba(232,194,122,.3)}.vt-flag.o b{color:#f3d9a4}
+.vt-flag button{height:28px;border-radius:9px;border:1px solid #3a3a3a;background:#1a1a1a;color:#fff;font-weight:800;font-size:11.5px;padding:0 9px;white-space:nowrap}
+.vt-who .vt-sb{margin-left:auto}
+.vt-dt{border:0;background:none;color:#8a8a8a;font:inherit;font-size:11.5px;font-weight:800;padding:3px 0 0;cursor:pointer}.vt-dt:hover{color:#e6e6e6}
+.vt-det{grid-column:1/-1;border-top:1px dashed #262626;padding-top:10px;display:flex;flex-direction:column;gap:8px;animation:vtUp .3s both}
+.vt-ev{display:flex;flex-direction:column;gap:0}.vt-ev div{display:grid;grid-template-columns:14px 1fr;gap:8px;font-size:12.5px;color:#cfcfcf;padding:4px 0}
+.vt-ev i{width:8px;height:8px;border-radius:50%;background:#444;margin-top:5px}.vt-ev i.validated{background:#5fd3a2}.vt-ev i.refused,.vt-ev i.deleted{background:#e07a7a}.vt-ev i.edited{background:#e8c27a}.vt-ev i.pending{background:#9a9a9a}
+.vt-ev b{color:#fff}.vt-ev small{color:#7a7a7a;font-size:11px;margin-left:4px}
+.vt-sb.cf{background:rgba(224,122,122,.18);border-color:#e07a7a;color:#fff}
+.vt-edsum{font-size:13px;color:#bdbdbd;background:#141414;border:1px solid #1f1f1f;border-radius:12px;padding:10px 12px}.vt-edsum b{color:#fff}
 .vt-com{display:flex;flex-direction:column;gap:8px}
 .vt-com .sg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#141414;border:1px solid #1f1f1f;border-radius:13px;padding:4px}
 .vt-com .sg button{height:34px;border-radius:10px;border:0;background:transparent;color:#9a9a9a;font-weight:800;font-size:12.5px;transition:background .2s,color .2s}
@@ -329,6 +354,7 @@
         <div class="vt-cap" id="qCap" role="button" aria-label="Agrandir la capture"><div class="bg"></div><img class="main" alt="Capture de la vente"><span class="zoom">⤢ Agrandir</span><span class="flash"></span></div>
         <div class="vt-pan">
           <div class="vt-who" id="qWho"></div>
+          <div class="vt-flags" id="qFlags"></div>
           <div class="vt-dup" id="qDup"></div>
           <div class="vt-aiq" id="qAi"></div>
           <div class="vt-note" id="qNote"></div>
@@ -366,6 +392,7 @@
         <div class="vt-hf">
           <select id="hStatus" aria-label="Statut"><option value="">Tous les statuts</option><option value="validated">Validées</option><option value="refused">Refusées</option><option value="pending">En attente</option></select>
           <select id="hUser" aria-label="Chatter"></select>
+          <select id="hCat" aria-label="Catégorie"></select>
           <select id="hPeriod" aria-label="Période"></select>
         </div>
         <div class="vt-hsum" id="histSum"></div>
@@ -389,14 +416,27 @@
   <div class="vt-ai" id="fAi" aria-live="polite"></div>
   <div class="vt-amt"><input id="fAmount" inputmode="decimal" placeholder="0" aria-label="Montant brut en euros" autocomplete="off"><span>€</span></div>
   <div class="vt-chips" id="amtChips"><button type="button" data-a="10">10</button><button type="button" data-a="15">15</button><button type="button" data-a="25">25</button><button type="button" data-a="40">40</button><button type="button" data-a="60">60</button><button type="button" data-a="80">80</button></div>
+  <div class="vt-fl"><span class="vt-lab">Ce qui a été vendu</span><div class="vt-chips l" id="catChips"></div><div class="vt-cq" id="catQty"></div><div class="vt-cmin" id="catMin"></div></div>
   <div class="vt-fl"><span class="vt-lab">Créatrice</span><div class="vt-chips l" id="creaChips"></div></div>
-  <div class="vt-fl"><span class="vt-lab">Quand</span>
-    <div class="vt-chips l" id="whenChips"><button type="button" data-w="now" class="on">Maintenant</button><button type="button" data-w="1h">Il y a 1 h</button><button type="button" data-w="pick">Choisir…</button></div>
-    <input class="vt-fi dt hidden" id="fDate" type="datetime-local" aria-label="Date et heure de la vente"></div>
-  <div class="vt-fl"><span class="vt-lab">Note (facultatif)</span><input class="vt-fi" id="fNote" maxlength="300" placeholder="ex. vidéo personnalisée pour Marc"></div>
+  <div class="vt-fl"><span class="vt-lab">Quand a eu lieu la vente ?</span>
+    <div class="vt-chips l" id="whenChips"><button type="button" data-w="now">À l'instant</button><button type="button" data-w="1h">Il y a 1 h</button><button type="button" data-w="pick">Plus tôt (choisir)…</button></div>
+    <input class="vt-fi dt hidden" id="fDate" type="datetime-local" aria-label="Date et heure de la vente">
+    <div class="vt-when" id="fWhen"></div></div>
+  <div class="vt-fl"><span class="vt-lab" id="noteLab">Note (facultatif)</span><input class="vt-fi" id="fNote" maxlength="300" placeholder="ex. vidéo personnalisée pour Marc"></div>
   <div id="cuSlot"></div>
   <button class="vt-send" id="fBtn" type="submit">Envoyer pour validation</button>
   <div class="vt-err" id="fErr" role="alert"></div>
+</form>
+
+<form class="vt-sheet vt" id="edSheet" role="dialog" aria-modal="true" aria-labelledby="edTitle" novalidate>
+  <div class="vt-shd"><b id="edTitle">Modifier la <em>vente</em></b><button type="button" class="vt-x" id="edClose" aria-label="Fermer">✕</button></div>
+  <div class="vt-edsum" id="edSum"></div>
+  <div class="vt-fl"><span class="vt-lab">Chatter</span><div class="vt-chips l" id="edUser"></div></div>
+  <div class="vt-fl"><span class="vt-lab">Créatrice</span><div class="vt-chips l" id="edModel"></div></div>
+  <div class="vt-fl"><span class="vt-lab">Date et heure de la vente</span><input class="vt-fi" id="edDate" type="datetime-local" aria-label="Date et heure de la vente"></div>
+  <div class="vt-hint" id="edNote" style="margin-top:12px"></div>
+  <button class="vt-send" id="edBtn" type="submit">Enregistrer</button>
+  <div class="vt-err" id="edErr" role="alert"></div>
 </form>
 
 <div class="lightbox hidden" id="lb"><img id="lbImg" alt="Capture d'écran de la vente"></div>
@@ -482,7 +522,7 @@ async function compress(file) {
 /* ======================================================================
    CHATTER : tableau de bord + feuille « déclarer une vente »
    ====================================================================== */
-let ACTIVE = [], MINE = [], MODELS = [], FILTER = "", SHOWN = 40, FILE = null, WHEN = "now", FRESH = null;
+let ACTIVE = [], MINE = [], MODELS = [], FILTER = "", SHOWN = 40, FILE = null, WHEN = null, FRESH = null;
 const thumb = s => `<button class="vt-th" data-z="${s.id}" aria-label="Voir la capture"><img src="${img(s.id)}" alt="" loading="lazy" onload="this.classList.add('ld')"></button>`;
 const amtHtml = s => `${s.amount !== s.declared_amount ? `<s>${E(s.declared_amount)}</s>` : ""}${E(s.amount)}`;
 const comWhyHtml = (s, me) => s.com_amount != null ? `<div class="vt-cw"><b>${s.com_amount > 0 ? E(s.com_amount) + (me ? " comptent pour toi" : " pour le chatter") : "Hors commission"}</b>${s.com_reason ? " · " + esc(s.com_reason) : ""}</div>` : "";
@@ -496,7 +536,7 @@ function renderMine() {
   list.slice(0, SHOWN).forEach((s, i) => {
     const d = dayLabel(s.sold_at); if (d !== last) { html += `<div class="vt-day">${d}</div>`; last = d; }
     html += `<div class="vt-rw${s.id === FRESH ? " new" : ""}" data-id="${s.id}" style="animation-delay:${Math.min(i, 12) * .04}s">${thumb(s)}
-      <div class="vt-rm"><div class="vt-a">${amtHtml(s)}</div><small>${esc(s.model_name)} · ${hm(s.sold_at)}${s.note ? " · " + esc(s.note) : ""}${s.declarer ? ` · <span class="vt-by">déclarée par ${esc(s.declarer)}</span>` : ""}</small>
+      <div class="vt-rm"><div class="vt-a">${amtHtml(s)}</div><small>${s.items ? esc(itemsTxt(s.items)) + " · " : ""}${esc(s.model_name)} · ${hm(s.sold_at)}${s.note ? " · " + esc(s.note) : ""}${s.declarer ? ` · <span class="vt-by">déclarée par ${esc(s.declarer)}</span>` : ""}</small>
         ${s.status === "refused" && s.reason ? `<div class="vt-why">${esc(s.reason)}</div>` : ""}${comWhyHtml(s, 1)}</div>
       <div class="vt-rr"><span class="vt-pill ${s.status}"><i></i>${STATUS[s.status]}</span>
         ${s.status === "pending" ? `<button class="vt-sb del" data-del="${s.id}">Retirer</button>` : ""}
@@ -566,10 +606,61 @@ async function readCapture(f) {
   const el = $("fAi"), me = ++SCAN; el.className = "vt-ai on load"; el.innerHTML = `<span class="ic">◌</span><span>Lecture de ta capture…</span>`;
   let d = null; try { const r = await fetch("/api/sales/scan", { method: "POST", headers: { "Content-Type": f.type }, body: f, credentials: "same-origin" }); d = await r.json(); } catch (e) {}
   if (me !== SCAN) return;
-  const r = d && d.ok ? d.read : null; LAST_READ = r; if (!r) { el.className = "vt-ai"; el.innerHTML = ""; return; }
+  const r = d && d.ok ? d.read : null; LAST_READ = r; LAST_WHEN = parseWhen(r); whenCheck(); if (!r) { el.className = "vt-ai"; el.innerHTML = ""; return; }
   showRead(r, true);
 }
 let LAST_READ = null;
+/* ---------- Ce qui a été vendu : catégories + quantités ---------- */
+let CATS = [], LATEH = 48, SEL = new Map(), LAST_WHEN = null;
+const UNIT = { photo: ["photo", "photos"], video: ["vidéo", "vidéos"], min: ["min", "min"] };
+const itemsTxt = items => (items || []).map(it => it.u ? `${it.l} × ${it.q}${it.u === "min" ? " min" : ""}` : it.l).join(" · ");
+async function loadCats() { try { const d = await api("/api/sales/cats"); CATS = d.cats; LATEH = d.lateHours; } catch (e) {} }
+function renderCats(items) {
+  SEL = new Map((items || []).filter(it => CATS.some(c => c.k === it.k)).map(it => [it.k, it.q ?? null]));
+  $("catChips").innerHTML = CATS.map(c => `<button type="button" data-k="${esc(c.k)}" class="${SEL.has(c.k) ? "on" : ""}">${esc(c.l)}</button>`).join("");
+  document.querySelectorAll("#catChips button").forEach(b => b.onclick = () => { const k = b.dataset.k, c = CATS.find(x => x.k === k);
+    if (SEL.has(k)) SEL.delete(k); else SEL.set(k, c.u === "video" ? 1 : null);
+    b.classList.toggle("on", SEL.has(k)); VS.tick(); $("fErr").textContent = ""; drawQty(SEL.has(k) ? k : null); });
+  drawQty();
+}
+function drawQty(focusK) {
+  const rows = [...SEL.keys()].map(k => CATS.find(c => c.k === k)).filter(c => c && c.u);
+  $("catQty").innerHTML = rows.map(c => `<div class="r" data-k="${esc(c.k)}"><b>${esc(c.l)}</b><button type="button" data-d="-1" aria-label="Moins">−</button><input inputmode="numeric" value="${SEL.get(c.k) ?? ""}" placeholder="?" aria-label="Nombre de ${UNIT[c.u][1]}"><button type="button" data-d="1" aria-label="Plus">+</button><small>${c.u === "min" ? "minutes" : UNIT[c.u][1]}</small></div>`).join("");
+  $("catQty").querySelectorAll(".r").forEach(r => { const k = r.dataset.k, inp = r.querySelector("input");
+    inp.oninput = () => { const v = parseInt(inp.value, 10); SEL.set(k, v > 0 ? v : null); inp.classList.remove("err"); catMin(); };
+    r.querySelectorAll("button").forEach(b => b.onclick = () => { const v = Math.max(1, (SEL.get(k) || 0) + +b.dataset.d); SEL.set(k, v); inp.value = v; inp.classList.remove("err"); VS.tick(); catMin(); }); });
+  if (focusK) { const i = $("catQty").querySelector(`[data-k="${focusK}"] input`); if (i && !i.value) i.focus({ preventScroll: true }); }
+  $("noteLab").textContent = SEL.has("autre") ? "Note (obligatoire pour « Autre »)" : "Note (facultatif)";
+  catMin();
+}
+// prix à l'unité et alerte « sous le prix minimum » (prix fixés dans Gestion › Réglages)
+function catMin() {
+  const el = $("catMin"), amount = parseNum($("fAmount").value) || 0, sel = [...SEL].map(([k, q]) => ({ c: CATS.find(x => x.k === k), q })).filter(x => x.c);
+  el.className = "vt-cmin"; el.innerHTML = "";
+  if (!sel.length || !(amount > 0)) return;
+  let min = 0, any = false; sel.forEach(x => { if (x.c.min) { any = true; min += x.c.min * (x.c.u ? x.q || 0 : 1); } });
+  const one = sel.length === 1 && sel[0].c.u && sel[0].q > 0 ? sel[0] : null;
+  const unitP = one ? `soit <b>${E(amount / one.q)}</b> ${one.c.u === "min" ? "la minute" : "la " + UNIT[one.c.u][0]}` : "";
+  if (any && sel.every(x => !x.c.u || x.q > 0) && amount < min - .001) { el.className = "vt-cmin w"; el.innerHTML = `${unitP ? unitP + " · " : ""}sous le prix minimum de l'agence (<b>${E(min)}</b>)`; return; }
+  el.innerHTML = unitP;
+}
+/* ---------- Quand : à choisir obligatoirement, comparé à l'heure lue sur la capture ---------- */
+const parseWhen = r => { const m = r && /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)/.exec(r.heure_achat || ""); if (!m) return null;
+  const t = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime(); return t < Date.now() + 3600e3 && t > Date.now() - 60 * 864e5 ? t : null; };
+const soldMs = () => WHEN === "now" ? Date.now() : WHEN === "1h" ? Date.now() - 3600e3 : WHEN === "pick" ? new Date($("fDate").value).getTime() : null;
+const whenFmt = ms => sameDay(ms, Date.now()) ? `aujourd'hui ${hm(ms)}` : sameDay(ms, Date.now() - 864e5) ? `hier ${hm(ms)}` : new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) + " " + hm(ms);
+function setWhen(w) {
+  WHEN = w; document.querySelectorAll("#whenChips button").forEach(x => x.classList.toggle("on", x.dataset.w === w)); $("whenChips").classList.remove("need");
+  $("fDate").classList.toggle("hidden", w !== "pick"); if (w === "pick") { $("fDate").value = $("fDate").value || toLocalInput(Date.now()); $("fDate").max = toLocalInput(Date.now() + 60e3); }
+}
+function whenCheck() {
+  const el = $("fWhen"); el.className = "vt-when"; el.innerHTML = "";
+  if (!LAST_WHEN) return;
+  const ms = soldMs(); if (ms && Math.abs(ms - LAST_WHEN) <= 3 * 3600e3) return;
+  el.className = "vt-when on";
+  el.innerHTML = `<span>La capture indique <b>${whenFmt(LAST_WHEN)}</b>${ms ? `, tu as mis <b>${whenFmt(ms)}</b>` : ""}.</span><button type="button">Mettre cette heure</button>`;
+  el.querySelector("button").onclick = () => { $("fDate").value = toLocalInput(LAST_WHEN); setWhen("pick"); whenCheck(); VS.tick(); };
+}
 function showRead(r, fill) {
   const el = $("fAi");
   const am = typeof r.amount === "number" ? r.amount : null, amTxt = am != null ? String(am).replace(".", ",") : null;
@@ -592,13 +683,11 @@ $("fFile").onchange = e => setFile(e.target.files[0]);
 $("drop").addEventListener("drop", e => { e.preventDefault(); setFile(e.dataTransfer.files[0]); });
 
 const syncAmtChips = () => { if (typeof fitAmt === "function") fitAmt(); const v = parseNum($("fAmount").value); document.querySelectorAll("#amtChips button").forEach(b => b.classList.toggle("on", +b.dataset.a === v)); };
-document.querySelectorAll("#amtChips button").forEach(b => b.onclick = () => { $("fAmount").value = b.dataset.a; syncAmtChips(); VS.tick(); if (LAST_READ) showRead(LAST_READ); });
+document.querySelectorAll("#amtChips button").forEach(b => b.onclick = () => { $("fAmount").value = b.dataset.a; syncAmtChips(); catMin(); VS.tick(); if (LAST_READ) showRead(LAST_READ); });
 const fitAmt = () => { const v = $("fAmount").value || "0"; $("fAmount").style.width = (v.length * .62 + .1) + "em"; };
-$("fAmount").oninput = () => { syncAmtChips(); fitAmt(); if (LAST_READ) showRead(LAST_READ); };
-document.querySelectorAll("#whenChips button").forEach(b => b.onclick = () => {
-  WHEN = b.dataset.w; document.querySelectorAll("#whenChips button").forEach(x => x.classList.toggle("on", x === b)); VS.tick();
-  $("fDate").classList.toggle("hidden", WHEN !== "pick"); if (WHEN === "pick") { $("fDate").value = $("fDate").value || toLocalInput(Date.now()); $("fDate").max = toLocalInput(Date.now() + 60e3); }
-});
+$("fAmount").oninput = () => { syncAmtChips(); fitAmt(); catMin(); if (LAST_READ) showRead(LAST_READ); };
+document.querySelectorAll("#whenChips button").forEach(b => b.onclick = () => { setWhen(b.dataset.w); VS.tick(); $("fErr").textContent = ""; whenCheck(); });
+$("fDate").addEventListener("input", whenCheck);
 function renderCrea(sel) {
   // pendant un shift : la créatrice principale et les renforts passent en premier
   let last = sel || (ACTIVE[0] && ACTIVE[0].model_id); try { last = last || +localStorage.getItem("stLastModel"); } catch (e) {}
@@ -610,10 +699,11 @@ function renderCrea(sel) {
 function openSheet(again) {
   FILE = null; $("fFile").value = ""; $("drop").classList.remove("has"); $("dropIn").innerHTML = DROP_EMPTY; $("fErr").textContent = ""; SCAN++; LAST_READ = null; $("fAi").className = "vt-ai"; $("fAi").innerHTML = "";
   $("fAmount").value = again ? String(again.declared_amount).replace(".", ",") : ""; $("fNote").value = again?.note || "";
-  WHEN = "now"; document.querySelectorAll("#whenChips button").forEach(x => x.classList.toggle("on", x.dataset.w === "now")); $("fDate").classList.add("hidden");
-  if (again) { WHEN = "pick"; document.querySelectorAll("#whenChips button").forEach(x => x.classList.toggle("on", x.dataset.w === "pick")); $("fDate").classList.remove("hidden"); $("fDate").value = toLocalInput(again.sold_at); }
+  WHEN = null; $("fDate").value = ""; document.querySelectorAll("#whenChips button").forEach(x => x.classList.remove("on")); $("whenChips").classList.remove("need"); $("fDate").classList.add("hidden");
+  LAST_WHEN = null; whenCheck();
+  if (again) { $("fDate").value = toLocalInput(again.sold_at); setWhen("pick"); }
   $("shTitle").innerHTML = again ? "Renvoyer la <em>vente</em>" : "Déclarer une <em>vente</em>";
-  renderFor(again ? null : FOR_DEFAULT()); renderCrea(again?.model_id); syncAmtChips(); CUSTOM.reset();
+  renderFor(again ? null : FOR_DEFAULT()); renderCats(again?.items); renderCrea(again?.model_id); syncAmtChips(); CUSTOM.reset();
   $("scrim").classList.add("on"); $("sheet").classList.add("on"); document.body.style.overflow = "hidden"; document.body.classList.add("modal-open"); VS.open();
 }
 // fondateur et managers qui vendent : choisir pour qui on déclare la vente
@@ -639,25 +729,62 @@ async function openSheetFor() {
 }
 function closeSheet() { $("scrim").classList.remove("on"); $("sheet").classList.remove("on"); document.body.style.overflow = ""; document.body.classList.remove("modal-open"); }
 $("openSheet").onclick = () => openSheet();
-$("scrim").onclick = closeSheet; $("shClose").onclick = closeSheet;
-addEventListener("keydown", e => { if (e.key === "Escape") { if (!$("lb").classList.contains("hidden")) $("lb").classList.add("hidden"); else if ($("sheet").classList.contains("on")) closeSheet(); } });
+$("scrim").onclick = () => { closeSheet(); closeEdit(); }; $("shClose").onclick = closeSheet;
+/* ---------- Modifier une vente (manager) : chatter, créatrice, date ---------- */
+let PPL = null, ED = null;
+function chipsInto(id, list, cur, on) {
+  $(id).innerHTML = list.map(([v, l]) => `<button type="button" data-v="${v}" class="${v === cur ? "on" : ""}">${esc(l)}</button>`).join("");
+  $(id).querySelectorAll("button").forEach(b => b.onclick = () => { $(id).querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); on(+b.dataset.v); VS.tick(); });
+}
+async function openEdit(s, done, date) {
+  try { if (!PPL) PPL = await api("/api/admin/sales/people"); } catch (e) { return notify("Erreur", e.message, "err"); }
+  ED = { s, done, u: s.user_id, m: s.model_id };
+  $("edSum").innerHTML = `<b>${E(s.amount)}</b> · ${esc(s.username)} · ${esc(s.model_name)} · ${whenTxt(s.sold_at)}${s.items ? "<br>" + esc(itemsTxt(s.items)) : ""}`;
+  const users = PPL.users.some(u => u.id === s.user_id) ? PPL.users : [{ id: s.user_id, username: s.username }, ...PPL.users];
+  chipsInto("edUser", users.map(u => [u.id, u.username]), ED.u, v => { ED.u = v; edNote(); });
+  chipsInto("edModel", PPL.models.map(m => [m.id, m.name]), ED.m, v => { ED.m = v; edNote(); });
+  $("edDate").value = toLocalInput(date || s.sold_at); $("edDate").max = toLocalInput(Date.now() + 60e3); $("edErr").textContent = ""; edNote();
+  $("scrim").classList.add("on"); $("edSheet").classList.add("on"); document.body.style.overflow = "hidden"; document.body.classList.add("modal-open"); VS.open();
+}
+function edNote() {
+  const u = ED.u !== ED.s.user_id ? (PPL.users.find(x => x.id === ED.u) || {}).username : null;
+  $("edNote").innerHTML = u ? `La vente passe de <b>${esc(ED.s.username)}</b> à <b>${esc(u)}</b>${ED.s.status === "validated" ? " et leurs paies sont recalculées" : ""}. Les deux sont prévenus.` : "Change le chatter, la créatrice ou la date si le chatter s'est trompé.";
+}
+function closeEdit() { if (!$("edSheet").classList.contains("on")) return; $("edSheet").classList.remove("on"); $("scrim").classList.remove("on"); document.body.style.overflow = ""; document.body.classList.remove("modal-open"); }
+$("edClose").onclick = closeEdit;
+$("edSheet").onsubmit = async e => {
+  e.preventDefault(); const at = new Date($("edDate").value).getTime(); if (!at) { $("edErr").textContent = "Choisis la date et l'heure."; return; }
+  $("edBtn").disabled = true; $("edErr").textContent = "";
+  try {
+    const r = await api(`/api/admin/sales/${ED.s.id}/edit`, { body: { user_id: ED.u, model_id: ED.m, sold_at: at } });
+    closeEdit(); notify(r.changed ? "Vente modifiée" : "Rien n'a changé", r.changed ? `${E(r.sale.amount)} · ${r.sale.username} · ${r.sale.model_name}` : "", r.changed ? "ok" : "info");
+    if (r.changed && ED.done) ED.done(r.sale);
+  } catch (err) { $("edErr").textContent = err.message; }
+  $("edBtn").disabled = false;
+};
+addEventListener("keydown", e => { if (e.key === "Escape") { if (!$("lb").classList.contains("hidden")) $("lb").classList.add("hidden"); else if ($("sheet").classList.contains("on")) closeSheet(); else closeEdit(); } });
 
 $("sheet").onsubmit = async e => {
   e.preventDefault(); $("fErr").textContent = "";
   const amount = parseNum($("fAmount").value), model = +document.querySelector("#creaChips button.on")?.dataset.m;
   if (!FILE) { $("fErr").textContent = "Ajoute la capture d'écran de la vente."; return; }
   if (!(amount > 0)) { $("fErr").textContent = "Indique le montant brut de la vente."; $("fAmount").focus(); return; }
+  if (!SEL.size) { $("fErr").textContent = "Choisis ce qui a été vendu (Lingerie, Nudes, Cam…)."; $("catChips").scrollIntoView({ block: "center", behavior: "smooth" }); return; }
+  const noQ = [...SEL].find(([k, q]) => { const c = CATS.find(x => x.k === k); return c && c.u && !(q > 0); });
+  if (noQ) { const c = CATS.find(x => x.k === noQ[0]); $("fErr").textContent = `Indique le nombre de ${c.u === "min" ? "minutes" : UNIT[c.u][1]} pour « ${c.l} ».`; const i = $("catQty").querySelector(`[data-k="${c.k}"] input`); if (i) { i.classList.add("err"); i.focus(); } return; }
+  if (SEL.has("autre") && !$("fNote").value.trim()) { $("fErr").textContent = "Pour « Autre », précise dans la note ce qui a été vendu."; $("fNote").focus(); return; }
   if (!model) { $("fErr").textContent = "Choisis la créatrice."; return; }
+  if (!WHEN) { $("fErr").textContent = "Indique quand la vente a eu lieu."; $("whenChips").classList.add("need"); $("whenChips").scrollIntoView({ block: "center", behavior: "smooth" }); return; }
   if (TG && !FOR) { $("fErr").textContent = "Choisis le chatter qui a fait la vente."; return; }
   const forU = TG && FOR !== ME0.id ? TG.users.find(x => x.id === FOR) : null;
-  const sold = WHEN === "now" ? Date.now() : WHEN === "1h" ? Date.now() - 3600e3 : new Date($("fDate").value).getTime();
+  const sold = soldMs();
   if (!sold || isNaN(sold)) { $("fErr").textContent = "Choisis la date et l'heure de la vente."; return; }
   if (sold > Date.now() + 5 * 60e3) { $("fErr").textContent = "La date de vente est dans le futur."; return; }
   let CU = null; try { CU = CUSTOM.read(); } catch (err) { $("fErr").textContent = err.message; return; }
   $("fBtn").disabled = true; $("fBtn").textContent = "Envoi…";
   try {
     const blob = await compress(FILE);
-    const q = new URLSearchParams({ model_id: model, amount, sold_at: sold, note: $("fNote").value }); if (forU) q.set("for_user", forU.id);
+    const q = new URLSearchParams({ model_id: model, amount, sold_at: sold, note: $("fNote").value, items: JSON.stringify([...SEL].map(([k, q]) => ({ k, q }))) }); if (forU) q.set("for_user", forU.id);
     const r = await fetch("/api/sales?" + q, { method: "POST", headers: { "Content-Type": blob.type || "image/jpeg" }, body: blob, credentials: "same-origin" });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || "Erreur " + r.status);
@@ -688,6 +815,11 @@ function qMeta() {
   $("qSum").textContent = n ? `· ${E(Q.list.reduce((t, s) => t + s.amount, 0))} en attente` : "";
   $("qPrev").disabled = Q.i <= 0; $("qNext").disabled = Q.i >= n - 1;
 }
+// chatter, créatrice et date de la vente + bouton Modifier
+function qWhoRender(s) {
+  $("qWho").innerHTML = `<span class="vt-av">${esc((s.username || "?")[0])}</span><div><b>${esc(s.username)}</b><small>${esc(s.model_name)} · ${whenTxt(s.sold_at)}${s.declarer ? ` · <span class="vt-by">déclarée par ${esc(s.declarer)}</span>` : ""}</small></div><button class="vt-sb" id="qEdit">Modifier</button>`;
+  $("qEdit").onclick = () => openEdit(s, n => { Object.assign(s, n); qWhoRender(s); qFlags(s); });
+}
 function qShow() {
   $("qLoad").classList.add("hidden");
   const s = qCur(); qMeta();
@@ -696,12 +828,27 @@ function qShow() {
   const cap = $("qCap"), im = cap.querySelector("img.main");
   im.classList.remove("ld"); im.onload = () => im.classList.add("ld"); im.src = img(s.id);
   cap.querySelector(".bg").style.backgroundImage = `url("${img(s.id)}")`;
-  $("qWho").innerHTML = `<span class="vt-av">${esc((s.username || "?")[0])}</span><div><b>${esc(s.username)}</b><small>${esc(s.model_name)} · ${whenTxt(s.sold_at)}${s.declarer ? ` · <span class="vt-by">déclarée par ${esc(s.declarer)}</span>` : ""}</small></div>`;
+  qWhoRender(s);
   qDup(s); qAi(s);
   $("qNote").style.display = s.note ? "" : "none"; $("qNote").textContent = s.note ? `« ${s.note} »` : "";
   $("qAmt").value = String(s.amount).replace(".", ",");
   qHint();
-  qReasons(false); qCom("all");
+  qReasons(false); qCom("all"); qFlags(s);
+}
+// contenu vendu, prix minimum, retard de déclaration, heure lue sur la capture
+const minTxt = items => (items || []).map(it => { const c = CATS.find(x => x.k === it.k); return c && c.min ? `${E(c.min)} ${c.u ? (c.u === "min" ? "la minute" : "la " + UNIT[c.u][0]) : "minimum"}` : null; }).filter(Boolean).join(", ");
+const lateTxt = h => h >= 48 ? `${Math.round(h / 24)} j` : `${h} h`;
+function qFlags(s) {
+  const amt = parseNum($("qAmt").value) || s.amount, it = s.items || [], one = it.length === 1 && it[0].u && it[0].q > 0 ? it[0] : null;
+  let h = "";
+  if (it.length) h += `<div class="vt-its">${it.map(x => `<span>${esc(x.l)}${x.u ? `<i>× ${x.q}${x.u === "min" ? " min" : ""}</i>` : ""}</span>`).join("")}${one ? `<span style="background:none;border-color:transparent;color:#8a8a8a">${E(amt / one.q)} ${one.u === "min" ? "la minute" : "la " + UNIT[one.u][0]}</span>` : ""}</div>`;
+  else h += `<div class="vt-flag"><span>Pas de catégorie (vente déclarée avant les catégories)</span></div>`;
+  if (s.min_total && amt < s.min_total - .001) h += `<div class="vt-flag w"><span>Sous le prix minimum : <b>${E(s.min_total)}</b> attendus (${esc(minTxt(it))})</span><button type="button" data-cr>Commission réduite</button></div>`;
+  if (s.late_h) h += `<div class="vt-flag o"><span>Déclarée en retard : <b>${lateTxt(s.late_h)}</b> après la vente</span></div>`;
+  if (s.when_off) h += `<div class="vt-flag o"><span>La capture indique <b>${whenTxt(s.when_off)}</b>, vente déclarée pour <b>${whenTxt(s.sold_at)}</b></span><button type="button" data-fixd>Corriger la date</button></div>`;
+  $("qFlags").innerHTML = h;
+  const cr = $("qFlags").querySelector("[data-cr]"); if (cr) cr.onclick = () => { qCom("part"); if (!$("qComWhy").value) $("qComWhy").value = "Vendu sous le prix minimum"; qComEq(); $("qComAmt").select(); };
+  const fx = $("qFlags").querySelector("[data-fixd]"); if (fx) fx.onclick = () => openEdit(s, n => { Object.assign(s, n); qWhoRender(s); qFlags(s); }, s.when_off);
 }
 // part de la vente qui compte pour le chatter : toute, une partie ou rien (le CA garde le montant entier)
 let COM = "all";
@@ -824,7 +971,7 @@ $("qCap").onclick = () => { const s = qCur(); if (s) zoom(img(s.id)); };
 $("qPrev").onclick = () => qGo(-1); $("qNext").onclick = () => qGo(1);
 const bump = d => { const v = parseNum($("qAmt").value) || 0; $("qAmt").value = String(Math.max(1, Math.round((v + d) * 100) / 100)).replace(".", ","); qHint(); VS.tick(); };
 $("amMinus").onclick = () => bump(-5); $("amPlus").onclick = () => bump(5);
-$("qAmt").oninput = () => { qHint(); qComEq(); };
+$("qAmt").oninput = () => { qHint(); qComEq(); const s = qCur(); if (s) qFlags(s); };
 $("qAmt").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); decide("validated"); } if (e.key === "ArrowUp") { e.preventDefault(); bump(1); } if (e.key === "ArrowDown") { e.preventDefault(); bump(-1); } });
 addEventListener("keydown", e => {
   if ($("adminView").classList.contains("hidden") || $("t-queue").classList.contains("hidden") || !$("lb").classList.contains("hidden")) return;
@@ -861,6 +1008,19 @@ async function loadQueue() {
 
 /* ----- historique ----- */
 let HP = null;
+// détails d'une vente : ce qui a été vendu, historique des actions, bouton Modifier
+async function histDetails(btn, s) {
+  const row = btn.closest(".vt-rw"), open = row.querySelector(".vt-det");
+  if (open) { open.remove(); btn.textContent = "Détails et historique ▾"; return; }
+  btn.textContent = "Masquer ▴";
+  const box = document.createElement("div"); box.className = "vt-det"; box.innerHTML = `<div class="vt-mut" style="font-size:12px">Chargement…</div>`; row.appendChild(box);
+  let ev = []; try { ev = (await api(`/api/admin/sales/${s.id}/events`)).events; } catch (e) {}
+  const dt = ms => new Date(ms).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  box.innerHTML = `${s.items ? `<div class="vt-its">${s.items.map(x => `<span>${esc(x.l)}${x.u ? `<i>× ${x.q}${x.u === "min" ? " min" : ""}</i>` : ""}</span>`).join("")}</div>` : ""}
+    <div class="vt-ev">${ev.map(e => `<div><i class="${e.action}"></i><span><b>${esc(e.label)}</b>${e.who ? ` par ${esc(e.who)}` : ""}<small>${dt(e.at)}</small>${e.detail ? `<br><span style="color:#9a9a9a">${esc(e.detail)}</span>` : ""}</span></div>`).join("") || `<div class="vt-mut">Aucun historique.</div>`}</div>
+    <div><button class="vt-sb" data-edit>Modifier chatter, créatrice ou date</button></div>`;
+  box.querySelector("[data-edit]").onclick = () => openEdit(s, () => loadHist());
+}
 async function loadHist() {
   if (!$("hist").children.length) $("hist").innerHTML = SK.line("100%", 64, 8).repeat(5);
   const q = new URLSearchParams();
@@ -868,8 +1028,10 @@ async function loadHist() {
   if ($("hUser").value) q.set("user", $("hUser").value);
   if ($("hPeriod").value) q.set("period", $("hPeriod").value);
   const d = await api("/api/admin/sales?" + q);
+  if ($("hCat").value) d.sales = d.sales.filter(s => (s.items || []).some(it => it.k === $("hCat").value));
   if (!HP) {
     HP = true;
+    $("hCat").innerHTML = `<option value="">Toutes les catégories</option>` + CATS.map(c => `<option value="${esc(c.k)}">${esc(c.l)}</option>`).join("");
     $("hUser").innerHTML = `<option value="">Tous les chatters</option>` + d.people.map(p => `<option value="${p.id}">${esc(p.username)}</option>`).join("");
     const keys = []; let t = new Date(); t.setDate(t.getDate() <= 15 ? 1 : 16);
     for (let i = 0; i < 12; i++) { keys.push(periodKey(t.getTime())); t = t.getDate() === 16 ? new Date(t.getFullYear(), t.getMonth(), 1) : new Date(t.getFullYear(), t.getMonth() - 1, 16); }
@@ -884,20 +1046,27 @@ async function loadHist() {
   d.sales.forEach((s, i) => {
     const dl = dayLabel(s.sold_at); if (dl !== last) { html += `<div class="vt-day">${dl}</div>`; last = dl; }
     html += `<div class="vt-rw vt-hrw" style="animation-delay:${Math.min(i, 12) * .03}s">${thumb(s)}
-      <div class="vt-rm"><div class="vt-a">${amtHtml(s)}</div><small><span class="who">${esc(s.username)}</span> · ${esc(s.model_name)} · ${hm(s.sold_at)}${s.note ? " · " + esc(s.note) : ""}${s.dup ? `<span class="vt-hdup ${s.dup.kind}">${s.dup.kind === "same" ? "capture déjà utilisée" : "capture ressemblante"}</span>` : ""}</small>
-        ${s.declarer || s.reviewer ? `<small>${s.declarer ? `<span class="vt-by">déclarée par ${esc(s.declarer)}</span>${s.reviewer ? " · " : ""}` : ""}${s.reviewer ? `${s.status === "refused" ? "refusée" : "validée"} par ${esc(s.reviewer)}` : ""}</small>` : ""}${s.status === "refused" && s.reason ? `<div class="vt-why">${esc(s.reason)}</div>` : ""}${comWhyHtml(s)}</div>
+      <div class="vt-rm"><div class="vt-a">${amtHtml(s)}</div><small><span class="who">${esc(s.username)}</span> · ${s.items ? esc(itemsTxt(s.items)) + " · " : ""}${esc(s.model_name)} · ${hm(s.sold_at)}${s.note ? " · " + esc(s.note) : ""}${s.dup ? `<span class="vt-hdup ${s.dup.kind}">${s.dup.kind === "same" ? "capture déjà utilisée" : "capture ressemblante"}</span>` : ""}</small>
+        ${s.declarer || s.reviewer ? `<small>${s.declarer ? `<span class="vt-by">déclarée par ${esc(s.declarer)}</span>${s.reviewer ? " · " : ""}` : ""}${s.reviewer ? `${s.status === "refused" ? "refusée" : "validée"} par ${esc(s.reviewer)}` : ""}</small>` : ""}${s.status === "refused" && s.reason ? `<div class="vt-why">${esc(s.reason)}</div>` : ""}${comWhyHtml(s)}${s.late_h ? `<div class="vt-cw">Déclarée ${lateTxt(s.late_h)} après la vente</div>` : ""}${s.min_total && s.amount < s.min_total - .001 ? `<div class="vt-why">Sous le prix minimum (${E(s.min_total)})</div>` : ""}
+        <button class="vt-dt" data-det="${s.id}">Détails et historique ▾</button></div>
       <div class="vt-rr"><span class="vt-pill ${s.status}"><i></i>${STATUS[s.status]}</span>
         <div style="display:flex;gap:6px">${s.status !== "pending" ? `<button class="vt-sb" data-back="${s.id}">Remettre en attente</button>` : ""}<button class="vt-sb del" data-hdel="${s.id}" aria-label="Supprimer">✕</button></div></div></div>`;
   });
   $("hist").innerHTML = html;
   document.querySelectorAll("#hist [data-z]").forEach(b => b.onclick = () => zoom(img(b.dataset.z)));
-  document.querySelectorAll("#hist [data-back]").forEach(b => b.onclick = async () => { b.disabled = true; await api(`/api/admin/sales/${b.dataset.back}/review`, { body: { decision: "pending" } }); notify("Vente remise en attente", "", "info"); loadHist(); loadQueue(); });
+  // remettre en attente : deux appuis (le premier demande confirmation)
+  document.querySelectorAll("#hist [data-back]").forEach(b => b.onclick = async () => {
+    if (!b.classList.contains("cf")) { b.classList.add("cf"); b.textContent = "Confirmer ?"; VS.tick(); clearTimeout(b._t); b._t = setTimeout(() => { b.classList.remove("cf"); b.textContent = "Remettre en attente"; }, 3500); return; }
+    clearTimeout(b._t); b.disabled = true;
+    try { await api(`/api/admin/sales/${b.dataset.back}/review`, { body: { decision: "pending" } }); notify("Vente remise en attente", "Elle revient dans « À valider »", "info"); loadHist(); loadQueue(); }
+    catch (e) { notify("Erreur", e.message, "err"); b.disabled = false; } });
+  document.querySelectorAll("#hist [data-det]").forEach(b => b.onclick = () => histDetails(b, d.sales.find(x => x.id === +b.dataset.det)));
   document.querySelectorAll("#hist [data-hdel]").forEach(b => b.onclick = async () => {
     if (!b.classList.contains("sure")) { b.classList.add("sure"); b.textContent = "Supprimer ?"; return; }
     await api(`/api/sales/${b.dataset.hdel}`, { method: "DELETE" }); loadHist(); loadQueue();
   });
 }
-["hStatus", "hUser", "hPeriod"].forEach(id => $(id).onchange = loadHist);
+["hStatus", "hUser", "hCat", "hPeriod"].forEach(id => $(id).onchange = loadHist);
 document.querySelectorAll("#adminView .vt-tabs button[data-t]").forEach(b => b.onclick = () => {
   b.parentElement.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
   $("t-queue").classList.toggle("hidden", b.dataset.t !== "queue"); $("t-hist").classList.toggle("hidden", b.dataset.t !== "hist");
@@ -924,7 +1093,7 @@ function mineTabs() {
 }
 (async () => {
   const me = ME0 = await api("/api/me");
-  renderShell("ventes", me);
+  renderShell("ventes", me); await loadCats();
   if (me.role === "admin") {
     $("adminView").classList.remove("hidden"); loadQueue();
     if (me.sells || me.rk === "founder") {
