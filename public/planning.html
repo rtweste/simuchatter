@@ -209,6 +209,57 @@
 .p-pr span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .p-pr .t{height:8px;border-radius:5px;background:#1f1f1f;overflow:hidden}.p-pr .t i{display:block;height:100%;border-radius:5px;width:0;transition:width 1.4s cubic-bezier(.2,.8,.2,1)}
 .p-pr span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+/* vues Par créatrice / Par chatter */
+.p-vseg{display:flex;gap:4px;padding:4px;border-radius:13px;background:#121212;border:1px solid #232323}
+.p-vseg button{height:32px;border-radius:9px;border:0;background:transparent;color:#8f8f8f;font-weight:800;font-size:12.5px;padding:0 12px;cursor:pointer}
+.p-vseg button.on{background:#ededed;color:#0a0a0a}
+.p-alt{display:none}
+.p-cm{display:grid;grid-template-columns:190px repeat(7,minmax(0,1fr)) 120px;gap:7px;align-items:stretch}
+.p-cm .hd,.p-ch2 .hd{font-size:11px;font-weight:900;color:#7a7a7a;text-align:center;padding:4px 0 6px;letter-spacing:.04em;text-transform:uppercase}
+.p-cm .hd b,.p-ch2 .hd b{display:block;font-size:17px;color:#e6e6e6;letter-spacing:-.03em;margin:2px auto 0;width:32px;line-height:28px}
+.p-cm .hd.today,.p-ch2 .hd.today{color:#fff}.p-cm .hd.today b,.p-ch2 .hd.today b{color:#0a0a0a;background:#ededed;border-radius:9px}
+.p-cm .hd.r,.p-ch2 .hd.r{text-align:right;padding-right:6px}.p-ch2 .hd.l{text-align:left;padding-left:6px}
+.p-cm .rh{border-radius:14px;background:#131313;border:1px solid #1d1d1d;padding:0 10px 0 14px;display:flex;align-items:center;gap:9px;min-height:112px}
+.p-cm .rh>i{width:11px;height:11px;border-radius:50%;background:var(--k);flex-shrink:0}
+.p-cm .rh b{font-size:15px;font-weight:900;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-cm .ax{margin-left:auto;display:grid;grid-template-rows:repeat(var(--n),1fr);gap:4px;align-self:stretch;padding:6px 0}
+.p-cm .ax span{display:flex;align-items:center;justify-content:flex-end;font-size:9.5px;font-weight:800;color:#6f6f6f}
+.p-cm .mx{border-radius:14px;background:#121212;border:1px solid #1c1c1c;padding:6px;display:grid;grid-template-rows:repeat(var(--n),1fr);gap:4px;min-width:0}
+.p-cm .mx.td{background:#161616;border-color:#2a2a2a}
+.p-cm .q{border-radius:7px;display:flex;align-items:center;justify-content:space-between;gap:4px;padding:0 7px;font-size:11px;font-weight:800;white-space:nowrap;overflow:hidden;min-height:22px;cursor:pointer;border:0;font-family:inherit;text-align:left}
+.p-cm .q span{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.p-cm .q small{font-size:9px;font-weight:900;opacity:.65;flex-shrink:0}
+.p-cm .q.on{background:var(--k);color:#0a0a0a}
+.p-cm .q.on.r{box-shadow:inset 0 0 0 2px #e07a7a}
+.p-cm .q.off{background:repeating-linear-gradient(-45deg,rgba(224,122,122,.1) 0 5px,transparent 5px 10px);border:1px solid rgba(224,122,122,.3);color:#e07a7a}
+.p-cm .q.past.off{opacity:.45}
+.p-cm .q.nw{outline:2px solid #fff;outline-offset:-2px}
+.p-cm .sd{display:flex;flex-direction:column;justify-content:center;align-items:flex-end;padding-right:6px;gap:2px}
+.p-cm .sd b{font-size:24px;font-weight:900;letter-spacing:-.03em}.p-cm .sd b.bad{color:#e07a7a}.p-cm .sd small{font-size:11px;font-weight:700;color:#8a8a8a;text-align:right}
+.p-ch2{display:grid;grid-template-columns:190px repeat(7,minmax(0,1fr)) 130px;gap:7px;align-items:stretch}
+.p-ch2 .rh{display:flex;align-items:center;gap:10px;padding:0 10px;border-radius:14px;background:#131313;border:1px solid #1d1d1d;min-height:60px;cursor:pointer;text-align:left;font-family:inherit;color:inherit}
+.p-ch2 .rh:hover{border-color:#333}
+.p-ch2 .av{width:34px;height:34px;border-radius:50%;background:#222;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#cfcfcf;flex-shrink:0}
+.p-ch2 .rh b{display:block;font-size:13.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.p-ch2 .rh small{display:block;font-size:10.5px;font-weight:700;color:#7a7a7a}
+.p-ch2 .rh>div{min-width:0}
+.p-ch2 .c{min-height:60px;border-radius:13px;padding:7px 9px 7px 13px;display:flex;flex-direction:column;justify-content:center;gap:3px;background:#1a1a1a;border:1px solid #1d1d1d;position:relative;overflow:hidden;cursor:pointer;min-width:0}
+.p-ch2 .c::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--k)}
+.p-ch2 .c .r1{display:flex;align-items:center;gap:6px}.p-ch2 .c .r1 b{font-size:14px;font-weight:900;letter-spacing:-.02em;white-space:nowrap}
+.p-ch2 .c .dt{width:7px;height:7px;border-radius:50%;margin-left:auto;flex-shrink:0}
+.p-ch2 .c small{font-size:10px;font-weight:800;letter-spacing:.04em;color:var(--k);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-ch2 .c small em{font-style:normal;color:#e89a9a;letter-spacing:0;font-weight:700}
+.p-ch2 .c.td{background:#202020;border-color:#2c2c2c}
+.p-ch2 .c.nw{border-color:rgba(95,211,162,.55);background:linear-gradient(90deg,rgba(95,211,162,.14),#1c1c1c 75%)}
+.p-ch2 .c.r{border-color:rgba(224,122,122,.5)}
+.p-ch2 .c.rest{background:repeating-linear-gradient(-45deg,#111 0 7px,#151515 7px 14px);border:1px dashed #262626;align-items:center}
+.p-ch2 .c.rest::before{display:none}.p-ch2 .c.rest b{font-size:11px;font-weight:800;color:#6a6a6a;letter-spacing:.08em}
+.p-ch2 .tot{display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 6px}
+.p-ch2 .tot .r{display:flex;justify-content:space-between;align-items:baseline;gap:6px}.p-ch2 .tot b{font-size:16px;font-weight:900}.p-ch2 .tot small{font-size:10.5px;font-weight:700;color:#7a7a7a}
+.p-ch2 .hb{height:5px;border-radius:9px;background:#222;overflow:hidden}.p-ch2 .hb i{display:block;height:100%;background:#ededed;border-radius:9px}
+.p-vf{display:flex;gap:6px;margin:0 0 12px;flex-wrap:wrap}
+.p-vf button{height:30px;padding:0 12px;border-radius:99px;border:1px solid #262626;background:#121212;color:#cfcfcf;font-weight:800;font-size:12px;cursor:pointer}
+.p-vf button.on{background:#ededed;color:#0a0a0a;border-color:#ededed}
+.p-vnote{margin-top:12px;font-size:11.5px;font-weight:700;color:#8a8a8a}
 .p-daytabs{display:none;gap:4px;margin-bottom:10px}
 .p-daytabs button{flex:1;min-width:0;height:54px;border-radius:13px;border:1px solid #222;background:#141414;color:#8a8a8a;font-weight:800;font-size:10.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-transform:uppercase;padding:0}
 .p-daytabs button b{font-size:16px;color:#e6e6e6;letter-spacing:-.03em}
@@ -235,7 +286,7 @@
   .p-cd{font-size:52px}
   .p-sheet{left:0;right:0;top:auto;bottom:0;width:auto;max-width:none;transform:translateY(100%);border-radius:24px 24px 0 0;max-height:90vh;max-height:90dvh;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
   .p-sheet.on{transform:none}
-  .p-grid,.p-legend{display:none}
+  .p-grid,.p-legend,.p-vseg,.p-alt{display:none!important}
   .p-daytabs,.p-mlist{display:flex}
   .main-area{padding-bottom:96px}
   .p-ctab .hide-m{display:none}
@@ -283,12 +334,13 @@
       <div class="p-tabs"><button class="on" data-t="plan">Planning</button><button data-t="clocks">Pointages</button></div></div>
     <section id="t-plan">
       <div class="p-bar2"><div class="p-wnav"><button id="mPrev" aria-label="Semaine précédente">‹</button><b id="mLab"></b><button id="mNext" aria-label="Semaine suivante">›</button><button id="mToday" style="width:auto;padding:0 10px;font-size:12px">Aujourd'hui</button></div>
+        <div class="p-vseg" role="tablist" id="vSeg"><button data-v="grid">Grille</button><button data-v="cr">Par créatrice</button><button data-v="ch">Par chatter</button></div>
         <button class="p-gbtn" id="restBtn" style="margin-left:auto"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>Jours de repos</button>
         <button class="p-wbtn" id="addShift"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Ajouter des shifts</button></div>
       <div class="p-alerts" id="alerts"></div>
       <div class="p-gw">
         <div class="p-card" style="--d:.06s;padding:14px">
-          <div class="p-crs" id="crLeg"></div><div class="p-daytabs" id="dayTabs"></div><div class="p-mlist" id="mList"></div><div class="p-grid" id="grid"></div>
+          <div class="p-crs" id="crLeg"></div><div class="p-daytabs" id="dayTabs"></div><div class="p-mlist" id="mList"></div><div class="p-grid" id="grid"></div><div class="p-alt" id="vCr"></div><div class="p-alt" id="vCh"></div>
           <div class="p-legend"><span><i style="background:#5fd3a2;border-radius:50%"></i>Pointé à l'heure</span><span><i style="background:#e07a7a;border-radius:50%"></i>Retard ou absent</span><span><i style="background:#5fd3a2;border-radius:50%;box-shadow:0 0 0 3px rgba(95,211,162,.25)"></i>En shift maintenant</span><span><i style="border:1px dashed #777"></i>Repris, à valider</span><span><i style="border:1px dashed #e07a7a"></i>À pourvoir</span><span><i style="border:1px dashed #9a9a9a"></i>Créatrice sans chatter</span>
             <button class="p-gtg" id="gapTg" type="button"><b></b>Montrer les créatrices non couvertes</button></div>
         </div>
@@ -668,7 +720,73 @@ function renderGrid() {
   $("grid").innerHTML = h; bindCells($("grid"));
   $("crLeg").innerHTML = `<span class="lb">CRÉATRICES</span>` + A.models.map(m => `<span class="c" style="--k:${colOf(m.id)}"><i></i>${esc(m.name)}</span>`).join("");
   $("gapTg").classList.toggle("on", GAPS);
+  renderAlt();
 }
+/* ----- vues Par créatrice (matrice de couverture) et Par chatter (semaine en grille) ----- */
+let VIEW = (() => { try { return localStorage.getItem("plView") || "grid"; } catch (e) { return "grid"; } })(), CHF = "all";
+const durH = s => { const a = +s.start.slice(0, 2) * 60 + +s.start.slice(3), b = +s.end.slice(0, 2) * 60 + +s.end.slice(3); return ((b - a + 1440) % 1440 || 1440) / 60; };
+const stInfo = s => { // état d'un shift : classe, couleur du point, petite note
+  if (s.swap && s.swap.status === "open" && s.state === "future") return { c: "r", dot: "#e07a7a", note: "à pourvoir" };
+  if (s.swap && s.swap.status === "requested") return { c: "", dot: "#9a9a9a", note: `→ ${esc(s.swap.to_name)} ?` };
+  if (s.state === "done") return s.late ? { c: "r", dot: "#e07a7a", note: `+${s.late} min` } : { c: "", dot: "#5fd3a2", note: "" };
+  if (s.state === "absent") return { c: "r", dot: "#e07a7a", note: "absent" };
+  if (s.state === "live") return { c: "nw", dot: "#5fd3a2", note: s.late ? `+${s.late} min` : "" };
+  if (s.state === "missing") return { c: "r", dot: "#e07a7a", note: "pas pointé" };
+  return { c: "", dot: null, note: "" };
+};
+const slotLab = s => { const sl = SLOTS.find(x => isSlot(s, x)); return sl ? sl[0] : `${s.start}–${s.end}`; };
+function heads(last) { let h = "<div></div>"; for (let k = 0; k < 7; k++) { const d = addD(A.from, k); h += `<div class="hd${d === A.today ? " today" : ""}">${DAYN[k]}<b>${dOf(d).getDate()}</b></div>`; } return h + last; }
+function renderAlt() {
+  document.querySelectorAll("#vSeg button").forEach(b => b.classList.toggle("on", b.dataset.v === VIEW));
+  $("grid").style.display = VIEW === "grid" ? "" : "none"; $("vCr").style.display = VIEW === "cr" ? "block" : "none"; $("vCh").style.display = VIEW === "ch" ? "block" : "none";
+  document.querySelector(".p-legend").style.display = VIEW === "cr" ? "none" : ""; $("gapTg").style.display = VIEW === "grid" ? "" : "none";
+  if (VIEW === "cr") renderCr(); if (VIEW === "ch") renderCh();
+}
+// par créatrice : pour chaque jour, ses créneaux pleins (chatter) ou hachurés (personne), et ses trous de la semaine
+function renderCr() {
+  const cur = nowSlot(), n = SLOTS.length, t = A.today;
+  let h = heads('<div class="hd r">Trous</div>');
+  A.models.forEach(m => { const k = colOf(m.id); let holes = 0, cells = "";
+    for (let i = 0; i < 7; i++) { const d = addD(A.from, i); let q = "";
+      SLOTS.forEach(sl => { const ss = A.shifts.filter(s => s.date === d && s.model_id === m.id && isSlot(s, sl) && !(s.swap && s.swap.status === "open"));
+        const nw = d === t && cur === sl ? " nw" : "";
+        if (ss.length) { const bad = ss.some(s => stInfo(s).c === "r"); q += `<button class="q on${bad ? " r" : ""}${nw}" style="--k:${k}" data-sid="${ss[0].id}" title="${esc(ss.map(s => s.username).join(", "))} · ${sl[0]}${bad ? " · " + stInfo(ss.find(s => stInfo(s).c === "r")).note : ""}"><span>${esc(ss.map(s => s.username).join(" + "))}</span><small>${sl[0]}</small></button>`; }
+        else { holes++; q += `<button class="q off${d < t ? " past" : ""}${nw}" data-add="${d}|${sl[0]}|${m.id}" title="Personne sur ${esc(m.name)} · ${sl[0]} · ajouter un shift"><span>—</span><small>${sl[0]}</small></button>`; } });
+      cells += `<div class="mx${d === t ? " td" : ""}" style="--n:${n}">${q}</div>`; }
+    h += `<div class="rh" style="--k:${k}"><i></i><b>${esc(m.name)}</b><div class="ax" style="--n:${n}">${SLOTS.map(sl => `<span>${sl[0]}</span>`).join("")}</div></div>${cells}<div class="sd"><b class="${holes > n * 7 / 2 ? "bad" : ""}">${holes}</b><small>créneau${holes > 1 ? "x" : ""} sans<br>personne</small></div>`; });
+  $("vCr").innerHTML = `<div class="p-cm">${h}</div><div class="p-vnote">Plein = un chatter sur la créatrice · hachuré rouge = personne (touche pour ajouter un shift) · contour blanc = maintenant${otherShifts().length ? " · les shifts à horaires libres ne sont pas comptés ici" : ""}</div>`;
+  bindAlt($("vCr"));
+}
+// par chatter : son créneau et sa créatrice chaque jour, ses repos, ses heures de la semaine
+function renderCh() {
+  const t = A.today, DL = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+  const ids = [...new Set(A.shifts.map(s => s.user_id))], ppl = A.people.filter(p => ids.includes(p.id));
+  const first = u => A.shifts.filter(s => s.user_id === u.id).sort((a, b) => a.start.localeCompare(b.start))[0];
+  ppl.sort((a, b) => { const x = first(a), y = first(b); return (x.start === y.start ? a.username.localeCompare(b.username) : (((+x.start.slice(0, 2) - 3 + 24) % 24) - ((+y.start.slice(0, 2) - 3 + 24) % 24))); });
+  const todayIdx = Math.round((dOf(t) - dOf(A.from)) / 864e5), inWeek = todayIdx >= 0 && todayIdx < 7;
+  const L = ppl.filter(u => { if (CHF === "all" || !inWeek) return true; const on = A.shifts.some(s => s.user_id === u.id && s.date === t); return CHF === "on" ? on : !on; });
+  let h = heads('<div class="hd l">Semaine</div>'), hrs = 0;
+  L.forEach(u => { const mine = A.shifts.filter(s => s.user_id === u.id); hrs = mine.reduce((a, s) => a + durH(s), 0);
+    const rest = []; let cells = "";
+    for (let i = 0; i < 7; i++) { const d = addD(A.from, i), ss = mine.filter(s => s.date === d).sort((a, b) => a.start.localeCompare(b.start));
+      if (!ss.length) { rest.push(DL[i]); cells += `<div class="c rest" data-add="${d}|||${u.id}" title="Ajouter un shift à ${esc(u.username)}"><b>REPOS</b></div>`; continue; }
+      const s = ss[0], st = stInfo(s), k = colOf(s.model_id);
+      cells += `<div class="c${d === t ? " td" : ""}${st.c ? " " + st.c : ""}" style="--k:${k}" data-sid="${s.id}" title="${esc(s.username)} · ${esc(s.model_name)} · ${s.start}–${s.end}${st.note ? " · " + st.note : ""}"><div class="r1"><b>${slotLab(s)}</b>${ss.length > 1 ? `<small style="color:#9a9a9a">+${ss.length - 1}</small>` : ""}${st.dot ? `<i class="dt" style="background:${st.dot}"></i>` : ""}</div><small>${esc(s.model_name)}${st.note ? ` · <em>${st.note}</em>` : ""}</small></div>`; }
+    h += `<button class="rh" data-rest="${u.id}" title="Changer son jour de repos"><span class="av">${esc(u.username[0].toUpperCase())}</span><div><b>${esc(u.username)}</b><small>${rest.length ? "repos le " + rest.join(" et le ") : "pas de jour de repos"}</small></div></button>${cells}
+      <div class="tot"><div class="r"><b>${Math.round(hrs * 10) / 10} h</b><small>${mine.length} shift${mine.length > 1 ? "s" : ""}</small></div><div class="hb"><i style="width:${Math.min(100, hrs / 42 * 100)}%"></i></div></div>`; });
+  const none = A.people.filter(p => p.role !== "admin" && !ids.includes(p.id));
+  $("vCh").innerHTML = `<div class="p-vf">${inWeek ? `<button data-f="all" class="${CHF === "all" ? "on" : ""}">Tous</button><button data-f="on" class="${CHF === "on" ? "on" : ""}">En shift aujourd'hui</button><button data-f="off" class="${CHF === "off" ? "on" : ""}">Repos aujourd'hui</button>` : ""}</div>
+    ${L.length ? `<div class="p-ch2">${h}</div>` : `<div class="p-empty">Aucun chatter pour ce filtre.</div>`}
+    <div class="p-vnote">Touche une case pour modifier le shift · touche un nom pour changer son jour de repos${none.length ? ` · sans shift cette semaine : ${none.map(p => esc(p.username)).join(", ")}` : ""}</div>`;
+  $("vCh").querySelectorAll(".p-vf button").forEach(b => b.onclick = () => { CHF = b.dataset.f; VS.tick(); renderCh(); });
+  $("vCh").querySelectorAll("[data-rest]").forEach(b => b.onclick = () => openRestSheet(+b.dataset.rest));
+  bindAlt($("vCh"));
+}
+function bindAlt(root) {
+  root.querySelectorAll("[data-sid]").forEach(e => e.onclick = ev => { ev.stopPropagation(); openShiftSheet(A.shifts.find(s => s.id === +e.dataset.sid)); });
+  root.querySelectorAll("[data-add]").forEach(e => e.onclick = () => { const [date, slot, model, user] = e.dataset.add.split("|"); openShiftSheet(null, { date, slot: slot || undefined, model: model ? +model : undefined, user: user ? +user : undefined }); });
+}
+$("vSeg").querySelectorAll("button").forEach(b => b.onclick = () => { VIEW = b.dataset.v; try { localStorage.setItem("plView", VIEW); } catch (e) {} VS.tick(); renderAlt(); });
 $("gapTg").onclick = () => { GAPS = !GAPS; try { localStorage.setItem("plGaps", GAPS ? "1" : "0"); } catch (e) {} VS.tick(); renderGrid(); };
 function renderDay() {
   let t = "";
@@ -740,10 +858,10 @@ function openShiftSheet(s, preset = {}) {
   $("fDay").innerHTML = Array.from({ length: 7 }, (_, k) => { const d = addD(A.from, k); return `<button data-d="${d}" class="${d === date ? "on" : ""}">${DAYN[k]} ${dOf(d).getDate()}</button>`; }).join("") + `<button data-d="autre" class="${inWeek ? "" : "on"}">Autre date</button>`;
   $("fDate").value = date; $("fDate").classList.toggle("hidden", inWeek);
   chips($("fDay"), b => $("fDate").classList.toggle("hidden", b.dataset.d !== "autre"));
-  const ppl = A.people.filter(p => p.role !== "admin"), uid = s ? s.user_id : (ppl[0]?.id);
+  const ppl = A.people.filter(p => p.role !== "admin"), uid = s ? s.user_id : (preset.user || ppl[0]?.id);
   $("fUser").innerHTML = (ppl.length ? ppl : A.people).map(p => `<button data-u="${p.id}" class="${p.id === uid ? "on" : ""}">${esc(p.username)}</button>`).join("");
   chips($("fUser"));
-  const mid = s ? s.model_id : A.models[0]?.id;
+  const mid = s ? s.model_id : (preset.model || A.models[0]?.id);
   $("fModel").innerHTML = A.models.map(m => `<button data-m="${m.id}" class="${m.id === mid ? "on" : ""}">${esc(m.name)}</button>`).join("");
   chips($("fModel"));
   document.querySelectorAll("#fRep button").forEach((b, i) => b.classList.toggle("on", i === 0)); $("fRepBox").classList.toggle("hidden", !!s);
