@@ -27,7 +27,7 @@ window.SIMLOCK = (() => {
       <span class="tx"><b>${e(p.name)} <span>· ${e(p.label)}</span></b><span class="pv">${p.opens ? "…" : "Vu il y a 3 semaines"}</span></span><span class="tm">${bars(p.level)}${LV[p.level] || ""}</span></button>`;
     el.innerHTML = `<div class="lk">
       <div class="lk-chips" role="group" aria-label="Choisir un fan">${P.map(row).join("")}</div>
-      <div class="lk-left"><div class="lk-ph"><div class="lk-wall"></div><div class="lk-wall2"></div>
+      <div class="lk-left"><div class="lk-bz" aria-hidden="true"></div><div class="lk-ph"><div class="lk-wall"></div><div class="lk-wall2"></div>
         <div class="lk-isl" aria-hidden="true"><span class="av" data-pa></span><span data-in></span><span class="eq"><i></i><i></i><i></i></span></div>
         <div class="lk-lock"><div class="lk-date"></div><div class="lk-clock"></div><div class="lk-stack" aria-live="polite"></div></div>
         <div class="lk-chat"><div class="tp"><span class="av" data-pa></span><b data-pn></b></div><div class="lk-cm"></div><div class="cp">Écris en tant que la créatrice…</div></div>

@@ -5,7 +5,8 @@
 .lk-chips{display:none}
 .lk-left{position:relative;min-height:760px}
 .lk-left::before{content:"";position:absolute;inset:0;background:radial-gradient(340px 420px at 50% 50%,color-mix(in srgb,var(--fc) 20%,transparent),transparent 70%);z-index:-1;transition:background .9s}
-.lk-ph{position:absolute;left:50%;top:36px;width:320px;height:688px;margin-left:-160px;border-radius:50px;background:#000;border:1.5px solid #2e2e2e;box-shadow:0 0 0 8px #101010,0 0 0 9px #2a2a2a,0 60px 120px -40px rgba(0,0,0,.95),0 30px 140px -50px var(--fc);overflow:hidden;isolation:isolate}
+.lk-ph{position:absolute;left:50%;top:36px;width:320px;height:688px;margin-left:-160px;border-radius:50px;background:#000;border:1.5px solid #2e2e2e;overflow:hidden;isolation:isolate;clip-path:inset(0 round 50px);-webkit-mask-image:-webkit-radial-gradient(#fff,#000)}
+.lk-bz{position:absolute;left:50%;top:36px;width:320px;height:688px;margin-left:-160px;border-radius:50px;box-shadow:0 0 0 8px #101010,0 0 0 9px #2a2a2a,0 60px 120px -40px rgba(0,0,0,.95),0 30px 140px -50px var(--fc);pointer-events:none}
 .lk-wall{position:absolute;inset:-30%;z-index:-2;background:conic-gradient(from var(--lkwa) at 50% 45%,color-mix(in srgb,var(--fc) 70%,#000),#0b0b14,color-mix(in srgb,var(--fc) 35%,#3a1d5c),#050505,color-mix(in srgb,var(--fc) 70%,#000));filter:blur(40px) saturate(1.2);animation:lkWall 24s linear infinite;transition:filter .8s}
 @keyframes lkWall{to{--lkwa:360deg}}
 .lk-wall2{position:absolute;inset:0;z-index:-1;background:radial-gradient(circle at 50% 120%,rgba(0,0,0,.85),transparent 60%),linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.35))}
@@ -100,7 +101,8 @@
   .lk-chips .lk-row b span,.lk-chips .lk-row .pv,.lk-chips .lk-row .tm{display:none}
   .lk-chips .lk-row.on{border-color:var(--c)}
   .lk-left{min-height:0;height:620px}
-  .lk-ph{left:0;right:0;width:auto;max-width:440px;margin:0 auto;top:0;height:620px;border-radius:30px;box-shadow:0 0 0 1px #262626,0 30px 100px -50px var(--fc)}
+  .lk-ph{left:0;right:0;width:auto;max-width:440px;margin:0 auto;top:0;height:620px;border-radius:30px;clip-path:inset(0 round 30px);box-shadow:none}
+  .lk-bz{left:0;right:0;width:auto;max-width:440px;margin:0 auto;top:0;height:620px;border-radius:30px;box-shadow:0 0 0 1px #262626,0 30px 100px -50px var(--fc)}
   .lk-isl{display:none}
   .lk-lock{padding-top:30px}
   .lk-clock{font-size:74px}
