@@ -28,7 +28,9 @@ module.exports = function mount(app, db, auth, admin) {
   const setSet = (k, v) => db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(k, v);
   const AG = () => { try { return JSON.parse(getSet("agency", "{}")); } catch (e) { return {}; } };
   const GRACE = () => { const v = +AG().tolerance; return Number.isFinite(v) && v >= 0 ? v : 5; };   // minutes de tolérance avant un retard
-  const DEFAULT_SLOTS = [["6–9", "06:00", "09:00"], ["6–12", "06:00", "12:00"], ["12–18", "12:00", "18:00"], ["18–2", "18:00", "02:00"], ["18–3", "18:00", "03:00"]];
+  const DEFAULT_SLOTS = [["3–9", "03:00", "09:00"], ["9–15", "09:00", "15:00"], ["15–21", "15:00", "21:00"], ["21–3", "21:00", "03:00"]];
+  // passage aux 4 créneaux de 6 h (une seule fois : remplace les créneaux enregistrés dans les Réglages)
+  if (getSet("slots_v2", null) == null) { try { const a = AG(); a.slots = DEFAULT_SLOTS; setSet("agency", JSON.stringify(a)); setSet("slots_v2", String(Date.now())); } catch (e) {} }
   const SLOTS = () => { const s = AG().slots; return Array.isArray(s) && s.length ? s : DEFAULT_SLOTS; };
   // suspension (sanctions) : plus de reprise de shift ni de renfort
   const suspended = uid => { try { const r = db.prepare("SELECT until FROM suspensions WHERE user_id = ? AND until > ?").get(uid, Date.now()); return r ? r.until : null; } catch (e) { return null; } };

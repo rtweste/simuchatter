@@ -314,7 +314,7 @@
   <div class="p-fl"><span class="p-lab">Créatrice</span><div class="p-chips" id="fModel"></div></div>
   <div class="p-fl" id="fRepBox"><span class="p-lab">Répéter</span><div class="p-chips" id="fRep"><button data-r="0" class="on">Une fois</button><button data-r="3">4 semaines</button><button data-r="7">8 semaines</button></div></div>
   <div class="p-fl"><span class="p-lab">Note (facultatif)</span><input class="p-fi" id="fNote" maxlength="200" placeholder="ex. couvrir les messages du soir"></div>
-  <div class="p-info" id="fInfo">Les shifts <b>18–2</b> et <b>18–3</b> finissent le lendemain : ils restent rattachés au jour où ils commencent (heures, ventes et compta).</div>
+  <div class="p-info" id="fInfo">Le shift <b>21–3</b> finit le lendemain : il reste rattaché au jour où il commence (heures, ventes et compta).</div>
   <div class="p-srow"><button class="p-del hidden" id="fDel">Supprimer</button><button class="p-send" id="fGo">Ajouter le shift</button></div>
   <button class="p-sb hidden" id="fRest" style="margin-top:10px;width:100%;height:40px">Changer son jour de repos</button>
   <div class="p-err" id="fErr"></div>
@@ -362,7 +362,7 @@
 <script>
 const pad = n => String(n).padStart(2, "0");
 const DAYN = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
-let SLOTS = [["6–9", "06:00", "09:00"], ["6–12", "06:00", "12:00"], ["12–18", "12:00", "18:00"], ["18–2", "18:00", "02:00"], ["18–3", "18:00", "03:00"]];
+let SLOTS = [["3–9", "03:00", "09:00"], ["9–15", "09:00", "15:00"], ["15–21", "15:00", "21:00"], ["21–3", "21:00", "03:00"]];
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const hm = ms => new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 const dOf = s => new Date(s + "T12:00:00");
@@ -694,9 +694,9 @@ $("mToday").onclick = () => { MW = null; MDAY = null; loadAdmin(); };
 function openShiftSheet(s, preset = {}) {
   EDIT = s;
   const slotOf = x => (SLOTS.find(sl => isSlot(x, sl)) || [null])[0];
-  const curSlot = s ? (slotOf(s) || "autre") : (preset.slot || "18–2");
+  const curSlot = s ? (slotOf(s) || "autre") : (preset.slot || SLOTS[0][0]);
   $("fSlot").innerHTML = SLOTS.map(sl => `<button data-s="${sl[0]}" class="${sl[0] === curSlot ? "on" : ""}">${sl[0]}${sl[2] < sl[1] ? " <sup>+1 j</sup>" : ""}</button>`).join("") + `<button data-s="autre" class="${curSlot === "autre" ? "on" : ""}">Autre</button>`;
-  $("fStart").value = s ? s.start : "18:00"; $("fEnd").value = s ? s.end : "02:00"; $("fTimes").classList.toggle("hidden", curSlot !== "autre");
+  $("fStart").value = s ? s.start : "21:00"; $("fEnd").value = s ? s.end : "03:00"; $("fTimes").classList.toggle("hidden", curSlot !== "autre");
   chips($("fSlot"), b => $("fTimes").classList.toggle("hidden", b.dataset.s !== "autre"));
   const date = s ? s.date : (preset.date || (A.today >= A.from && A.today <= A.to ? A.today : A.from));
   const inWeek = date >= A.from && date <= A.to;
@@ -726,7 +726,7 @@ function openPlanSheet() {
   const ppl = A.people.filter(p => p.role !== "admin");
   $("pUser").innerHTML = (ppl.length ? ppl : A.people).map((p, i) => `<button data-u="${p.id}" class="${i === 0 ? "on" : ""}">${esc(p.username)}</button>`).join("");
   $("pSlot").innerHTML = SLOTS.map((sl, i) => `<button data-s="${sl[0]}" class="${i === 0 ? "on" : ""}">${sl[0]}${sl[2] < sl[1] ? " <sup>+1 j</sup>" : ""}</button>`).join("") + `<button data-s="autre">Autre</button>`;
-  $("pStart").value = "18:00"; $("pEnd").value = "02:00"; $("pTimes").classList.add("hidden");
+  $("pStart").value = "21:00"; $("pEnd").value = "03:00"; $("pTimes").classList.add("hidden");
   $("pRest").innerHTML = DAYN.map((d, k) => `<button data-k="${k}">${d}</button>`).join("");
   const nextMon = addD(A.today, 7 - ((dOf(A.today).getDay() + 6) % 7));
   $("pFromC").innerHTML = `<button data-d="${A.today}" class="on">Aujourd'hui</button><button data-d="${nextMon}">Lundi ${dOf(nextMon).getDate()}</button><button data-d="autre">Autre date</button>`;

@@ -53,7 +53,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   const trCfg = () => { const t = AG().training || {}, o = {}; for (const k in TR_DEF) o[k] = typeof TR_DEF[k] === "object" ? { ...TR_DEF[k], ...(t[k] || {}) } : (t[k] ?? TR_DEF[k]); return o; };
   const agency = () => { const a = AG(); return {
     tiers: compta.getTiers(), tolerance: a.tolerance ?? 5, missedAlert: a.missedAlert ?? 10, reminder: a.reminder ?? 30, creatorPct: a.creatorPct ?? 50,
-    slots: a.slots || [["6–9", "06:00", "09:00"], ["6–12", "06:00", "12:00"], ["12–18", "12:00", "18:00"], ["18–2", "18:00", "02:00"], ["18–3", "18:00", "03:00"]],
+    slots: a.slots || [["3–9", "03:00", "09:00"], ["9–15", "09:00", "15:00"], ["15–21", "15:00", "21:00"], ["21–3", "21:00", "03:00"]],
     fee: Number(getSet("platform_fee", "25")), goalCa: Number(getSet("goal_ca", "20000")), goalChatter: Number(getSet("goal_chatter", "300")),
     rules: rules(), thresholds: th(), training: trCfg(), tlPrime: a.tlPrime ?? 30, assistantInfo: a.assistantInfo || "", pauseMax: a.pauseMax ?? 15, pauseCount: a.pauseCount ?? 2, applyWhatsapp: a.applyWhatsapp || "", applyUnlock: a.applyUnlock ?? 70 }; };
   const user = id => db.prepare("SELECT id, username, role, active, created_at FROM users WHERE id = ?").get(id);
