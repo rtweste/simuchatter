@@ -170,8 +170,12 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     const C = SC.cats(db);
     if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: "Choisis ce qui a été vendu (catégorie). Si tu ne vois pas les catégories, recharge la page." });
     const seenK = new Set(); items = items.slice(0, 12).map(it => { const c = C.find(x => x.k === String(it.k)); if (!c || seenK.has(c.k)) return null; seenK.add(c.k);
-      const q = c.u ? Math.round(Number(it.q)) : null; if (c.u && !(q >= 1 && q <= 1000)) return { bad: c }; return { k: c.k, l: c.l, u: c.u, q }; });
+      const q = c.u ? Math.round(Number(it.q)) : null; if (c.u && !(q >= 1 && q <= 1000)) return { bad: c };
+      // vidéo masturbation : avec ou sans jouet (obligatoire)
+      if (c.k === "vmasturb") { if (!["avec jouet", "sans jouet"].includes(it.o)) return { badO: c }; return { k: c.k, l: c.l, u: c.u, q, o: it.o }; }
+      return { k: c.k, l: c.l, u: c.u, q }; });
     if (items.some(x => !x)) return res.status(400).json({ error: "Catégorie inconnue : recharge la page" });
+    const badO = items.find(x => x && x.badO); if (badO) return res.status(400).json({ error: `Indique si « ${badO.badO.l} » est avec ou sans jouet` });
     const badQ = items.find(x => x.bad); if (badQ) return res.status(400).json({ error: `Indique le nombre de ${UNIT_TXT[badQ.bad.u][1]} pour « ${badQ.bad.l} »` });
     if (items.some(x => x.k === "autre") && !note.trim()) return res.status(400).json({ error: "Pour « Autre », précise dans la note ce qui a été vendu" });
     if (sold_at > Date.now() + 5 * 60e3) return res.status(400).json({ error: "La date de vente est dans le futur" });

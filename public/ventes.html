@@ -117,6 +117,9 @@
 .vt-cq .r input{width:54px;height:32px;border-radius:10px;border:1px solid #2a2a2a;background:#0e0e0e;color:#fff;font:inherit;font-weight:900;font-size:15px;text-align:center}
 .vt-cq .r input.err{border-color:#e07a7a}
 .vt-cq .r small{width:46px;font-size:11.5px;color:#8a8a8a;font-weight:700}
+.vt-cq .r{flex-wrap:wrap}.vt-cq .op{flex-basis:100%;display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:2px 0 2px}
+.vt-cq .op button{width:auto;height:34px;font-size:12.5px;font-weight:800;color:#bdbdbd}.vt-cq .op button.on{background:#ededed;color:#0a0a0a;border-color:#ededed}
+.vt-cq .op.err button{border-color:rgba(224,122,122,.7)}
 .vt-cmin{font-size:12px;color:#8a8a8a;text-align:center;margin-top:7px;min-height:0}.vt-cmin b{color:#e6e6e6}.vt-cmin.w{color:#e8c27a}.vt-cmin.w b{color:#f3d9a4}
 .vt-when{display:none;align-items:center;gap:8px;font-size:12.5px;color:#cfcfcf;background:rgba(232,194,122,.07);border:1px solid rgba(232,194,122,.28);border-radius:12px;padding:8px 10px;margin-top:8px}.vt-when.on{display:flex}
 .vt-when span{flex:1}.vt-when button{height:28px;border-radius:9px;border:1px solid #3a3a3a;background:#1a1a1a;color:#fff;font-weight:800;font-size:11.5px;padding:0 9px;white-space:nowrap}
@@ -613,22 +616,28 @@ let LAST_READ = null;
 /* ---------- Ce qui a été vendu : catégories + quantités ---------- */
 let CATS = [], LATEH = 48, SEL = new Map(), LAST_WHEN = null;
 const UNIT = { photo: ["photo", "photos"], video: ["vidéo", "vidéos"], min: ["min", "min"] };
-const itemsTxt = items => (items || []).map(it => it.u ? `${it.l} × ${it.q}${it.u === "min" ? " min" : ""}` : it.l).join(" · ");
+const itemLab = it => it.o ? `${it.l} (${it.o})` : it.l;
+const itemsTxt = items => (items || []).map(it => it.u ? `${itemLab(it)} × ${it.q}${it.u === "min" ? " min" : ""}` : itemLab(it)).join(" · ");
+// options obligatoires de certaines catégories (vidéo masturbation : avec ou sans jouet)
+const OPTS = { vmasturb: ["avec jouet", "sans jouet"] };
+let OPT = new Map();
 async function loadCats() { try { const d = await api("/api/sales/cats"); CATS = d.cats; LATEH = d.lateHours; } catch (e) {} }
 function renderCats(items) {
   SEL = new Map((items || []).filter(it => CATS.some(c => c.k === it.k)).map(it => [it.k, it.q ?? null]));
+  OPT = new Map((items || []).filter(it => it.o).map(it => [it.k, it.o]));
   $("catChips").innerHTML = CATS.map(c => `<button type="button" data-k="${esc(c.k)}" class="${SEL.has(c.k) ? "on" : ""}">${esc(c.l)}</button>`).join("");
   document.querySelectorAll("#catChips button").forEach(b => b.onclick = () => { const k = b.dataset.k, c = CATS.find(x => x.k === k);
-    if (SEL.has(k)) SEL.delete(k); else SEL.set(k, c.u === "video" ? 1 : null);
+    if (SEL.has(k)) { SEL.delete(k); OPT.delete(k); } else SEL.set(k, c.u === "video" ? 1 : null);
     b.classList.toggle("on", SEL.has(k)); VS.tick(); $("fErr").textContent = ""; drawQty(SEL.has(k) ? k : null); });
   drawQty();
 }
 function drawQty(focusK) {
   const rows = [...SEL.keys()].map(k => CATS.find(c => c.k === k)).filter(c => c && c.u);
-  $("catQty").innerHTML = rows.map(c => `<div class="r" data-k="${esc(c.k)}"><b>${esc(c.l)}</b><button type="button" data-d="-1" aria-label="Moins">−</button><input inputmode="numeric" value="${SEL.get(c.k) ?? ""}" placeholder="?" aria-label="Nombre de ${UNIT[c.u][1]}"><button type="button" data-d="1" aria-label="Plus">+</button><small>${c.u === "min" ? "minutes" : UNIT[c.u][1]}</small></div>`).join("");
+  $("catQty").innerHTML = rows.map(c => `<div class="r" data-k="${esc(c.k)}"><b>${esc(c.l)}</b><button type="button" data-d="-1" aria-label="Moins">−</button><input inputmode="numeric" value="${SEL.get(c.k) ?? ""}" placeholder="?" aria-label="Nombre de ${UNIT[c.u][1]}"><button type="button" data-d="1" aria-label="Plus">+</button><small>${c.u === "min" ? "minutes" : UNIT[c.u][1]}</small>${OPTS[c.k] ? `<div class="op">${OPTS[c.k].map(o => `<button type="button" data-o="${o}" class="${OPT.get(c.k) === o ? "on" : ""}">${o[0].toUpperCase() + o.slice(1)}</button>`).join("")}</div>` : ""}</div>`).join("");
   $("catQty").querySelectorAll(".r").forEach(r => { const k = r.dataset.k, inp = r.querySelector("input");
     inp.oninput = () => { const v = parseInt(inp.value, 10); SEL.set(k, v > 0 ? v : null); inp.classList.remove("err"); catMin(); };
-    r.querySelectorAll("button").forEach(b => b.onclick = () => { const v = Math.max(1, (SEL.get(k) || 0) + +b.dataset.d); SEL.set(k, v); inp.value = v; inp.classList.remove("err"); VS.tick(); catMin(); }); });
+    r.querySelectorAll(".op button").forEach(b => b.onclick = () => { OPT.set(k, b.dataset.o); r.querySelectorAll(".op button").forEach(x => x.classList.toggle("on", x === b)); r.querySelector(".op").classList.remove("err"); $("fErr").textContent = ""; VS.tick(); });
+    r.querySelectorAll("button[data-d]").forEach(b => b.onclick = () => { const v = Math.max(1, (SEL.get(k) || 0) + +b.dataset.d); SEL.set(k, v); inp.value = v; inp.classList.remove("err"); VS.tick(); catMin(); }); });
   if (focusK) { const i = $("catQty").querySelector(`[data-k="${focusK}"] input`); if (i && !i.value) i.focus({ preventScroll: true }); }
   $("noteLab").textContent = SEL.has("autre") ? "Note (obligatoire pour « Autre »)" : "Note (facultatif)";
   catMin();
@@ -772,6 +781,8 @@ $("sheet").onsubmit = async e => {
   if (!SEL.size) { $("fErr").textContent = "Choisis ce qui a été vendu (Lingerie, Nudes, Cam…)."; $("catChips").scrollIntoView({ block: "center", behavior: "smooth" }); return; }
   const noQ = [...SEL].find(([k, q]) => { const c = CATS.find(x => x.k === k); return c && c.u && !(q > 0); });
   if (noQ) { const c = CATS.find(x => x.k === noQ[0]); $("fErr").textContent = `Indique le nombre de ${c.u === "min" ? "minutes" : UNIT[c.u][1]} pour « ${c.l} ».`; const i = $("catQty").querySelector(`[data-k="${c.k}"] input`); if (i) { i.classList.add("err"); i.focus(); } return; }
+  const noO = [...SEL.keys()].find(k => OPTS[k] && !OPT.get(k));
+  if (noO) { const c = CATS.find(x => x.k === noO); $("fErr").textContent = `Indique si « ${c ? c.l : "la vidéo"} » est avec ou sans jouet.`; const o = $("catQty").querySelector(`[data-k="${noO}"] .op`); if (o) { o.classList.add("err"); o.scrollIntoView({ block: "center", behavior: "smooth" }); } return; }
   if (SEL.has("autre") && !$("fNote").value.trim()) { $("fErr").textContent = "Pour « Autre », précise dans la note ce qui a été vendu."; $("fNote").focus(); return; }
   if (!model) { $("fErr").textContent = "Choisis la créatrice."; return; }
   if (!WHEN) { $("fErr").textContent = "Indique quand la vente a eu lieu."; $("whenChips").classList.add("need"); $("whenChips").scrollIntoView({ block: "center", behavior: "smooth" }); return; }
@@ -784,7 +795,7 @@ $("sheet").onsubmit = async e => {
   $("fBtn").disabled = true; $("fBtn").textContent = "Envoi…";
   try {
     const blob = await compress(FILE);
-    const q = new URLSearchParams({ model_id: model, amount, sold_at: sold, note: $("fNote").value, items: JSON.stringify([...SEL].map(([k, q]) => ({ k, q }))) }); if (forU) q.set("for_user", forU.id);
+    const q = new URLSearchParams({ model_id: model, amount, sold_at: sold, note: $("fNote").value, items: JSON.stringify([...SEL].map(([k, q]) => OPT.get(k) ? { k, q, o: OPT.get(k) } : { k, q })) }); if (forU) q.set("for_user", forU.id);
     const r = await fetch("/api/sales?" + q, { method: "POST", headers: { "Content-Type": blob.type || "image/jpeg" }, body: blob, credentials: "same-origin" });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || "Erreur " + r.status);
@@ -841,7 +852,7 @@ const lateTxt = h => h >= 48 ? `${Math.round(h / 24)} j` : `${h} h`;
 function qFlags(s) {
   const amt = parseNum($("qAmt").value) || s.amount, it = s.items || [], one = it.length === 1 && it[0].u && it[0].q > 0 ? it[0] : null;
   let h = "";
-  if (it.length) h += `<div class="vt-its">${it.map(x => `<span>${esc(x.l)}${x.u ? `<i>× ${x.q}${x.u === "min" ? " min" : ""}</i>` : ""}</span>`).join("")}${one ? `<span style="background:none;border-color:transparent;color:#8a8a8a">${E(amt / one.q)} ${one.u === "min" ? "la minute" : "la " + UNIT[one.u][0]}</span>` : ""}</div>`;
+  if (it.length) h += `<div class="vt-its">${it.map(x => `<span>${esc(itemLab(x))}${x.u ? `<i>× ${x.q}${x.u === "min" ? " min" : ""}</i>` : ""}</span>`).join("")}${one ? `<span style="background:none;border-color:transparent;color:#8a8a8a">${E(amt / one.q)} ${one.u === "min" ? "la minute" : "la " + UNIT[one.u][0]}</span>` : ""}</div>`;
   else h += `<div class="vt-flag"><span>Pas de catégorie (vente déclarée avant les catégories)</span></div>`;
   if (s.min_total && amt < s.min_total - .001) h += `<div class="vt-flag w"><span>Sous le prix minimum : <b>${E(s.min_total)}</b> attendus (${esc(minTxt(it))})</span><button type="button" data-cr>Commission réduite</button></div>`;
   if (s.late_h) h += `<div class="vt-flag o"><span>Déclarée en retard : <b>${lateTxt(s.late_h)}</b> après la vente</span></div>`;
@@ -1016,7 +1027,7 @@ async function histDetails(btn, s) {
   const box = document.createElement("div"); box.className = "vt-det"; box.innerHTML = `<div class="vt-mut" style="font-size:12px">Chargement…</div>`; row.appendChild(box);
   let ev = []; try { ev = (await api(`/api/admin/sales/${s.id}/events`)).events; } catch (e) {}
   const dt = ms => new Date(ms).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-  box.innerHTML = `${s.items ? `<div class="vt-its">${s.items.map(x => `<span>${esc(x.l)}${x.u ? `<i>× ${x.q}${x.u === "min" ? " min" : ""}</i>` : ""}</span>`).join("")}</div>` : ""}
+  box.innerHTML = `${s.items ? `<div class="vt-its">${s.items.map(x => `<span>${esc(itemLab(x))}${x.u ? `<i>× ${x.q}${x.u === "min" ? " min" : ""}</i>` : ""}</span>`).join("")}</div>` : ""}
     <div class="vt-ev">${ev.map(e => `<div><i class="${e.action}"></i><span><b>${esc(e.label)}</b>${e.who ? ` par ${esc(e.who)}` : ""}<small>${dt(e.at)}</small>${e.detail ? `<br><span style="color:#9a9a9a">${esc(e.detail)}</span>` : ""}</span></div>`).join("") || `<div class="vt-mut">Aucun historique.</div>`}</div>
     <div><button class="vt-sb" data-edit>Modifier chatter, créatrice ou date</button></div>`;
   box.querySelector("[data-edit]").onclick = () => openEdit(s, () => loadHist());
