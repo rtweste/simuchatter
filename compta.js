@@ -290,7 +290,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     const base = getSetting("commission_base", "net"); // "net" ou "brut"
     const mode = getSetting("attribution_mode", "ventes"); // "ventes" (ventes validées) ou "heures"
     const fee = Number(getSetting("platform_fee", "25"));
-    const validated = validatedByPeriod ? validatedByPeriod(p.key) : {};
+    const validated = validatedByPeriod ? validatedByPeriod(p.key) : {}, validatedCom = validatedByPeriod ? validatedByPeriod(p.key, true) : {};
     // le CA saisi à la main est mensuel : la quinzaine en prend sa part au prorata des jours (sert au mode « heures »)
     const mi = monthInfo(p.key.slice(0, 7)), share = (+p.to.slice(8) - +p.from.slice(8) + 1) / +mi.to.slice(8);
     const models = db.prepare(`SELECT m.id, m.name, m.creator_pct, r.brut, r.net, r.abo, r.live, r.coll, r.push, r.v2, r.legacy_net FROM models m
@@ -328,8 +328,8 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     });
     const lines = [];
     users.forEach(u => modelRows.forEach(m => {
-      const k = u.id + ":" + m.id, h = hours[k] || 0, ov = overrides[k], v = validated[k] || 0;
-      if (!h && ov === undefined && !v) return;
+      const k = u.id + ":" + m.id, h = hours[k] || 0, ov = overrides[k], v = validatedCom[k] || 0;
+      if (!h && ov === undefined && !v && !validated[k]) return;
       const auto = mode === "ventes"
         ? (base === "brut" ? v : Math.round(v * (1 - fee / 100) * 100) / 100)
         : (m.totalHours > 0 ? m.commissionBase * h / m.totalHours : 0);
@@ -606,7 +606,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   const periodElapsed = (p, today) => { const d = +today.slice(8), d1 = +p.from.slice(8), d2 = +p.to.slice(8); return Math.min(1, Math.max(1 / 16, (d - d1 + 1) / (d2 - d1 + 1))); };
   const boardOf = (inP) => {
     const board = {};
-    db.prepare("SELECT s.user_id, u.username, s.amount, s.sold_at FROM sales s JOIN users u ON u.id = s.user_id WHERE s.status = 'validated'").all()
+    db.prepare("SELECT s.user_id, u.username, COALESCE(s.com_amount, s.amount) amount, s.sold_at FROM sales s JOIN users u ON u.id = s.user_id WHERE s.status = 'validated'").all()
       .filter(s => inP(s.sold_at)).forEach(s => { const k = s.user_id; board[k] = board[k] || { user_id: k, username: s.username, total: 0 }; board[k].total += s.amount; });
     return Object.values(board).sort((a, b) => b.total - a.total);
   };
@@ -647,7 +647,8 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     const selfView = req.user.role === "admin" && req.query.self === "1" && !!(db.prepare("SELECT sells FROM users WHERE id = ?").get(req.user.id) || {}).sells;
     if (req.user.role !== "admin" || selfView) {
       const u = db.prepare("SELECT commission_pct FROM users WHERE id = ?").get(req.user.id);
-      const mine = db.prepare("SELECT amount, status, sold_at FROM sales WHERE user_id = ?").all(req.user.id).filter(s => inP(s.sold_at));
+      // côté chatter, une vente validée compte pour sa part (commission réduite par le manager)
+      const mine = db.prepare("SELECT CASE WHEN status = 'validated' THEN COALESCE(com_amount, amount) ELSE amount END amount, status, sold_at FROM sales WHERE user_id = ?").all(req.user.id).filter(s => inP(s.sold_at));
       const validated = mine.filter(s => s.status === "validated").reduce((t, s) => t + s.amount, 0);
       const pending = mine.filter(s => s.status === "pending").reduce((t, s) => t + s.amount, 0);
       const baseAmt = base === "brut" ? validated : validated * (1 - fee / 100);
@@ -656,7 +657,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       const last = db.prepare("SELECT score, persona_id, started_at FROM sims WHERE user_id = ? AND status = 'done' ORDER BY started_at DESC LIMIT 1").get(req.user.id);
       const my7 = sims.filter(x => x.user_id === req.user.id);
       // séries des 7 derniers jours + tendance par rapport aux 7 jours d'avant
-      const allMine = db.prepare("SELECT amount, status, sold_at FROM sales WHERE user_id = ?").all(req.user.id);
+      const allMine = db.prepare("SELECT CASE WHEN status = 'validated' THEN COALESCE(com_amount, amount) ELSE amount END amount, status, sold_at FROM sales WHERE user_id = ?").all(req.user.id);
       const clocksMine = db.prepare("SELECT start_at, end_at FROM clocks WHERE user_id = ? AND reinforce = 0").all(req.user.id);
       const salesDay = d => allMine.filter(x => x.status === "validated" && parisDate(x.sold_at) === d).reduce((t, x) => t + x.amount, 0);
       const hoursDay = d => clocksMine.filter(c => parisDate(c.start_at) === d).reduce((t, c) => t + ((c.end_at || now) - c.start_at) / 3.6e6, 0);
@@ -678,7 +679,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       const up = upcomingOf(req.user.id), op = openOf(req.user.id), target = op ? op.model_name : up[0]?.model_name;
       let lastShift = null;
       if (target) { const lc = db.prepare(`SELECT c.start_at, c.end_at FROM clocks c JOIN models m ON m.id = c.model_id WHERE c.user_id = ? AND m.name = ? AND c.end_at IS NOT NULL ORDER BY c.start_at DESC LIMIT 1`).get(req.user.id, target);
-        if (lc) { const ss = db.prepare(`SELECT s.amount FROM sales s JOIN models m ON m.id = s.model_id WHERE s.user_id = ? AND m.name = ? AND s.status != 'refused' AND s.sold_at BETWEEN ? AND ?`).all(req.user.id, target, lc.start_at, lc.end_at);
+        if (lc) { const ss = db.prepare(`SELECT CASE WHEN s.status = 'validated' THEN COALESCE(s.com_amount, s.amount) ELSE s.amount END amount FROM sales s JOIN models m ON m.id = s.model_id WHERE s.user_id = ? AND m.name = ? AND s.status != 'refused' AND s.sold_at BETWEEN ? AND ?`).all(req.user.id, target, lc.start_at, lc.end_at);
           lastShift = { count: ss.length, net: Math.round(netOf(ss.reduce((t, x) => t + x.amount, 0)) * 100) / 100, hours: (lc.end_at - lc.start_at) / 3.6e6 }; } }
       // shifts de la semaine (lundi → dimanche) : rang du prochain créneau dans la semaine
       const wd = (new Date(today + "T12:00Z").getUTCDay() + 6) % 7, mon = parisDate(now - wd * 864e5), sun = parisDate(now + (6 - wd) * 864e5);

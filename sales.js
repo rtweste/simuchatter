@@ -62,7 +62,8 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
   })();
   // lecture des captures par l'IA : montant et état du média (Accepté / En attente)
   const AI = require("./ai");
-  for (const [c, t] of [["ai_amount", "REAL"], ["ai_status", "TEXT"], ["ai_sale", "INTEGER"], ["ai_note", "TEXT"], ["ai_at", "INTEGER"]])
+  // com_amount : part de la vente qui compte pour le chatter (null = toute la vente) ; le CA garde toujours le montant entier
+  for (const [c, t] of [["ai_amount", "REAL"], ["ai_status", "TEXT"], ["ai_sale", "INTEGER"], ["ai_note", "TEXT"], ["ai_at", "INTEGER"], ["com_amount", "REAL"], ["com_reason", "TEXT"]])
     if (!db.prepare("PRAGMA table_info(sales)").all().some(x => x.name === c)) db.exec(`ALTER TABLE sales ADD COLUMN ${c} ${t}`);
   const scans = new Map();   // empreinte de l'image → lecture déjà faite pendant que le chatter remplissait le formulaire
   const shaOf = buf => require("crypto").createHash("sha256").update(buf).digest("hex");
@@ -99,6 +100,7 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
   const num = (v, min, max) => { const n = Number(v); return Number.isFinite(n) && n >= min && n <= max ? n : null; };
   const pub = s => ({ id: s.id, user_id: s.user_id, username: s.username, model_id: s.model_id, model_name: s.model_name,
     amount: s.amount, declared_amount: s.declared_amount, sold_at: s.sold_at, note: s.note, status: s.status, reason: s.reason,
+    com_amount: s.status === "validated" ? s.com_amount ?? null : null, com_reason: s.status === "validated" ? s.com_reason || null : null,
     reviewer: s.reviewer, reviewed_at: s.reviewed_at, created_at: s.created_at, period: periodOfDate(parisDate(s.sold_at)), dup: dupInfo(s), ai: aiInfo(s) });
   const SELECT = `SELECT s.*, u.username, m.name model_name, r.username reviewer FROM sales s
     JOIN users u ON u.id = s.user_id JOIN models m ON m.id = s.model_id LEFT JOIN users r ON r.id = s.reviewed_by`;
@@ -202,16 +204,26 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
       amount = num(String(req.body.amount).replace(",", "."), 0.01, 100000);
       if (amount === null) return res.status(400).json({ error: "Montant invalide" });
     }
-    db.prepare("UPDATE sales SET status = ?, amount = ?, reason = ?, reviewed_by = ?, reviewed_at = ? WHERE id = ?")
+    // commission réduite : la vente entre dans le CA mais ne compte (en partie ou pas du tout) pour le chatter
+    let com = null, comWhy = null;
+    if (decision === "validated" && req.body.com_amount !== undefined && req.body.com_amount !== null && req.body.com_amount !== "") {
+      com = num(String(req.body.com_amount).replace(",", "."), 0, amount);
+      if (com === null) return res.status(400).json({ error: `La part du chatter doit être entre 0 et ${String(amount).replace(".", ",")} €` });
+      com = Math.round(com * 100) / 100;
+      if (com >= amount) com = null;
+      else { comWhy = String(req.body.com_reason || "").trim().slice(0, 200); if (!comWhy) return res.status(400).json({ error: "Indique la raison : le chatter la verra" }); }
+    }
+    db.prepare("UPDATE sales SET status = ?, amount = ?, reason = ?, reviewed_by = ?, reviewed_at = ?, com_amount = ?, com_reason = ? WHERE id = ?")
       .run(decision, amount, decision === "refused" ? String(req.body.reason || "").slice(0, 300) : null,
-        decision === "pending" ? null : req.user.id, decision === "pending" ? null : Date.now(), s.id);
+        decision === "pending" ? null : req.user.id, decision === "pending" ? null : Date.now(), com, comWhy, s.id);
     res.json({ ok: true });
   });
 
   /* ---------- Pour la compta : ventes validées par chatter et créatrice sur une période ---------- */
-  return function validatedByPeriod(pkey) {
+  // forCom : montants qui comptent pour la paie des chatters (part réduite si le manager l'a décidé), sinon montants du CA
+  return function validatedByPeriod(pkey, forCom) {
     const out = {};
-    db.prepare("SELECT user_id, model_id, amount, sold_at FROM sales WHERE status = 'validated'").all()
+    db.prepare(`SELECT user_id, model_id, ${forCom ? "COALESCE(com_amount, amount)" : "amount"} amount, sold_at FROM sales WHERE status = 'validated'`).all()
       .filter(s => periodOfDate(parisDate(s.sold_at)) === pkey)
       .forEach(s => { const k = s.user_id + ":" + s.model_id; out[k] = (out[k] || 0) + s.amount; });
     return out;

@@ -107,9 +107,10 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       C.tip = Math.max(C.tip, t.id); push(t.recruit_id, "coach", { title: `Conseil de ${t.username}`, body: cut(t.text, 140), url: "/home", tag: "tip-" + t.id }).catch(() => {}); });
     if (has("sim_assignments")) db.prepare("SELECT a.*, u.username FROM sim_assignments a LEFT JOIN users u ON u.id = a.created_by WHERE a.id > ? ORDER BY a.id").all(C.asg).forEach(a => {
       C.asg = Math.max(C.asg, a.id); push(a.user_id, "coach", { title: "Nouvel entraînement à faire", body: `${a.username || "Ton manager"} t'assigne une simulation · objectif ${a.goal}`, url: "/app", tag: "asg-" + a.id }).catch(() => {}); });
-    if (has("sales")) { db.prepare("SELECT s.id, s.user_id, s.amount, s.status, s.reason, s.reviewed_at, m.name model FROM sales s JOIN models m ON m.id = s.model_id WHERE s.reviewed_at > ? AND s.status IN ('validated','refused') ORDER BY s.reviewed_at").all(C.rev).forEach(s => {
+    if (has("sales")) { db.prepare("SELECT s.id, s.user_id, s.amount, s.com_amount, s.com_reason, s.status, s.reason, s.reviewed_at, m.name model FROM sales s JOIN models m ON m.id = s.model_id WHERE s.reviewed_at > ? AND s.status IN ('validated','refused') ORDER BY s.reviewed_at").all(C.rev).forEach(s => {
       C.rev = Math.max(C.rev, s.reviewed_at); if (!once("sale:" + s.id + ":" + s.status)) return;
-      push(s.user_id, "sales", s.status === "validated" ? { title: `Vente validée · +${eur(s.amount)}`, body: `${s.model} · elle compte dans ta paie`, url: "/ventes", tag: "sale-" + s.id }
+      push(s.user_id, "sales", s.status === "validated" && s.com_amount != null ? { title: s.com_amount > 0 ? `Vente validée · ${eur(s.com_amount)} pour toi` : "Vente validée · hors commission", body: `${s.model} · ${eur(s.amount)} au CA${s.com_reason ? " · " + cut(s.com_reason, 90) : ""}`, url: "/ventes", tag: "sale-" + s.id }
+        : s.status === "validated" ? { title: `Vente validée · +${eur(s.amount)}`, body: `${s.model} · elle compte dans ta paie`, url: "/ventes", tag: "sale-" + s.id }
         : { title: "Vente refusée", body: `${s.model} · ${eur(s.amount)}${s.reason ? " · " + cut(s.reason, 90) : ""}`, url: "/ventes", tag: "sale-" + s.id }).catch(() => {}); }); }
   }
   // rappels de shift : X minutes avant, puis si le shift a commencé sans pointage

@@ -25,7 +25,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       if (!has("customs")) return [];
       return db.prepare(`SELECT c.user_id, u.username, COUNT(*) v FROM customs c JOIN users u ON u.id = c.user_id WHERE c.created_at BETWEEN ? AND ?${mf.replace("model_id", "c.model_id")} GROUP BY c.user_id ORDER BY v DESC`).all(c.start_at, to);
     }
-    const agg = c.metric === "ca" ? "SUM(s.amount)" : "COUNT(*)";
+    const agg = c.metric === "ca" ? "SUM(CASE WHEN s.status = 'validated' THEN COALESCE(s.com_amount, s.amount) ELSE s.amount END)" : "COUNT(*)";
     return db.prepare(`SELECT s.user_id, u.username, ${agg} v FROM sales s JOIN users u ON u.id = s.user_id WHERE s.status <> 'refused' AND s.sold_at BETWEEN ? AND ?${mf.replace("model_id", "s.model_id")} GROUP BY s.user_id ORDER BY v DESC`).all(c.start_at, to);
   }
   function feedOf(c) {

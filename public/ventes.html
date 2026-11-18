@@ -70,6 +70,7 @@
 .vt-a{font-weight:900;font-size:19px;letter-spacing:-.03em}.vt-a s{font-size:12px;color:#6a6a6a;font-weight:700;margin-right:6px;letter-spacing:0}
 .vt-rm small{display:block;font-size:12px;color:#8a8a8a;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vt-why{font-size:12px;color:#e0a3a3;margin-top:4px}
+.vt-cw{font-size:12px;color:#e8c27a;margin-top:4px;overflow-wrap:anywhere}.vt-cw b{color:#f3d9a4}
 .vt-rr{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 .vt-sb{height:28px;border-radius:9px;border:1px solid #2a2a2a;background:#181818;color:#e6e6e6;font-weight:800;font-size:11.5px;padding:0 10px;white-space:nowrap}
 .vt-sb.del{color:#9a9a9a}.vt-sb.del.sure{color:#e07a7a;border-color:rgba(224,122,122,.45)}
@@ -149,6 +150,16 @@
 .vt-am .cur{font-size:22px;font-weight:900;color:#6f6f6f}
 .vt-hint{font-size:11.5px;color:#7a7a7a;text-align:center;margin-top:-4px}
 .vt-hint b{color:#e6e6e6}
+.vt-com{display:flex;flex-direction:column;gap:8px}
+.vt-com .sg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#141414;border:1px solid #1f1f1f;border-radius:13px;padding:4px}
+.vt-com .sg button{height:34px;border-radius:10px;border:0;background:transparent;color:#9a9a9a;font-weight:800;font-size:12.5px;transition:background .2s,color .2s}
+.vt-com .sg button.on{background:#262626;color:#fff}.vt-com .sg button.on[data-c=part],.vt-com .sg button.on[data-c=none]{background:rgba(232,194,122,.16);color:#f3d9a4}
+.vt-com .mo{display:none;flex-direction:column;gap:8px;animation:vtUp .3s both}.vt-com.on .mo{display:flex}
+.vt-com .pr{display:flex;align-items:center;gap:8px;font-size:13px;color:#bdbdbd}
+.vt-com .pr input{width:96px;height:40px;border-radius:12px;border:1px solid #2a2a2a;background:#141414;color:#fff;font:inherit;font-weight:900;font-size:17px;text-align:center}
+.vt-com .pr button{height:32px;border-radius:10px;border:1px solid #2a2a2a;background:#1a1a1a;color:#d6d6d6;font-weight:700;font-size:12px;padding:0 10px}
+.vt-com .vt-fi{height:40px;font-size:13px}
+.vt-com .eq{font-size:12px;color:#8a8a8a}.vt-com .eq b{color:#e6e6e6}
 .vt-reasons{display:none;flex-direction:column;gap:8px;animation:vtUp .35s both}.vt-reasons.on{display:flex}
 .vt-reasons .rs{display:flex;flex-wrap:wrap;gap:6px}
 .vt-reasons .rs button{height:32px;border-radius:10px;border:1px solid rgba(224,122,122,.3);background:rgba(224,122,122,.06);color:#e6c3c3;font-weight:700;font-size:12px;padding:0 10px}
@@ -320,6 +331,15 @@
           <div><div class="vt-lab" style="margin-bottom:6px">Montant brut</div>
             <div class="vt-am"><button id="amMinus" aria-label="Moins 5 €">−</button><input id="qAmt" inputmode="decimal" aria-label="Montant brut" autocomplete="off"><span class="cur">€</span><button id="amPlus" aria-label="Plus 5 €">+</button></div></div>
           <div class="vt-hint" id="qHint">Corrige le montant si la capture ne correspond pas</div>
+          <div class="vt-com" id="qCom">
+            <div class="vt-lab">Compte pour le chatter</div>
+            <div class="sg" role="radiogroup"><button data-c="all" class="on">Toute la vente</button><button data-c="part">Une partie</button><button data-c="none">Rien</button></div>
+            <div class="mo">
+              <div class="pr" id="qComRow"><input id="qComAmt" inputmode="decimal" autocomplete="off" aria-label="Montant qui compte pour le chatter"><span>€ pour le chatter</span><button id="qComHalf">La moitié</button></div>
+              <input class="vt-fi" id="qComWhy" maxlength="200" placeholder="Raison, le chatter la verra (ex. : cam vendue trop peu chère)">
+              <div class="eq" id="qComEq"></div>
+            </div>
+          </div>
           <div class="vt-reasons" id="qReasons">
             <div class="vt-lab">Motif du refus</div>
             <div class="rs"><button>Capture illisible</button><button>Montant incorrect</button><button>Doublon</button><button>Pas une vente</button></div>
@@ -460,6 +480,7 @@ async function compress(file) {
 let ACTIVE = [], MINE = [], MODELS = [], FILTER = "", SHOWN = 40, FILE = null, WHEN = "now", FRESH = null;
 const thumb = s => `<button class="vt-th" data-z="${s.id}" aria-label="Voir la capture"><img src="${img(s.id)}" alt="" loading="lazy" onload="this.classList.add('ld')"></button>`;
 const amtHtml = s => `${s.amount !== s.declared_amount ? `<s>${E(s.declared_amount)}</s>` : ""}${E(s.amount)}`;
+const comWhyHtml = (s, me) => s.com_amount != null ? `<div class="vt-cw"><b>${s.com_amount > 0 ? E(s.com_amount) + (me ? " comptent pour toi" : " pour le chatter") : "Hors commission"}</b>${s.com_reason ? " · " + esc(s.com_reason) : ""}</div>` : "";
 
 function renderMine() {
   const list = MINE.filter(s => !FILTER || s.status === FILTER);
@@ -471,7 +492,7 @@ function renderMine() {
     const d = dayLabel(s.sold_at); if (d !== last) { html += `<div class="vt-day">${d}</div>`; last = d; }
     html += `<div class="vt-rw${s.id === FRESH ? " new" : ""}" data-id="${s.id}" style="animation-delay:${Math.min(i, 12) * .04}s">${thumb(s)}
       <div class="vt-rm"><div class="vt-a">${amtHtml(s)}</div><small>${esc(s.model_name)} · ${hm(s.sold_at)}${s.note ? " · " + esc(s.note) : ""}</small>
-        ${s.status === "refused" && s.reason ? `<div class="vt-why">${esc(s.reason)}</div>` : ""}</div>
+        ${s.status === "refused" && s.reason ? `<div class="vt-why">${esc(s.reason)}</div>` : ""}${comWhyHtml(s, 1)}</div>
       <div class="vt-rr"><span class="vt-pill ${s.status}"><i></i>${STATUS[s.status]}</span>
         ${s.status === "pending" ? `<button class="vt-sb del" data-del="${s.id}">Retirer</button>` : ""}
         ${s.status === "refused" ? `<button class="vt-sb" data-again="${s.id}">Renvoyer</button>` : ""}</div></div>`;
@@ -517,7 +538,7 @@ async function loadMine(opts = {}) {
   if (opts.watch) {   // décisions du manager arrivées depuis le dernier passage
     const before = new Map(MINE.map(s => [s.id, s.status]));
     const changed = d.sales.filter(s => before.get(s.id) === "pending" && s.status !== "pending");
-    changed.forEach(s => s.status === "validated" ? notify("Vente validée", `${E(s.amount)} · ${s.model_name}`, "ok") : notify("Vente refusée", s.reason || `${E(s.amount)} · ${s.model_name}`, "err"));
+    changed.forEach(s => s.status === "validated" ? notify(s.com_amount != null ? (s.com_amount > 0 ? `Vente validée · ${E(s.com_amount)} pour toi` : "Vente validée · hors commission") : "Vente validée", s.com_reason ? `${E(s.amount)} · ${s.model_name} · ${s.com_reason}` : `${E(s.amount)} · ${s.model_name}`, "ok") : notify("Vente refusée", s.reason || `${E(s.amount)} · ${s.model_name}`, "err"));
     if (changed.some(s => s.status === "validated")) VS.ok(); else if (changed.length) VS.ko();
     MINE = d.sales; MODELS = d.models; ACTIVE = d.active || []; if (h) renderHero(h);
     if (changed.length) { renderMine(); changed.forEach(s => { const r = document.querySelector(`#myList [data-id="${s.id}"]`); if (r) { r.classList.add(s.status === "validated" ? "flip-v" : "flip-r"); setTimeout(() => r.classList.remove("flip-v", "flip-r"), 2600); } }); }
@@ -651,8 +672,25 @@ function qShow() {
   $("qNote").style.display = s.note ? "" : "none"; $("qNote").textContent = s.note ? `« ${s.note} »` : "";
   $("qAmt").value = String(s.amount).replace(".", ",");
   qHint();
-  qReasons(false);
+  qReasons(false); qCom("all");
 }
+// part de la vente qui compte pour le chatter : toute, une partie ou rien (le CA garde le montant entier)
+let COM = "all";
+function qCom(c) {
+  COM = c; document.querySelectorAll("#qCom .sg button").forEach(b => b.classList.toggle("on", b.dataset.c === c));
+  $("qCom").classList.toggle("on", c !== "all"); $("qComRow").style.display = c === "part" ? "" : "none";
+  if (c === "all") { $("qComAmt").value = ""; $("qComWhy").value = ""; }
+  if (c === "part" && !$("qComAmt").value) { const a = parseNum($("qAmt").value) || 0; $("qComAmt").value = String(Math.round(a / 2 * 100) / 100).replace(".", ","); }
+  qComEq(); $("qVal").textContent = c === "none" ? "✓ Valider sans commission" : c === "part" ? "✓ Valider · part réduite" : "✓ Valider";
+}
+function qComVal() { return COM === "none" ? 0 : COM === "part" ? parseNum($("qComAmt").value) : null; }
+function qComEq() {
+  const a = parseNum($("qAmt").value) || 0, c = qComVal();
+  $("qComEq").innerHTML = COM === "all" ? "" : `<b>${E(a)}</b> au CA de la créatrice · <b>${E(c > 0 ? c : 0)}</b> dans la paie du chatter`;
+}
+document.querySelectorAll("#qCom .sg button").forEach(b => b.onclick = () => { qCom(b.dataset.c); VS.tick(); if (b.dataset.c === "part") $("qComAmt").select(); else if (b.dataset.c === "none") $("qComWhy").focus(); });
+$("qComAmt").oninput = qComEq;
+$("qComHalf").onclick = () => { const a = parseNum($("qAmt").value) || 0; $("qComAmt").value = String(Math.round(a / 2 * 100) / 100).replace(".", ","); qComEq(); };
 // verdict de l'IA sur la capture
 let AIPOLL = null;
 function qAi(s) {
@@ -727,15 +765,20 @@ async function decide(decision) {
   const s = qCur(); if (!s || Q.busy) return;
   const amount = parseNum($("qAmt").value);
   if (decision === "validated" && !(amount > 0)) { notify("Montant invalide", "Indique un montant supérieur à 0 €", "err"); $("qAmt").focus(); return; }
+  const com = decision === "validated" ? qComVal() : null, comWhy = $("qComWhy").value.trim();
+  if (com !== null) {
+    if (!(com >= 0) || com >= amount) { notify("Part du chatter invalide", `Indique un montant entre 0 et ${E(amount)}`, "err"); $("qComAmt").focus(); return; }
+    if (!comWhy) { notify("Raison manquante", "Indique pourquoi : le chatter la verra", "err"); $("qComWhy").focus(); return; }
+  }
   const reason = [...document.querySelectorAll("#qReasons .rs button.on")].map(b => b.textContent).concat($("qOther").value.trim() ? [$("qOther").value.trim()] : []).join(" · ");
   Q.busy = true; $("qVal").disabled = $("qRef").disabled = true;
   try {
-    await api(`/api/admin/sales/${s.id}/review`, { body: { decision, amount: amount > 0 ? amount : "", reason } });
+    await api(`/api/admin/sales/${s.id}/review`, { body: { decision, amount: amount > 0 ? amount : "", reason, com_amount: com === null ? "" : com, com_reason: comWhy } });
     const fl = $("qCap").querySelector(".flash"); fl.className = "flash"; void fl.offsetWidth; fl.className = "flash " + (decision === "validated" ? "v" : "r");
     if (decision === "validated") {
       VS.ok(); flyAmount("+" + E(amount)).then(() => { Q.val += amount; countTo($("sVal"), Q.val, E, 600); hit("sValBox", "hit"); });
       Q.nv++; countTo($("sNv"), Q.nv, N, 400); hit("sNvBox", "hit");
-      notify("Vente validée", `${E(amount)} ajoutés à la compta de ${s.username}`, "ok");
+      notify("Vente validée", com === null ? `${E(amount)} ajoutés à la compta de ${s.username}` : `${E(amount)} au CA · ${com > 0 ? E(com) + " pour " + s.username : "rien pour " + s.username}`, "ok");
     } else {
       VS.ko(); Q.nr++; countTo($("sNr"), Q.nr, N, 400); hit("sNrBox", "hit-r");
       notify("Vente refusée", `${s.username} est prévenu${reason ? " · " + reason : ""}`, "info");
@@ -752,7 +795,7 @@ $("qCap").onclick = () => { const s = qCur(); if (s) zoom(img(s.id)); };
 $("qPrev").onclick = () => qGo(-1); $("qNext").onclick = () => qGo(1);
 const bump = d => { const v = parseNum($("qAmt").value) || 0; $("qAmt").value = String(Math.max(1, Math.round((v + d) * 100) / 100)).replace(".", ","); qHint(); VS.tick(); };
 $("amMinus").onclick = () => bump(-5); $("amPlus").onclick = () => bump(5);
-$("qAmt").oninput = qHint;
+$("qAmt").oninput = () => { qHint(); qComEq(); };
 $("qAmt").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); decide("validated"); } if (e.key === "ArrowUp") { e.preventDefault(); bump(1); } if (e.key === "ArrowDown") { e.preventDefault(); bump(-1); } });
 addEventListener("keydown", e => {
   if ($("adminView").classList.contains("hidden") || $("t-queue").classList.contains("hidden") || !$("lb").classList.contains("hidden")) return;
@@ -813,7 +856,7 @@ async function loadHist() {
     const dl = dayLabel(s.sold_at); if (dl !== last) { html += `<div class="vt-day">${dl}</div>`; last = dl; }
     html += `<div class="vt-rw vt-hrw" style="animation-delay:${Math.min(i, 12) * .03}s">${thumb(s)}
       <div class="vt-rm"><div class="vt-a">${amtHtml(s)}</div><small><span class="who">${esc(s.username)}</span> · ${esc(s.model_name)} · ${hm(s.sold_at)}${s.note ? " · " + esc(s.note) : ""}${s.dup ? `<span class="vt-hdup ${s.dup.kind}">${s.dup.kind === "same" ? "capture déjà utilisée" : "capture ressemblante"}</span>` : ""}</small>
-        ${s.reviewer ? `<small>par ${esc(s.reviewer)}</small>` : ""}${s.status === "refused" && s.reason ? `<div class="vt-why">${esc(s.reason)}</div>` : ""}</div>
+        ${s.reviewer ? `<small>par ${esc(s.reviewer)}</small>` : ""}${s.status === "refused" && s.reason ? `<div class="vt-why">${esc(s.reason)}</div>` : ""}${comWhyHtml(s)}</div>
       <div class="vt-rr"><span class="vt-pill ${s.status}"><i></i>${STATUS[s.status]}</span>
         <div style="display:flex;gap:6px">${s.status !== "pending" ? `<button class="vt-sb" data-back="${s.id}">Remettre en attente</button>` : ""}<button class="vt-sb del" data-hdel="${s.id}" aria-label="Supprimer">✕</button></div></div></div>`;
   });
