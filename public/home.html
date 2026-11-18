@@ -440,6 +440,23 @@
 .shV .slrow{display:flex;gap:8px;align-items:center}
 .shV .slrow .slide{margin-top:0;flex:1}
 .shV .mdl{margin:0}.shV .mdl select{height:56px;border-radius:28px;min-width:0;width:auto;max-width:130px;padding:0 14px}
+/* choix de la créatrice avant de pointer */
+.shV .mpk{margin:16px 0 12px}
+.shV .mpk .k{display:block;font-size:11px;letter-spacing:.14em;color:#7a7a7a;font-weight:800;margin-bottom:9px}
+.shV .mpk .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.shV .mpk button{position:relative;display:flex;align-items:center;gap:10px;height:56px;border-radius:16px;border:1px solid #262626;background:#151515;color:#d6d6d6;font:inherit;text-align:left;padding:0 12px 0 8px;cursor:pointer;transition:background .2s,border-color .2s,transform .15s,box-shadow .25s}
+.shV .mpk button:hover{border-color:#3a3a3a}.shV .mpk button:active{transform:scale(.97)}
+.shV .mpk .mav{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-weight:900;font-size:15px;flex-shrink:0;background:color-mix(in srgb,var(--c) 18%,#151515);color:var(--c)}
+.shV .mpk .mtx{display:flex;flex-direction:column;min-width:0;gap:2px}
+.shV .mpk button b{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shV .mpk button small{font-size:11px;color:#7a7a7a;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shV .mpk button small.mpl{color:#5fd3a2}.shV .mpk button small.mbz{color:#e8c27a}
+.shV .mpk button.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 9%,#151515);box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 18%,transparent);color:#fff}
+.shV .mpk button.on .mav{background:var(--c);color:#0b0b0b}
+.shV .mpk .mck{position:absolute;right:10px;top:50%;width:18px;height:18px;margin-top:-9px;border-radius:50%;background:var(--c);color:#0b0b0b;display:grid;place-items:center;opacity:0;transform:scale(.4);transition:opacity .2s,transform .3s cubic-bezier(.3,1.6,.5,1)}
+.shV .mpk button.on .mck{opacity:1;transform:none}
+.shV .mpk .wr{font-size:12px;color:#e8c27a;margin-top:8px;min-height:0}
+.shV .slide .lbl b{color:#fff}
 .shV .liveb{display:flex;align-items:center;gap:12px}
 .shV .liveb .dot{width:10px;height:10px;border-radius:50%;background:#3ccf91;animation:hPl 2s ease-out infinite;flex-shrink:0}
 .shV .liveb .stop{margin-left:0}.shV .liveb #pzBtn{margin-left:auto}.shV .liveb #pzBtn[hidden]+.stop{margin-left:auto}
@@ -573,7 +590,7 @@ const todayIso = (() => { const d = new Date(); return `${d.getFullYear()}-${pad
 const dayLbl = d => d === todayIso ? "Aujourd'hui" : new Date(d + "T12:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric" }).replace(/^./, c => c.toUpperCase());
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const desk = () => innerWidth >= 1000;
-let ME = null, D = null, MODE = "quick", tick = null, T0 = 0;
+let ME = null, D = null, MODE = "quick", tick = null, T0 = 0, PICK = null;
 
 /* ---------------- Petits outils ---------------- */
 const STAR4 = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5 14.2 9.8 22.5 12 14.2 14.2 12 22.5 9.8 14.2 1.5 12 9.8 9.8Z" fill="#fff"/></svg>';
@@ -691,7 +708,13 @@ function palB() {
 // prochain shift : compte à rebours + fiche de la créatrice
 function shiftV3() {
   const nx = D.upcoming[0], op = D.open, ls = D.lastShift, model = op ? op.model_name : nx?.model_name;
-  const sel = D.models.map(m => `<option value="${m.id}" ${model === m.name ? "selected" : ""}>${esc(m.name)}</option>`).join("");
+  // créatrices en cartes : couleur comme sur le planning, « prévue » sur celle du créneau, qui y est déjà
+  const ids = D.models.map(m => m.id).sort((a, b) => a - b), COL = ["#f2a65a", "#8fa2ff", "#5fd3a2", "#f08cc8", "#e8d36a", "#6fd0e8", "#c39bff", "#ff8a7a", "#a3d977", "#d9a3ff"];
+  const colM = id => COL[Math.max(0, ids.indexOf(id)) % COL.length];
+  if (!op) PICK = D.models.find(m => m.name === (PICK && PICK.name)) || D.models.find(m => m.name === model) || D.models[0] || null;
+  const busy = name => (D.live || []).filter(l => l.model_name === name && l.username !== ME?.username).map(l => l.username);
+  const pick = D.models.map(m => { const b = busy(m.name), pl = nx && nx.model_name === m.name;
+    return `<button type="button" data-m="${m.id}" class="${PICK && PICK.id === m.id ? "on" : ""}" style="--c:${colM(m.id)}" aria-pressed="${PICK && PICK.id === m.id}"><span class="mav">${esc(m.name[0])}</span><span class="mtx"><b>${esc(m.name)}</b>${pl ? `<small class="mpl">ton créneau</small>` : b.length ? `<small class="mbz">${esc(b.join(", "))} y ${b.length > 1 ? "sont" : "est"}</small>` : `<small>libre</small>`}</span><span class="mck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></span></button>`; }).join("");
   const when = nx ? `${nx.date === todayIso ? "aujourd'hui" : dayLbl(nx.date).toLowerCase()} · <b>${nx.start} – ${nx.end}</b>` : "aucun créneau prévu";
   const wk = D.weekShifts?.nth ? `${D.weekShifts.nth === 1 ? "1ᵉʳ" : D.weekShifts.nth + "ᵉ"} shift de la semaine · ` : D.weekShifts?.count ? `${D.weekShifts.count} shift${D.weekShifts.count > 1 ? "s" : ""} cette semaine · ` : "";
   const dur = nx ? (() => { const [a, b] = [nx.start, nx.end].map(x => { const [hh, mm] = x.split(":"); return +hh * 60 + +mm; }); return Math.round(((b - a + 1440) % 1440 || 1440) / 60 * 10) / 10; })() : 0;
@@ -702,8 +725,8 @@ function shiftV3() {
     <div class="g3"><div class="cdw"><span class="k" id="rollK">${op ? "EN SHIFT DEPUIS" : nx ? "COMMENCE DANS" : "PRÊT QUAND TU L'ES"}</span><div class="roll" id="roll"></div>
       <div class="mut" style="margin-top:8px">${wk}${nx && !op ? `<b>${String(dur).replace(".", ",")} h</b>` : op ? `depuis ${new Date(op.start_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}` : ""}</div></div>${crea}</div>
     ${op ? `<div class="liveb"><span class="dot"></span><span class="mut">Bon shift sur <b>${esc(op.model_name)}</b> !</span><button class="btn ghost small" id="pzBtn" hidden></button><button class="btn ghost small stop" id="outBtn">Terminer</button></div>`
-      : `<div class="slrow"><button class="slide" id="slide" aria-label="Glisser pour commencer mon shift"><span class="fill" id="sFill"></span><span class="lbl">Glisser pour commencer</span><span class="knob" id="sKnob"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
-        <label class="mdl"><span class="sr">Créatrice</span><select id="inModel">${sel}</select></label></div>`}</div>`;
+      : `<div class="mpk"><span class="k">SUR QUELLE CRÉATRICE ?</span><div class="g" id="mPick" role="radiogroup" aria-label="Créatrice">${pick}</div><div class="wr" id="mWarn"></div></div>
+        <div class="slrow"><button class="slide" id="slide" aria-label="Glisser pour commencer mon shift"><span class="fill" id="sFill"></span><span class="lbl" id="sLbl">Glisser pour commencer</span><span class="knob" id="sKnob"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button></div>`}</div>`;
 }
 // chiffres qui roulent (compte à rebours / chrono)
 function rollSet(el, txt) {
@@ -730,10 +753,17 @@ function bindShiftV3() {
       try { await api("/api/clock/out", { body: {} }); window.PAUSEUI && PAUSEUI.refresh(); notify("Shift terminé", `${hrs(dur)} pointées sur ${op.model_name}`, "ok"); } catch (e) { notify("Impossible de terminer le shift", e.message, "err"); }
       MODE = "static"; load(); }; return; }
   const sl = $("slide"), kn = $("sKnob"), fl = $("sFill"); let x0 = null, max = 0, done = false;
+  // choix de la créatrice : le libellé du curseur suit, avertissement si ce n'est pas celle du créneau
+  const pickUpd = () => { $("sLbl").innerHTML = PICK ? `Glisser pour commencer sur&nbsp;<b>${esc(PICK.name)}</b>` : "Choisis une créatrice";
+    $("mWarn").textContent = PICK && nx && nx.model_name && nx.model_name !== PICK.name ? `Ton créneau prévu est sur ${nx.model_name}.` : ""; };
+  document.querySelectorAll("#mPick button").forEach(b => b.onclick = () => { PICK = D.models.find(m => m.id === +b.dataset.m);
+    document.querySelectorAll("#mPick button").forEach(x => { x.classList.toggle("on", x === b); x.setAttribute("aria-pressed", x === b); }); try { navigator.vibrate && navigator.vibrate(8); } catch (e) {} pickUpd(); });
+  pickUpd();
   const setX = x => { kn.style.left = (4 + x) + "px"; fl.style.width = (56 + x) + "px"; };
   const go = async () => { if (done) return; done = true; sl.classList.add("anim"); setX(max); SND.shift();
-    const name = $("inModel").selectedOptions[0]?.textContent || "";
-    try { await api("/api/clock/in", { body: { model_id: $("inModel").value } }); window.PAUSEUI && setTimeout(PAUSEUI.refresh, 600); notify("Shift commencé", `${name} · bon courage !`, "ok"); } catch (e) { notify("Impossible de pointer", e.message, "err"); }
+    if (!PICK) { done = false; sl.classList.add("anim"); setX(0); return notify("Choisis une créatrice", "", "err"); }
+    const name = PICK.name;
+    try { await api("/api/clock/in", { body: { model_id: PICK.id } }); window.PAUSEUI && setTimeout(PAUSEUI.refresh, 600); notify("Shift commencé", `${name} · bon courage !`, "ok"); } catch (e) { notify("Impossible de pointer", e.message, "err"); }
     setTimeout(() => { MODE = "static"; load(); }, 450); };
   sl.addEventListener("pointerdown", e => { if (done) return; x0 = e.clientX; max = sl.clientWidth - 56; sl.classList.add("drag"); sl.classList.remove("anim"); sl.setPointerCapture(e.pointerId); });
   sl.addEventListener("pointermove", e => { if (x0 == null || done) return; setX(Math.max(0, Math.min(max, e.clientX - x0))); });
