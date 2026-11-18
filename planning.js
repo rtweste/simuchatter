@@ -17,6 +17,10 @@ const shiftSpan = s => { const a = parisMs(s.date, s.start); let b = parisMs(s.d
 const mondayOf = d => { const wd = (new Date(d + "T12:00:00Z").getUTCDay() + 6) % 7; return addDays(d, -wd); };
 
 module.exports = function mount(app, db, auth, admin) {
+  return mountPlanning(app, db, auth, admin);
+};
+module.exports.shiftSpan = shiftSpan;
+function mountPlanning(app, db, auth, admin) {
   db.exec(`
   CREATE TABLE IF NOT EXISTS shift_swaps (id INTEGER PRIMARY KEY, shift_id INTEGER NOT NULL, from_user INTEGER NOT NULL, to_user INTEGER,
     reason TEXT, status TEXT NOT NULL DEFAULT 'open', created_at INTEGER NOT NULL, decided_by INTEGER, decided_at INTEGER);
@@ -59,7 +63,7 @@ module.exports = function mount(app, db, auth, admin) {
       else if (now < b) { state = "missing"; late = Math.round((now - a) / 60000); }
       else state = "absent";
       const sw = swaps.find(w => w.shift_id === s.id);
-      return { ...s, start_ms: a, end_ms: b, state, late, clock_in: c ? c.start_at : null,
+      return { ...s, start_ms: a, end_ms: b, state, late, clock_in: c ? c.start_at : null, clock_id: c ? c.id : null, clock_open: !!(c && !c.end_at),
         swap: sw ? { id: sw.id, status: sw.status, to_user: sw.to_user, to_name: sw.to_name, reason: sw.reason } : null };
     });
   }
@@ -231,4 +235,4 @@ module.exports = function mount(app, db, auth, admin) {
 
   // créatrices actives d'un chatter (principale + renforts) pour le formulaire de vente
   return { decorate, punctuality, shiftSpan, suspended, SHIFT_SQL, activeModels: uid => { sweep(); return db.prepare("SELECT model_id, reinforce FROM clocks WHERE user_id = ? AND end_at IS NULL ORDER BY reinforce, start_at").all(uid); } };
-};
+}

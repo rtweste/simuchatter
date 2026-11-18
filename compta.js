@@ -252,7 +252,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     res.json({
       period: p,
       clocks: rows.filter(c => periodOfDate(parisDate(c.start_at)) === p.key),
-      live: rows.filter(c => !c.end_at),
+      live: rows.filter(c => !c.end_at).map(c => ({ ...c, planned_end: c.reinforce ? c.until_at || null : plannedEnd(c) })),
       people: db.prepare("SELECT id, username FROM users WHERE active = 1 AND role != 'trainee' ORDER BY username").all(),
       models: db.prepare("SELECT id, name FROM models ORDER BY name").all()
     });
@@ -279,6 +279,26 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     db.prepare("UPDATE clocks SET user_id=?, model_id=?, start_at=?, end_at=?, edited=1 WHERE id=?")
       .run(c.user_id, c.model_id, c.start_at, c.end_at, parseInt(req.params.id, 10));
     res.json({ ok: true });
+  });
+  // terminer le shift d'un chatter qui a oublié de dépointer (à l'heure choisie par le manager)
+  const SPAN = require("./planning").shiftSpan;
+  const plannedEnd = c => { const d = parisDate(c.start_at), prev = parisDate(c.start_at - 864e5);
+    const ss = db.prepare("SELECT date, start, end, model_id FROM shifts WHERE user_id = ? AND date IN (?, ?)").all(c.user_id, d, prev)
+      .map(s => ({ s, sp: SPAN(s) })).filter(x => c.start_at >= x.sp[0] - 3 * 3.6e6 && c.start_at < x.sp[1]);
+    const m = ss.find(x => x.s.model_id === c.model_id) || ss[0]; return m ? m.sp[1] : null; };
+  app.post("/api/admin/clocks/:id/end", auth, admin, (req, res) => {
+    const c = db.prepare("SELECT c.*, u.username FROM clocks c JOIN users u ON u.id = c.user_id WHERE c.id = ?").get(parseInt(req.params.id, 10));
+    if (!c) return res.status(404).json({ error: "Pointage introuvable" });
+    if (c.end_at) return res.status(400).json({ error: `${c.username} a déjà dépointé` });
+    const now = Date.now(), end = req.body?.end_at ? num(req.body.end_at, 1e12, 1e13) : now;
+    if (!end || end <= c.start_at) return res.status(400).json({ error: "La fin doit être après le début du shift" });
+    if (end > now + 60e3) return res.status(400).json({ error: "La fin ne peut pas être dans le futur" });
+    if (end - c.start_at > 24 * 3.6e6) return res.status(400).json({ error: "Un shift ne peut pas dépasser 24 h" });
+    if (isLocked(periodOfDate(parisDate(c.start_at)))) return res.status(400).json(lockedMsg);
+    db.prepare("UPDATE clocks SET end_at = ?, edited = 1 WHERE id = ?").run(end, c.id);
+    // les renforts tenus pendant ce shift s'arrêtent avec lui
+    if (!c.reinforce) db.prepare("UPDATE clocks SET end_at = MAX(start_at + 60000, MIN(?, COALESCE(until_at, ?))), edited = 1 WHERE user_id = ? AND reinforce = 1 AND end_at IS NULL").run(end, end, c.user_id);
+    res.json({ ok: true, end_at: end });
   });
   app.delete("/api/admin/clocks/:id", auth, admin, (req, res) => {
     db.prepare("DELETE FROM clocks WHERE id = ?").run(parseInt(req.params.id, 10)); res.json({ ok: true });

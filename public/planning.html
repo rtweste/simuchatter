@@ -277,6 +277,10 @@
 .p-live{display:flex;gap:8px;flex-wrap:wrap}
 .p-chip{display:inline-flex;align-items:center;gap:8px;background:#151515;border:1px solid #232323;border-radius:12px;padding:7px 10px;font-size:12.5px;font-weight:700}
 .p-chip i{width:7px;height:7px;border-radius:50%;background:#5fd3a2}
+.p-chip.r{border-color:rgba(224,122,122,.45);background:rgba(224,122,122,.06)}.p-chip.r i{background:#e07a7a}.p-chip.r em{font-style:normal;color:#f0a0a0;font-weight:700}
+.p-chip .p-sb{height:26px;font-size:11.5px;padding:0 9px;margin-left:2px}
+.p-endsum{font-size:13px;color:#bdbdbd;background:#141414;border:1px solid #1f1f1f;border-radius:12px;padding:10px 12px;margin-bottom:4px}.p-endsum b{color:#fff}
+.p-endh{font-size:12.5px;color:#9a9a9a;text-align:center;margin-top:12px}.p-endh b{color:#e6e6e6}
 
 @media(max-width:1100px){.p-side{grid-template-columns:1fr}}
 @media(max-width:860px){
@@ -389,6 +393,7 @@
   <div class="p-info" id="fInfo">Le shift <b>21–3</b> finit le lendemain : il reste rattaché au jour où il commence (heures, ventes et compta).</div>
   <div class="p-srow"><button class="p-del hidden" id="fDel">Supprimer</button><button class="p-send" id="fGo">Ajouter le shift</button></div>
   <button class="p-sb hidden" id="fRest" style="margin-top:10px;width:100%;height:40px">Changer son jour de repos</button>
+  <button class="p-sb w hidden" id="fEndShift" style="margin-top:8px;width:100%;height:40px">Terminer son shift (oubli de dépointer)</button>
   <div class="p-err" id="fErr"></div>
 </div>
 <!-- planning d'un chatter (manager) : son créneau tous les jours sauf ses jours de repos -->
@@ -419,6 +424,15 @@
   <div class="p-err" id="rErr"></div>
 </div>
 <!-- pointage manuel (manager) -->
+<div class="p-sheet" id="endSheet" role="dialog" aria-modal="true" aria-labelledby="enT">
+  <div class="p-shd"><b id="enT">Terminer le shift</b><button class="p-x" data-close aria-label="Fermer">✕</button></div>
+  <div class="p-endsum" id="enSum"></div>
+  <div class="p-fl"><span class="p-lab">Heure de fin</span><div class="p-chips" id="enWhen"></div><input class="p-fi hidden" type="datetime-local" id="enDate" style="margin-top:8px" aria-label="Heure de fin"></div>
+  <div class="p-endh" id="enHint"></div>
+  <div class="p-srow" style="margin-top:16px"><button class="p-send" id="enGo">Terminer le shift</button></div>
+  <div class="p-err" id="enErr"></div>
+</div>
+
 <div class="p-sheet" id="ckSheet" role="dialog" aria-modal="true" aria-labelledby="ckT">
   <div class="p-shd"><b id="ckT">Pointage</b><button class="p-x" data-close aria-label="Fermer">✕</button></div>
   <div class="p-fl"><span class="p-lab">Chatter</span><select class="p-fi" id="cUser"></select></div>
@@ -868,6 +882,8 @@ function openShiftSheet(s, preset = {}) {
   $("fNote").value = s ? (s.note || "") : "";
   $("shT").innerHTML = s ? "Modifier le <em>shift</em>" : "Ajouter un <em>shift</em>"; $("fGo").textContent = s ? "Enregistrer" : "Ajouter le shift";
   $("fRest").classList.toggle("hidden", !s);
+  $("fEndShift").classList.toggle("hidden", !(s && s.clock_open));
+  $("fEndShift").onclick = () => openEnd({ id: s.clock_id, username: s.username, model_name: s.model_name, start_at: s.clock_in, planned_end: s.end_ms, reinforce: 0 }, () => loadAdmin());
   $("fDel").classList.toggle("hidden", !s); $("fDel").textContent = "Supprimer"; delete $("fDel").dataset.sure; $("fErr").textContent = "";
   openSheet("shSheet");
 }
@@ -1010,7 +1026,10 @@ const fmtDT = ms => new Date(ms).toLocaleString("fr-FR", { weekday: "short", day
 async function loadClocks(p) {
   CL = await api("/api/admin/clocks" + (p || PERIOD ? `?period=${p || PERIOD}` : "")); PERIOD = CL.period.key;
   $("periodLabel").textContent = CL.period.label;
-  $("liveList").innerHTML = CL.live.length ? CL.live.map(c => `<span class="p-chip"><i></i><b>${esc(c.username)}</b> sur ${esc(c.model_name)}${c.reinforce ? " (renfort)" : ""} · depuis ${hrsTxt((Date.now() - c.start_at) / 3.6e6)}</span>`).join("") : `<span class="p-mut">Personne n'est en shift.</span>`;
+  // shift fini depuis plus de 15 min mais pas dépointé : en rouge, avec le bouton Terminer
+  $("liveList").innerHTML = CL.live.length ? CL.live.map(c => { const over = c.planned_end && Date.now() > c.planned_end + 15 * 60e3;
+    return `<span class="p-chip${over ? " r" : ""}"><i></i><b>${esc(c.username)}</b> sur ${esc(c.model_name)}${c.reinforce ? " (renfort)" : ""} · depuis ${hrsTxt((Date.now() - c.start_at) / 3.6e6)}${over ? ` · <em>fin prévue ${hm(c.planned_end)}, pas dépointé</em>` : ""}<button class="p-sb" data-end="${c.id}">Terminer</button></span>`; }).join("") : `<span class="p-mut">Personne n'est en shift.</span>`;
+  document.querySelectorAll("#liveList [data-end]").forEach(b => b.onclick = () => openEnd(CL.live.find(c => c.id == b.dataset.end), () => loadClocks()));
   const tot = {}; CL.clocks.filter(c => c.end_at && !c.reinforce).forEach(c => tot[c.username] = (tot[c.username] || 0) + (c.end_at - c.start_at) / 3.6e6);
   $("clockSummary").innerHTML = Object.entries(tot).sort((a, b) => b[1] - a[1]).map(([u, h]) => `<span class="p-chip"><b>${esc(u)}</b> ${hrsTxt(h)}</span>`).join("");
   $("clockTable").innerHTML = !CL.clocks.length ? `<div class="p-empty">Aucun pointage sur cette période.</div>` :
@@ -1021,6 +1040,27 @@ async function loadClocks(p) {
       <td style="text-align:right"><button class="p-sb" data-c="${c.id}">Modifier</button></td></tr>`).join("") + "</table>";
   document.querySelectorAll("[data-c]").forEach(b => b.onclick = () => openClock(CL.clocks.find(c => c.id == b.dataset.c)));
 }
+/* ----- terminer le shift de quelqu'un qui a oublié de dépointer ----- */
+let ENDC = null;
+function openEnd(c, done) {
+  ENDC = { c, done }; const now = Date.now(), pe = c.planned_end && c.planned_end > c.start_at && c.planned_end < now ? c.planned_end : null;
+  $("enT").textContent = `Terminer le shift de ${c.username}`;
+  $("enSum").innerHTML = `<b>${esc(c.username)}</b> sur ${esc(c.model_name)}${c.reinforce ? " (renfort)" : ""} · pointé ${fmtDT(c.start_at)}${c.planned_end ? `<br>Fin prévue : <b>${fmtDT(c.planned_end)}</b>` : ""}`;
+  $("enWhen").innerHTML = (pe ? `<button data-w="pe" class="on">À la fin prévue · ${hm(pe)}</button>` : "") + `<button data-w="now"${pe ? "" : ' class="on"'}>Maintenant · ${hm(now)}</button><button data-w="pick">Autre heure…</button>`;
+  ENDC.w = pe ? "pe" : "now"; ENDC.pe = pe;
+  chips($("enWhen"), b => { ENDC.w = b.dataset.w; $("enDate").classList.toggle("hidden", ENDC.w !== "pick"); endHint(); });
+  $("enDate").value = toLocalInput(pe || now); $("enDate").max = toLocalInput(now); $("enDate").classList.add("hidden"); $("enDate").oninput = endHint;
+  $("enErr").textContent = ""; endHint(); openSheet("endSheet");
+}
+const endAt = () => ENDC.w === "pe" ? ENDC.pe : ENDC.w === "pick" ? new Date($("enDate").value).getTime() : Date.now();
+function endHint() { const e = endAt(), c = ENDC.c; $("enHint").innerHTML = e > c.start_at ? `Shift compté : <b>${hrsTxt((e - c.start_at) / 3.6e6)}</b> · le pointage sera marqué « corrigé »` : ""; }
+$("enGo").onclick = async () => {
+  const e = endAt(); if (!e) { $("enErr").textContent = "Choisis l'heure de fin."; return; }
+  $("enGo").disabled = true;
+  try { await api(`/api/admin/clocks/${ENDC.c.id}/end`, { body: { end_at: e } }); closeSheet(); notify("Shift terminé", `${ENDC.c.username} · dépointé à ${hm(e)}`, "ok"); ENDC.done && ENDC.done(); }
+  catch (err) { $("enErr").textContent = err.message; }
+  $("enGo").disabled = false;
+};
 $("prevP").onclick = () => loadClocks(CL.period.prev); $("nextP").onclick = () => loadClocks(CL.period.next);
 $("addClock").onclick = () => openClock(null);
 function openClock(c) {
