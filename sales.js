@@ -63,7 +63,7 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
   // lecture des captures par l'IA : montant et état du média (Accepté / En attente)
   const AI = require("./ai");
   // com_amount : part de la vente qui compte pour le chatter (null = toute la vente) ; le CA garde toujours le montant entier
-  for (const [c, t] of [["ai_amount", "REAL"], ["ai_status", "TEXT"], ["ai_sale", "INTEGER"], ["ai_note", "TEXT"], ["ai_at", "INTEGER"], ["com_amount", "REAL"], ["com_reason", "TEXT"]])
+  for (const [c, t] of [["ai_amount", "REAL"], ["ai_status", "TEXT"], ["ai_sale", "INTEGER"], ["ai_note", "TEXT"], ["ai_at", "INTEGER"], ["com_amount", "REAL"], ["com_reason", "TEXT"], ["declared_by", "INTEGER"]])
     if (!db.prepare("PRAGMA table_info(sales)").all().some(x => x.name === c)) db.exec(`ALTER TABLE sales ADD COLUMN ${c} ${t}`);
   const scans = new Map();   // empreinte de l'image → lecture déjà faite pendant que le chatter remplissait le formulaire
   const shaOf = buf => require("crypto").createHash("sha256").update(buf).digest("hex");
@@ -101,9 +101,9 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
   const pub = s => ({ id: s.id, user_id: s.user_id, username: s.username, model_id: s.model_id, model_name: s.model_name,
     amount: s.amount, declared_amount: s.declared_amount, sold_at: s.sold_at, note: s.note, status: s.status, reason: s.reason,
     com_amount: s.status === "validated" ? s.com_amount ?? null : null, com_reason: s.status === "validated" ? s.com_reason || null : null,
-    reviewer: s.reviewer, reviewed_at: s.reviewed_at, created_at: s.created_at, period: periodOfDate(parisDate(s.sold_at)), dup: dupInfo(s), ai: aiInfo(s) });
-  const SELECT = `SELECT s.*, u.username, m.name model_name, r.username reviewer FROM sales s
-    JOIN users u ON u.id = s.user_id JOIN models m ON m.id = s.model_id LEFT JOIN users r ON r.id = s.reviewed_by`;
+    declared_by: s.declared_by || null, reviewer: s.reviewer, declarer: s.declared_by && s.declared_by !== s.user_id ? s.declarer || null : null, reviewed_at: s.reviewed_at, created_at: s.created_at, period: periodOfDate(parisDate(s.sold_at)), dup: dupInfo(s), ai: aiInfo(s) });
+  const SELECT = `SELECT s.*, u.username, m.name model_name, r.username reviewer, dd.username declarer FROM sales s
+    JOIN users u ON u.id = s.user_id JOIN models m ON m.id = s.model_id LEFT JOIN users r ON r.id = s.reviewed_by LEFT JOIN users dd ON dd.id = s.declared_by`;
 
   /* ---------- Lecture de la capture pendant que le chatter remplit le formulaire (pré-remplit le montant) ---------- */
   const scanHits = new Map();
@@ -116,6 +116,15 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     catch (e) { res.json({ ok: false }); }
   });
 
+  /* ---------- Déclarer une vente pour un autre chatter : fondateur et managers qui vendent ---------- */
+  const canDeclareFor = u => u.role === "admin" && (u.rk === "founder" || !!(db.prepare("SELECT sells FROM users WHERE id = ?").get(u.id) || {}).sells);
+  const targetsOf = me => db.prepare("SELECT id, username, role FROM users WHERE active = 1 AND id <> ? AND (role = 'chatter' OR (role = 'admin' AND sells = 1)) ORDER BY username COLLATE NOCASE").all(me);
+  app.get("/api/sales/targets", auth, (req, res) => {
+    if (!canDeclareFor(req.user)) return res.status(403).json({ error: "Réservé au fondateur et aux managers qui vendent" });
+    res.json({ self: !!(db.prepare("SELECT sells FROM users WHERE id = ?").get(req.user.id) || {}).sells, users: targetsOf(req.user.id),
+      models: db.prepare("SELECT id, name FROM models ORDER BY name").all() });
+  });
+
   /* ---------- Déclarer une vente (image envoyée telle quelle dans le corps de la requête) ---------- */
   app.post("/api/sales", auth, express.raw({ type: "image/*", limit: "12mb" }), (req, res) => {
     const model_id = parseInt(req.query.model_id, 10);
@@ -123,7 +132,13 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     const sold_at = num(req.query.sold_at, 1e12, 1e13) || Date.now();
     const note = String(req.query.note || "").slice(0, 300);
     const mime = (req.headers["content-type"] || "").split(";")[0];
-    if (req.user.role === "admin" && !(db.prepare("SELECT sells FROM users WHERE id = ?").get(req.user.id) || {}).sells) return res.status(403).json({ error: "Active « Déclare ses propres ventes » sur ton compte dans Gestion" });
+    // vente déclarée pour un autre chatter (fondateur, ou manager qui vend)
+    const forId = parseInt(req.query.for_user, 10), other = forId && forId !== req.user.id;
+    if (other && !canDeclareFor(req.user)) return res.status(403).json({ error: "Seuls le fondateur et les managers qui vendent peuvent déclarer une vente pour un autre chatter" });
+    const target = other ? targetsOf(req.user.id).find(u => u.id === forId) : null;
+    if (other && !target) return res.status(400).json({ error: "Chatter introuvable ou inactif" });
+    const uid = other ? target.id : req.user.id;
+    if (!other && req.user.role === "admin" && !(db.prepare("SELECT sells FROM users WHERE id = ?").get(req.user.id) || {}).sells) return res.status(403).json({ error: "Active « Déclare ses propres ventes » sur ton compte dans Gestion" });
     if (!db.prepare("SELECT 1 FROM models WHERE id = ?").get(model_id)) return res.status(400).json({ error: "Choisissez une créatrice" });
     if (amount === null) return res.status(400).json({ error: "Montant invalide" });
     if (sold_at > Date.now() + 5 * 60e3) return res.status(400).json({ error: "La date de vente est dans le futur" });
@@ -131,16 +146,17 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     if (!MIME[mime] || !Buffer.isBuffer(req.body) || req.body.length < 100) return res.status(400).json({ error: "Ajoutez une capture d'écran (image)" });
     let fp = null; try { fp = IH.fingerprint(req.body, mime); } catch (e) {}
     // même capture déjà déclarée par ce chatter : on le prévient tout de suite plutôt que de la faire refuser
-    if (fp) { const mine = db.prepare("SELECT amount, sold_at FROM sales WHERE sha = ? AND user_id = ? AND status <> 'refused' ORDER BY id DESC LIMIT 1").get(fp.sha, req.user.id);
+    if (fp) { const mine = db.prepare("SELECT amount, sold_at FROM sales WHERE sha = ? AND user_id = ? AND status <> 'refused' ORDER BY id DESC LIMIT 1").get(fp.sha, uid);
+      if (mine && other) return res.status(409).json({ error: `Cette capture est déjà déclarée pour ${target.username} (vente de ${String(mine.amount).replace(".", ",")} €).` });
       if (mine) return res.status(409).json({ error: `Tu as déjà déclaré cette capture (vente de ${String(mine.amount).replace(".", ",")} € du ${new Date(mine.sold_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", timeZone: "Europe/Paris" })}). Si c'est une autre vente, prends une nouvelle capture.` }); }
-    const info = db.prepare(`INSERT INTO sales (user_id, model_id, amount, declared_amount, sold_at, note, mime, created_at)
-      VALUES (?,?,?,?,?,?,?,?)`).run(req.user.id, model_id, amount, amount, sold_at, note, mime, Date.now());
+    const info = db.prepare(`INSERT INTO sales (user_id, model_id, amount, declared_amount, sold_at, note, mime, created_at, declared_by)
+      VALUES (?,?,?,?,?,?,?,?,?)`).run(uid, model_id, amount, amount, sold_at, note, mime, Date.now(), other ? req.user.id : null);
     const file = `sale-${info.lastInsertRowid}-${Date.now().toString(36)}.${MIME[mime]}`;
     fs.writeFileSync(path.join(UP, file), req.body);
     db.prepare("UPDATE sales SET image = ? WHERE id = ?").run(file, info.lastInsertRowid);
     if (fp) { db.prepare("UPDATE sales SET sha = ?, phash = ?, ratio = ? WHERE id = ?").run(fp.sha, fp.phash, fp.ratio, info.lastInsertRowid);
       try { saveDup(info.lastInsertRowid, findDup(info.lastInsertRowid, fp, req.body, mime)); } catch (e) {} }
-    analyze(info.lastInsertRowid, req.body, mime, req.user.id);   // en arrière-plan : ne ralentit pas l'envoi
+    analyze(info.lastInsertRowid, req.body, mime, uid);   // en arrière-plan : ne ralentit pas l'envoi
     res.json({ ok: true, id: info.lastInsertRowid });
   });
 
@@ -197,6 +213,7 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     if (locked(s.sold_at)) return res.status(400).json({ error: "Cette quinzaine est clôturée : rouvre-la dans la Compta pour modifier cette vente" });
     // un manager qui déclare ses ventes ne les valide pas lui-même (un autre manager ou le fondateur s'en charge)
     if (s.user_id === req.user.id && req.user.rk !== "founder") return res.status(403).json({ error: "C'est ta propre vente : un autre manager ou le fondateur doit la valider" });
+    if (s.declared_by === req.user.id && req.user.rk !== "founder" && req.body?.decision !== "pending") return res.status(403).json({ error: "Tu as déclaré cette vente toi-même : un autre manager ou le fondateur doit la valider" });
     const decision = req.body?.decision;
     if (!["validated", "refused", "pending"].includes(decision)) return res.status(400).json({ error: "Décision invalide" });
     let amount = s.amount;

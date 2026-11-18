@@ -109,6 +109,10 @@
 .vt-chips button{height:34px;border-radius:11px;border:1px solid #262626;background:#151515;color:#cfcfcf;font-weight:800;font-size:13px;padding:0 13px;transition:background .2s,color .2s,border-color .2s,transform .2s}
 .vt-chips button:active{transform:scale(.95)}
 .vt-chips button.on{background:#ededed;color:#0a0a0a;border-color:#ededed}
+.vt-for{display:none}.vt-for.on{display:block}
+.vt-for .vt-chips{max-height:116px;overflow:auto}
+.vt-for .hn{font-size:11.5px;color:#8a8a8a;text-align:center;margin-top:6px}.vt-for .hn b{color:#e8c27a}
+.vt-by{color:#e8c27a}
 .vt-chips.l{justify-content:flex-start}
 .vt-fl{margin-top:14px}.vt-fl .vt-lab{margin-bottom:7px;display:block}
 .vt-fi{width:100%;height:44px;border-radius:13px;border:1px solid #262626;background:#151515;color:#f5f5f5;font:inherit;font-size:13.5px;padding:0 13px;outline:none;margin:0}
@@ -377,6 +381,7 @@
 <div class="vt-scrim" id="scrim"></div>
 <form class="vt-sheet vt" id="sheet" role="dialog" aria-modal="true" aria-labelledby="shTitle" novalidate>
   <div class="vt-shd"><b id="shTitle">Déclarer une <em>vente</em></b><button type="button" class="vt-x" id="shClose" aria-label="Fermer">✕</button></div>
+  <div class="vt-fl vt-for" id="forRow" style="margin-top:0;margin-bottom:12px"><span class="vt-lab">Vente de</span><div class="vt-chips l" id="forChips"></div><div class="hn" id="forHint"></div></div>
   <div class="vt-drop" id="drop">
     <div id="dropIn"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M5 20h14"/></svg></span><div style="margin-top:6px">Ajoute la capture de la vente</div><small>Touche pour choisir ou glisse l'image ici</small></div>
     <input type="file" id="fFile" accept="image/*" aria-label="Capture d'écran">
@@ -491,7 +496,7 @@ function renderMine() {
   list.slice(0, SHOWN).forEach((s, i) => {
     const d = dayLabel(s.sold_at); if (d !== last) { html += `<div class="vt-day">${d}</div>`; last = d; }
     html += `<div class="vt-rw${s.id === FRESH ? " new" : ""}" data-id="${s.id}" style="animation-delay:${Math.min(i, 12) * .04}s">${thumb(s)}
-      <div class="vt-rm"><div class="vt-a">${amtHtml(s)}</div><small>${esc(s.model_name)} · ${hm(s.sold_at)}${s.note ? " · " + esc(s.note) : ""}</small>
+      <div class="vt-rm"><div class="vt-a">${amtHtml(s)}</div><small>${esc(s.model_name)} · ${hm(s.sold_at)}${s.note ? " · " + esc(s.note) : ""}${s.declarer ? ` · <span class="vt-by">déclarée par ${esc(s.declarer)}</span>` : ""}</small>
         ${s.status === "refused" && s.reason ? `<div class="vt-why">${esc(s.reason)}</div>` : ""}${comWhyHtml(s, 1)}</div>
       <div class="vt-rr"><span class="vt-pill ${s.status}"><i></i>${STATUS[s.status]}</span>
         ${s.status === "pending" ? `<button class="vt-sb del" data-del="${s.id}">Retirer</button>` : ""}
@@ -608,8 +613,29 @@ function openSheet(again) {
   WHEN = "now"; document.querySelectorAll("#whenChips button").forEach(x => x.classList.toggle("on", x.dataset.w === "now")); $("fDate").classList.add("hidden");
   if (again) { WHEN = "pick"; document.querySelectorAll("#whenChips button").forEach(x => x.classList.toggle("on", x.dataset.w === "pick")); $("fDate").classList.remove("hidden"); $("fDate").value = toLocalInput(again.sold_at); }
   $("shTitle").innerHTML = again ? "Renvoyer la <em>vente</em>" : "Déclarer une <em>vente</em>";
-  renderCrea(again?.model_id); syncAmtChips(); CUSTOM.reset();
+  renderFor(again ? null : FOR_DEFAULT()); renderCrea(again?.model_id); syncAmtChips(); CUSTOM.reset();
   $("scrim").classList.add("on"); $("sheet").classList.add("on"); document.body.style.overflow = "hidden"; document.body.classList.add("modal-open"); VS.open();
+}
+// fondateur et managers qui vendent : choisir pour qui on déclare la vente
+let TG = null, FOR = null;
+const FOR_DEFAULT = () => !TG ? null : !$("chatterView").classList.contains("hidden") && TG.self ? ME0.id : null;
+function renderFor(sel) {
+  $("forRow").classList.toggle("on", !!TG); if (!TG) { FOR = null; return; }
+  FOR = sel;
+  const opts = (TG.self ? [{ id: ME0.id, username: "Moi" }] : []).concat(TG.users);
+  $("forChips").innerHTML = opts.map(u => `<button type="button" data-u="${u.id}" class="${u.id === FOR ? "on" : ""}">${esc(u.username)}</button>`).join("") || `<span class="vt-mut">Aucun chatter actif.</span>`;
+  document.querySelectorAll("#forChips button").forEach(b => b.onclick = () => { FOR = +b.dataset.u; document.querySelectorAll("#forChips button").forEach(x => x.classList.toggle("on", x === b)); VS.tick(); $("fErr").textContent = ""; forHint(); });
+  forHint();
+}
+function forHint() {
+  const u = TG && TG.users.find(x => x.id === FOR);
+  $("forHint").innerHTML = !u ? "" : `La vente ira dans la paie de <b>${esc(u.username)}</b>${ME0.rk === "founder" ? "" : " · un autre manager ou le fondateur la validera"}`;
+  $("fBtn").textContent = u ? `Déclarer pour ${u.username}` : "Envoyer pour validation";
+}
+async function openSheetFor() {
+  try { if (!TG) TG = await api("/api/sales/targets"); } catch (e) { notify("Erreur", e.message, "err"); return; }
+  if (!MODELS.length) MODELS = TG.models;
+  openSheet();
 }
 function closeSheet() { $("scrim").classList.remove("on"); $("sheet").classList.remove("on"); document.body.style.overflow = ""; document.body.classList.remove("modal-open"); }
 $("openSheet").onclick = () => openSheet();
@@ -622,6 +648,8 @@ $("sheet").onsubmit = async e => {
   if (!FILE) { $("fErr").textContent = "Ajoute la capture d'écran de la vente."; return; }
   if (!(amount > 0)) { $("fErr").textContent = "Indique le montant brut de la vente."; $("fAmount").focus(); return; }
   if (!model) { $("fErr").textContent = "Choisis la créatrice."; return; }
+  if (TG && !FOR) { $("fErr").textContent = "Choisis le chatter qui a fait la vente."; return; }
+  const forU = TG && FOR !== ME0.id ? TG.users.find(x => x.id === FOR) : null;
   const sold = WHEN === "now" ? Date.now() : WHEN === "1h" ? Date.now() - 3600e3 : new Date($("fDate").value).getTime();
   if (!sold || isNaN(sold)) { $("fErr").textContent = "Choisis la date et l'heure de la vente."; return; }
   if (sold > Date.now() + 5 * 60e3) { $("fErr").textContent = "La date de vente est dans le futur."; return; }
@@ -629,18 +657,19 @@ $("sheet").onsubmit = async e => {
   $("fBtn").disabled = true; $("fBtn").textContent = "Envoi…";
   try {
     const blob = await compress(FILE);
-    const q = new URLSearchParams({ model_id: model, amount, sold_at: sold, note: $("fNote").value });
+    const q = new URLSearchParams({ model_id: model, amount, sold_at: sold, note: $("fNote").value }); if (forU) q.set("for_user", forU.id);
     const r = await fetch("/api/sales?" + q, { method: "POST", headers: { "Content-Type": blob.type || "image/jpeg" }, body: blob, credentials: "same-origin" });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || "Erreur " + r.status);
     try { localStorage.setItem("stLastModel", model); } catch (e) {}
     if (CU) { try { await CUSTOM.submit(d.id, CU); notify("Demande envoyée au Studio", `Contenu perso pour @${CU.fan}`, "ok"); } catch (err) { notify("Vente envoyée, mais pas la demande perso", err.message, "err"); } }
     closeSheet(); VS.send();
+    if (forU) { notify(`Vente déclarée pour ${forU.username}`, `${E(amount)} · en attente de validation`, "ok"); if (!$("adminView").classList.contains("hidden")) { loadQueue().catch(() => {}); if (!$("t-hist").classList.contains("hidden")) loadHist(); } $("fBtn").disabled = false; forHint(); return; }
     notify("Vente envoyée", `${E(amount)} · en attente de validation`, "ok");
     FRESH = d.id; if (FILTER && FILTER !== "pending") { FILTER = ""; document.querySelectorAll("#mySeg button").forEach(x => x.classList.toggle("on", !x.dataset.f)); }
     await loadMine(); if (CU) CUSTOM.mountMine($("cuMine"));
   } catch (err) { $("fErr").textContent = err.message; }
-  $("fBtn").disabled = false; $("fBtn").textContent = "Envoyer pour validation";
+  $("fBtn").disabled = false; if (TG) forHint(); else $("fBtn").textContent = "Envoyer pour validation";
 };
 
 /* ======================================================================
@@ -667,7 +696,7 @@ function qShow() {
   const cap = $("qCap"), im = cap.querySelector("img.main");
   im.classList.remove("ld"); im.onload = () => im.classList.add("ld"); im.src = img(s.id);
   cap.querySelector(".bg").style.backgroundImage = `url("${img(s.id)}")`;
-  $("qWho").innerHTML = `<span class="vt-av">${esc((s.username || "?")[0])}</span><div><b>${esc(s.username)}</b><small>${esc(s.model_name)} · ${whenTxt(s.sold_at)}</small></div>`;
+  $("qWho").innerHTML = `<span class="vt-av">${esc((s.username || "?")[0])}</span><div><b>${esc(s.username)}</b><small>${esc(s.model_name)} · ${whenTxt(s.sold_at)}${s.declarer ? ` · <span class="vt-by">déclarée par ${esc(s.declarer)}</span>` : ""}</small></div>`;
   qDup(s); qAi(s);
   $("qNote").style.display = s.note ? "" : "none"; $("qNote").textContent = s.note ? `« ${s.note} »` : "";
   $("qAmt").value = String(s.amount).replace(".", ",");
@@ -817,7 +846,7 @@ async function loadQueue() {
     Q.nv = today.filter(s => s.status === "validated").length; Q.nr = today.filter(s => s.status === "refused").length;
     countTo($("sVal"), Q.val, E, 900); countTo($("sNv"), Q.nv); countTo($("sNr"), Q.nr);
   }
-  if (ME0 && ME0.rk !== "founder") p.sales = p.sales.filter(s => s.user_id !== ME0.id);   // ses propres ventes : validées par un autre
+  if (ME0 && ME0.rk !== "founder") p.sales = p.sales.filter(s => s.user_id !== ME0.id && s.declared_by !== ME0.id);   // ses propres ventes : validées par un autre
   const ids = new Set(p.sales.map(s => s.id)), cur = qCur();
   if (!Q.loaded) { Q.list = p.sales; Q.loaded = true; qShow(); $("qStage").classList.add("in"); return; }
   // rafraîchissement : nouvelles ventes à la fin, ventes traitées ailleurs retirées
@@ -856,7 +885,7 @@ async function loadHist() {
     const dl = dayLabel(s.sold_at); if (dl !== last) { html += `<div class="vt-day">${dl}</div>`; last = dl; }
     html += `<div class="vt-rw vt-hrw" style="animation-delay:${Math.min(i, 12) * .03}s">${thumb(s)}
       <div class="vt-rm"><div class="vt-a">${amtHtml(s)}</div><small><span class="who">${esc(s.username)}</span> · ${esc(s.model_name)} · ${hm(s.sold_at)}${s.note ? " · " + esc(s.note) : ""}${s.dup ? `<span class="vt-hdup ${s.dup.kind}">${s.dup.kind === "same" ? "capture déjà utilisée" : "capture ressemblante"}</span>` : ""}</small>
-        ${s.reviewer ? `<small>par ${esc(s.reviewer)}</small>` : ""}${s.status === "refused" && s.reason ? `<div class="vt-why">${esc(s.reason)}</div>` : ""}${comWhyHtml(s)}</div>
+        ${s.declarer || s.reviewer ? `<small>${s.declarer ? `<span class="vt-by">déclarée par ${esc(s.declarer)}</span>${s.reviewer ? " · " : ""}` : ""}${s.reviewer ? `${s.status === "refused" ? "refusée" : "validée"} par ${esc(s.reviewer)}` : ""}</small>` : ""}${s.status === "refused" && s.reason ? `<div class="vt-why">${esc(s.reason)}</div>` : ""}${comWhyHtml(s)}</div>
       <div class="vt-rr"><span class="vt-pill ${s.status}"><i></i>${STATUS[s.status]}</span>
         <div style="display:flex;gap:6px">${s.status !== "pending" ? `<button class="vt-sb" data-back="${s.id}">Remettre en attente</button>` : ""}<button class="vt-sb del" data-hdel="${s.id}" aria-label="Supprimer">✕</button></div></div></div>`;
   });
@@ -898,7 +927,13 @@ function mineTabs() {
   renderShell("ventes", me);
   if (me.role === "admin") {
     $("adminView").classList.remove("hidden"); loadQueue();
-    if (me.sells) { mineTabs(); if (new URLSearchParams(location.search).has("declarer")) { $("tabMine").click(); openSheet(); } }
+    if (me.sells || me.rk === "founder") {
+      document.querySelector("#adminView .vt-hdr").insertAdjacentHTML("beforeend", `<button class="vt-wbtn" id="openSheetA"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Déclarer une vente</button>`);
+      $("openSheetA").onclick = () => openSheetFor();
+      $("openSheet").onclick = () => openSheetFor();
+    }
+    if (me.sells) { mineTabs(); if (new URLSearchParams(location.search).has("declarer")) { $("tabMine").click(); openSheetFor(); } }
+    else if (me.rk === "founder" && new URLSearchParams(location.search).has("declarer")) openSheetFor();
     setInterval(() => { if (!document.hidden && !$("adminView").classList.contains("hidden") && !$("t-queue").classList.contains("hidden")) loadQueue().catch(() => {}); }, 20000);
   } else {
     $("chatterView").classList.remove("hidden"); await startMine();
