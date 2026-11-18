@@ -55,6 +55,13 @@ function tierPay(net) {
   return { net, commission: Math.round(commission * 100) / 100, prime, total: Math.round((commission + prime) * 100) / 100, rate: TIERS[idx].rate, tier: idx };
 }
 
+// managers qui déclarent leurs ventes : commission fixe, sans paliers ni prime
+const MGR_RATE = 10;
+function flatPay(net) {
+  net = Math.max(0, net || 0); const c = Math.round(net * MGR_RATE) / 100;
+  return { net, commission: c, prime: 0, total: c, rate: MGR_RATE, tier: 0, flat: true };
+}
+
 module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   /* ---------- Tables ---------- */
   const cols = (t) => db.prepare(`PRAGMA table_info(${t})`).all().map(c => c.name);
@@ -274,7 +281,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       .filter(c => periodOfDate(parisDate(c.start_at)) === p.key).forEach(c => rfH[c.user_id] = (rfH[c.user_id] || 0) + (c.end_at - c.start_at) / 3.6e6);
     const nSales = {}; db.prepare("SELECT user_id, sold_at FROM sales WHERE status = 'validated'").all().filter(x => periodOfDate(parisDate(x.sold_at)) === p.key).forEach(x => nSales[x.user_id] = (nSales[x.user_id] || 0) + 1);
     const chatters = users.filter(u => u.role === "chatter" || lines.some(l => l.user_id === u.id) || adjs.some(a => a.user_id === u.id)).map(u => {
-      const ls = lines.filter(l => l.user_id === u.id), sales = ls.reduce((t, l) => t + l.sales, 0), tp = tierPay(sales);
+      const ls = lines.filter(l => l.user_id === u.id), sales = ls.reduce((t, l) => t + l.sales, 0), tp = u.role === "admin" ? flatPay(sales) : tierPay(sales);
       // la commission par paliers est répartie sur chaque créatrice au prorata des ventes
       ls.forEach(l => { l.pay = sales > 0 ? tp.total * l.sales / sales : 0; l.pct = tp.rate; });
       const lost = tp.prime > 0 && hooks.primeLost && hooks.primeLost(u.id, p.key);
@@ -282,7 +289,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       const adj = adjs.filter(a => a.user_id === u.id), adjT = adj.reduce((t, a) => t + a.amount, 0), pay = r2(tp.total + adjT);
       // heures : les renforts sont comptés à part (ils ne doublent pas le temps de travail)
       const hRf = rfH[u.id] || 0, hAll = ls.reduce((t, l) => t + l.hours, 0);
-      return { id: u.id, username: u.username, active: u.active, commission_pct: tp.rate, rate: tp.rate, tier: tp.tier, prime: tp.prime, primeLost: tp.primeLost || 0, commission: tp.commission,
+      return { id: u.id, username: u.username, active: u.active, flat: !!tp.flat, commission_pct: tp.rate, rate: tp.rate, tier: tp.tier, prime: tp.prime, primeLost: tp.primeLost || 0, commission: tp.commission,
         hours: hAll - hRf, renfortHours: hRf, sales, salesCount: nSales[u.id] || 0, salesBrut: ls.reduce((t, l) => t + l.validatedBrut, 0),
         adjustments: adj.map(a => ({ id: a.id, amount: a.amount, reason: a.reason, at: a.created_at, by: a.by_name })), adjTotal: adjT, pay,
         paid: pays[u.id] ? { amount: pays[u.id].amount, at: pays[u.id].paid_at } : null };
@@ -597,8 +604,9 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       const byP = {}; allMine.filter(x => x.status === "validated").forEach(x => { const k = periodOfDate(parisDate(x.sold_at)); byP[k] = (byP[k] || 0) + x.amount; });
       const best = Math.max(0, ...Object.entries(byP).filter(([k]) => k !== p.key).map(([, v]) => v));
       // paliers : commission actuelle, palier suivant, projection
-      const tp = tierPay(baseAmt), commission = tp.total, goal = Number(getSetting("goal_chatter", "300"));
-      const nxt = TIERS[tp.tier + 1] || null, projNet = baseAmt / elapsed, tpP = tierPay(projNet);
+      const pay = selfView ? flatPay : tierPay;   // manager qui vend : 10 % fixe
+      const tp = pay(baseAmt), commission = tp.total, goal = Number(getSetting("goal_chatter", "300"));
+      const nxt = selfView ? null : TIERS[tp.tier + 1] || null, projNet = baseAmt / elapsed, tpP = pay(projNet);
       const netOf = x => base === "brut" ? x : x * (1 - fee / 100);
       const nDays = +p.to.slice(8) - +p.from.slice(8) + 1, d1 = +p.from.slice(8), dToday = +today.slice(8) - d1 + 1;
       let cum = 0; const netPts = [];
@@ -616,7 +624,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       const weekShifts = { count: wk.length, nth: nextIdx >= 0 ? nextIdx + 1 : null };
       const board = boardOf(inP), myIdx = board.findIndex(b => b.user_id === req.user.id);
       return res.json({ role: "chatter", period: p, open: op, upcoming: up, today, nDays, netPts, lastShift, weekShifts, days,
-        tiers: { list: TIERS, k: base === "brut" ? 1 : 1 - fee / 100, net: Math.round(baseAmt * 100) / 100, commission: tp.commission, prime: tp.prime, total: tp.total, rate: tp.rate, tier: tp.tier,
+        tiers: { list: TIERS, flat: !!tp.flat, k: base === "brut" ? 1 : 1 - fee / 100, net: Math.round(baseAmt * 100) / 100, commission: tp.commission, prime: tp.prime, total: tp.total, rate: tp.rate, tier: tp.tier,
           next: nxt ? { ...nxt, gap: Math.round((nxt.from - baseAmt) * 100) / 100 } : null, projNet: Math.round(projNet), projTotal: tpP.total, projPrime: tpP.prime },
         feed: feedOf(), live: liveNow(),
         series, trend, best, goal, projection: Math.round(commission / elapsed * 100) / 100, elapsed,

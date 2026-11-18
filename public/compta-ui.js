@@ -238,8 +238,8 @@ function renderFiche(c, refresh) {
     return `<div class="c-trr"><span>${r} %${b === Infinity ? " et +" : ""}</span><span class="t"><i data-w="${part && span > 0 ? Math.max(4, Math.min(100, part / span * 100)) : 0}" style="background:${k === BD.length - 1 ? "#5fd3a2" : "#bdbdbd"}"></i></span><span>${part ? E(part * r / 100) : "—"}</span></div>`; }).join("");
   d.innerHTML = `<span class="c-stamp">PAYÉ</span><div class="c-dh"><span class="c-av">${esc(c.username[0])}</span><div><b>${esc(c.username)}</b><small>Fiche de paie · ${esc(C.period.label)}</small></div><button class="c-x" aria-label="Fermer">✕</button></div>
     <div class="c-dtot"><small>TOTAL ${c.paid ? "PAYÉ" : "À PAYER"}</small><span id="dTot">${E(c.pay)}</span></div>
-    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><span class="c-tag ${c.rate >= 15 ? "v" : "w"}"><i></i>Palier ${c.rate} %${c.prime ? ` + prime ${c.prime} €` : ""}</span><span class="c-tag w"><i></i>${hrs(c.hours)} pointées${c.renfortHours ? ` · ${hrs(c.renfortHours)} de renfort` : ""}</span></div>
-    <div class="c-lab" style="margin-top:20px">Commission par tranche · sur ${E(c.sales)} ${C.base === "brut" ? "brut" : "net"}</div><div class="c-tiers">${tiers}</div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><span class="c-tag ${c.rate >= 15 ? "v" : "w"}"><i></i>${c.flat ? `Commission fixe ${c.rate} %` : `Palier ${c.rate} %`}${c.prime ? ` + prime ${c.prime} €` : ""}</span><span class="c-tag w"><i></i>${hrs(c.hours)} pointées${c.renfortHours ? ` · ${hrs(c.renfortHours)} de renfort` : ""}</span></div>
+    ${c.flat ? `<div class="c-lab" style="margin-top:20px">Commission fixe · ${c.rate} % de ${E(c.sales)} ${C.base === "brut" ? "brut" : "net"} = ${E(c.commission)}</div>` : `<div class="c-lab" style="margin-top:20px">Commission par tranche · sur ${E(c.sales)} ${C.base === "brut" ? "brut" : "net"}</div><div class="c-tiers">${tiers}</div>`}
     <div class="c-lines">
       <div class="c-ln"><span>Ventes validées<small>${c.salesCount} vente${c.salesCount > 1 ? "s" : ""} · ${E(c.salesBrut)} brut</small></span><b>${E(c.sales)} ${C.base === "brut" ? "brut" : "net"}</b></div>
       <div class="c-ln"><span>Commission</span><b>${E(c.commission)}</b></div>
@@ -258,7 +258,7 @@ function renderFiche(c, refresh) {
   const pb = $("payB"); if (pb) pb.onclick = () => setPaid(c.id, true);
   const up = $("unpay"); if (up) up.onclick = () => setPaid(c.id, false);
   $("copyR").onclick = async () => {
-    const txt = [`StellADS · Paie de ${c.username} · ${C.period.label}`, `Ventes validées : ${E(c.sales)} (${c.salesCount} ventes)`, `Palier : ${c.rate} %`, `Commission : ${E(c.commission)}`,
+    const txt = [`StellADS · Paie de ${c.username} · ${C.period.label}`, `Ventes validées : ${E(c.sales)} (${c.salesCount} ventes)`, (c.flat ? `Commission fixe : ${c.rate} %` : `Palier : ${c.rate} %`), `Commission : ${E(c.commission)}`,
       c.prime ? `Prime de palier : +${E(c.prime)}` : "", ...c.adjustments.map(a => `${a.amount > 0 ? "Prime" : "Retenue"} : ${a.amount > 0 ? "+" : ""}${E(a.amount)} (${a.reason || "sans motif"})`), `TOTAL : ${E(c.pay)}${c.paid ? ` · payé le ${dShort(c.paid.at)}` : ""}`].filter(Boolean).join("\n");
     try { await navigator.clipboard.writeText(txt); notify("Récap copié", "Tu peux le coller dans un message", "ok"); } catch (e) { notify("Impossible de copier", "", "err"); }
   };

@@ -497,6 +497,7 @@ function renderHero(h) {
   countTo($("kPend"), h.sales.pending, E, 800);
   countTo($("kCom"), t.total, E, 1000);
   countTo($("kRef"), h.sales.refused, N, 600);
+  if (t.flat) { $("hTier").innerHTML = `<div class="vt-nxt">Commission fixe : <b>${t.rate} %</b> sur toutes tes ventes, sans palier.</div>`; return; }
   // barre de palier, en montant brut validé
   const L = t.list, brut = h.sales.validated, nx = L[t.tier + 1], nx2 = L[t.tier + 2];
   if (!nx) { $("hTier").innerHTML = `<div class="vt-nxt">Palier maximum atteint : <b>${t.rate} %</b>${t.prime ? ` + <b>${E(t.prime)}</b> de prime` : ""}. Bravo.</div>`; return; }
