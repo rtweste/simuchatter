@@ -69,7 +69,9 @@ module.exports = function mount(app, db, auth, admin, ctx) {
 
   // ---------- un seul essai par mois : même adresse IP ou même contact (WhatsApp / Telegram / e-mail) ----------
   const COOL = 30 * 864e5;
-  const ipOf = req => crypto.createHash("sha256").update(String(req.ip) + "stellads").digest("hex").slice(0, 16);
+  // vraie adresse du visiteur : derrière l'hébergeur (et un éventuel Cloudflare), req.ip peut être celle du proxy, la même pour tout le monde
+  const clientIp = req => String(req.headers["cf-connecting-ip"] || String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.ip || "");
+  const ipOf = req => crypto.createHash("sha256").update(clientIp(req) + "stellads").digest("hex").slice(0, 16);
   const normC = (ct, c) => { c = String(c || "").trim().toLowerCase(); return ct === "whatsapp" ? c.replace(/\D/g, "").slice(-9) : ct === "telegram" ? c.replace(/^@?/, "@").replace(/\s/g, "") : c; };
   // les comptes de l'équipe (connectés) peuvent repasser le test autant qu'ils veulent pour le vérifier
   const isStaff = req => { try { const t = req.cookies && req.cookies.tok; if (!t) return false;
@@ -78,8 +80,10 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   // renvoie la date à partir de laquelle on peut retenter, ou null si rien ne bloque
   const blockOf = (req, ct, contact) => { if (isStaff(req)) return null;
     const ip = ipOf(req), n = ct && contact ? normC(ct, contact) : null;
-    const hit = db.prepare("SELECT at, ip_hash, contact_type, contact FROM applications WHERE at > ? ORDER BY at DESC").all(Date.now() - COOL)
-      .find(r => r.ip_hash === ip || (n && n.length >= 4 && r.contact_type === ct && normC(ct, r.contact) === n));
+    const rows = db.prepare("SELECT at, ip_hash, contact_type, contact FROM applications WHERE at > ? ORDER BY at DESC").all(Date.now() - COOL);
+    // adresse partagée (wifi commun, opérateur, proxy) : 3 contacts différents ou plus → on ne bloque plus sur l'adresse, seulement sur le contact
+    const sameIp = rows.filter(r => r.ip_hash === ip), shared = new Set(sameIp.map(r => r.contact_type + ":" + normC(r.contact_type, r.contact))).size >= 3;
+    const hit = rows.find(r => (!shared && r.ip_hash === ip) || (n && n.length >= 4 && r.contact_type === ct && normC(ct, r.contact) === n));
     return hit ? hit.at + COOL : null; };
   const frDate = t => new Date(t).toLocaleDateString("fr-FR", { day: "numeric", month: "long", timeZone: "Europe/Paris" });
 
@@ -105,7 +109,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       score: graded ? Math.round(r.ai_score) : null, min: graded ? +min : null, rule: graded && g.regles_ok === false }); });
   const hits = new Map();
   app.post("/api/apply", (req, res) => {
-    const b = req.body || {}, ip = crypto.createHash("sha256").update(String(req.ip) + "stellads").digest("hex").slice(0, 16), now = Date.now();
+    const b = req.body || {}, ip = ipOf(req), now = Date.now();
     // anti-robots : champ piège, formulaire rempli trop vite, trop d'envois depuis la même adresse
     if (b.website) return res.json({ ok: true });
     if (!(Number(b.t) > 6000)) return res.status(400).json({ error: "Prends le temps de remplir le formulaire 🙂" });
