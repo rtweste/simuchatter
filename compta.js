@@ -161,6 +161,48 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     } catch (e) { db.exec("ROLLBACK"); return res.status(500).json({ error: "Le planning n'a pas pu être rempli" }); }
     res.json({ ok: true, added, skipped, removed, from: s.date, to: last });
   });
+  /* ----- jour de repos d'un chatter : déduit de son planning à venir, modifiable sans toucher au reste ----- */
+  const dowOf = d => (new Date(d + "T12:00:00Z").getUTCDay() + 6) % 7;   // 0 = lundi
+  function restPattern(uid) {
+    const today = parisDate(Date.now());
+    const rows = db.prepare("SELECT s.date, s.start, s.end, s.model_id, m.name model_name FROM shifts s JOIN models m ON m.id = s.model_id WHERE s.user_id = ? AND s.date >= ? ORDER BY s.date").all(uid, today);
+    if (!rows.length) return { today, shifts: [], rest: [], slot: null, to: null };
+    const to = rows[rows.length - 1].date, seen = new Set(rows.map(r => dowOf(r.date)));
+    const span = Math.round((new Date(to + "T12:00:00Z") - new Date(today + "T12:00:00Z")) / 864e5) + 1;
+    // jours de repos = jours de la semaine sans aucun shift sur la période prévue (si elle couvre au moins une semaine)
+    const rest = span >= 7 ? [0, 1, 2, 3, 4, 5, 6].filter(k => !seen.has(k)) : [];
+    // créneau et créatrice habituels = les plus fréquents
+    const cnt = {}; rows.forEach(r => { const k = `${r.start}|${r.end}|${r.model_id}`; cnt[k] = (cnt[k] || 0) + 1; });
+    const [st, en, mid] = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0][0].split("|");
+    return { today, to, rest, slot: { start: st, end: en, model_id: +mid, model_name: rows.find(r => r.model_id === +mid).model_name }, shifts: rows.map(r => ({ date: r.date, start: r.start, end: r.end })) };
+  }
+  app.get("/api/admin/shifts/rest", auth, admin, (req, res) => {
+    const uid = parseInt(req.query.user_id, 10); if (!userExists(uid)) return res.status(400).json({ error: "Chatter invalide" });
+    res.json(restPattern(uid));
+  });
+  // nouveaux jours de repos à partir d'une date : ses shifts de ces jours sont retirés,
+  // ses anciens jours de repos reçoivent son créneau habituel ; le reste de son planning ne bouge pas
+  app.post("/api/admin/shifts/rest", auth, admin, (req, res) => {
+    const b = req.body || {}, uid = parseInt(b.user_id, 10); if (!userExists(uid)) return res.status(400).json({ error: "Chatter invalide" });
+    const P = restPattern(uid); if (!P.slot) return res.status(400).json({ error: "Aucun shift prévu pour ce chatter : utilise « Ajouter des shifts »" });
+    const nw = new Set((Array.isArray(b.rest) ? b.rest : []).map(Number).filter(n => n >= 0 && n <= 6)), old = new Set(P.rest);
+    if (nw.size >= 7) return res.status(400).json({ error: "Laisse au moins un jour travaillé" });
+    const from = isDate(b.from) && b.from > P.today ? b.from : P.today;
+    const nowHM = new Date().toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" });
+    let removed = 0, added = 0;
+    db.exec("BEGIN");
+    try {
+      const has = db.prepare("SELECT 1 FROM shifts WHERE user_id = ? AND date = ?"), ins = db.prepare("INSERT INTO shifts (user_id, model_id, date, start, end, note) VALUES (?,?,?,?,?,'')");
+      for (let d = from; d <= P.to; ) {
+        const k = dowOf(d);
+        if (nw.has(k)) removed += db.prepare("DELETE FROM shifts WHERE user_id = ? AND date = ?" + (d === P.today ? " AND start > ?" : "")).run(...(d === P.today ? [uid, d, nowHM] : [uid, d])).changes;
+        else if (old.has(k) && !has.get(uid, d) && !(d === P.today && P.slot.start <= nowHM)) { ins.run(uid, P.slot.model_id, d, P.slot.start, P.slot.end); added++; }
+        const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + 1); d = x.toISOString().slice(0, 10);
+      }
+      db.exec("COMMIT");
+    } catch (e) { db.exec("ROLLBACK"); return res.status(500).json({ error: "Le jour de repos n'a pas pu être changé" }); }
+    res.json({ ok: true, removed, added, from, to: P.to });
+  });
   app.put("/api/admin/shifts/:id", auth, admin, (req, res) => {
     const s = shiftBody(req.body || {}); if (s.error) return res.status(400).json(s);
     db.prepare("UPDATE shifts SET user_id=?, model_id=?, date=?, start=?, end=?, note=? WHERE id=?")

@@ -135,7 +135,7 @@
 .p-chips button:active{transform:scale(.95)}
 .p-chips button sup{font-size:9px;color:#8a8a8a}
 .p-chips button.on{background:#ededed;color:#0a0a0a;border-color:#ededed}.p-chips button.on sup{color:#555}
-#pRest button.on{background:rgba(224,122,122,.14);color:#f0a3a3;border-color:rgba(224,122,122,.45)}   /* jours de repos */
+#pRest button.on,#rRest button.on{background:rgba(224,122,122,.14);color:#f0a3a3;border-color:rgba(224,122,122,.45)}   /* jours de repos */
 .p-fl{margin-top:16px}.p-fl .p-lab{display:block;margin-bottom:8px}
 .p-fi{width:100%;height:42px;border-radius:12px;border:1px solid #262626;background:#151515;color:#f5f5f5;font:inherit;font-size:13.5px;padding:0 12px;margin:0;color-scheme:dark}
 .p-times{display:flex;gap:8px;margin-top:8px}.p-times>*{flex:1}
@@ -264,6 +264,7 @@
       <div class="p-tabs"><button class="on" data-t="plan">Planning</button><button data-t="clocks">Pointages</button></div></div>
     <section id="t-plan">
       <div class="p-bar2"><div class="p-wnav"><button id="mPrev" aria-label="Semaine précédente">‹</button><b id="mLab"></b><button id="mNext" aria-label="Semaine suivante">›</button><button id="mToday" style="width:auto;padding:0 10px;font-size:12px">Aujourd'hui</button></div>
+        <button class="p-gbtn" id="restBtn" style="margin-left:auto"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>Jours de repos</button>
         <button class="p-wbtn" id="addShift"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Ajouter des shifts</button></div>
       <div class="p-alerts" id="alerts"></div>
       <div class="p-gw">
@@ -315,6 +316,7 @@
   <div class="p-fl"><span class="p-lab">Note (facultatif)</span><input class="p-fi" id="fNote" maxlength="200" placeholder="ex. couvrir les messages du soir"></div>
   <div class="p-info" id="fInfo">Les shifts <b>18–2</b> et <b>18–3</b> finissent le lendemain : ils restent rattachés au jour où ils commencent (heures, ventes et compta).</div>
   <div class="p-srow"><button class="p-del hidden" id="fDel">Supprimer</button><button class="p-send" id="fGo">Ajouter le shift</button></div>
+  <button class="p-sb hidden" id="fRest" style="margin-top:10px;width:100%;height:40px">Changer son jour de repos</button>
   <div class="p-err" id="fErr"></div>
 </div>
 <!-- planning d'un chatter (manager) : son créneau tous les jours sauf ses jours de repos -->
@@ -332,6 +334,17 @@
   <div class="p-info" id="pInfo"></div>
   <div class="p-srow"><button class="p-del" id="pOne" style="color:#cfcfcf;border-color:#2a2a2a">Un seul shift</button><button class="p-send" id="pGo">Remplir le planning</button></div>
   <div class="p-err" id="pErr"></div>
+</div>
+<!-- jour de repos d'un chatter (manager) -->
+<div class="p-sheet" id="rsSheet" role="dialog" aria-modal="true" aria-labelledby="rsT">
+  <div class="p-shd"><b id="rsT">Changer son jour de <em>repos</em></b><button class="p-x" data-close aria-label="Fermer">✕</button></div>
+  <div class="p-fl"><span class="p-lab">Chatter</span><div class="p-chips" id="rUser"></div></div>
+  <div class="p-info" id="rNow"></div>
+  <div class="p-fl"><span class="p-lab">Nouveau(x) jour(s) de repos · touche pour choisir</span><div class="p-chips" id="rRest"></div></div>
+  <div class="p-fl"><span class="p-lab">À partir du</span><div class="p-chips" id="rFromC"></div><input class="p-fi hidden" type="date" id="rFrom" style="margin-top:8px" aria-label="Date"></div>
+  <div class="p-info" id="rInfo"></div>
+  <button class="p-send" id="rGo">Changer le jour de repos</button>
+  <div class="p-err" id="rErr"></div>
 </div>
 <!-- pointage manuel (manager) -->
 <div class="p-sheet" id="ckSheet" role="dialog" aria-modal="true" aria-labelledby="ckT">
@@ -699,6 +712,7 @@ function openShiftSheet(s, preset = {}) {
   document.querySelectorAll("#fRep button").forEach((b, i) => b.classList.toggle("on", i === 0)); $("fRepBox").classList.toggle("hidden", !!s);
   $("fNote").value = s ? (s.note || "") : "";
   $("shT").innerHTML = s ? "Modifier le <em>shift</em>" : "Ajouter un <em>shift</em>"; $("fGo").textContent = s ? "Enregistrer" : "Ajouter le shift";
+  $("fRest").classList.toggle("hidden", !s);
   $("fDel").classList.toggle("hidden", !s); $("fDel").textContent = "Supprimer"; delete $("fDel").dataset.sure; $("fErr").textContent = "";
   openSheet("shSheet");
 }
@@ -746,10 +760,60 @@ function planInfo() {
   const rs = b.rest.slice().sort().map(k => "le " + DAYL[k]), restTxt = !rs.length ? "tous les jours" : `tous les jours sauf ${rs.length > 1 ? rs.slice(0, -1).join(", ") + " et " + rs[rs.length - 1] : rs[0]}`;
   const nowHM = new Date().toTimeString().slice(0, 5);   // le créneau d'aujourd'hui déjà commencé n'est pas ajouté
   let n = 0; for (let i = 0; i < b.weeks * 7; i++) { const d = addD(b.from, i); if (!b.rest.includes((dOf(d).getDay() + 6) % 7) && d >= A.today && !(d === A.today && b.start <= nowHM)) n++; }
-  $("pInfo").innerHTML = work < 1 ? "Laisse au moins un jour travaillé." : `<b>${esc(u ? u.username : "")}</b> sur <b>${esc(m ? m.name : "")}</b>, ${b.start.replace(":00", "")}–${b.end.replace(":00", "")}, ${restTxt}, du ${fmt(b.from)} au ${fmt(last)} : <b>${n} shift${n > 1 ? "s" : ""}</b>.
+  $("pInfo").innerHTML = work < 1 ? "Laisse au moins un jour travaillé." : `<b>${esc(u ? u.username : "")}</b> sur <b>${esc(m ? m.name : "")}</b>, ${hTxt(b.start)}–${hTxt(b.end)}, ${restTxt}, du ${fmt(b.from)} au ${fmt(last)} : <b>${n} shift${n > 1 ? "s" : ""}</b>.
     ${b.replace ? " Ses shifts déjà prévus sur cette période seront remplacés." : " Les jours où il a déjà un shift ne sont pas touchés."}`;
 }
 $("pFrom").onchange = planInfo;
+
+/* ----- changer le jour de repos : déduit de son planning, seuls les jours concernés bougent ----- */
+let RP = null;
+$("restBtn").onclick = () => openRestSheet();
+const hTxt = t => /:00$/.test(t) ? String(+t.slice(0, 2)) : t;   // "18:00" → "18", "02:00" → "2"
+$("fRest").onclick = () => { const uid = EDIT && EDIT.user_id; closeSheet(); setTimeout(() => openRestSheet(uid), 260); };
+function openRestSheet(uid) {
+  const ppl = A.people.filter(p => p.role !== "admin"), first = uid || ppl[0]?.id;
+  $("rUser").innerHTML = (ppl.length ? ppl : A.people).map(p => `<button data-u="${p.id}" class="${p.id === first ? "on" : ""}">${esc(p.username)}</button>`).join("");
+  chips($("rUser"), () => loadRest());
+  const nextMon = addD(A.today, 7 - ((dOf(A.today).getDay() + 6) % 7));
+  $("rFromC").innerHTML = `<button data-d="${A.today}" class="on">Aujourd'hui</button><button data-d="${nextMon}">Lundi ${dOf(nextMon).getDate()}</button><button data-d="autre">Autre date</button>`;
+  $("rFrom").value = A.today; $("rFrom").classList.add("hidden");
+  chips($("rFromC"), b => { $("rFrom").classList.toggle("hidden", b.dataset.d !== "autre"); restInfo(); });
+  $("rErr").textContent = ""; openSheet("rsSheet"); loadRest();
+}
+async function loadRest() {
+  const uid = +document.querySelector("#rUser button.on")?.dataset.u; RP = null;
+  $("rNow").innerHTML = "Lecture de son planning…"; $("rRest").innerHTML = ""; $("rInfo").innerHTML = ""; $("rGo").disabled = true;
+  try { RP = await api("/api/admin/shifts/rest?user_id=" + uid); } catch (e) { $("rNow").textContent = e.message; return; }
+  const fmt = d => dOf(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }), u = A.people.find(p => p.id === uid);
+  if (!RP.slot) { $("rNow").innerHTML = `<b>${esc(u ? u.username : "")}</b> n'a aucun shift prévu. Utilise « Ajouter des shifts » pour remplir son planning.`; return; }
+  const rs = RP.rest.map(k => "le " + DAYL[k]);
+  $("rNow").innerHTML = `Actuellement : <b>${rs.length ? "repos " + (rs.length > 1 ? rs.slice(0, -1).join(", ") + " et " + rs[rs.length - 1] : rs[0]) : "aucun jour de repos"}</b> · ${hTxt(RP.slot.start)}–${hTxt(RP.slot.end)} sur ${esc(RP.slot.model_name)} · planning prévu jusqu'au ${fmt(RP.to)}`;
+  $("rRest").innerHTML = DAYN.map((d, k) => `<button data-k="${k}" class="${RP.rest.includes(k) ? "on" : ""}">${d}</button>`).join("");
+  $("rRest").querySelectorAll("button").forEach(b => b.onclick = () => { b.classList.toggle("on"); VS.tick(); restInfo(); });
+  restInfo();
+}
+function restInfo() {
+  if (!RP || !RP.slot) return;
+  const nw = [...document.querySelectorAll("#rRest button.on")].map(b => +b.dataset.k), fd = document.querySelector("#rFromC button.on").dataset.d;
+  const from = fd === "autre" ? $("rFrom").value : fd, dow = d => (dOf(d).getDay() + 6) % 7, have = new Set(RP.shifts.map(x => x.date));
+  let rm = 0, ad = 0; for (let d = from > RP.today ? from : RP.today; d && d <= RP.to; d = addD(d, 1)) {
+    if (nw.includes(dow(d))) rm += RP.shifts.filter(x => x.date === d).length; else if (RP.rest.includes(dow(d)) && !have.has(d)) ad++; }
+  const same = nw.length === RP.rest.length && nw.every(k => RP.rest.includes(k));
+  const rs = nw.slice().sort().map(k => "le " + DAYL[k]);
+  $("rGo").disabled = same || nw.length >= 7;
+  $("rInfo").innerHTML = nw.length >= 7 ? "Laisse au moins un jour travaillé." : same ? "Choisis son nouveau jour de repos." :
+    `Repos ${rs.length ? (rs.length > 1 ? rs.slice(0, -1).join(", ") + " et " + rs[rs.length - 1] : rs[0]) : "supprimé (il travaille tous les jours)"} à partir du ${dOf(from).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} : <b>${rm} shift${rm > 1 ? "s" : ""} retiré${rm > 1 ? "s" : ""}</b>, <b>${ad} ajouté${ad > 1 ? "s" : ""}</b> sur ses anciens jours de repos. Le reste de son planning ne bouge pas.`;
+}
+$("rFrom").onchange = restInfo;
+$("rGo").onclick = async () => {
+  const fd = document.querySelector("#rFromC button.on").dataset.d, b = { user_id: +document.querySelector("#rUser button.on").dataset.u,
+    rest: [...document.querySelectorAll("#rRest button.on")].map(x => +x.dataset.k), from: fd === "autre" ? $("rFrom").value : fd };
+  $("rGo").disabled = true; $("rErr").textContent = "";
+  try { const r = await api("/api/admin/shifts/rest", { body: b }); closeSheet(); VS.ok();
+    const u = A.people.find(p => p.id === b.user_id);
+    notify("Jour de repos changé", `${u ? u.username : ""} · ${r.removed} shift${r.removed > 1 ? "s" : ""} retiré${r.removed > 1 ? "s" : ""} · ${r.added} ajouté${r.added > 1 ? "s" : ""}`, "ok"); await loadAdmin();
+  } catch (e) { $("rErr").textContent = e.message; $("rGo").disabled = false; }
+};
 $("pStart").onchange = $("pEnd").onchange = planInfo;
 $("pOne").onclick = () => { closeSheet(); setTimeout(() => openShiftSheet(null), 260); };
 $("pGo").onclick = async () => {
