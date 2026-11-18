@@ -198,6 +198,14 @@ function mountPlanning(app, db, auth, admin) {
   });
 
   /* ================= MANAGER ================= */
+  // alertes du planning masquées par un manager (« c'est réglé ») : partagées entre managers
+  db.exec("CREATE TABLE IF NOT EXISTS planning_dismiss (key TEXT PRIMARY KEY, by_id INTEGER, at INTEGER NOT NULL)");
+  app.post("/api/admin/planning/dismiss", auth, admin, (req, res) => {
+    const key = String(req.body?.key || "").slice(0, 80); if (!/^[a-z]+:[\w,-]+$/.test(key)) return res.status(400).json({ error: "Alerte invalide" });
+    db.prepare("INSERT OR REPLACE INTO planning_dismiss (key, by_id, at) VALUES (?,?,?)").run(key, req.user.id, Date.now());
+    db.prepare("DELETE FROM planning_dismiss WHERE at < ?").run(Date.now() - 14 * 864e5);
+    res.json({ ok: true });
+  });
   app.get("/api/admin/planning", auth, admin, (req, res) => {
     sweep();
     const now = Date.now(), today = parisDate(now);
@@ -208,6 +216,7 @@ function mountPlanning(app, db, auth, admin) {
     const pkey = periodOfDate(today);
     const usual = {}; try { db.prepare("SELECT user_id, model_id FROM user_models").all().forEach(r => (usual[r.user_id] = usual[r.user_id] || []).push(r.model_id)); } catch (e) {}
     res.json({ now, today, from, to, shifts, people, usual, models: models(), slots: SLOTS(),
+      dismissed: db.prepare("SELECT key FROM planning_dismiss").all().map(r => r.key),
       missing: around.filter(s => s.state === "missing" && s.late >= (+AG().missedAlert || 10)), swaps: activeSwaps(), renforts: renforts(), helps: helps(),
       punctuality: people.filter(p => p.role !== "admin").map(p => ({ id: p.id, username: p.username, ...punctuality(p.id, pkey) })).filter(p => p.total) });
   });

@@ -160,6 +160,11 @@
 .p-al.r{border-color:rgba(224,122,122,.4);background:linear-gradient(135deg,rgba(224,122,122,.1),#111 70%)}.p-al.r .i{background:rgba(224,122,122,.16);color:#e07a7a;animation:pPulse 1.4s infinite}
 .p-al.w .i{background:rgba(255,255,255,.07);color:#e6e6e6}.p-al.g .i{background:rgba(95,211,162,.12);color:#5fd3a2}
 .p-al .p-sb,.p-al .p-tag{margin-top:8px}
+.p-al{position:relative}.p-al>div{flex:1;padding-right:22px}
+.p-al .p-alx{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:8px;border:0;background:transparent;color:#6a6a6a;font-size:12px;cursor:pointer;transition:background .2s,color .2s}
+.p-al .p-alx:hover{background:rgba(255,255,255,.07);color:#e6e6e6}
+.p-al.out{animation:pAlOut .32s ease forwards}
+@keyframes pAlOut{to{opacity:0;transform:scale(.96) translateY(-4px)}}
 .p-gw{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}
 .p-grid{display:grid;grid-template-columns:104px repeat(7,minmax(0,1fr));gap:7px}
 .p-crs{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:0 0 14px}
@@ -814,14 +819,21 @@ function renderDay() {
   bindCells($("mList"));
 }
 function renderAlerts() {
-  const out = [];
+  // chaque alerte a une clé : la croix la masque pour tous les managers (« c'est réglé »)
+  const out = [], DIS = new Set(A.dismissed || []), X = k => `<button class="p-alx" data-dis="${k}" aria-label="Masquer cette alerte" title="C'est réglé">✕</button>`;
+  const push = (k, html) => { if (!DIS.has(k)) out.push(html.replace(/^<div class="p-al ([a-z]+)">/, `<div class="p-al $1" data-k="${k}">${X(k)}`)); };
   A.missing.forEach(s => { const asked = A.helps.some(h => h.model_id === s.model_id);
-    out.push(`<div class="p-al r"><span class="i">!</span><div><b>${esc(s.username)} n'a pas pointé</b><small>${esc(s.model_name)} · ${slotKey(s)} · a commencé il y a ${s.late} min</small>${asked ? '<span class="p-tag w live"><i></i>Renfort demandé</span>' : `<button class="p-sb" data-ask="${s.id}">Demander un renfort</button>`}</div></div>`); });
-  A.helps.filter(h => h.for_user && h.created_by === h.for_user).forEach(h => out.push(`<div class="p-al r"><span class="i">!</span><div><b>${esc(h.for_name)} a un souci</b><small>Renfort demandé sur ${esc(h.model_name)} · ${ago(h.created_at)}</small></div></div>`));
+    push("miss:" + s.id, `<div class="p-al r"><span class="i">!</span><div><b>${esc(s.username)} n'a pas pointé</b><small>${esc(s.model_name)} · ${slotKey(s)} · a commencé il y a ${s.late} min</small>${asked ? '<span class="p-tag w live"><i></i>Renfort demandé</span>' : `<button class="p-sb" data-ask="${s.id}">Demander un renfort</button>`}</div></div>`); });
+  A.helps.filter(h => h.for_user && h.created_by === h.for_user).forEach(h => push("help:" + h.id, `<div class="p-al r"><span class="i">!</span><div><b>${esc(h.for_name)} a un souci</b><small>Renfort demandé sur ${esc(h.model_name)} · ${ago(h.created_at)}</small></div></div>`));
   const req = A.swaps.filter(w => w.status === "requested").length;
-  if (req) out.push(`<div class="p-al w"><span class="i">⇄</span><div><b>${req} échange${req > 1 ? "s" : ""} à valider</b><small>Changements de dernière minute proposés par l'équipe</small></div></div>`);
-  A.renforts.slice(0, 2).forEach(r => out.push(`<div class="p-al g"><span class="i">+</span><div><b>Renfort en cours</b><small>${esc(r.username)} tient ${esc(r.model_name)}${r.main_model_name ? " en plus de " + esc(r.main_model_name) : ""} depuis ${hm(r.start_at)}${r.sales ? ` · ${r.sales} vente${r.sales > 1 ? "s" : ""} de ${eur(r.amount)}` : ""}</small></div></div>`));
+  if (req) push("swaps:" + A.swaps.filter(w => w.status === "requested").map(w => w.id).join(","), `<div class="p-al w"><span class="i">⇄</span><div><b>${req} échange${req > 1 ? "s" : ""} à valider</b><small>Changements de dernière minute proposés par l'équipe</small></div></div>`);
+  A.renforts.slice(0, 2).forEach(r => push("rf:" + r.id, `<div class="p-al g"><span class="i">+</span><div><b>Renfort en cours</b><small>${esc(r.username)} tient ${esc(r.model_name)}${r.main_model_name ? " en plus de " + esc(r.main_model_name) : ""} depuis ${hm(r.start_at)}${r.sales ? ` · ${r.sales} vente${r.sales > 1 ? "s" : ""} de ${eur(r.amount)}` : ""}</small></div></div>`));
   $("alerts").innerHTML = out.join("");
+  document.querySelectorAll("#alerts [data-dis]").forEach(b => b.onclick = async () => {
+    const k = b.dataset.dis, al = b.closest(".p-al"); (A.dismissed = A.dismissed || []).push(k); al.classList.add("out"); VS.tick();
+    setTimeout(() => al.remove(), 320);
+    try { await api("/api/admin/planning/dismiss", { body: { key: k } }); } catch (e) { notify("Erreur", e.message, "err"); }
+  });
   document.querySelectorAll("[data-ask]").forEach(b => b.onclick = async () => { b.disabled = true; await api("/api/admin/help", { body: { shift_id: +b.dataset.ask } }); VS.rf(); notify("Renfort demandé", "Les chatters en shift le voient tout de suite", "ok"); loadAdmin(); });
 }
 function renderSwaps() {
