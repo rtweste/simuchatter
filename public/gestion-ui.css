@@ -340,6 +340,7 @@
 .csc.pend{display:flex;gap:3px}.csc.pend i{width:5px;height:5px;border-radius:50%;background:#777;animation:cscD 1s infinite}.csc.pend i:nth-child(2){animation-delay:.15s}.csc.pend i:nth-child(3){animation-delay:.3s}
 @keyframes cscD{50%{transform:translateY(-3px);opacity:1}0%,100%{opacity:.4}}
 .cflags{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}.cflags:empty{display:none}.cflags .tag{position:static}
+.cflags .tag.ref{display:inline-flex;align-items:center;gap:5px;color:#c9b2ff;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.35)}
 .tag.r{background:rgba(224,122,122,.14);color:#e07a7a}
 .cgr{display:flex;gap:16px;align-items:center;padding:14px;border-radius:16px;background:#0b0b0b;border:1px solid #222}
 .cgs{text-align:center;flex-shrink:0;min-width:74px}.cgs b{display:block;font:900 44px/1 Inter;letter-spacing:-.04em;color:var(--c);font-variant-numeric:tabular-nums}.cgs small{font:800 11px Inter;color:#777}

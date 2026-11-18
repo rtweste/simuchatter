@@ -150,9 +150,11 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   // ---------- manager ----------
   const view = r => { const dup = db.prepare("SELECT COUNT(*) n FROM applications WHERE contact = ? AND id <> ?").get(r.contact, r.id).n;
     const u = r.user_id ? db.prepare("SELECT username, role, active FROM users WHERE id = ?").get(r.user_id) : null;
+    // parrainage : le chatter qui a envoyé son lien
+    const rf = r.ref_user ? db.prepare("SELECT username, display_name FROM users WHERE id = ?").get(r.ref_user) : null;
     return { id: r.id, at: r.at, firstName: r.first_name, age: r.age, contactType: r.contact_type, contactLabel: CONTACT[r.contact_type], contact: r.contact,
       slots: J(r.slots) || [], exp: r.exp, expLabel: EXP[r.exp], motivation: r.motivation, testReply: r.test_reply, source: r.source, status: r.status,
-      decidedAt: r.decided_at, user: u, seen: !!r.seen, dup,
+      decidedAt: r.decided_at, user: u, seen: !!r.seen, dup, refBy: rf ? (rf.display_name || rf.username) : null,
       test: (J(r.test_answers) || []).map(a => { const sc = SCEN.find(x => x.id === a.id) || {}; return { ...a, who: sc.who, fan: sc.fan, goal: sc.goal }; }),
       quiz: quizOf(r), score: r.ai_score, grade: J(r.ai_detail), gradePending: !!r.test_answers && r.ai_score == null && !r.ai_err, gradeErr: r.ai_err }; };
   app.get("/api/admin/applications", auth, admin, (req, res) => {
