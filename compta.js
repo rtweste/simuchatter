@@ -140,6 +140,27 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     }
     res.json({ ok: true });
   });
+  // planning d'un chatter en une fois : son créneau tous les jours de la période, sauf ses jours de repos
+  // rest : jours de repos (0 = lundi … 6 = dimanche) · replace : efface d'abord ses shifts déjà prévus sur la période (à partir d'aujourd'hui)
+  app.post("/api/admin/shifts/fill", auth, admin, (req, res) => {
+    const b = req.body || {}, s = shiftBody({ ...b, date: b.from }); if (s.error) return res.status(400).json(s);
+    const weeks = Math.min(Math.max(parseInt(b.weeks, 10) || 1, 1), 12);
+    const rest = new Set((Array.isArray(b.rest) ? b.rest : []).map(Number).filter(n => n >= 0 && n <= 6));
+    if (rest.size >= 7) return res.status(400).json({ error: "Laisse au moins un jour travaillé" });
+    const today = parisDate(Date.now()), nowHM = new Date().toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" }), days = [];
+    for (let i = 0; i < weeks * 7; i++) { const d = new Date(s.date + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + i); days.push(d.toISOString().slice(0, 10)); }
+    const last = days[days.length - 1], dow = d => (new Date(d + "T12:00:00Z").getUTCDay() + 6) % 7;
+    let removed = 0, added = 0, skipped = 0;
+    db.exec("BEGIN");
+    try {
+      if (b.replace) removed = db.prepare("DELETE FROM shifts WHERE user_id = ? AND date BETWEEN ? AND ?").run(s.user_id, s.date < today ? today : s.date, last).changes;
+      const has = db.prepare("SELECT 1 FROM shifts WHERE user_id = ? AND date = ?"), ins = db.prepare("INSERT INTO shifts (user_id, model_id, date, start, end, note) VALUES (?,?,?,?,?,?)");
+      days.forEach(d => { if (rest.has(dow(d)) || d < today || (d === today && s.start <= nowHM)) return;   // jours passés et créneau déjà commencé : ignorés
+        if (has.get(s.user_id, d)) { skipped++; return; } ins.run(s.user_id, s.model_id, d, s.start, s.end, s.note); added++; });
+      db.exec("COMMIT");
+    } catch (e) { db.exec("ROLLBACK"); return res.status(500).json({ error: "Le planning n'a pas pu être rempli" }); }
+    res.json({ ok: true, added, skipped, removed, from: s.date, to: last });
+  });
   app.put("/api/admin/shifts/:id", auth, admin, (req, res) => {
     const s = shiftBody(req.body || {}); if (s.error) return res.status(400).json(s);
     db.prepare("UPDATE shifts SET user_id=?, model_id=?, date=?, start=?, end=?, note=? WHERE id=?")

@@ -200,7 +200,8 @@ module.exports = function mount(app, db, auth, admin) {
     const around = decorate(db.prepare(`${SHIFT_SQL} WHERE s.date BETWEEN ? AND ?`).all(addDays(today, -1), today));
     const people = db.prepare("SELECT id, username, role FROM users WHERE active = 1 AND role != 'trainee' ORDER BY role DESC, username").all();
     const pkey = periodOfDate(today);
-    res.json({ now, today, from, to, shifts, people, models: models(), slots: SLOTS(),
+    const usual = {}; try { db.prepare("SELECT user_id, model_id FROM user_models").all().forEach(r => (usual[r.user_id] = usual[r.user_id] || []).push(r.model_id)); } catch (e) {}
+    res.json({ now, today, from, to, shifts, people, usual, models: models(), slots: SLOTS(),
       missing: around.filter(s => s.state === "missing" && s.late >= (+AG().missedAlert || 10)), swaps: activeSwaps(), renforts: renforts(), helps: helps(),
       punctuality: people.filter(p => p.role !== "admin").map(p => ({ id: p.id, username: p.username, ...punctuality(p.id, pkey) })).filter(p => p.total) });
   });

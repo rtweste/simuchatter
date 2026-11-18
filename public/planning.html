@@ -135,6 +135,7 @@
 .p-chips button:active{transform:scale(.95)}
 .p-chips button sup{font-size:9px;color:#8a8a8a}
 .p-chips button.on{background:#ededed;color:#0a0a0a;border-color:#ededed}.p-chips button.on sup{color:#555}
+#pRest button.on{background:rgba(224,122,122,.14);color:#f0a3a3;border-color:rgba(224,122,122,.45)}   /* jours de repos */
 .p-fl{margin-top:16px}.p-fl .p-lab{display:block;margin-bottom:8px}
 .p-fi{width:100%;height:42px;border-radius:12px;border:1px solid #262626;background:#151515;color:#f5f5f5;font:inherit;font-size:13.5px;padding:0 12px;margin:0;color-scheme:dark}
 .p-times{display:flex;gap:8px;margin-top:8px}.p-times>*{flex:1}
@@ -263,7 +264,7 @@
       <div class="p-tabs"><button class="on" data-t="plan">Planning</button><button data-t="clocks">Pointages</button></div></div>
     <section id="t-plan">
       <div class="p-bar2"><div class="p-wnav"><button id="mPrev" aria-label="Semaine précédente">‹</button><b id="mLab"></b><button id="mNext" aria-label="Semaine suivante">›</button><button id="mToday" style="width:auto;padding:0 10px;font-size:12px">Aujourd'hui</button></div>
-        <button class="p-wbtn" id="addShift"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Ajouter un shift</button></div>
+        <button class="p-wbtn" id="addShift"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Ajouter des shifts</button></div>
       <div class="p-alerts" id="alerts"></div>
       <div class="p-gw">
         <div class="p-card" style="--d:.06s;padding:14px">
@@ -315,6 +316,22 @@
   <div class="p-info" id="fInfo">Les shifts <b>18–2</b> et <b>18–3</b> finissent le lendemain : ils restent rattachés au jour où ils commencent (heures, ventes et compta).</div>
   <div class="p-srow"><button class="p-del hidden" id="fDel">Supprimer</button><button class="p-send" id="fGo">Ajouter le shift</button></div>
   <div class="p-err" id="fErr"></div>
+</div>
+<!-- planning d'un chatter (manager) : son créneau tous les jours sauf ses jours de repos -->
+<div class="p-sheet" id="plSheet" role="dialog" aria-modal="true" aria-labelledby="plT">
+  <div class="p-shd"><b id="plT">Planning d'un <em>chatter</em></b><button class="p-x" data-close aria-label="Fermer">✕</button></div>
+  <div class="p-fl"><span class="p-lab">Chatter</span><div class="p-chips" id="pUser"></div></div>
+  <div class="p-fl"><span class="p-lab">Son créneau</span><div class="p-chips" id="pSlot"></div>
+    <div class="p-times hidden" id="pTimes"><input class="p-fi" type="time" id="pStart" aria-label="Début"><input class="p-fi" type="time" id="pEnd" aria-label="Fin"></div></div>
+  <div class="p-fl"><span class="p-lab">Jour(s) de repos · touche pour choisir</span><div class="p-chips" id="pRest"></div></div>
+  <div class="p-fl"><span class="p-lab">Créatrice</span><div class="p-chips" id="pModel"></div></div>
+  <div class="p-fl"><span class="p-lab">À partir du</span><div class="p-chips" id="pFromC"></div><input class="p-fi hidden" type="date" id="pFrom" style="margin-top:8px" aria-label="Date de début"></div>
+  <div class="p-fl"><span class="p-lab">Pendant</span><div class="p-chips" id="pWeeks"><button data-w="1">1 semaine</button><button data-w="2">2 semaines</button><button data-w="4" class="on">4 semaines</button><button data-w="8">8 semaines</button></div></div>
+  <div class="p-fl"><span class="p-lab">S'il a déjà des shifts sur ces jours</span><div class="p-chips" id="pRep"><button data-r="0" class="on">Les garder</button><button data-r="1">Remplacer son planning</button></div></div>
+  <div class="p-fl"><span class="p-lab">Note (facultatif)</span><input class="p-fi" id="pNote" maxlength="200" placeholder="ex. couvrir les messages du soir"></div>
+  <div class="p-info" id="pInfo"></div>
+  <div class="p-srow"><button class="p-del" id="pOne" style="color:#cfcfcf;border-color:#2a2a2a">Un seul shift</button><button class="p-send" id="pGo">Remplir le planning</button></div>
+  <div class="p-err" id="pErr"></div>
 </div>
 <!-- pointage manuel (manager) -->
 <div class="p-sheet" id="ckSheet" role="dialog" aria-modal="true" aria-labelledby="ckT">
@@ -686,7 +703,65 @@ function openShiftSheet(s, preset = {}) {
   openSheet("shSheet");
 }
 chips($("fRep"));
-$("addShift").onclick = () => openShiftSheet(null);
+$("addShift").onclick = () => openPlanSheet();
+
+/* ----- planning d'un chatter : créneau + jours de repos → tous les jours remplis ----- */
+const DAYL = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+const toggles = box => box.querySelectorAll("button").forEach(b => b.onclick = () => { b.classList.toggle("on"); VS.tick(); planInfo(); });
+function openPlanSheet() {
+  const ppl = A.people.filter(p => p.role !== "admin");
+  $("pUser").innerHTML = (ppl.length ? ppl : A.people).map((p, i) => `<button data-u="${p.id}" class="${i === 0 ? "on" : ""}">${esc(p.username)}</button>`).join("");
+  $("pSlot").innerHTML = SLOTS.map((sl, i) => `<button data-s="${sl[0]}" class="${i === 0 ? "on" : ""}">${sl[0]}${sl[2] < sl[1] ? " <sup>+1 j</sup>" : ""}</button>`).join("") + `<button data-s="autre">Autre</button>`;
+  $("pStart").value = "18:00"; $("pEnd").value = "02:00"; $("pTimes").classList.add("hidden");
+  $("pRest").innerHTML = DAYN.map((d, k) => `<button data-k="${k}">${d}</button>`).join("");
+  const nextMon = addD(A.today, 7 - ((dOf(A.today).getDay() + 6) % 7));
+  $("pFromC").innerHTML = `<button data-d="${A.today}" class="on">Aujourd'hui</button><button data-d="${nextMon}">Lundi ${dOf(nextMon).getDate()}</button><button data-d="autre">Autre date</button>`;
+  $("pFrom").value = A.today; $("pFrom").classList.add("hidden");
+  document.querySelectorAll("#pWeeks button").forEach(b => b.classList.toggle("on", b.dataset.w === "4"));
+  document.querySelectorAll("#pRep button").forEach((b, i) => b.classList.toggle("on", i === 0));
+  $("pNote").value = ""; $("pErr").textContent = "";
+  chips($("pUser"), () => { pickUsual(); planInfo(); });
+  chips($("pSlot"), b => { $("pTimes").classList.toggle("hidden", b.dataset.s !== "autre"); planInfo(); });
+  chips($("pFromC"), b => { $("pFrom").classList.toggle("hidden", b.dataset.d !== "autre"); planInfo(); });
+  chips($("pWeeks"), planInfo); chips($("pRep"), planInfo); toggles($("pRest"));
+  pickUsual(); planInfo(); openSheet("plSheet");
+}
+// créatrice : sa créatrice habituelle (Gestion) est présélectionnée
+function pickUsual() {
+  const uid = +document.querySelector("#pUser button.on")?.dataset.u, us = (A.usual && A.usual[uid]) || [], mid = us.find(m => A.models.some(x => x.id === m)) || A.models[0]?.id;
+  $("pModel").innerHTML = A.models.map(m => `<button data-m="${m.id}" class="${m.id === mid ? "on" : ""}">${esc(m.name)}${us.includes(m.id) ? " <sup>habituelle</sup>" : ""}</button>`).join("");
+  chips($("pModel"), planInfo);
+}
+function planBody() {
+  const sb = document.querySelector("#pSlot button.on").dataset.s, sl = SLOTS.find(x => x[0] === sb), fd = document.querySelector("#pFromC button.on").dataset.d;
+  return { user_id: +document.querySelector("#pUser button.on")?.dataset.u, model_id: +document.querySelector("#pModel button.on")?.dataset.m,
+    from: fd === "autre" ? $("pFrom").value : fd, start: sl ? sl[1] : $("pStart").value, end: sl ? sl[2] : $("pEnd").value,
+    rest: [...document.querySelectorAll("#pRest button.on")].map(b => +b.dataset.k), weeks: +document.querySelector("#pWeeks button.on").dataset.w,
+    replace: document.querySelector("#pRep button.on").dataset.r === "1", note: $("pNote").value };
+}
+function planInfo() {
+  const b = planBody(); if (!b.from) { $("pInfo").innerHTML = "Choisis la date de début."; return; }
+  const u = A.people.find(p => p.id === b.user_id), m = A.models.find(x => x.id === b.model_id), work = 7 - b.rest.length;
+  const last = addD(b.from, b.weeks * 7 - 1), fmt = d => dOf(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  const rs = b.rest.slice().sort().map(k => "le " + DAYL[k]), restTxt = !rs.length ? "tous les jours" : `tous les jours sauf ${rs.length > 1 ? rs.slice(0, -1).join(", ") + " et " + rs[rs.length - 1] : rs[0]}`;
+  const nowHM = new Date().toTimeString().slice(0, 5);   // le créneau d'aujourd'hui déjà commencé n'est pas ajouté
+  let n = 0; for (let i = 0; i < b.weeks * 7; i++) { const d = addD(b.from, i); if (!b.rest.includes((dOf(d).getDay() + 6) % 7) && d >= A.today && !(d === A.today && b.start <= nowHM)) n++; }
+  $("pInfo").innerHTML = work < 1 ? "Laisse au moins un jour travaillé." : `<b>${esc(u ? u.username : "")}</b> sur <b>${esc(m ? m.name : "")}</b>, ${b.start.replace(":00", "")}–${b.end.replace(":00", "")}, ${restTxt}, du ${fmt(b.from)} au ${fmt(last)} : <b>${n} shift${n > 1 ? "s" : ""}</b>.
+    ${b.replace ? " Ses shifts déjà prévus sur cette période seront remplacés." : " Les jours où il a déjà un shift ne sont pas touchés."}`;
+}
+$("pFrom").onchange = planInfo;
+$("pStart").onchange = $("pEnd").onchange = planInfo;
+$("pOne").onclick = () => { closeSheet(); setTimeout(() => openShiftSheet(null), 260); };
+$("pGo").onclick = async () => {
+  const b = planBody(); if (b.rest.length >= 7) { $("pErr").textContent = "Laisse au moins un jour travaillé."; return; }
+  $("pGo").disabled = true; $("pErr").textContent = "";
+  try { const r = await api("/api/admin/shifts/fill", { body: b }); closeSheet(); VS.ok();
+    const u = A.people.find(p => p.id === b.user_id);
+    notify("Planning rempli", `${u ? u.username : ""} · ${r.added} shift${r.added > 1 ? "s" : ""} ajouté${r.added > 1 ? "s" : ""}${r.removed ? ` · ${r.removed} remplacé${r.removed > 1 ? "s" : ""}` : ""}${r.skipped ? ` · ${r.skipped} jour${r.skipped > 1 ? "s" : ""} déjà prévu${r.skipped > 1 ? "s" : ""} gardé${r.skipped > 1 ? "s" : ""}` : ""}`, "ok");
+    MW = b.from; MDAY = null; await loadAdmin();
+  } catch (e) { $("pErr").textContent = e.message; }
+  $("pGo").disabled = false;
+};
 $("fGo").onclick = async () => {
   const sb = document.querySelector("#fSlot button.on").dataset.s, sl = SLOTS.find(x => x[0] === sb);
   const db = document.querySelector("#fDay button.on").dataset.d;
