@@ -83,7 +83,7 @@
       <div style="margin-top:12px"><div class="trow h"><span></span><span>À PARTIR DE</span><span>TAUX</span><span>PRIME</span><span></span></div>${rows}</div>
       <button class="gbtn" data-add style="margin-top:10px">${SV(PLUS, 15, 2.4)}Ajouter un palier</button>
       <div class="savebar ${dirty ? "on" : ""}"><b>Paliers modifiés</b><div style="display:flex;gap:8px"><button class="sb" data-cancel>Annuler</button><button class="sb w" data-save>Enregistrer</button></div></div>
-      ${lockov("Les managers voient les paliers dans Gestion › Réglages, sans pouvoir les modifier.")}</div>`;
+      ${lockov("Les managers voient les paliers dans Réglages agence, sans pouvoir les modifier.")}</div>`;
   }
   function drawStair() {
     qa(".stp").forEach((s, i) => { const t = T[i]; if (!t) return; const lo = Math.min(...T.map(x => x.rate)), hi = Math.max(...T.map(x => x.rate)); s.style.height = (46 + (hi > lo ? (t.rate - lo) / (hi - lo) : .5) * 104) + "px"; });

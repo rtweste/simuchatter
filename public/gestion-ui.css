@@ -24,6 +24,7 @@
 .ge .tabs{display:flex;background:#141414;border:1px solid #222;border-radius:13px;padding:3px;gap:2px;margin-bottom:16px;width:max-content;max-width:100%;overflow-x:auto}
 .ge .tabs button{height:34px;border:0;border-radius:10px;background:transparent;color:#8f8f8f;font-weight:800;font-size:13px;padding:0 14px;white-space:nowrap;transition:background .3s,color .3s}
 .ge .tabs button.on{background:#ededed;color:#0a0a0a}
+.ge .tabs[hidden],.ge .tabs button[hidden]{display:none!important}
 .ge .tabs button b{margin-left:5px;font-size:11px;opacity:.6}
 .ge .pane{display:none}.ge .pane.on{display:block;animation:geUp .45s both}
 .ge .av{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#2e2e2e,#141414);border:1px solid #333;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17px;flex-shrink:0;position:relative}

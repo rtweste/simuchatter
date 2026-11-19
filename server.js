@@ -562,6 +562,8 @@ LIVE = require("./simlive")(app, db, auth, admin, { loadSim, publicSim, PERSONAS
 
 /* ----- Pages ----- */
 app.get("/rejoindre", (req, res) => res.sendFile(path.join(__dirname, "public", "bienvenue.html")));   // comptes formation express (session d'entretien)
+// la Salle de contrôle a été retirée : ses adresses ramènent à l'accueil
+app.get(/^\/salle(-[a-z]+)?(\.html)?$/, (req, res) => res.redirect(302, "/home"));
 app.use(express.static(path.join(__dirname, "public"), { extensions: ["html"] }));
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
 

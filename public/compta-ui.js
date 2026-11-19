@@ -121,7 +121,7 @@ function renderMonthPay() {
 /* ----- créatrices ----- */
 function renderCreators() {
   const tops = {}; LINES.forEach(l => { (tops[l.model_id] = tops[l.model_id] || []).push(l); });
-  $("creators").innerHTML = !M.models.length ? `<div class="c-empty">Aucune créatrice : ajoute-en dans Gestion.</div>` : M.models.map((m, k) => {
+  $("creators").innerHTML = !M.models.length ? `<div class="c-empty">Aucune créatrice : ajoute-en dans Créatrices › Gestion des créatrices.</div>` : M.models.map((m, k) => {
     const tp = (tops[m.id] || []).filter(l => l.validatedBrut > 0).sort((a, b) => b.validatedBrut - a.validatedBrut).slice(0, 2);
     const paidAll = m.creatorPaid > 0 && m.creatorPaid >= m.creatorPay - .01;
     return `<div class="c-cr${m.missing.length ? " warn" : ""}" style="animation-delay:${.05 + k * .05}s" data-cr="${m.id}">

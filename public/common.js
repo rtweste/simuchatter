@@ -103,8 +103,6 @@ const MODULES = [
     desc: "La bibliothèque de messages tout prêts des chatters : créer, modifier, importer depuis Twizz, voir ceux qui marchent." },
   { id: "tags", label: "Tags", href: "/tags", icon: "tag", section: "Manager", roles: ["admin"], nodock: ["admin"], hide: ["assistant"],
     desc: "Les tags des fans : règles qui les posent tout seuls (gros payeur, nouveau, inactif…), tags de l'équipe et ce que valent leurs fans." },
-  { id: "salle", label: "Salle de contrôle", short: "Live", href: "/salle", icon: "pulse", section: "Manager", roles: ["admin"], nodock: ["admin"], hide: ["assistant"],
-    desc: "Écran en direct à afficher dans l'agence : ventes, classement du jour et chatters en shift." },
   { id: "admin", label: "Gestion", href: "/admin", icon: "team", section: "Manager", roles: ["admin"],
     desc: "Équipe, créatrices et résultats des simulations." },
   { id: "messagerie", label: "Messagerie Twizz", short: "Twizz", href: "/messagerie", icon: "chat", section: "Fondateur", roles: ["admin", "chatter"], when: me => RKOF(me) === "founder" || !!me.inbox, nodock: ["admin", "chatter", "tl"],
@@ -118,6 +116,57 @@ const MODULES = [
 ];
 // rubriques visibles selon le rôle fin (Fondateur, Manager, Assistante, Team Leader…)
 const RKOF = me => me.rk || (me.role === "admin" ? "manager" : me.role);
+/* ---------- côté managers : moins d'entrées dans le menu, les pages proches sont regroupées avec des onglets en haut de page ---------- */
+const MGR_GROUPS = {
+  "g-ventes": { label: "Ventes", icon: "receipt", tabs: [["ventes", "Ventes"], ["compta", "Compta"]] },
+  "g-msg": { label: "Messagerie", short: "Twizz", icon: "bubbles", nodock: 1, tabs: [["messagerie", "Conversations"], ["scripts", "Scripts"], ["tags", "Tags"]] },
+  "g-crea": { label: "Créatrices", icon: "spark", nodock: 1, tabs: [["creatrices", "Fiches"], ["admin#crea", "Gestion des créatrices"]] },
+  "g-form": { label: "Formation", icon: "gauge", nodock: 1, tabs: [["simu", "Simu Chatter"], ["tests", "Tests d'aptitude"]] },
+  "g-motiv": { label: "Motivation", icon: "flag", nodock: 1, tabs: [["defis", "Défis"], ["admin#stel", "Stella's"], ["boutique", "Boutique"], ["parrainage", "Parrainage"]] },
+  "g-reg": { label: "Réglages agence", short: "Réglages", icon: "crown", nodock: 1, tabs: [["admin#reg", "Agence"], ["fondateur", "Fondateur"]] }
+};
+const MGR_MENU = [[null, "home"], ["Au quotidien", "planning", "g-ventes", "g-msg", "studio"], ["Équipe", "admin", "g-crea", "g-form", "g-motiv"],
+  ["Communication", "chat", "vocal"], ["Réglages", "g-reg", "profil", "parametres"]];
+const MGR_HASH = ["crea", "reg", "stel"];   // onglets de Gestion rangés ailleurs dans le menu
+const mgrKey = active => active === "admin" && MGR_HASH.includes(location.hash.slice(1)) ? "admin#" + location.hash.slice(1) : active;
+function mgrMods(me, base) {
+  const has = id => base.find(m => m.id === id), rk = RKOF(me), placed = new Set(), out = [];
+  const hrefOf = k => { const [id, h] = k.split("#"); return (has(id) || {}).href + (h ? "#" + h : ""); };
+  const tabOk = k => { const [id, h] = k.split("#"); return !!has(id) && !(rk === "assistant" && ["reg", "stel"].includes(h)); };
+  MGR_MENU.forEach(([sec, ...ids]) => ids.forEach(id => {
+    const g = MGR_GROUPS[id];
+    if (!g) { const m = has(id); if (!m) return; placed.add(id);
+      out.push({ ...m, section: sec || undefined, ...(id === "admin" ? { label: "Équipe", short: "Équipe", icon: "team" } : {}) }); return; }
+    const tabs = g.tabs.filter(([k]) => tabOk(k)).map(([k, l]) => [k, l, hrefOf(k)]); if (!tabs.length) return;
+    tabs.forEach(([k]) => placed.add(k.split("#")[0]));
+    // un seul onglet visible (Assistante : la Compta sans les Ventes) : l'entrée prend le nom de la page
+    const one = tabs.length === 1 && !tabs[0][0].includes("#") ? has(tabs[0][0]) : null;
+    out.push({ id, label: one ? one.label : g.label, short: one ? one.short || one.label : g.short, icon: one ? one.icon : g.icon, section: sec, href: tabs[0][2], keys: tabs.map(t => t[0]), tabs, nodock: g.nodock ? ["admin"] : [] });
+  }));
+  base.filter(m => !placed.has(m.id)).forEach(m => out.push(m));   // une page qui n'est pas encore rangée reste accessible
+  return out;
+}
+// onglets du groupe en haut de la page (Ventes · Compta, Conversations · Scripts · Tags…)
+function mountGTabs(mods, key) {
+  let bar = document.getElementById("gtabs-bar"); const g = mods.find(m => m.keys && m.keys.includes(key));
+  if (!g || g.tabs.length < 2) { if (bar) bar.remove(); return; }
+  if (!document.getElementById("gtabs-css")) { const st = document.createElement("style"); st.id = "gtabs-css";
+    st.textContent = `.gtabs{display:flex;gap:4px;width:max-content;max-width:100%;overflow-x:auto;margin:0 0 18px;padding:4px;border-radius:14px;background:#111;border:1px solid #222;scrollbar-width:none;position:relative;z-index:5;box-sizing:border-box}
+.gtabs::-webkit-scrollbar{display:none}.gtabs a{display:inline-flex;align-items:center;height:32px;padding:0 14px;border-radius:10px;font:700 13px Inter,system-ui,sans-serif;color:#8a8a8a;text-decoration:none;white-space:nowrap;transition:background .2s,color .2s}
+.gtabs a:hover{color:#e6e6e6}.gtabs a.on{background:#ededed;color:#0a0a0a}
+.gt-hide{display:none!important}.gtabs.sm{margin:0;padding:3px;border-radius:11px}.gtabs.sm a{height:28px;padding:0 11px;font-size:12px;border-radius:8px}`; document.head.appendChild(st); }
+  if (!bar) { bar = document.createElement("nav"); bar.id = "gtabs-bar"; bar.className = "gtabs";
+    // à la place du petit sur-titre de la page (« MANAGER », « FORMATION »…), même si la page se dessine après coup
+    const EB = ".eyebrow, .cap, .eb, .st-eb", main = document.querySelector(".main-area"), t0 = Date.now();
+    const place = () => { const slot = document.getElementById("gtabs");
+      if (slot) { bar.classList.add("sm"); if (bar.parentNode !== slot) slot.appendChild(bar); return; }
+      if (!main) return; const eb = [...main.querySelectorAll(EB)].find(e => e.offsetParent !== null || e.classList.contains("gt-hide"));
+      if (eb) { if (bar.nextElementSibling !== eb) eb.parentNode.insertBefore(bar, eb); eb.classList.add("gt-hide"); return; }
+      if (!bar.isConnected && Date.now() - t0 > 3000) { const host = main.querySelector(":scope > .wrap, :scope > div:not(.hidden), :scope > section") || main; host.insertBefore(bar, host.firstChild); } };
+    place(); if (main) { let q = 0; new MutationObserver(() => { if (q) return; q = requestAnimationFrame(() => { q = 0; place(); }); }).observe(main, { childList: true, subtree: true }); setTimeout(place, 3100); } }
+  bar.setAttribute("aria-label", g.label);
+  bar.innerHTML = g.tabs.map(([k, l, h]) => `<a href="${h}" class="${k === key ? "on" : ""}" ${k === key ? 'aria-current="page"' : ""}>${esc(l)}</a>`).join("");
+}
 const modsFor = me => { const L = MODULES.filter(m => m.roles.includes(me.role) && (!m.only || m.only.includes(RKOF(me))) && (!m.when || m.when(me)) && !(m.hide || []).includes(RKOF(me)))
   // les élèves voient le chat comme « Salon formation », dans la rubrique Formation
   .map(m => me.role === "trainee" && m.id === "chat" ? { ...m, label: "Salon formation", short: "Salon", section: "Formation", desc: "Le salon des élèves en formation et des managers." } : m);
@@ -264,12 +313,14 @@ function renderShell(active, me) {
   // chat : compteur de messages non lus dans le menu
   if (me && active !== "chat") { const cu = () => api("/api/chat/unread").then(c => updateBadge(c.n, "chat")).catch(() => {}); setTimeout(cu, 800); setInterval(() => { if (!document.hidden) cu(); }, 30e3); }
   const el = document.getElementById("sidebar"); if (!el) return;
-  const mods = modsFor(me);
-  const badge = m => ["ventes", "studio", "chat"].includes(m.id);
+  const MGR = me.role === "admin", mods = MGR ? mgrMods(me, modsFor(me)) : modsFor(me);
+  let AK = MGR ? mgrKey(active) : active;
+  const isOn = m => m.keys ? m.keys.includes(AK) : m.id === AK;
+  const badge = m => ["ventes", "studio", "chat", "g-ventes"].includes(m.id);
   let html = `<div class="sb-top"><a class="logo" href="/home" aria-label="StellADS — Accueil">${logoHTML()}</a><button class="sb-col" type="button" aria-label="Réduire le menu" title="Réduire le menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button></div><nav>`, sec;
   mods.forEach((m, i) => {
     if (m.section && m.section !== sec) { sec = m.section; html += `<div class="sec">${esc(sec)}</div>`; }
-    html += `<a href="${m.href}" style="--i:${i}" data-tip="${esc(m.label)}" class="${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""}>${icon(m.icon)}<span class="lb">${chars(m.label)}</span><span class="sr">${esc(m.label)}</span>${badge(m) ? `<em class="navbadge hidden" data-badge="${m.id}"></em>` : ""}</a>`;
+    html += `<a href="${m.href}" style="--i:${i}" data-tip="${esc(m.label)}" data-k="${esc((m.keys || [m.id]).join(" "))}" class="${isOn(m) ? "on" : ""}" ${isOn(m) ? 'aria-current="page"' : ""}>${icon(m.icon)}<span class="lb">${chars(m.label)}</span><span class="sr">${esc(m.label)}</span>${badge(m) ? `<em class="navbadge hidden" data-badge="${m.id === "g-ventes" ? "ventes" : m.id}"></em>` : ""}</a>`;
   });
   html += `<span class="nv-line" aria-hidden="true"></span></nav><div class="me">${me.role === "trainee" ? `<span class="av">${esc(me.username[0])}</span>` : `<a class="av" href="/profil" title="Mon profil" aria-label="Mon profil" style="${me.color ? `--ac:${esc(me.color)};` : ""}${me.avatar ? `background:#111 url(${esc(me.avatar)}) center/cover;font-size:0;` : ""}">${esc((me.name || me.username)[0])}</a>`}<div><b>${esc(me.name || me.username)}</b><small>${esc(me.roleLabel || (me.role === "admin" ? "Manager" : me.role === "trainee" ? "En formation" : "Chatter"))}</small></div>
     ${me.role === "trainee" && INTRO_ON ? `<button onclick="INTRO.show(ME_SHELL,{replay:true})" title="Revoir la présentation" aria-label="Revoir la présentation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg></button>` : ""}${me.role === "trainee" || me.role === "admin" ? "" : `<button onclick="openPush()" title="${IS_DESK ? "Notifications" : "Notifications sur le téléphone"}" aria-label="${IS_DESK ? "Notifications" : "Notifications sur le téléphone"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IS_DESK ? '<path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0"/>' : '<rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M10.5 18.5h3"/><circle cx="17.5" cy="5.5" r="3" fill="currentColor" stroke="none" opacity=".9"/>'}</svg></button>`}<button onclick="logout()" title="Déconnexion" aria-label="Déconnexion" style="margin-left:0">${icon("logout")}</button></div>`;
@@ -287,7 +338,11 @@ function renderShell(active, me) {
   // Dock flottant (téléphone)
   let dock = document.getElementById("dock");
   if (!dock) { dock = document.createElement("nav"); dock.id = "dock"; dock.className = "dock"; dock.setAttribute("aria-label", "Navigation principale"); document.body.appendChild(dock); }
-  dock.innerHTML = `<span class="dk-line" aria-hidden="true"></span>` + mods.filter(m => !(m.nodock || []).includes(me.role) && !(m.nodock || []).includes(RKOF(me)) && !(me.role === "admin" && m.id === "simu")).map(m => `<a href="${m.href}" class="di ${m.id === active ? "on" : ""}" ${m.id === active ? 'aria-current="page"' : ""} aria-label="${esc(m.label)}">${icon(m.icon)}<span class="lb">${chars(m.short || m.label)}</span>${badge(m) ? `<em class="navbadge hidden" data-badge="${m.id}"></em>` : ""}</a>`).join("");
+  dock.innerHTML = `<span class="dk-line" aria-hidden="true"></span>` + mods.filter(m => !(m.nodock || []).includes(me.role) && !(m.nodock || []).includes(RKOF(me)) && !(me.role === "admin" && m.id === "simu")).map(m => `<a href="${m.href}" class="di ${isOn(m) ? "on" : ""}" ${isOn(m) ? 'aria-current="page"' : ""} aria-label="${esc(m.label)}">${icon(m.icon)}<span class="lb">${chars(m.short || m.label)}</span>${badge(m) ? `<em class="navbadge hidden" data-badge="${m.id === "g-ventes" ? "ventes" : m.id}"></em>` : ""}</a>`).join("");
+  // managers : onglets du groupe en haut de page ; Gestion change d'onglet sans recharger (lien avec #, ou clic dans la page)
+  if (MGR) { mountGTabs(mods, AK);
+    const re = () => { AK = mgrKey(active); el.querySelectorAll("nav a[data-k]").forEach(a => { const on = a.dataset.k.split(" ").includes(AK); a.classList.toggle("on", on); if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); }); mountGTabs(mods, AK); };
+    addEventListener("hashchange", re); addEventListener("st:tab", re); }
   // Le menu de gauche et le dock font leur entrée une seule fois par session (après l'intro)
   try { if (!sessionStorage.getItem("stNav")) { el.classList.add("nav-in"); dock.classList.add("dock-in"); sessionStorage.setItem("stNav", "1"); } } catch (e) {}
   dock.querySelectorAll("a").forEach(a => a.addEventListener("click", e => {

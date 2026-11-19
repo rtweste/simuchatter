@@ -699,7 +699,7 @@
 <aside class="sidebar" id="sidebar"></aside>
 <main class="main-area mxm">
   <div class="mx" id="mx">
-    <div class="mx-topw"><div class="mx-top"><h1>Messagerie <em>Twizz</em></h1><span class="mx-badge">TEST</span>
+    <div class="mx-topw"><div class="mx-top"><h1>Messagerie <em>Twizz</em></h1><span class="mx-badge">TEST</span><span id="gtabs" style="margin-left:6px"></span>
       <div class="mx-cr" id="crs"></div>
       <div class="mx-tg"><span class="mx-live" id="live" title="Les nouveaux messages arrivent tout seuls"><i></i><span>CONNEXION…</span></span>
         <button class="tgi on" id="swBlur" title="Flouter les photos et vidéos (survole une image pour la voir)" aria-label="Flouter les médias"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/></svg></button>
@@ -788,7 +788,7 @@ const crLabel = () => ((ST && ST.creators.find(c => c.id === CID)) || {}).label 
 const UNREAD = {};
 function top() {
   const L = ST.creators.filter(c => c.id), box = $("crs"), ids = [...box.querySelectorAll("[data-cid]")].map(b => b.dataset.cid).join("|");
-  if (!L.length) box.innerHTML = `<span style="color:#777;font-size:13px;padding:0 10px">${ST.founder ? "Teste la connexion Twizz dans Réglages fondateur" : "Aucune créatrice pour toi : tes créatrices habituelles se règlent dans Gestion, ou commence ton shift"}</span>`;
+  if (!L.length) box.innerHTML = `<span style="color:#777;font-size:13px;padding:0 10px">${ST.founder ? "Teste la connexion Twizz dans Réglages fondateur" : "Aucune créatrice pour toi : tes créatrices habituelles se règlent dans Équipe, ou commence ton shift"}</span>`;
   else if (ids !== L.map(c => c.id).join("|")) {
     box.innerHTML = L.map(c => `<button data-cid="${esc(c.id)}" title="${esc(c.label)}">${rav((c.label[0] || "?").toUpperCase(), 34, pal(c.label))}<span class="nm">${esc(c.label)}</span></button>`).join("");
     box.querySelectorAll("[data-cid]").forEach(b => b.onclick = () => { if (b.dataset.cid === CID) return; CID = b.dataset.cid; try { localStorage.setItem("mx:cid", CID); } catch (e) {} CUR = null; QDONE.clear(); QTREATED = 0; $("mx").classList.remove("open"); top(); loadList(); thread(); fanCard(); });
@@ -1064,7 +1064,7 @@ async function teamBox() {
   const LV = [["0", "Aucun"], ["1", "Lecture"], ["2", "Envoi"]];
   const paint = () => { m.innerHTML = `<div class="ta-b"><div class="ta-h"><h2>Accès à la <em>messagerie</em></h2><button class="px" id="tmX" aria-label="Fermer">✕</button></div>
     <div class="ta-o"><div><b>Ouvrir à l'équipe</b><small>${D.open ? "Les personnes ci-dessous voient la messagerie selon leur accès." : "Fermée : toi seul la vois. Choisis les accès, puis ouvre."}</small></div><button type="button" class="ta-sw ${D.open ? "on" : ""}" id="tmO" aria-label="Ouvrir à l'équipe"><i></i></button></div>
-    <div class="ta-n">Un chatter ne voit que ses <b>créatrices habituelles</b> (Gestion) et celle de son <b>shift en cours</b>. Un manager voit toutes les créatrices. « Envoi » ne marche que si l'interrupteur « Envoi activé » est allumé${D.send ? " (il l'est)" : " (il est coupé)"}.</div>
+    <div class="ta-n">Un chatter ne voit que ses <b>créatrices habituelles</b> (fiche du chatter dans Équipe) et celle de son <b>shift en cours</b>. Un manager voit toutes les créatrices. « Envoi » ne marche que si l'interrupteur « Envoi activé » est allumé${D.send ? " (il l'est)" : " (il est coupé)"}.</div>
     <div class="ta-l">${D.users.length ? D.users.map(u => `<div class="ta-r"><span class="ta-a">${esc((u.username[0] || "?").toUpperCase())}</span><div class="ta-u"><b>${esc(u.username)}${u.manager ? ` <em>manager</em>` : u.tl ? ` <em>team leader</em>` : ""}</b><small>${u.manager ? "Toutes les créatrices" : u.creators.length ? esc(u.creators.join(" · ")) + " + son shift" : "Seulement la créatrice de son shift"}</small></div>
       <div class="ta-sg" role="radiogroup" aria-label="Accès de ${esc(u.username)}">${LV.map(([v, l]) => `<button type="button" data-u="${u.id}" data-lv="${v}" class="${String(u.level) === v ? "on lv" + v : ""}">${l}</button>`).join("")}</div></div>`).join("") : `<div class="pempty">Personne dans l'équipe</div>`}</div></div>`;
     m.querySelector("#tmX").onclick = () => m.remove();

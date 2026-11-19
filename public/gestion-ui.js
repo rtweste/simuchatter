@@ -42,9 +42,14 @@ const openDr = (html, cb) => { dr.innerHTML = html; dr.classList.add("on"); scri
 
 /* ----- onglets ----- */
 const LOADED = {};
+// Créatrices, Réglages et Stella's ont leur propre entrée dans le menu (onglets en haut de page) : ici, les onglets de l'équipe
+const ELSEWHERE = { crea: ["Les", "créatrices."], reg: ["Les", "réglages."], stel: ["Les", "Stella's."] };
 function tab(t) {
-  qa(".tabs button").forEach(x => x.classList.toggle("on", x.dataset.t === t)); qa(".pane").forEach(p => p.classList.toggle("on", p.dataset.p === t));
+  qa(".tabs button").forEach(x => { x.classList.toggle("on", x.dataset.t === t); x.hidden = !!ELSEWHERE[x.dataset.t]; }); qa(".pane").forEach(p => p.classList.toggle("on", p.dataset.p === t));
+  const tb = document.querySelector(".tabs"); if (tb) tb.hidden = !!ELSEWHERE[t];
+  const tt = document.querySelector(".hdr .ttl"), w = ELSEWHERE[t] || ["L'", "équipe."]; if (tt) tt.innerHTML = `${w[0] === "L'" ? "L'" : w[0] + " "}<em>${w[1]}</em>`;
   try { history.replaceState(null, "", "#" + t); } catch (e) {}
+  try { dispatchEvent(new Event("st:tab")); } catch (e) {}
   ({ team: loadTeam, crea: loadCrea, reg: loadReg, jour: loadJour, sanc: loadSanc, cand: loadCand, roles: () => ROLESUI.load(), stel: () => STELADMIN.load() })[t]();
   if (t === "team") LAUNCHUI.load();
 }
@@ -643,7 +648,10 @@ return { tab, loadSanc };
   renderShell("admin", me);
   const h = (location.hash || "").slice(1);
   if (me.rk === "assistant") document.getElementById("tStel")?.remove();
-  GE.tab(["team", "crea", "reg", "jour", "sanc", "cand", "roles", "stel"].includes(h) && !(me.rk === "assistant" && ["cand", "reg", "sanc", "stel"].includes(h)) ? h : "team");
+  const okTab = x => ["team", "crea", "reg", "jour", "sanc", "cand", "roles", "stel"].includes(x) && !(me.rk === "assistant" && ["cand", "reg", "sanc", "stel"].includes(x));
+  GE.tab(okTab(h) ? h : "team");
+  // lien du menu ou des onglets du haut vers un autre onglet de cette page (Équipe → Réglages agence…)
+  addEventListener("hashchange", () => { const x = location.hash.slice(1); if (okTab(x) && !document.querySelector(`.pane.on[data-p="${x}"]`)) GE.tab(x); });
   if (h !== "stel" && me.rk !== "assistant") api("/api/admin/stellas/overview").then(o => { $("nStel").textContent = o.requests.filter(q => me.rk === "founder" || q.kind === "title").length || ""; }).catch(() => {});
   if (h !== "cand" && me.rk !== "assistant") api("/api/admin/applications/count").then(c => { $("nCand").textContent = c.new || ""; }).catch(() => {});
   // compteur « à traiter » visible dès l'ouverture

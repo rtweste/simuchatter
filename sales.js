@@ -186,7 +186,7 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
       comWhy = String(req.query.com_reason || "").trim().slice(0, 200);
       if (!comWhy) return res.status(400).json({ error: "Indique pourquoi la commission est réduite : le chatter le verra" });
     }
-    if (!other && req.user.role === "admin" && !(db.prepare("SELECT sells FROM users WHERE id = ?").get(req.user.id) || {}).sells) return res.status(403).json({ error: "Active « Déclare ses propres ventes » sur ton compte dans Gestion" });
+    if (!other && req.user.role === "admin" && !(db.prepare("SELECT sells FROM users WHERE id = ?").get(req.user.id) || {}).sells) return res.status(403).json({ error: "Active « Déclare ses propres ventes » sur ton compte dans Équipe" });
     if (!db.prepare("SELECT 1 FROM models WHERE id = ?").get(model_id)) return res.status(400).json({ error: "Choisissez une créatrice" });
     if (amount === null) return res.status(400).json({ error: "Montant invalide" });
     // ce qui a été vendu : au moins une catégorie, avec sa quantité (photos, vidéos, minutes)
