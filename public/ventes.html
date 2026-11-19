@@ -370,7 +370,7 @@
             <div class="vt-lab">Compte pour le chatter</div>
             <div class="sg" role="radiogroup"><button data-c="all" class="on">Toute la vente</button><button data-c="part">Une partie</button><button data-c="none">Rien</button></div>
             <div class="mo">
-              <div class="pr" id="qComRow"><input id="qComAmt" inputmode="decimal" autocomplete="off" aria-label="Montant qui compte pour le chatter"><span>€ pour le chatter</span><button id="qComHalf">La moitié</button></div>
+              <div class="pr" id="qComRow"><input id="qComAmt" inputmode="decimal" autocomplete="off" aria-label="Montant qui compte pour le chatter"><span>€ comptés au chatter</span><button id="qComHalf">La moitié</button></div>
               <input class="vt-fi" id="qComWhy" maxlength="200" placeholder="Raison, le chatter la verra (ex. : cam vendue trop peu chère)">
               <div class="eq" id="qComEq"></div>
             </div>
@@ -418,7 +418,7 @@
       <div class="vt-lab">Commission du chatter</div>
       <div class="sg" role="radiogroup"><button type="button" data-c="all" class="on">Toute la vente</button><button type="button" data-c="part">Une partie</button><button type="button" data-c="none">Rien</button></div>
       <div class="mo">
-        <div class="pr" id="dComRow"><input id="dComAmt" inputmode="decimal" autocomplete="off" aria-label="Montant qui compte pour le chatter"><span>€ pour le chatter</span><button type="button" id="dComHalf">La moitié</button></div>
+        <div class="pr" id="dComRow"><input id="dComAmt" inputmode="decimal" autocomplete="off" aria-label="Montant qui compte pour le chatter"><span>€ comptés au chatter</span><button type="button" id="dComHalf">La moitié</button></div>
         <input class="vt-fi" id="dComWhy" maxlength="200" placeholder="Raison, le chatter la verra (ex. : vente refusée, ajoutée au CA)">
         <div class="eq" id="dComEq"></div>
       </div>
@@ -751,7 +751,7 @@ function dCom(c) {
 }
 const dComVal = () => DCOM === "none" ? 0 : DCOM === "part" ? parseNum($("dComAmt").value) : null;
 function dComEq() { const a = parseNum($("fAmount").value) || 0, c = dComVal();
-  $("dComEq").innerHTML = DCOM === "all" || !a ? "" : `<b>${E(a)}</b> au CA de la créatrice · <b>${E(c > 0 ? c : 0)}</b> dans la paie du chatter`; }
+  $("dComEq").innerHTML = DCOM === "all" || !a ? "" : `<b>${E(a)}</b> au CA de la créatrice · <b>${E(c > 0 ? c : 0)}</b> dans les ventes du chatter <span style="opacity:.7">(sa commission se calcule sur ce montant)</span>`; }
 document.querySelectorAll("#dCom .sg button").forEach(b => b.onclick = () => { dCom(b.dataset.c); VS.tick(); if (b.dataset.c === "part") $("dComAmt").select(); else if (b.dataset.c === "none") $("dComWhy").focus(); });
 $("dComAmt").oninput = dComEq;
 $("dComHalf").onclick = () => { const a = parseNum($("fAmount").value) || 0; $("dComAmt").value = String(Math.round(a / 2 * 100) / 100).replace(".", ","); dComEq(); };
@@ -914,7 +914,7 @@ function qCom(c) {
 function qComVal() { return COM === "none" ? 0 : COM === "part" ? parseNum($("qComAmt").value) : null; }
 function qComEq() {
   const a = parseNum($("qAmt").value) || 0, c = qComVal();
-  $("qComEq").innerHTML = COM === "all" ? "" : `<b>${E(a)}</b> au CA de la créatrice · <b>${E(c > 0 ? c : 0)}</b> dans la paie du chatter`;
+  $("qComEq").innerHTML = COM === "all" ? "" : `<b>${E(a)}</b> au CA de la créatrice · <b>${E(c > 0 ? c : 0)}</b> dans les ventes du chatter <span style="opacity:.7">(sa commission se calcule sur ce montant)</span>`;
 }
 document.querySelectorAll("#qCom .sg button").forEach(b => b.onclick = () => { qCom(b.dataset.c); VS.tick(); if (b.dataset.c === "part") $("qComAmt").select(); else if (b.dataset.c === "none") $("qComWhy").focus(); });
 $("qComAmt").oninput = qComEq;
