@@ -4,7 +4,12 @@ const path = require("path");
 const fs = require("fs");
 const express = require("express");
 
-const FILES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "audio/webm": "webm", "audio/ogg": "ogg", "audio/mp4": "m4a", "audio/mpeg": "mp3", "audio/wav": "wav" };
+const FILES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "audio/webm": "webm", "audio/ogg": "ogg", "audio/mp4": "m4a", "audio/mpeg": "mp3", "audio/wav": "wav",
+  "video/mp4": "mp4", "video/quicktime": "mov", "video/webm": "webm",
+  "application/pdf": "pdf", "text/plain": "txt", "text/csv": "csv", "application/zip": "zip", "application/x-zip-compressed": "zip",
+  "application/msword": "doc", "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+  "application/vnd.ms-excel": "xls", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx" };
 const QUICK = ["🔥", "💸", "👑", "😂", "❤️", "👀", "⭐", "👍"];
 
 module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning }) {
@@ -120,7 +125,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
       const t = thr.find(x => x.thread_root === r.id);
       const o = { id: r.id, channel_id: r.channel_id, user_id: r.user_id, username: r.username, role: r.role, kind: r.kind, body: del || hid ? "" : r.body, meta: del || hid ? {} : meta,
         created_at: r.created_at, edited_at: r.edited_at, deleted: del, deletedByMod: del && r.deleted_by && r.deleted_by !== r.user_id, hidden: !!r.hidden, pinned: !!r.pinned,
-        reply: r.reply_to && rmap[r.reply_to] ? { id: r.reply_to, username: rmap[r.reply_to].username, body: rmap[r.reply_to].deleted_at ? "message supprimé" : (rmap[r.reply_to].kind === "voice" ? "🎤 message vocal" : rmap[r.reply_to].kind === "image" ? "📷 photo" : rmap[r.reply_to].body).slice(0, 140) } : null,
+        reply: r.reply_to && rmap[r.reply_to] ? { id: r.reply_to, username: rmap[r.reply_to].username, body: rmap[r.reply_to].deleted_at ? "message supprimé" : (rmap[r.reply_to].kind === "voice" ? "🎤 message vocal" : rmap[r.reply_to].kind === "image" ? "📷 photo" : rmap[r.reply_to].kind === "video" ? "🎬 vidéo" : rmap[r.reply_to].kind === "file" ? "📎 fichier" : rmap[r.reply_to].body).slice(0, 140) } : null,
         thread_root: r.thread_root, reactions: rx, thread: t ? { n: t.n, last: t.last, users: String(t.us || "").split(",").map(Number).filter(Boolean).slice(0, 4) } : null };
       if (r.kind === "poll") { const vs = votes.filter(v => v.message_id === r.id); o.poll = { counts: (meta.options || []).map((_, i) => vs.filter(v => v.opt === i).length), mine: vs.filter(v => v.user_id === uid).map(v => v.opt), voters: new Set(vs.map(v => v.user_id)).size, who: (meta.options || []).map((_, i) => vs.filter(v => v.opt === i).map(v => v.username)) }; }
       if (r.pinned || meta.announce) { const a = acks.filter(x => x.message_id === r.id); o.acks = { n: a.length, of: teamN, me: a.some(x => x.user_id === uid), who: isAdmin ? a.map(x => ({ username: x.username, at: x.at })) : [] }; }
@@ -162,7 +167,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
       const last = db.prepare("SELECT m.body, m.kind, m.created_at, u.username FROM chat_messages m LEFT JOIN users u ON u.id = m.user_id WHERE m.channel_id = ? AND m.thread_root IS NULL AND m.deleted_at IS NULL ORDER BY m.id DESC LIMIT 1").get(c.id);
       let other = null; if (c.kind === "dm") { const o = db.prepare("SELECT u.id, u.username, u.role FROM chat_members cm JOIN users u ON u.id = cm.user_id WHERE cm.channel_id = ? AND cm.user_id <> ?").get(c.id, u.id); other = o || null; }
       return { id: c.id, slug: c.slug, name: other ? other.username : c.name, kind: c.kind, topic: c.topic, readonly: !!c.readonly, canWrite: !c.readonly || isAdmin, emoji: c.emoji, model_id: c.model_id,
-        other, unread, mentions: ment, last: last ? { body: last.kind === "voice" ? "🎤 Message vocal" : last.kind === "image" ? "📷 Photo" : last.kind === "poll" ? "📊 Sondage" : last.kind === "swap" ? "🔁 Remplacement de shift" : last.kind === "sos" ? "🆘 Aide fan" : last.kind === "sale" ? "💸 Nouvelle vente" : last.kind === "win" ? "🎉 Victoire d'équipe" : last.kind === "motm" ? "🏅 Vote du coéquipier du mois" : last.kind === "qotd" ? "☕ Question du jour" : last.body.slice(0, 80), at: last.created_at, username: last.username } : null };
+        other, unread, mentions: ment, last: last ? { body: last.kind === "voice" ? "🎤 Message vocal" : last.kind === "image" ? "📷 Photo" : last.kind === "video" ? "🎬 Vidéo" : last.kind === "file" ? "📎 Fichier" : last.kind === "poll" ? "📊 Sondage" : last.kind === "swap" ? "🔁 Remplacement de shift" : last.kind === "sos" ? "🆘 Aide fan" : last.kind === "sale" ? "💸 Nouvelle vente" : last.kind === "win" ? "🎉 Victoire d'équipe" : last.kind === "motm" ? "🏅 Vote du coéquipier du mois" : last.kind === "qotd" ? "☕ Question du jour" : last.body.slice(0, 80), at: last.created_at, username: last.username } : null };
     });
   }
   app.get("/api/chat/boot", auth, noTrainee, (req, res) => {
@@ -217,11 +222,12 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
     db.prepare("UPDATE chat_messages SET body = ?, edited_at = ? WHERE id = ?").run(body, now(), m.id); bump(m.id); res.json({ ok: true });
   });
   // fichiers : photos, GIF, vocaux
-  app.post("/api/chat/c/:id/upload", auth, noTrainee, express.raw({ type: ["image/*", "audio/*"], limit: "15mb" }), (req, res) => {
+  app.post("/api/chat/c/:id/upload", auth, noTrainee, express.raw({ type: ["image/*", "audio/*", "video/*", "application/*", "text/plain", "text/csv"], limit: "25mb" }), (req, res) => {
     const ch = chOf(+req.params.id); if (!guard(req, res, ch)) return;
     const mime = (req.headers["content-type"] || "").split(";")[0], ext = FILES[mime]; if (!ext || !Buffer.isBuffer(req.body) || req.body.length < 50) return res.status(400).json({ error: "Format non pris en charge" });
     const f = `c${ch.id}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}.${ext}`; fs.writeFileSync(path.join(DIR, f), req.body);
-    const kind = mime.startsWith("audio") ? "voice" : "image", meta = { file: f, mime, size: req.body.length };
+    const kind = mime.startsWith("audio") ? "voice" : mime.startsWith("image") ? "image" : mime.startsWith("video") ? "video" : "file", meta = { file: f, mime, size: req.body.length };
+    if (kind === "file" || kind === "video") meta.name = String(req.query.name || "").replace(/[\\/:*?"<>|\u0000-\u001f]/g, "_").trim().slice(0, 120) || f;
     if (kind === "voice") { meta.dur = Math.max(0, Math.min(600, +req.query.dur || 0)); try { meta.wave = String(req.query.wave || "").split(",").map(Number).filter(n => n >= 0 && n <= 100).slice(0, 48); } catch (e) {} }
     else { meta.w = +req.query.w || null; meta.h = +req.query.h || null; }
     const root = req.query.thread ? db.prepare("SELECT id FROM chat_messages WHERE id = ? AND channel_id = ? AND thread_root IS NULL").get(+req.query.thread, ch.id) : null;
@@ -231,7 +237,11 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
   app.get("/api/chat/file/:f", auth, noTrainee, (req, res) => {
     const f = path.basename(req.params.f), m = db.prepare("SELECT channel_id FROM chat_messages WHERE meta LIKE ? LIMIT 1").get(`%"file":"${f}"%`);
     if (!m || !canSee(chOf(m.channel_id), req.user)) return res.status(404).end(); const p = path.join(DIR, f); if (!fs.existsSync(p)) return res.status(404).end();
-    res.sendFile(p, { headers: { "Cache-Control": "private, max-age=604800" } });
+    const ext = path.extname(f).slice(1).toLowerCase(), inline = ["jpg", "png", "webp", "gif", "webm", "ogg", "m4a", "mp3", "wav", "mp4", "mov"].includes(ext);
+    const meta = (() => { try { return JSON.parse(db.prepare("SELECT meta FROM chat_messages WHERE meta LIKE ? LIMIT 1").get(`%"file":"${f}"%`).meta); } catch (e) { return {}; } })();
+    const headers = { "Cache-Control": "private, max-age=604800", "X-Content-Type-Options": "nosniff" };
+    if (!inline) headers["Content-Disposition"] = `attachment; filename*=UTF-8''${encodeURIComponent(meta.name || f)}`;
+    res.sendFile(p, { headers });
   });
 
   /* ---------- réactions, votes, lu par, épingles ---------- */

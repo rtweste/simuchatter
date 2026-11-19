@@ -155,6 +155,9 @@ function body(m) {
   const tx = m.body ? `<div class="ct-tx ${onlyEmoji(m.body) ? "big" : ""}">${fmt(m.body)}${m.edited_at ? `<span class="ct-ed">(modifié)</span>` : ""}</div>` : "";
   switch (m.kind) {
     case "image": return `<a class="ct-img" data-img="/api/chat/file/${encodeURIComponent(m.meta.file)}"><img src="/api/chat/file/${encodeURIComponent(m.meta.file)}" alt="" loading="lazy" ${m.meta.w ? `width="${m.meta.w}" height="${m.meta.h}"` : ""}></a>${tx}`;
+    case "video": return `<div class="ct-vid"><video src="/api/chat/file/${encodeURIComponent(m.meta.file)}" controls preload="metadata" playsinline></video></div>${tx}`;
+    case "file": { const n = m.meta.name || m.meta.file, ext = (n.split(".").pop() || "").toUpperCase().slice(0, 4);
+      return `<a class="ct-file" href="/api/chat/file/${encodeURIComponent(m.meta.file)}" download="${esc(n)}"><span class="ic e${esc(ext.toLowerCase())}">${esc(ext)}</span><span class="nm"><b>${esc(n)}</b><small>${fsize(m.meta.size || 0)} · télécharger</small></span><span class="dl">${svg('<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>', 2.2)}</span></a>${tx}`; }
     case "voice": { const w = (m.meta.wave && m.meta.wave.length ? m.meta.wave : Array.from({ length: 36 }, (_, i) => 20 + 50 * Math.abs(Math.sin(i * 1.7))));
       return `<div class="ct-vo" data-vo="${encodeURIComponent(m.meta.file)}" data-dur="${m.meta.dur || 0}"><button aria-label="Écouter">${svg(IC.play)}</button><div class="wv">${w.map(v => `<i style="height:${Math.max(10, v)}%"></i>`).join("")}</div><small>${fmtS(m.meta.dur || 0)}</small></div>`; }
     case "sale": { const s = m.meta; return `<div class="ct-card ct-sale ${s.super ? "super" : ""}" data-sale="${s.amount}"${s.user_id ? ` data-suid="${s.user_id}"` : ""}><span class="ic">${s.super ? "👑" : "💸"}</span><div><b class="am" data-cnt="${s.amount}">${eur(s.amount)}</b><small><b style="color:#fff">${esc(s.username)}</b> vient de vendre sur ${esc(s.model)}</small></div>${s.super ? `<button class="sx" data-super="${m.id}">💥 Super</button>` : ""}</div>`; }
@@ -291,11 +294,11 @@ function levelHTML() { return `<div class="ct-lv" role="radiogroup" aria-label="
 function bindLevel() { document.querySelectorAll("[data-lv]").forEach(b => b.onclick = () => { ANN_LV = b.dataset.lv; const w = b.closest(".ct-lv"); w.outerHTML = levelHTML(); bindLevel(); const se = $("sem"); if (se) se.classList.toggle("urg", ANN_LV === "urgent"); }); }
 function composerHTML(k) {
   return `<div class="ct-cp" id="cp${k}">${k === "m" && chan(CUR).readonly && B.me.role === "admin" ? levelHTML() : ""}<div id="rb${k}"></div><div class="ct-pl" id="pl${k}">
-      <button data-pa="img"><span style="background:rgba(125,211,252,.12)">📷</span><div>Photo ou GIF<small>Une capture, un GIF, une image</small></div></button>
+      <button data-pa="img"><span style="background:rgba(125,211,252,.12)">📷</span><div>Photo ou fichier<small>Image, vidéo, PDF, document… ou glisse-les dans le chat</small></div></button>
       <button data-pa="poll"><span style="background:rgba(179,136,255,.14)">📊</span><div>Sondage<small>Les réponses s'affichent en direct</small></div></button>
       <button data-pa="swap"><span style="background:rgba(95,211,162,.12)">🔁</span><div>Remplacement de shift<small>Un collègue prend ton créneau</small></div></button>
       <button data-pa="sos"><span style="background:rgba(255,106,61,.14)">🆘</span><div>Aide fan<small>Colle un message de fan difficile</small></div></button></div>
-    <div class="ct-box" id="bx${k}"><button class="ct-ib plus" id="pb${k}" aria-label="Plus">${svg(IC.plus, 2.2)}</button><input type="file" id="fi${k}" accept="image/*" hidden>
+    <div class="ct-box" id="bx${k}"><button class="ct-ib plus" id="pb${k}" aria-label="Plus">${svg(IC.plus, 2.2)}</button><input type="file" id="fi${k}" multiple hidden>
       <textarea id="ta${k}" rows="1" placeholder="${k === "t" ? "Répondre dans le fil…" : `Écrire dans ${chan(CUR).kind === "dm" ? chan(CUR).name : "#" + chan(CUR).name}…`}" enterkeyhint="send"></textarea>
       <button class="ct-ib" id="em${k}" aria-label="Emoji">${svg(IC.smile, 1.8)}</button><button class="ct-ib ct-mic" id="mi${k}" aria-label="Message vocal">${svg(IC.mic, 1.9)}</button><button class="ct-ib ct-send" id="se${k}" aria-label="Envoyer">${svg(IC.send, 2.4)}</button></div></div>`;
 }
@@ -319,14 +322,13 @@ function bindComposer(k) {
   if (k === "t") pl.querySelectorAll('[data-pa="poll"],[data-pa="swap"],[data-pa="sos"]').forEach(b => b.remove());
   if (chan(CUR)?.kind === "training") pl.querySelectorAll('[data-pa="swap"],[data-pa="sos"]').forEach(b => b.remove());
   if (B.me.role === "trainee") pl.querySelectorAll('[data-pa="poll"]').forEach(b => b.remove());
-  $("fi" + k).onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) uploadImg(k, f); };
+  $("fi" + k).onchange = e => { const fs = [...e.target.files]; e.target.value = ""; sendFiles(k, fs); };
   $("em" + k).onclick = e => { e.stopPropagation(); document.querySelector(".ct-ep")?.remove(); const p = document.createElement("div"); p.className = "ct-ep"; p.innerHTML = ["😂", "🔥", "💸", "👑", "🙏", "😏", "🥲", "💪", "👀", "❤️"].map(x => `<button>${x}</button>`).join(""); document.body.appendChild(p);
     const r = $("em" + k).getBoundingClientRect(); p.style.left = Math.max(8, Math.min(innerWidth - p.offsetWidth - 8, r.right - p.offsetWidth)) + "px"; p.style.top = (r.top - 58) + "px";
     p.querySelectorAll("button").forEach(b => b.onclick = ev => { ev.stopPropagation(); ta.setRangeText(b.textContent, ta.selectionStart, ta.selectionEnd, "end"); ta.dispatchEvent(new Event("input")); ta.focus(); }); setTimeout(() => document.addEventListener("click", () => p.remove(), { once: true }), 0); };
   $("mi" + k).onclick = () => record(k);
   // coller / glisser une image
-  ta.addEventListener("paste", e => { const f = [...(e.clipboardData?.files || [])][0]; if (f && f.type.startsWith("image/")) { e.preventDefault(); uploadImg(k, f); } });
-  $("bx" + k).addEventListener("dragover", e => e.preventDefault()); $("bx" + k).addEventListener("drop", e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && f.type.startsWith("image/")) uploadImg(k, f); });
+  ta.addEventListener("paste", e => { const fs = [...(e.clipboardData?.files || [])]; if (fs.length) { e.preventDefault(); sendFiles(k, fs); } });
 }
 function mentionPop(k) {
   const ta = $("ta" + k), v = ta.value.slice(0, ta.selectionStart), m = v.match(/@([\wÀ-ÿ.\-]*)$/); $("mp" + k)?.remove(); if (!m) return;
@@ -346,6 +348,45 @@ async function sendText(k) {
   catch (e) { ta.value = save; autosize(ta); toggleSend(k); blocked(k, e); }
 }
 function blocked(k, e) { const bx = $("bx" + k); bx.classList.remove("shake"); void bx.offsetWidth; bx.classList.add("shake"); notify(/bloqué/.test(e.message) ? "Message bloqué 🔒" : "Envoi impossible", e.message, "err"); }
+/* =============== fichiers : glisser-déposer, plusieurs à la fois, vidéos et documents =============== */
+const MAXF = 25 * 1048576;
+const FILE_OK = /^(image\/(jpeg|png|webp|gif)|video\/(mp4|quicktime|webm)|application\/(pdf|zip|x-zip-compressed|msword|vnd\.ms-excel|vnd\.openxmlformats-officedocument\.(wordprocessingml\.document|spreadsheetml\.sheet|presentationml\.presentation))|text\/(plain|csv))$/;
+const EXT_MIME = { pdf: "application/pdf", txt: "text/plain", csv: "text/csv", zip: "application/zip", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation", mov: "video/quicktime", mp4: "video/mp4", heic: "" };
+const mimeOf = f => f.type || EXT_MIME[(f.name.split(".").pop() || "").toLowerCase()] || "";
+const fsize = n => n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(n / 1024)) + " Ko";
+async function sendFiles(k, list) {
+  if (!CUR || !list.length) return;
+  if (k === "t" && !TH) k = "m";
+  const files = list.slice(0, 10); if (list.length > 10) notify("10 fichiers maximum à la fois", "Les premiers sont envoyés", "info");
+  for (const f of files) {
+    const mt = mimeOf(f);
+    if (!FILE_OK.test(mt)) { notify("Format non pris en charge", `${f.name} · images, vidéos, PDF, Word, Excel, PowerPoint, texte ou zip`, "err"); continue; }
+    if (f.size > MAXF && !mt.startsWith("image/")) { notify("Fichier trop lourd", `${f.name} fait ${fsize(f.size)} · 25 Mo maximum`, "err"); continue; }
+    if (mt.startsWith("image/")) await uploadImg(k, f); else await uploadFile(k, f, mt);
+  }
+}
+async function uploadFile(k, f, mt) {
+  const q = new URLSearchParams({ name: f.name, caption: $("ta" + k).value.trim() }); if (k === "t") q.set("thread", TH);
+  notify("Envoi en cours…", `${f.name} · ${fsize(f.size)}`, "info");
+  try { const r = await fetch(`/api/chat/c/${CUR}/upload?` + q, { method: "POST", headers: { "Content-Type": mt }, body: f, credentials: "same-origin" });
+    const d = await r.json().catch(() => ({ error: r.status === 413 ? "Fichier trop lourd (25 Mo maximum)" : "Erreur serveur" })); if (!r.ok) throw new Error(d.error);
+    $("ta" + k).value = ""; autosize($("ta" + k)); toggleSend(k); insert(d.message, true); } catch (e) { notify("Envoi impossible", `${f.name} · ${e.message}`, "err"); }
+}
+// zone de dépôt : tout le salon (ou le fil ouvert)
+function bindDrop() {
+  const has = e => [...(e.dataTransfer?.types || [])].includes("Files");
+  [["main", "m"], ["thp", "t"]].forEach(([id, k]) => { const el = $(id); if (!el || el.dataset.drop) return; el.dataset.drop = 1; let n = 0;
+    const ov = () => { let o = el.querySelector(".ct-drop"); if (!o) { o = document.createElement("div"); o.className = "ct-drop"; el.appendChild(o); }
+      o.innerHTML = `<div><span>${svg(IC.plus, 2.2)}</span><b>Dépose pour envoyer</b><small>${k === "t" ? "dans le fil" : "dans #" + esc(chan(CUR)?.kind === "dm" ? "ce message privé" : chan(CUR)?.name || "")} · images, vidéos, documents (25 Mo max)</small></div>`; return o; };
+    el.addEventListener("dragenter", e => { if (!has(e) || !CUR || (k === "t" && !TH)) return; e.preventDefault(); n++; ov().classList.add("on"); });
+    el.addEventListener("dragover", e => { if (!has(e) || !CUR) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; });
+    el.addEventListener("dragleave", e => { if (!has(e)) return; n = Math.max(0, n - 1); if (!n) el.querySelector(".ct-drop")?.classList.remove("on"); });
+    el.addEventListener("drop", e => { if (!has(e)) return; e.preventDefault(); e.stopPropagation(); n = 0; el.querySelector(".ct-drop")?.classList.remove("on"); sendFiles(k, [...e.dataTransfer.files]); });
+  });
+}
+window.addEventListener("dragover", e => { if ([...(e.dataTransfer?.types || [])].includes("Files")) e.preventDefault(); });
+window.addEventListener("drop", e => { if ([...(e.dataTransfer?.types || [])].includes("Files")) e.preventDefault(); });
 async function uploadImg(k, f) {
   let blob = f, w = 0, h = 0;
   try { const bmp = await createImageBitmap(f); w = bmp.width; h = bmp.height; if (f.type !== "image/gif" && Math.max(w, h) > 1600) { const s = 1600 / Math.max(w, h), c = document.createElement("canvas"); c.width = w * s; c.height = h * s; c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height); blob = await new Promise(r => c.toBlob(r, "image/jpeg", .85)); w = c.width; h = c.height; } } catch (e) {}
@@ -429,12 +470,13 @@ function stream() {
   es.addEventListener("message", async e => { const d = JSON.parse(e.data), c = chan(d.channel_id); if (!c) { refreshBoot(); return; }
     const visible = d.channel_id === CUR && !document.hidden;
     if (d.channel_id === CUR || (d.thread_root && d.thread_root === TH)) { if (MSGS.some(x => x.id === d.id) || THM.some(x => x.id === d.id)) return; const m = await api(`/api/chat/m/${d.id}`); insert(m, d.user_id === B.me.id); }
-    if (d.user_id !== B.me.id && !d.thread_root && !visible) { c.unread++; if ((d.mentions || []).includes(B.me.id)) c.mentions++; const m = await api(`/api/chat/m/${d.id}`).catch(() => null); if (m) c.last = { body: m.kind === "text" ? m.body.slice(0, 80) : m.kind === "voice" ? "🎤 Message vocal" : m.kind === "sale" ? "💸 Nouvelle vente" : m.kind === "win" ? "🎉 Victoire d'équipe" : m.kind === "motm" ? "🏅 Vote du coéquipier du mois" : m.kind === "qotd" ? "☕ Question du jour" : "…", at: m.created_at, username: m.username }; renderRail();
+    if (d.user_id !== B.me.id && !d.thread_root && !visible) { c.unread++; if ((d.mentions || []).includes(B.me.id)) c.mentions++; const m = await api(`/api/chat/m/${d.id}`).catch(() => null); if (m) c.last = { body: m.kind === "text" ? m.body.slice(0, 80) : m.kind === "voice" ? "🎤 Message vocal" : m.kind === "sale" ? "💸 Nouvelle vente" : m.kind === "video" ? "🎬 Vidéo" : m.kind === "file" ? "📎 Fichier" : m.kind === "win" ? "🎉 Victoire d'équipe" : m.kind === "motm" ? "🏅 Vote du coéquipier du mois" : m.kind === "qotd" ? "☕ Question du jour" : "…", at: m.created_at, username: m.username }; renderRail();
       if ((d.mentions || []).includes(B.me.id) || c.kind === "dm" || c.slug === "informations") { try { SND.notif?.(); } catch (er) {} notify(c.kind === "dm" ? `Message de ${m?.username}` : (d.mentions || []).includes(B.me.id) ? `${m?.username} t'a mentionné` : "📣 Nouvelle annonce", `${c.kind === "dm" ? "" : "#" + c.name + " · "}${(m?.body || "").slice(0, 90)}`, "info"); } }
-    if (d.user_id && TYP[d.user_id]) { delete TYP[d.user_id]; paintTyping(); } });
+    if (d.user_id && TYP[d.user_id + ":" + d.channel_id]) { delete TYP[d.user_id + ":" + d.channel_id]; paintTyping(); } });
   es.addEventListener("update", async e => { const d = JSON.parse(e.data); if (d.channel_id !== CUR) return; if (!MSGS.some(x => x.id === d.id) && !THM.some(x => x.id === d.id)) return; const m = await api(`/api/chat/m/${d.id}`).catch(() => null); if (m) replace(m); });
   es.addEventListener("react", e => { const d = JSON.parse(e.data); if (d.channel_id && d.channel_id !== CUR) return; if (d.super && d.user_id !== B.me.id && MSGS.some(x => x.id === d.id)) { rain(d.emoji); notify(`💥 ${d.username} envoie une super-réaction`, "", "info"); } });
-  es.addEventListener("typing", e => { const d = JSON.parse(e.data); if (d.user_id === B.me.id || d.channel_id !== CUR) return; TYP[d.user_id] = { name: d.username, at: Date.now(), thread: d.thread }; paintTyping(); });
+  // « … écrit » : propre à chaque salon (et à chaque fil), jamais affiché dans un autre salon
+  es.addEventListener("typing", e => { const d = JSON.parse(e.data); if (d.user_id === B.me.id) return; TYP[d.user_id + ":" + d.channel_id] = { name: d.username, at: Date.now(), thread: d.thread, ch: d.channel_id }; paintTyping(); });
   es.addEventListener("presence", e => { const d = JSON.parse(e.data); if (USERS[d.user_id]) { USERS[d.user_id].status = d.status; const u = B.users.find(x => x.id === d.user_id); if (u) u.status = d.status; } document.querySelectorAll(".ct-av").forEach(() => {}); renderRail(); });
   es.addEventListener("seen", e => { const d = JSON.parse(e.data); if (d.channel_id === CUR && d.user_id !== B.me.id) { SEEN = d.last_id; paintSeen(); } });
   es.addEventListener("pins", async e => { const d = JSON.parse(e.data); if (d.channel_id !== CUR) return; const r = await api(`/api/chat/c/${CUR}/messages?before=0`).catch(() => null); if (r) { PINS = r.pins; paintPins(); } });
@@ -442,7 +484,7 @@ function stream() {
   es.onerror = () => {};
 }
 function paintTyping() { const now = Date.now(); Object.keys(TYP).forEach(k => { if (now - TYP[k].at > 5000) delete TYP[k]; });
-  const main = Object.values(TYP).filter(t => !t.thread), th = Object.values(TYP).filter(t => t.thread && t.thread === TH);
+  const here = Object.values(TYP).filter(t => t.ch === CUR), main = here.filter(t => !t.thread), th = here.filter(t => t.thread && t.thread === TH);
   const txt = a => a.length === 1 ? `<b>${esc(a[0].name)}</b> écrit` : a.length ? `<b>${a.slice(0, 2).map(t => esc(t.name)).join(", ")}</b> écrivent` : "";
   if ($("ty")) { $("ty").innerHTML = main.length ? `<i></i><i></i><i></i>${txt(main)}…` : ""; $("ty").classList.toggle("on", !!main.length); }
   if ($("tty")) { $("tty").innerHTML = th.length ? `<i></i><i></i><i></i>${txt(th)}…` : ""; $("tty").classList.toggle("on", !!th.length); } }
@@ -484,7 +526,7 @@ function dmSheet() {
   const me = await api("/api/me"); renderShell("chat", me);
   await refreshBoot();
   $("meBar").innerHTML = `${av(B.me.username, USERS[B.me.id]?.status)}<div><b>${esc(nameOf(B.me.id, B.me.username))}</b><div style="font-size:11.5px;color:#777">${ST_LBL[USERS[B.me.id]?.status === "offline" ? "online" : USERS[B.me.id]?.status] || "en ligne"}</div></div>`;
-  $("q").oninput = renderRail; stream();
+  $("q").oninput = renderRail; stream(); bindDrop();
   const q = +new URLSearchParams(location.search).get("c"); const first = q && chan(q) ? q : (B.channels.find(c => c.slug === "informations" && c.unread) || B.channels.find(c => c.slug === (me.role === "trainee" ? "formation" : "general")) || B.channels[0]).id;
   if (!MOB() || q) openCh(first);
 })();

@@ -315,3 +315,27 @@
 .ct-mv .ls i{font-style:normal;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:900;border:1px solid #333;color:transparent;flex-shrink:0}
 .ct-mv .ls .on i{background:#ffd23f;border-color:#ffd23f;color:#1b1306}
 .ct-mv .em{padding:20px;text-align:center;color:#8a8a8a;font-size:13px}
+/* lisibilité : messages plus aérés */
+.ct-m{padding:9px 18px 7px}
+.ct-m:not(.cont){margin-top:6px}
+.ct-m.cont{padding-top:3px;padding-bottom:4px}
+.ct-m .who{margin-bottom:4px}
+.ct-tx{line-height:1.55}
+.ct-day{margin:26px 18px 12px}
+.ct-sys{padding:10px 18px}
+/* glisser-déposer et pièces jointes */
+.ct-main,.ct-thp{position:relative}
+.ct-drop{position:absolute;inset:10px;z-index:40;display:grid;place-items:center;border-radius:22px;border:2px dashed rgba(95,211,162,.6);background:rgba(10,14,12,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .2s}
+.ct-drop.on{opacity:1}
+.ct-drop div{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:20px;transform:scale(.96);transition:transform .25s}
+.ct-drop.on div{transform:none}
+.ct-drop span{width:62px;height:62px;border-radius:20px;display:grid;place-items:center;background:rgba(95,211,162,.14);color:#5fd3a2;animation:ctDropB 1.2s ease-in-out infinite}.ct-drop span svg{width:28px;height:28px}
+.ct-drop b{font:900 20px Inter;letter-spacing:-.02em;color:#fff}.ct-drop small{font-size:13px;color:#9a9a9a}
+@keyframes ctDropB{50%{transform:translateY(-4px)}}
+.ct-vid{margin-top:4px;max-width:420px;border-radius:14px;overflow:hidden;border:1px solid #262626;background:#000}.ct-vid video{display:block;width:100%;max-height:420px}
+.ct-file{margin-top:4px;display:flex;align-items:center;gap:12px;max-width:380px;padding:10px 12px;border-radius:14px;border:1px solid #262626;background:#121212;color:#eee;text-decoration:none;transition:background .2s,border-color .2s}
+.ct-file:hover{background:#171717;border-color:#333}
+.ct-file .ic{width:42px;height:46px;border-radius:9px;flex:none;display:grid;place-items:center;font:900 10.5px Inter;letter-spacing:.04em;color:#fff;background:#3a3a3a}
+.ct-file .ic.epdf{background:#d9534f}.ct-file .ic.edoc,.ct-file .ic.edocx{background:#2b6cd4}.ct-file .ic.exls,.ct-file .ic.exlsx,.ct-file .ic.ecsv{background:#1f8a4c}.ct-file .ic.epptx{background:#d4642b}.ct-file .ic.ezip{background:#7a5cd4}
+.ct-file .nm{flex:1;min-width:0}.ct-file .nm b{display:block;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ct-file .nm small{display:block;font-size:12px;color:#888;margin-top:2px}
+.ct-file .dl{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#bbb;background:#1a1a1a;flex:none}.ct-file .dl svg{width:16px;height:16px}

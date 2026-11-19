@@ -58,3 +58,5 @@
 @media(prefers-reduced-motion:reduce){.pz *{animation:none!important}.pz-ov{transition:none}}
 /* ordinateur : la pastille se place à droite du menu (sans recouvrir le compte en bas du menu) */
 @media(min-width:861px){.pz-pill{left:258px;bottom:22px;transition:transform .6s cubic-bezier(.34,1.56,.64,1),opacity .4s,border-color .4s,left .55s cubic-bezier(.5,0,.15,1)}body:has(.sidebar.mini) .pz-pill{left:98px}}
+/* page du chat : au-dessus de la barre du compte, dans la colonne des salons */
+@media(min-width:861px){body:has(.ct-rail) .pz-pill{left:254px;bottom:78px}body:has(.ct-rail):has(.sidebar.mini) .pz-pill{left:94px}}
