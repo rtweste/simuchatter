@@ -7,10 +7,16 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     CREATE TABLE IF NOT EXISTS team_tips (id INTEGER PRIMARY KEY, recruit_id INTEGER NOT NULL, leader_id INTEGER NOT NULL, text TEXT NOT NULL, at INTEGER NOT NULL, seen INTEGER NOT NULL DEFAULT 0);
     CREATE TABLE IF NOT EXISTS assistant_log (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, at INTEGER NOT NULL, q TEXT, a TEXT, escalated INTEGER NOT NULL DEFAULT 0);`);
   const user = id => db.prepare("SELECT id, username, role, active, created_at FROM users WHERE id = ?").get(id);
+  // ventes automatiques Twizz : l'assistant explique le mode en cours
+  const twOn = () => { try { const r = db.prepare("SELECT value FROM settings WHERE key = 'twizz_on'").get(); return !!r && r.value === "true"; } catch (e) { return false; } };
+  const faq = () => FAQ.replace("{{VENTES}}", twOn()
+    ? "Ventes (MODE ACTUEL : automatique) : les ventes Twizz arrivent toutes seules sur le site, plus besoin de les déclarer ni de faire de capture. Un PPV envoyé depuis la Messagerie du site est compté au chatter qui l'a envoyé ; sinon la vente va au chatter en shift sur la créatrice ; sinon elle reste au CA de l'agence. Seuls les contenus perso et les sessions Snap payés en dehors de Twizz se déclarent encore, dans Ventes → « Perso ou Snap ». La partie « mode manuel » ci-dessous ne s'applique plus."
+    : "Ventes (MODE ACTUEL : manuel) : chaque vente se déclare comme expliqué ci-dessous.");
 
   /* =================== ASSISTANT =================== */
   const FAQ = `FONCTIONNEMENT DE L'AGENCE STELLADS (site stellads.fr)
-- Déclarer une vente : quand le média payant passe de « En attente » à « Accepté » sur Twizz, le chatter prend une capture d'écran et la dépose dans Ventes → « Déclarer une vente », avec le montant brut et la créatrice. L'IA du site lit la capture et pré-remplit le montant. Le manager valide ou refuse ensuite. Ne jamais déclarer deux fois la même vente (refus « Doublon » = point de sanction). Ne pas déclarer un média encore « En attente ».
+- {{VENTES}}
+- (mode manuel) Déclarer une vente : quand le média payant passe de « En attente » à « Accepté » sur Twizz, le chatter prend une capture d'écran et la dépose dans Ventes → « Déclarer une vente », avec le montant brut et la créatrice. L'IA du site lit la capture et pré-remplit le montant. Le manager valide ou refuse ensuite. Ne jamais déclarer deux fois la même vente (refus « Doublon » = point de sanction). Ne pas déclarer un média encore « En attente ».
 - Pointer : sur l'Accueil ou le Planning, glisser « pour commencer » en choisissant la créatrice ; en fin de shift, bouton « Terminer ». Au moment de terminer, une fenêtre de passation permet de noter les fans à suivre pour le chatter suivant (ou « Rien à signaler »).
 - Passation : en arrivant sur une créatrice, le chatter voit sur son Accueil la passation du chatter précédent et coche les fans dont il s'est occupé. Un fan prioritaire non suivi est signalé au manager.
 - Planning : les shifts de la semaine sont dans Planning. On peut y proposer un échange de shift et demander un renfort.
@@ -47,7 +53,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
 Tu réponds UNIQUEMENT à partir des informations ci-dessous. Si la réponse n'y est pas ou si c'est une décision qui revient au manager (exception, litige, changement de planning, réclamation de paie), dis-le simplement et propose d'utiliser le bouton « Transmettre au manager ». N'invente jamais de chiffre, de règle ou de date.
 Tu ne parles que du travail à l'agence. Tu ne rédiges pas de messages explicites et tu rappelles les règles éthiques si on te demande de les contourner.
 
-${FAQ}
+${faq()}
 
 ${c}`;
   const hits = new Map();
@@ -64,7 +70,7 @@ ${c}`;
     catch (e) { console.error("assistant", e.message); res.status(500).json({ error: "L'assistant ne répond pas pour le moment. Tu peux transmettre ta question au manager." }); }
   });
   // manager : voir exactement ce que l'assistant sait d'un chatter
-  app.get("/api/admin/assistant/context/:id", auth, admin, (req, res) => { const id = parseInt(req.params.id, 10); if (!user(id)) return res.status(404).json({ error: "Introuvable" }); res.json({ faq: FAQ, context: context(id) }); });
+  app.get("/api/admin/assistant/context/:id", auth, admin, (req, res) => { const id = parseInt(req.params.id, 10); if (!user(id)) return res.status(404).json({ error: "Introuvable" }); res.json({ faq: faq(), context: context(id) }); });
   app.post("/api/assistant/escalate", auth, (req, res) => {
     const q = String(req.body?.question || "").trim().slice(0, 600); if (!q) return res.status(400).json({ error: "Question vide" });
     if (req.body?.id) db.prepare("UPDATE assistant_log SET escalated = 1 WHERE id = ? AND user_id = ?").run(parseInt(req.body.id, 10), req.user.id);

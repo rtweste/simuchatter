@@ -178,7 +178,7 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
       let uid = null;
       if (t.conv_id) { const s = (db.prepare("SELECT user_id FROM twizz_sent WHERE conv_id = ? AND price IS NOT NULL AND at <= ? AND at > ? ORDER BY at DESC LIMIT 1").get(t.conv_id, at + 60e3, at - 7 * 864e5) || db.prepare("SELECT user_id FROM twizz_sent WHERE conv_id = ? AND at <= ? AND at > ? ORDER BY at DESC LIMIT 1").get(t.conv_id, at + 60e3, at - 7 * 864e5)); if (s) uid = s.user_id; }
       if (!uid && modelId) uid = whoSold(modelId, at);
-      if (uid) makeSale(t, uid); else db.prepare("UPDATE twizz_tx SET state = 'no_chatter' WHERE id = ?").run(id);
+      if (uid) makeSale(t, uid); else db.prepare("UPDATE twizz_tx SET state = 'ca_only' WHERE id = ?").run(id);   // personne à qui la relier : CA de l'agence, sans commission
     }
     return 1;
   }
@@ -211,6 +211,18 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
       saveStatus(); console.error("Twizz :", e.message); throw e;
     }
   }
+  // reprend toutes les ventes depuis une date (une fois, à l'activation) : pages espacées, 40 au plus par créatrice
+  async function backfill(fromMs, reason) {
+    let added = 0; const mapped = db.prepare("SELECT * FROM twizz_creators WHERE model_id IS NOT NULL").all(), from = ymd(fromMs), to = ymd(now() + 864e5);
+    for (const c of mapped) for (let page = 0; page < 40; page++) {
+      const q = new URLSearchParams({ creatorId: c.twizz_id, includeStats: "true", fromDate: from, toDate: to, type: "month", offset: String(page * 15), limit: "15" });
+      const j = await get("/earning/twizz/stats?" + q), L = (j.data && j.data.detailPaymentReport) || [];
+      L.forEach(it => added += ingest(it, c.twizz_id, c.model_id)); if (L.length < 15) break;
+    }
+    S.set("twizz_backfill", { from: fromMs, at: now(), added, reason: reason || "" }); if (added) console.log(`Twizz : reprise de ${added} transaction(s) depuis le ${from}`);
+    return { added };
+  }
+  const monthStart = () => { const p = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" }).slice(0, 7); return Date.parse(p + "-01T00:00:00+01:00"); };
   setInterval(() => {
     if (!cfg().on || !configured()) return;
     if (status.pausedUntil && now() < status.pausedUntil) return;
@@ -252,7 +264,9 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     if (typeof b.on === "boolean") {
       const was = cfg().on; S.set("twizz_on", b.on);
       // les ventes automatiques commencent maintenant (pas de doublon avec les ventes déjà déclarées)
-      if (b.on && !was) { S.set("twizz_since", now()); log(req.user.id, "a", `**${req.user.username}** a activé les ventes automatiques Twizz`, ""); sync("activation").catch(() => {}); }
+      if (b.on && !was) { S.set("twizz_since", now()); log(req.user.id, "a", `**${req.user.username}** a activé les ventes automatiques Twizz`, "");
+        // le CA du mois se calcule depuis Twizz : on reprend le mois en cours depuis le 1er, puis la synchro normale continue
+        running = running.then(() => backfill(monthStart(), "activation")).catch(e => console.error("Twizz reprise :", e.message)).then(() => doSync("activation")).catch(() => {}); }
       if (!b.on && was) log(req.user.id, "a", `**${req.user.username}** a coupé les ventes automatiques Twizz`, "");
     }
     res.json(overview());
@@ -270,11 +284,11 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     makeSale(t, uid); log(req.user.id, "a", `**${req.user.username}** a attribué une vente Twizz (${r2(t.net)} € net)`, ""); res.json(overview());
   });
   // pour la page Ventes : les déclarations sont remplacées par l'import automatique
-  app.get("/api/twizz/mode", auth, (req, res) => res.json({ auto: cfg().on }));
+  app.get("/api/twizz/mode", auth, (req, res) => res.json({ auto: cfg().on, since: cfg().since }));
 
   // pour le temps réel (socket Twizz) : badge courant et identifiant du compte (champ sourceId du badge)
   const token = () => sess.cookies.token || null;
   const accountId = () => { try { return JSON.parse(Buffer.from(String(token()).split(".")[1], "base64url").toString()).sourceId || ""; } catch (e) { return ""; } };
   async function ensureAuth() { if (!token()) await reauth(true); return token(); }
-  return { auto: () => cfg().on, sync, status: () => status, call, get, S, configured, fail, token, accountId, ensureAuth, reauth };
+  return { auto: () => cfg().on, since: () => cfg().since, backfill, sync, status: () => status, call, get, S, configured, fail, token, accountId, ensureAuth, reauth };
 };

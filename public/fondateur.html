@@ -134,7 +134,7 @@
     const c = q(".rz"); if (!c) return;
     c.querySelectorAll("[data-rp]").forEach(b => b.addEventListener("click", () => loadReset(b.dataset.rp)));
     c.querySelectorAll("[data-rz]").forEach(b => b.addEventListener("click", () => { const x = RS.parts.find(y => y.k === b.dataset.rz); x.on = !x.on;
-      if (x.k === "sales" && x.on && !confirm(`Supprimer aussi les ${x.n} ventes déclarées de cette quinzaine ? Elles disparaissent des ventes, du classement et des paies.`)) { x.on = false; return; }
+      if (x.k === "sales" && x.on && !confirm(`Supprimer aussi les ${x.n} ventes de cette quinzaine ? Elles disparaissent des ventes, du classement et des paies.`)) { x.on = false; return; }
       b.classList.toggle("on", x.on); c.querySelector("[data-rzgo]").disabled = !RS.parts.some(y => y.on); }));
     const hb = c.querySelector("[data-rzgo]"); const fill = hb.querySelector(".fill"), lb = hb.querySelector("span"); let t0 = 0, raf = 0, busy = false; const DUR = 1600;
     const tick = now => { const k = Math.min(1, (now - t0) / DUR); fill.style.width = (k * 100) + "%"; if (k < 1) raf = requestAnimationFrame(tick); else go(); };

@@ -313,7 +313,8 @@ app.get("/api/me", auth, (req, res) => {
     sells: req.user.role === "admin" && !!(ob && ob.sells), pushNeeded: !req.viewAs && pushNeeded(req.user),
     viewAs: req.viewAs ? { username: req.user.username, real: req.realUser.username } : null,
     celebrate: !req.viewAs && COMM ? COMM.celebrate(req.user.id) : null,
-    voiceNeeded: !req.viewAs && req.user.role === "chatter" && VOICE ? VOICE.needed(req.user.id) : false });
+    voiceNeeded: !req.viewAs && req.user.role === "chatter" && VOICE ? VOICE.needed(req.user.id) : false,
+    inbox: req.user.rk !== "founder" && app.locals.inboxOf ? app.locals.inboxOf(req) : false });
 });
 // nouvelle version de la vidéo : les élèves déjà inscrits la regardent une fois (une seule réinitialisation)
 setTimeout(() => { try { const k = db.prepare("SELECT value FROM settings WHERE key = 'intro_version'").get();
@@ -553,7 +554,7 @@ require("./purge")(app, db, auth, admin, { gest: GEST });
 const NOTIFY = require("./notify")(app, db, auth, admin, { bcrypt, PROD, gest: GEST, planning: PLAN });
 require("./backups")(app, db, auth, admin, { dbPath: DB_PATH, notify: NOTIFY, gest: GEST });   // sauvegardes de nuit + téléchargement fondateur
 const TWIZZ = require("./twizz")(app, db, auth, admin, { gest: GEST });   // CRM Twizz : ventes automatiques (lecture seule)
-require("./twizz-inbox")(app, db, auth, admin, { twizz: TWIZZ, ai });   // messagerie Twizz (test, fondateur seulement)
+require("./twizz-inbox")(app, db, auth, admin, { twizz: TWIZZ, ai });   // messagerie Twizz (fondateur, puis l'équipe qu'il ouvre)
 require("./profile")(app, db, auth, { bcrypt, PERM });   // Mon profil, Paramètres, carte de profil dans le chat   // notifications sur le téléphone, invitations, premier lancement
 require("./announce")(app, db, auth, admin, { gest: GEST });   // annonces importantes / urgentes : bandeau, écran bloquant, suivi de lecture   // comptes désactivés depuis 24 h : supprimés (historique gardé)   // alertes du shift en cours (cloche manager, salle de contrôle)
 /* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */

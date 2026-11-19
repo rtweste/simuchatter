@@ -54,6 +54,7 @@ async function loadM(m) {
 const trendHtml = (a, b) => { if (!b) return ""; const p = Math.round((a - b) / b * 100); return `<span class="c-trend ${p >= 0 ? "up" : "dn"}">${p >= 0 ? "▲" : "▼"} ${Math.abs(p)} %</span>`; };
 function srcBar(el, s, legacyNet) {
   const parts = [["s1", "Chatting", s.chat, true], ["s2", "Abonnements", s.abo], ["s3", "Live", s.live], ["s4", "Collections", s.coll], ["s5", "Média push", s.push]];
+  if (s.ppv) parts.push(["s7", "PPV sans chatter", s.ppv, true]); if (s.autres) parts.push(["s8", "Autres ventes Twizz", s.autres, true]);
   if (legacyNet) parts.push(["s6", "Saisi d'un bloc", legacyNet]);
   const tot = parts.reduce((t, p) => t + (p[2] || 0), 0);
   el.innerHTML = !tot ? `<span style="flex:1;color:#6a6a6a;font-size:12px;font-weight:700;justify-content:center;align-items:center">Pas encore de CA sur cette période</span>`
@@ -90,6 +91,7 @@ function renderProj() {
 }
 function renderAlerts() {
   const out = [];
+  if (M.auto) out.push(`<div class="c-al" style="border-color:rgba(95,211,162,.35);background:rgba(95,211,162,.07)"><span class="i" style="color:#5fd3a2">⚡</span><div><b>CA rempli automatiquement depuis Twizz</b><small>Chatting, abonnements, live, collections et média push arrivent tout seuls. Les PPV qu'on ne peut relier à aucun chatter restent au CA de l'agence, sans commission.</small></div></div>`);
   M.models.filter(m => m.missing && m.missing.length).forEach(m => {
     const names = m.missing.map(k => SRCS.find(s => s[0] === k)[1]);
     out.push(`<div class="c-al r"><span class="i">!</span><div><b>${esc(m.name)} : ${names.length > 2 ? names.length + " entrées" : names.join(" et ")} pas encore saisi${names.length > 1 ? "es" : ""}</b><small>Son CA du mois ne compte que le chatting et les entrées déjà remplies.</small>${lockedM() ? "" : `<button class="c-sb" data-goto="${m.id}:${m.missing[0]}">Saisir</button>`}</div></div>`);
@@ -129,9 +131,12 @@ function renderCreators() {
       <div class="c-srs">
         <div class="c-sr auto"><span>Chatting <em class="c-tag v" style="font-style:normal"><i></i>auto · ${m.chatCount} vente${m.chatCount > 1 ? "s" : ""}</em></span><b>${E(m.chatNet)}</b></div>
         <div class="c-sr sub"><span>${E(m.chatBrut)} brut − ${fix2(M.fee)} % de la plateforme</span></div>
-        ${SRCS.map(([k, l]) => `<div class="c-sr${m.sources[k] == null && !m.legacy ? " miss" : ""}"><span>${l}</span><label><input data-src="${k}" data-m="${m.id}" value="${m.sources[k] == null ? "" : fix2(m.sources[k])}" placeholder="${m.legacy ? "0" : "à saisir"}" inputmode="decimal" aria-label="${l} de ${esc(m.name)} (net)"> €</label></div>`).join("")}
+        ${m.auto ? SRCS.map(([k, l]) => `<div class="c-sr auto"><span>${l} <em class="c-tag v" style="font-style:normal"><i></i>Twizz</em></span><b>${E(m.sources[k] || 0)}</b></div>`).join("")
+          + (m.ppvAgence ? `<div class="c-sr auto"><span>PPV sans chatter <em class="c-tag v" style="font-style:normal"><i></i>agence</em></span><b>${E(m.ppvAgence)}</b></div>` : "")
+          + (m.autres ? `<div class="c-sr auto"><span>Autres ventes Twizz <em class="c-tag v" style="font-style:normal"><i></i>Twizz</em></span><b>${E(m.autres)}</b></div>` : "") : ""}
+        ${m.auto ? "" : SRCS.map(([k, l]) => `<div class="c-sr${m.sources[k] == null && !m.legacy ? " miss" : ""}"><span>${l}</span><label><input data-src="${k}" data-m="${m.id}" value="${m.sources[k] == null ? "" : fix2(m.sources[k])}" placeholder="${m.legacy ? "0" : "à saisir"}" inputmode="decimal" aria-label="${l} de ${esc(m.name)} (net)"> €</label></div>`).join("")}
       </div>
-      <div class="c-mut" style="margin-top:6px;font-size:11px">Abonnements, Live, Collections et Média push : montants nets, comptés tels quels</div>
+      <div class="c-mut" style="margin-top:6px;font-size:11px">${m.auto ? "Tout vient de Twizz (montants nets) : rien à saisir" : "Abonnements, Live, Collections et Média push : montants nets, comptés tels quels"}</div>
       <div class="vs"><span>Sa part<b>${E(m.creatorPay)}</b></span><span>Déjà versé<b>${E(m.creatorPaid)}</b></span><span>Reste à verser<b>${E(Math.max(0, m.creatorPay - m.creatorPaid))}</b></span></div>
       <div class="vb"><i data-w="${m.creatorPay > 0 ? Math.min(100, m.creatorPaid / m.creatorPay * 100) : 0}"></i></div>
       <div class="ft"><div class="c-tops">${tp.map(l => `<span><b>${esc(l.username)}</b> ${E(l.validatedBrut)}</span>`).join("")}</div>
@@ -333,9 +338,9 @@ $("exportBtn").onclick = () => {
   let rows, name;
   if (VIEW === "m") {
     rows = [[`StellADS — Compta ${M.period.label}${M.locked ? " (clôturé)" : ""}`], [],
-      ["CRÉATRICES"], ["Créatrice", "Chatting brut", "Chatting net", "Abonnements", "Live", "Collections", "Média push", "CA net", "CA brut", "% créatrice", "Sa part", "Déjà versé"],
-      ...M.models.map(m => [m.name, n(m.chatBrut), n(m.chatNet), n(m.sources.abo), n(m.sources.live), n(m.sources.coll), n(m.sources.push), n(m.net), n(m.brut), n(m.creator_pct), n(m.creatorPay), n(m.creatorPaid)]),
-      ["Total", "", "", "", "", "", "", n(M.totals.net), n(M.totals.brut), "", n(M.totals.creators)], [],
+      ["CRÉATRICES"], ["Créatrice", "Chatting brut", "Chatting net", "Abonnements", "Live", "Collections", "Média push", "PPV sans chatter", "Autres ventes Twizz", "CA net", "CA brut", "% créatrice", "Sa part", "Déjà versé"],
+      ...M.models.map(m => [m.name, n(m.chatBrut), n(m.chatNet), n(m.sources.abo), n(m.sources.live), n(m.sources.coll), n(m.sources.push), n(m.ppvAgence || 0), n(m.autres || 0), n(m.net), n(m.brut), n(m.creator_pct), n(m.creatorPay), n(m.creatorPaid)]),
+      ["Total", "", "", "", "", "", "", "", "", n(M.totals.net), n(M.totals.brut), "", n(M.totals.creators)], [],
       ["PAIE DES CHATTERS (par quinzaine)"], ["Chatter", "Ventes nettes", "Paie du mois", "1 – 15", "16 – fin", "Tout payé"], ...M.chatters.map(c => [c.username, n(c.sales), n(c.pay), n(c.halves[0]?.pay), n(c.halves[1]?.pay), c.paidAll ? "oui" : "non"]), [],
       ["RÉSUMÉ"], ["CA brut", n(M.totals.brut)], ["CA net", n(M.totals.net)], ["Plateforme", n(M.totals.platform)], ["Part des créatrices", n(M.totals.creators)], ["Paie des chatters", n(M.totals.chatters)], ["Marge de l'agence", n(M.totals.margin)]];
     name = `stellads-compta-${M.period.key}.csv`;

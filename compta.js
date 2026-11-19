@@ -304,6 +304,26 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     db.prepare("DELETE FROM clocks WHERE id = ?").run(parseInt(req.params.id, 10)); res.json({ ok: true });
   });
 
+  /* ================= CA automatique depuis Twizz ================= */
+  // ventes automatiques Twizz allumées : abonnements, live, collections, média push, PPV sans chatter et autres ventes
+  // se calculent depuis les transactions importées (plus de saisie à la main pour ces mois-là)
+  const twSet = k => { try { const r = db.prepare("SELECT value FROM settings WHERE key = ?").get(k); return r ? JSON.parse(r.value) : null; } catch (e) { return null; } };
+  const twSince = () => twSet("twizz_on") === true ? twSet("twizz_since") : null;
+  const autoMonth = mkey => { const t = twSince(); return !!t && parisDate(t).slice(0, 7) <= String(mkey).slice(0, 7); };
+  const TWMAP = t => /subscri|abonn/i.test(t) ? "abo" : /live/i.test(t) ? "live" : /collection/i.test(t) ? "coll" : /push/i.test(t) ? "push" : /privatemedia|private_media/i.test(t) ? "ppv" : "autres";
+  const rr2 = x => Math.round(x * 100) / 100;
+  function twizzSrc(from, to) {   // dates « AAAA-MM-JJ » (heure de Paris), incluses
+    const out = {}, since = twSince(); let rows = [];
+    try { rows = db.prepare("SELECT model_id, type, net, at, state FROM twizz_tx WHERE refund = 0 AND net > 0 AND model_id IS NOT NULL AND at >= ? AND at <= ?")
+      .all(Date.parse(from + "T00:00:00Z") - 3 * 3600e3, Date.parse(to + "T23:59:59Z") + 3 * 3600e3); } catch (e) { return out; }
+    rows.forEach(r => { const d = parisDate(r.at); if (d < from || d > to) return; const k = TWMAP(r.type);
+      // un PPV relié à un chatter est déjà compté dans le chatting (vente validée) ; avant l'activation, ils étaient déclarés à la main
+      if (k === "ppv" && !(since && r.at >= since && (r.state === "ca_only" || r.state === "no_chatter"))) return;
+      const o = out[r.model_id] || (out[r.model_id] = { abo: 0, live: 0, coll: 0, push: 0, ppv: 0, autres: 0 }); o[k] = rr2(o[k] + r.net); });
+    return out;
+  }
+  const TW0 = { abo: 0, live: 0, coll: 0, push: 0, ppv: 0, autres: 0 };
+
   /* ================= COMPTA ================= */
   function computeCompta(pkey) {
     const p = periodInfo(pkey);
@@ -333,16 +353,18 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       .forEach(a => overrides[a.user_id + ":" + a.model_id] = a.amount);
 
     const r2 = x => Math.round(x * 100) / 100;
+    const AT = autoMonth(mi.key) ? twizzSrc(p.from, p.to) : null;
     const modelRows = models.map(m => {
       const totalH = users.reduce((t, u) => t + (hours[u.id + ":" + m.id] || 0), 0);
       const chatBrut = r2(chatBy[m.id] || 0), chatNet = r2(chatBrut * keep);
+      const tw = AT ? (AT[m.id] || TW0) : null; if (tw) { SRC.forEach(k => m[k] = tw[k]); m.v2 = 1; m.legacy_net = 0; }
       const legacy = !m.v2 && m.brut != null;   // CA saisi d'un bloc avant les sources
-      const manual = (SRC.reduce((t, k) => t + (m[k] || 0), 0) + (m.legacy_net || 0)) * share;
+      const manual = tw ? tw.abo + tw.live + tw.coll + tw.push + tw.ppv + tw.autres : (SRC.reduce((t, k) => t + (m[k] || 0), 0) + (m.legacy_net || 0)) * share;
       const net = legacy ? r2((m.net || 0) * share) : r2(chatNet + manual), brut = legacy ? m.brut * share : chatBrut + manual / keep;
       const missing = legacy ? [] : SRC.filter(k => m[k] == null);
       const creatorPay = r2(net * m.creator_pct / 100), cp = paidC[m.id];
       return { id: m.id, name: m.name, creator_pct: m.creator_pct, brut, net, legacy, chatBrut, chatNet, chatCount: chatN[m.id] || 0,
-        sources: Object.fromEntries(SRC.map(k => [k, m[k] == null ? null : r2(m[k] * share)])), missing,
+        sources: Object.fromEntries(SRC.map(k => [k, m[k] == null ? null : r2(tw ? m[k] : m[k] * share)])), missing: tw ? [] : missing, auto: !!tw, ppvAgence: tw ? tw.ppv : 0, autres: tw ? tw.autres : 0,
         totalHours: totalH, creatorPay, creatorPaid: cp ? cp.amount : 0, creatorPaidAt: cp ? cp.paid_at : null, agencyShare: net - creatorPay,
         commissionBase: base === "brut" ? brut : net };
     });
@@ -384,7 +406,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       agencyShare: sum(modelRows, m => m.agencyShare), chatters: sum(chatters, c => c.pay) };
     totals.margin = totals.agencyShare - totals.chatters;
     totals.brut = r2(totals.brut); totals.platform = r2(totals.brut - totals.net);
-    totals.sources = { chat: sum(modelRows, m => m.legacy ? 0 : m.chatNet), legacy: sum(modelRows, m => m.legacy ? m.net : 0) };
+    totals.sources = { chat: sum(modelRows, m => m.legacy ? 0 : m.chatNet), legacy: sum(modelRows, m => m.legacy ? m.net : 0), ppv: sum(modelRows, m => m.ppvAgence), autres: sum(modelRows, m => m.autres) };
     SRC.forEach(k => totals.sources[k] = sum(modelRows, m => m.legacy ? 0 : m.sources[k]));
     return { period: p, base, mode, fee, models: modelRows, lines, chatters, totals, unattributed };
   }
@@ -415,24 +437,26 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     db.prepare("SELECT model_id, sold_at FROM sales WHERE status = 'validated'").all().filter(x => parisDate(x.sold_at).slice(0, 7) === mkey)
       .forEach(x => chatN[x.model_id] = (chatN[x.model_id] || 0) + 1);
     const paidC = {}; db.prepare("SELECT model_id, amount, paid_at FROM creator_paid WHERE period = ?").all(mkey).forEach(x => paidC[x.model_id] = x);
+    const AM = autoMonth(mkey) ? twizzSrc(mi.from, mi.to) : null;
     const models = db.prepare(`SELECT m.id, m.name, m.creator_pct, r.brut, r.net, r.abo, r.live, r.coll, r.push, r.v2, r.legacy_net FROM models m
       LEFT JOIN revenues r ON r.model_id = m.id AND r.period = ? ORDER BY m.name`).all(mkey).map(m => {
       const chatBrut = r2(chatBy[m.id] || 0), chatNet = r2(chatBrut * keep);
+      const tw = AM ? (AM[m.id] || TW0) : null; if (tw) { SRC.forEach(k => m[k] = tw[k]); m.v2 = 1; m.legacy_net = 0; }
       const legacy = !m.v2 && m.brut != null;
-      const manual = SRC.reduce((t, k) => t + (m[k] || 0), 0) + (m.legacy_net || 0);
+      const manual = SRC.reduce((t, k) => t + (m[k] || 0), 0) + (m.legacy_net || 0) + (tw ? tw.ppv + tw.autres : 0);
       const net = legacy ? (m.net || 0) : r2(chatNet + manual), brut = legacy ? m.brut : r2(chatBrut + manual / keep);
       const missing = legacy ? [] : SRC.filter(k => m[k] == null);
       const creatorPay = r2(net * m.creator_pct / 100), cp = paidC[m.id];
       return { id: m.id, name: m.name, creator_pct: m.creator_pct, brut, net, legacy, legacyNet: m.legacy_net || 0, chatBrut, chatNet, chatCount: chatN[m.id] || 0,
-        sources: { abo: m.abo, live: m.live, coll: m.coll, push: m.push }, missing,
+        sources: { abo: m.abo, live: m.live, coll: m.coll, push: m.push }, missing: tw ? [] : missing, auto: !!tw, ppvAgence: tw ? tw.ppv : 0, autres: tw ? tw.autres : 0,
         creatorPay, creatorPaid: cp ? cp.amount : 0, creatorPaidAt: cp ? cp.paid_at : null, agencyShare: r2(net - creatorPay) };
     });
     const sum = (arr, f) => arr.reduce((t, x) => t + (f(x) || 0), 0);
     const totals = { brut: r2(sum(models, m => m.brut)), net: r2(sum(models, m => m.net)), creators: r2(sum(models, m => m.creatorPay)), agencyShare: r2(sum(models, m => m.agencyShare)) };
     totals.platform = r2(totals.brut - totals.net);
-    totals.sources = { chat: sum(models, m => m.legacy ? 0 : m.chatNet), legacy: sum(models, m => m.legacy ? m.net : m.legacyNet) };
+    totals.sources = { chat: sum(models, m => m.legacy ? 0 : m.chatNet), legacy: sum(models, m => m.legacy ? m.net : m.legacyNet), ppv: sum(models, m => m.ppvAgence), autres: sum(models, m => m.autres) };
     SRC.forEach(k => totals.sources[k] = sum(models, m => m.legacy ? 0 : m.sources[k]));
-    return { period: mi, base, mode, fee, models, totals };
+    return { period: mi, base, mode, fee, models, totals, auto: !!AM };
   }
   // le mois tel qu'affiché : CA figé à la clôture du mois, paie des chatters toujours lue sur les quinzaines
   function comptaMonthOf(mkey) {
@@ -542,6 +566,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     const { source } = req.body || {}, period = monthOfKey(req.body?.month || req.body?.period), model_id = parseInt(req.body?.model_id, 10);   // CA saisi au mois
     if (!period || !modelExists(model_id) || !SRC.includes(source)) return res.status(400).json({ error: "Données invalides" });
     if (isLocked(period)) return res.status(400).json(lockedMonthMsg);
+    if (autoMonth(period)) return res.status(400).json({ error: "Ce mois se remplit tout seul depuis Twizz : plus rien à saisir" });
     const empty = req.body.amount === "" || req.body.amount == null, v = empty ? null : num(String(req.body.amount).replace(",", "."), 0, 1e9);
     if (!empty && v === null) return res.status(400).json({ error: "Montant invalide" });
     db.prepare(`INSERT INTO revenues (period, model_id, v2, ${source}) VALUES (?,?,1,?) ON CONFLICT(period, model_id) DO UPDATE SET v2 = 1, ${source} = excluded.${source}`).run(period, model_id, v);
@@ -633,11 +658,12 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   function feedOf() {
     const ev = [];
     // fil d'activité : ventes déclarées / validées / refusées, pointages, simulations
-    db.prepare(`SELECT s.amount, s.status, s.created_at, s.reviewed_at, u.username, m.name model_name FROM sales s JOIN users u ON u.id = s.user_id
+    db.prepare(`SELECT s.amount, s.status, s.created_at, s.reviewed_at, s.source, u.username, m.name model_name FROM sales s JOIN users u ON u.id = s.user_id
       JOIN models m ON m.id = s.model_id ORDER BY s.created_at DESC LIMIT 30`).all().forEach(x => {
-      ev.push({ t: x.created_at, k: "e", who: x.username, text: `a déclaré une vente de ${x.amount.toLocaleString("fr-FR")} € · ${x.model_name}`, tag: x.status === "pending" ? "à valider" : "", cls: x.status === "pending" ? "o" : "",
-        short: "a déclaré une vente", sub: x.model_name, amt: x.amount });
-      if (x.reviewed_at && x.status !== "pending") ev.push({ t: x.reviewed_at, k: "e", who: x.username, text: `: vente de ${x.amount.toLocaleString("fr-FR")} € ${x.status === "validated" ? "validée" : "refusée"}`, tag: x.status === "validated" ? "validée" : "refusée", cls: x.status === "validated" ? "g" : "r",
+      const tw = x.source === "twizz";
+      ev.push({ t: x.created_at, k: "e", who: x.username, text: tw ? `: vente Twizz de ${x.amount.toLocaleString("fr-FR")} € · ${x.model_name}` : `a déclaré une vente de ${x.amount.toLocaleString("fr-FR")} € · ${x.model_name}`, tag: x.status === "pending" ? "à valider" : tw ? "Twizz" : "", cls: x.status === "pending" ? "o" : tw ? "g" : "",
+        short: tw ? "vente Twizz" : "a déclaré une vente", sub: x.model_name, amt: x.amount });
+      if (!tw && x.reviewed_at && x.status !== "pending") ev.push({ t: x.reviewed_at, k: "e", who: x.username, text: `: vente de ${x.amount.toLocaleString("fr-FR")} € ${x.status === "validated" ? "validée" : "refusée"}`, tag: x.status === "validated" ? "validée" : "refusée", cls: x.status === "validated" ? "g" : "r",
         short: x.status === "validated" ? "vente validée" : "vente refusée", sub: x.model_name, amt: x.amount });
     });
     db.prepare(`SELECT c.start_at, c.end_at, u.username, m.name model_name FROM clocks c JOIN users u ON u.id = c.user_id JOIN models m ON m.id = c.model_id

@@ -139,7 +139,12 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     catch (e) { res.json({ ok: false }); }
   });
 
-  app.get("/api/sales/cats", auth, (req, res) => res.json({ cats: SC.cats(db), lateHours: SC.lateHours(db) }));
+  // ventes automatiques Twizz : il ne reste à déclarer que ce qui se paie en dehors de Twizz
+  const twAuto = () => { try { const r = db.prepare("SELECT value FROM settings WHERE key = 'twizz_on'").get(); return !!r && r.value === "true"; } catch (e) { return false; } };
+  const autoCats = () => { const A = SC.cats(db);
+    return [A.find(c => c.k === "perso") || A.find(c => /perso|custom/i.test(c.l)) || { k: "perso", l: "Contenu perso", u: null, min: null },
+      A.find(c => c.k === "snap") || A.find(c => /snap/i.test(c.l)) || { k: "snap", l: "Session Snap", u: "min", min: null }]; };
+  app.get("/api/sales/cats", auth, (req, res) => { const auto = twAuto(); res.json({ cats: auto && req.user.role !== "admin" ? autoCats() : SC.cats(db), lateHours: SC.lateHours(db), auto }); });
 
   /* ---------- Déclarer une vente pour un autre chatter : fondateur et managers qui vendent ---------- */
   const canDeclareFor = u => u.role === "admin" && (u.rk === "founder" || !!(db.prepare("SELECT sells FROM users WHERE id = ?").get(u.id) || {}).sells);
@@ -161,8 +166,8 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
 
   /* ---------- Déclarer une vente (image envoyée telle quelle dans le corps de la requête) ---------- */
   app.post("/api/sales", auth, express.raw({ type: "image/*", limit: "12mb" }), (req, res) => {
-    // ventes automatiques Twizz : les chatters ne déclarent plus (les managers peuvent toujours corriger à la main)
-    try { const tw = db.prepare("SELECT value FROM settings WHERE key = 'twizz_on'").get(); if (tw && tw.value === "true" && req.user.role !== "admin") return res.status(400).json({ error: "Les ventes arrivent maintenant automatiquement depuis Twizz : plus besoin de les déclarer" }); } catch (e) {}
+    // ventes automatiques Twizz : les chatters ne déclarent plus que ce qui est payé en dehors de Twizz (contenu perso, Snap)
+    const autoOnly = twAuto() && req.user.role !== "admin";
     const model_id = parseInt(req.query.model_id, 10);
     const amount = num(String(req.query.amount || "").replace(",", "."), 0.01, 100000);
     const sold_at = num(req.query.sold_at, 1e12, 1e13) || Date.now();
@@ -189,14 +194,14 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     if (amount === null) return res.status(400).json({ error: "Montant invalide" });
     // ce qui a été vendu : au moins une catégorie, avec sa quantité (photos, vidéos, minutes)
     let items; try { items = JSON.parse(String(req.query.items || "[]")); } catch (e) { items = []; }
-    const C = SC.cats(db);
+    const C = autoOnly ? autoCats() : SC.cats(db);
     if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: "Choisis ce qui a été vendu (catégorie). Si tu ne vois pas les catégories, recharge la page." });
     const seenK = new Set(); items = items.slice(0, 12).map(it => { const c = C.find(x => x.k === String(it.k)); if (!c || seenK.has(c.k)) return null; seenK.add(c.k);
       const q = c.u ? Math.round(Number(it.q)) : null; if (c.u && !(q >= 1 && q <= 1000)) return { bad: c };
       // vidéo masturbation : avec ou sans jouet (obligatoire)
       if (c.k === "vmasturb") { if (!["avec jouet", "sans jouet"].includes(it.o)) return { badO: c }; return { k: c.k, l: c.l, u: c.u, q, o: it.o }; }
       return { k: c.k, l: c.l, u: c.u, q }; });
-    if (items.some(x => !x)) return res.status(400).json({ error: "Catégorie inconnue : recharge la page" });
+    if (items.some(x => !x)) return res.status(400).json({ error: autoOnly ? "Les ventes Twizz arrivent toutes seules : ici, seulement un contenu perso ou une session Snap payés en dehors de Twizz" : "Catégorie inconnue : recharge la page" });
     const badO = items.find(x => x && x.badO); if (badO) return res.status(400).json({ error: `Indique si « ${badO.badO.l} » est avec ou sans jouet` });
     const badQ = items.find(x => x.bad); if (badQ) return res.status(400).json({ error: `Indique le nombre de ${UNIT_TXT[badQ.bad.u][1]} pour « ${badQ.bad.l} »` });
     if (items.some(x => x.k === "autre") && !note.trim()) return res.status(400).json({ error: "Pour « Autre », précise dans la note ce qui a été vendu" });

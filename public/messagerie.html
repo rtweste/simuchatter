@@ -567,6 +567,22 @@
 @keyframes mxF{from{opacity:0}}.mx-lb img,.mx-lb video{max-width:100%;max-height:100%;border-radius:12px}
 .mx-lb button{position:absolute;top:18px;right:18px;width:42px;height:42px;border-radius:50%;border:0;background:#1d1d1d;color:#fff;font-size:18px;cursor:pointer}
 /* ---- coffre intelligent ---- */
+.hr-row{display:inline-flex;align-items:center;gap:3px;height:17px;padding:0 6px;margin-right:6px;border-radius:999px;background:rgba(255,190,90,.12);color:#ffc46b;font:800 9.5px Inter;letter-spacing:.01em;vertical-align:middle;max-width:90px;overflow:hidden;white-space:nowrap}
+.hr-hd{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;margin-left:8px;border-radius:999px;background:rgba(255,190,90,.1);border:1px solid rgba(255,190,90,.3);color:#ffc46b;font:700 11px Inter;white-space:nowrap;animation:vchIn .5s cubic-bezier(.3,1.4,.5,1) both}
+.hr-hd i{width:6px;height:6px;border-radius:50%;background:#ffc46b;box-shadow:0 0 8px #ffc46b}.hr-hd.ty i{animation:hrP 1s infinite}@keyframes hrP{50%{opacity:.25}}
+.tgs.ro{cursor:help}#teamB[hidden]{display:none!important}
+.ta-b{width:min(620px,100%);max-height:min(760px,100%);display:flex;flex-direction:column;background:#0d0d0d;border:1px solid #262626;border-radius:24px;overflow:hidden;box-shadow:0 50px 120px -30px #000;animation:vUp .6s cubic-bezier(.16,1,.3,1) both}
+.ta-h{display:flex;align-items:center;gap:12px;padding:18px 20px 14px;border-bottom:1px solid #1c1c1c}.ta-h h2{margin:0;flex:1;font:900 21px Inter;letter-spacing:-.04em}.ta-h h2 em{font-family:"Instrument Serif",serif;font-style:italic;font-weight:400}
+.ta-o{display:flex;align-items:center;gap:14px;margin:14px 20px 0;padding:13px 15px;border-radius:15px;background:#121212;border:1px solid #232323}.ta-o>div{flex:1;min-width:0}.ta-o b{font:800 13.5px Inter;color:#fff}.ta-o small{display:block;margin-top:2px;font:500 11.5px/1.45 Inter;color:#888}
+.ta-sw{flex:none;width:44px;height:26px;border-radius:999px;border:0;background:#2a2a2a;position:relative;cursor:pointer;transition:background .25s}.ta-sw i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#bbb;transition:transform .3s cubic-bezier(.3,1.4,.5,1),background .25s}.ta-sw.on{background:#2fbf7f}.ta-sw.on i{transform:translateX(18px);background:#fff}
+.ta-n{margin:10px 20px 4px;font:500 11.5px/1.5 Inter;color:#7a7a7a}.ta-n b{color:#cfcfcf}
+.ta-l{overflow:auto;padding:8px 12px 16px}.ta-r{display:flex;align-items:center;gap:11px;padding:10px 8px;border-bottom:1px solid #181818}.ta-r:last-child{border-bottom:0}
+.ta-a{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#1c1c1c;color:#ddd;font:800 13px Inter}
+.ta-u{flex:1;min-width:0}.ta-u b{display:block;font:800 13px Inter;color:#f2f2f2}.ta-u b em{font:700 9.5px Inter;font-style:normal;color:#9a9a9a;background:#1a1a1a;border-radius:6px;padding:1px 5px;margin-left:4px;text-transform:uppercase;letter-spacing:.04em}
+.ta-u small{display:block;margin-top:2px;font:500 11px Inter;color:#777;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ta-sg{flex:none;display:flex;padding:3px;border-radius:11px;background:#141414;border:1px solid #222}.ta-sg button{height:26px;padding:0 10px;border:0;border-radius:8px;background:none;color:#8a8a8a;font:700 11.5px Inter;cursor:pointer}
+.ta-sg button.on{color:#0a0a0a;background:#e8e8e8}.ta-sg button.on.lv1{background:#7db4ff}.ta-sg button.on.lv2{background:#3ddc97}.ta-sg button.on.lv0{background:#3a3a3a;color:#ddd}
+@media (max-width:560px){.ta-r{flex-wrap:wrap}.ta-sg{margin-left:43px}}
 .mx-mod{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.74);backdrop-filter:blur(3px);display:grid;place-items:center;padding:18px;animation:mxF .3s both}
 .vbox{width:min(1100px,100%);height:min(820px,100%);display:flex;flex-direction:column;background:#0d0d0d;border:1px solid #262626;border-radius:24px;overflow:hidden;box-shadow:0 50px 120px -30px #000;animation:vUp .6s cubic-bezier(.16,1,.3,1) both;position:relative}
 @keyframes vUp{from{transform:translateY(30px) scale(.97);opacity:0;filter:blur(6px)}}
@@ -687,6 +703,7 @@
       <div class="mx-cr" id="crs"></div>
       <div class="mx-tg"><span class="mx-live" id="live" title="Les nouveaux messages arrivent tout seuls"><i></i><span>CONNEXION…</span></span>
         <button class="tgi on" id="swBlur" title="Flouter les photos et vidéos (survole une image pour la voir)" aria-label="Flouter les médias"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/></svg></button>
+        <button class="tgi" id="teamB" hidden title="Qui a accès à la messagerie" aria-label="Accès de l'équipe"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6"/><path d="M16 5.2a3 3 0 0 1 0 5.6M18.5 19c-.3-1.9-1.2-3.2-2.5-3.9"/></svg></button>
         <button class="tgs" id="swSend" title="Tant que c'est coupé, rien ne peut partir vers les fans"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span id="sendTx">Envoi OFF</span></button></div></div>
       <div class="mx-warn" id="sendWarn"><i></i>Envoi activé : ce que tu envoies part vraiment aux fans</div></div>
     <div class="mx-body blur" id="body">
@@ -763,13 +780,15 @@ function slideInd(w, from) { if (!w) return; const on = w.querySelector("button.
 let AC = null;
 function chime() { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const t = AC.currentTime;
   [[880, 0], [1318.5, .09], [1760, .18]].forEach(([f, d]) => { const o = AC.createOscillator(), g = AC.createGain(); o.type = "sine"; o.frequency.value = f; g.gain.setValueAtTime(0, t + d); g.gain.linearRampToValueAtTime(.12, t + d + .015); g.gain.exponentialRampToValueAtTime(.0001, t + d + .5); o.connect(g).connect(AC.destination); o.start(t + d); o.stop(t + d + .55); }); } catch (e) {} }
+const CANSEND = () => !!(ST && ST.send && ST.canSend !== false);
+const offMsg = () => !ST.canSend ? "🔒 Lecture seule : tu peux tout lire, le fondateur ne t'a pas encore donné le droit d'envoyer." : ST.founder ? "🔒 Envoi coupé : tu peux tout lire sans rien changer côté Twizz. Active « Envoi activé » pour répondre." : "🔒 Envoi coupé pour le moment par le fondateur : tu peux tout lire.";
 const crLabel = () => ((ST && ST.creators.find(c => c.id === CID)) || {}).label || "";
 
 /* ================= haut de page ================= */
 const UNREAD = {};
 function top() {
   const L = ST.creators.filter(c => c.id), box = $("crs"), ids = [...box.querySelectorAll("[data-cid]")].map(b => b.dataset.cid).join("|");
-  if (!L.length) box.innerHTML = `<span style="color:#777;font-size:13px;padding:0 10px">Teste la connexion Twizz dans Réglages fondateur</span>`;
+  if (!L.length) box.innerHTML = `<span style="color:#777;font-size:13px;padding:0 10px">${ST.founder ? "Teste la connexion Twizz dans Réglages fondateur" : "Aucune créatrice pour toi : tes créatrices habituelles se règlent dans Gestion, ou commence ton shift"}</span>`;
   else if (ids !== L.map(c => c.id).join("|")) {
     box.innerHTML = L.map(c => `<button data-cid="${esc(c.id)}" title="${esc(c.label)}">${rav((c.label[0] || "?").toUpperCase(), 34, pal(c.label))}<span class="nm">${esc(c.label)}</span></button>`).join("");
     box.querySelectorAll("[data-cid]").forEach(b => b.onclick = () => { if (b.dataset.cid === CID) return; CID = b.dataset.cid; try { localStorage.setItem("mx:cid", CID); } catch (e) {} CUR = null; QDONE.clear(); QTREATED = 0; $("mx").classList.remove("open"); top(); loadList(); thread(); fanCard(); });
@@ -777,14 +796,16 @@ function top() {
   box.querySelectorAll("[data-cid]").forEach(b => { const id = b.dataset.cid, n = UNREAD[id] || 0, d = b.querySelector(".dot");
     b.classList.toggle("on", id === CID);
     if (n && !d) b.insertAdjacentHTML("beforeend", `<span class="dot">${n > 99 ? "99+" : n}</span>`); else if (n && d) d.textContent = n > 99 ? "99+" : n; else if (!n && d) d.remove(); });
-  $("swSend").classList.toggle("on", ST.send); $("sendTx").textContent = ST.send ? "Envoi ON" : "Envoi OFF"; $("sendWarn").classList.toggle("on", ST.send);
+  $("swSend").classList.toggle("on", CANSEND()); $("swSend").classList.toggle("ro", !ST.founder);
+  $("sendTx").textContent = ST.founder ? (ST.send ? "Envoi ON" : "Envoi OFF") : !ST.canSend ? "Lecture seule" : ST.send ? "Envoi ON" : "Envoi coupé";
+  $("sendWarn").classList.toggle("on", CANSEND()); $("teamB").hidden = !ST.founder;
 }
 // non lus de chaque créatrice (pastille rouge sur les autres créatrices)
 let unT = null;
 async function unreads(only) { if (!ST) return; for (const c of ST.creators.filter(c => c.id && (!only || c.id === only))) {
   try { const r = await api(`/api/twizz/inbox/${enc(c.id)}/unread`); UNREAD[c.id] = +r.count || 0; } catch (e) {} } top(); }
 function liveUi() { $("live").classList.toggle("on", LIVE); $("live").lastElementChild.textContent = LIVE ? "EN DIRECT" : "ACTUALISATION AUTO"; }
-$("swSend").onclick = async () => { const on = !ST.send;
+$("swSend").onclick = async () => { if (!ST.founder) return notify(!ST.canSend ? "Lecture seule" : ST.send ? "Envoi activé" : "Envoi coupé", !ST.canSend ? "Le fondateur ne t'a pas encore donné le droit d'envoyer" : ST.send ? "Ce que tu envoies part vraiment aux fans" : "Le fondateur a coupé l'envoi pour le moment", "info"); const on = !ST.send;
   if (on && !confirm("Activer l'envoi ?\n\nTout ce que tu envoies d'ici part VRAIMENT au fan sur Twizz, au nom de la créatrice.")) return;
   try { ST.send = (await api("/api/twizz/inbox/state", { body: { send: on } })).send; top(); if (CUR) thread(); notify(ST.send ? "Envoi activé" : "Envoi coupé", "", ST.send ? "ok" : "info"); } catch (e) { notify("Erreur", e.message, "err"); } };
 $("swBlur").onclick = () => { const on = !$("swBlur").classList.contains("on"); $("swBlur").classList.toggle("on", on); $("body").classList.toggle("blur", on); document.querySelectorAll(".mx-mod").forEach(m => m.classList.toggle("blur", on)); try { localStorage.setItem("mx:blur", on ? "1" : "0"); } catch (e) {} };
@@ -812,11 +833,12 @@ async function loadList(fresh, more) {
 const skelRows = () => Array.from({ length: 8 }, (_, i) => `<div class="mx-c" style="animation-delay:${i * .03}s;cursor:default"><span class="mx-av sk"></span><span class="t"><span class="sk" style="display:block;height:12px;width:${50 + (i * 17) % 40}%"></span><span class="sk" style="display:block;height:10px;width:${60 + (i * 13) % 30}%;margin-top:8px"></span></span></div>`).join("");
 function syncCur(L) { if (CUR && L) { const c = L.items.find(x => x.id === CUR.id); if (c) Object.assign(CUR, { last: c.last, unread: c.unread }); } }
 function prefix(c) { if (c.last.fromFan) return ""; if (c.last.by) return `<span class="pre" style="--c:${pal(c.last.by)[0]}">${esc(c.last.by)} :</span> `; return `<span class="pre tw">Twizz :</span> `; }
+const hereChip = c => c.here && c.here.length ? `<span class="hr-row" title="${esc(c.here.join(", "))} ${c.here.length > 1 ? "sont" : "est"} sur cette conversation">${SV(IC.eye || IC.chat, 11, 2.4)}${esc(c.here[0])}${c.here.length > 1 ? " +" + (c.here.length - 1) : ""}</span>` : "";
 function rowHtml(c) { const waitMin = c.last.fromFan && c.last.at ? (Date.now() - Date.parse(c.last.at)) / 60e3 : 0, wait = waitMin > 5;
     const prev = c.last.text || (c.last.type === "FILE" ? "📷 Média" : "");
     return `<button class="mx-c ${c.id === (CUR && CUR.id) ? "on" : ""} ${c.unread ? "un" : ""} ${wait ? "wait" : ""}" data-conv="${esc(c.id)}">${av(c.fan)}
       <span class="t"><b>${esc(c.fan.name)}</b><small>${wait ? `<span class="wt">Attend depuis ${since(c.last.at)} · </span>` : prefix(c)}${esc(prev)}</small>${rowTags(c)}</span>
-      <span class="r">${ago(c.last.at)}${c.unread ? `<span class="n">${c.unread > 99 ? "99+" : c.unread}</span>` : ""}</span></button>`; }
+      <span class="r">${hereChip(c)}${ago(c.last.at)}${c.unread ? `<span class="n">${c.unread > 99 ? "99+" : c.unread}</span>` : ""}</span></button>`; }
 // met à jour la liste sans tout redessiner (pas de clignotement) ; les lignes qui partent glissent hors de la liste
 function paintRows(rows, find, outAnim) {
   const cl = $("cl"), first = !cl.querySelector("[data-conv]");
@@ -914,7 +936,7 @@ function markDone(conv) {
 
 /* ================= fil de discussion ================= */
 async function openConv(c) {
-  if (!c) return; if (!CUR || CUR.id !== c.id) { PANEL = null; } CUR = c; $("mx").classList.add("open"); renderList(); thread(); loadMsgs(); loadHist(); loadRun(); setTimeout(fanCard, 150);
+  if (!c) return; if (!CUR || CUR.id !== c.id) { PANEL = null; hereLeave(); } CUR = c; HEREO = []; hereBeat(); $("mx").classList.add("open"); renderList(); thread(); loadMsgs(); loadHist(); loadRun(); setTimeout(fanCard, 150);
 }
 const isPPV = m => !m.fromFan && m.type === "FILE" && m.price != null && m.medias.length;
 async function loadMsgs(fresh) {
@@ -981,11 +1003,11 @@ function thread(keep, noScroll) {
     flush(); if (!T.items.length) body = `<div class="mx-empty">Pas encore de message</div>`;
     T.items.forEach(m => SHOWN.add(m.id)); if (!SHOWN.size) SHOWN.add("_");
   }
-  $("th").innerHTML = `${STARS}<div class="mx-hd"><button class="mx-ib mx-bk" id="bk">${SV(IC.back, 16)}</button>${av(CUR.fan, "av")}<div style="min-width:0"><b>${esc(CUR.fan.name)}</b><small>${CUR.fan.username ? "@" + esc(CUR.fan.username) : ""}</small></div><span class="htg" id="htg">${headTagsHtml()}</span>
+  $("th").innerHTML = `${STARS}<div class="mx-hd"><button class="mx-ib mx-bk" id="bk">${SV(IC.back, 16)}</button>${av(CUR.fan, "av")}<div style="min-width:0"><b>${esc(CUR.fan.name)}</b><small>${CUR.fan.username ? "@" + esc(CUR.fan.username) : ""}</small></div><span class="htg" id="htg">${headTagsHtml()}</span><span id="hrw">${hereHtml()}</span>
       <span class="sp"><span class="crew" id="crew">${crewHtml()}</span>${TYPE === "QUEUE" ? `<button class="mx-ib" id="nxB" title="Fan suivant de la file">${SV(IC.down, 14, 2.4)}<span class="lb">Fan suivant</span><span class="kbd">↓</span></button>` : ""}<button class="mx-ib" id="rd" title="Marque la conversation comme lue sur Twizz">${SV(IC.eye, 15)}<span class="lb">Marquer lu</span></button><button class="mx-ib mx-fb" id="fanB">${SV(IC.user, 15)}<span class="lb">Fiche</span></button></span></div>
     <div class="mx-sc" id="sc">${body}</div>
-    <div class="mx-cpw"><div id="rnw"></div>${ST.send ? "" : `<div class="mx-off">🔒 Envoi coupé : tu peux tout lire sans rien changer côté Twizz. Active « Envoi activé » pour répondre.</div>`}
-      <div class="mx-cp"><span class="tools"><button class="md" id="mdB" title="Envoyer un média du coffre" ${ST.send ? "" : "disabled"}>${SV(IC.img, 19)}</button><button class="md tl2 ${PANEL === "scripts" ? "act" : ""}" id="scB" title="Scripts (touche /)">${SV(IC.doc, 19)}</button><button class="md tl2 ai ${PANEL === "ai" ? "act" : ""}" id="aiB" title="Assistant IA (⌘J)">${SV(IC.spark, 19, 2)}</button></span><textarea id="tx" rows="1" placeholder="${ST.send ? (innerWidth > 860 ? "Écris ton message… ( / pour les scripts )" : "Écris ton message…") : "Envoi coupé"}" ${ST.send ? "" : "disabled"}></textarea><button class="go" id="goB" title="Envoyer" ${ST.send ? "" : "disabled"}>${SV(IC.send, 19, 2.6)}</button></div>
+    <div class="mx-cpw"><div id="rnw"></div>${CANSEND() ? "" : `<div class="mx-off">${offMsg()}</div>`}
+      <div class="mx-cp"><span class="tools"><button class="md" id="mdB" title="Envoyer un média du coffre" ${CANSEND() ? "" : "disabled"}>${SV(IC.img, 19)}</button><button class="md tl2 ${PANEL === "scripts" ? "act" : ""}" id="scB" title="Scripts (touche /)">${SV(IC.doc, 19)}</button><button class="md tl2 ai ${PANEL === "ai" ? "act" : ""}" id="aiB" title="Assistant IA (⌘J)">${SV(IC.spark, 19, 2)}</button></span><textarea id="tx" rows="1" placeholder="${CANSEND() ? (innerWidth > 860 ? "Écris ton message… ( / pour les scripts )" : "Écris ton message…") : ST.canSend ? "Envoi coupé" : "Lecture seule"}" ${CANSEND() ? "" : "disabled"}></textarea><button class="go" id="goB" title="Envoyer" ${CANSEND() ? "" : "disabled"}>${SV(IC.send, 19, 2.6)}</button></div>
       <div class="hintbar"><span class="kh"><span class="kbd">↵</span>envoyer</span><span class="kh"><span class="kbd">/</span>scripts</span><span class="kh"><span class="kbd">⌘</span><span class="kbd">J</span>assistant IA</span><span class="kh"><span class="kbd">↓</span>fan suivant</span></div></div>`;
   // en bas : on y reste, même quand les images finissent de charger ; sinon on garde l'endroit où on lisait
   const sc = $("sc"), toBottom = () => { sc._prog = Date.now(); sc.scrollTop = sc.scrollHeight; };
@@ -1002,19 +1024,56 @@ function thread(keep, noScroll) {
     else if (e.key === "/" && !tx.value) { e.preventDefault(); openPanel("scripts", { slash: true }); }
     else if ((e.metaKey || e.ctrlKey) && (e.key === "j" || e.key === "J")) { e.preventDefault(); openPanel(PANEL === "ai" ? null : "ai"); }
     else if (e.key === "Escape" && PANEL) { e.preventDefault(); openPanel(null); } };
+  tx.addEventListener("input", () => { if (tx.value.trim()) hereTyping(); });
   tx.addEventListener("input", () => { if (PANEL === "scripts" && SQ.slash) { if (!tx.value.startsWith("/")) { SQ.slash = false; openPanel(null); } else { SQ.q = tx.value.slice(1); paintScripts(); } } });
   $("goB").onclick = () => sendText(); $("mdB").onclick = () => vault();
   $("scB").onclick = () => openPanel(PANEL === "scripts" ? null : "scripts"); $("aiB").onclick = () => openPanel(PANEL === "ai" ? null : "ai");
   if (PANEL) paintPanel();
   paintRun();
   if ($("nxB")) $("nxB").onclick = nextInQueue;
-  $("bk").onclick = () => { $("mx").classList.remove("open"); CUR = null; renderList(); };
+  $("bk").onclick = () => { $("mx").classList.remove("open"); hereLeave(); CUR = null; renderList(); };
   $("fanB").onclick = () => $("fan").classList.toggle("show");
-  $("rd").onclick = async () => { if (!ST.send) return notify("Envoi coupé", "Active « Envoi activé » pour marquer comme lu sur Twizz", "info");
+  $("rd").onclick = async () => { if (!CANSEND()) return notify(ST.canSend ? "Envoi coupé" : "Lecture seule", ST.canSend ? (ST.founder ? "Active « Envoi activé » pour marquer comme lu sur Twizz" : "Le fondateur a coupé l'envoi pour le moment") : "Demande au fondateur le droit d'envoyer", "info");
     try { await api2("/read", { body: { conversationId: CUR.id } }); CUR.unread = 0; renderList(); notify("Marquée comme lue", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
   sc.querySelectorAll("[data-lb]").forEach(b => b.onclick = () => { const [mid, i] = b.dataset.lb.split(":"), m = T.items.find(x => x.id === mid), x = m && m.medias[+i]; if (x) lightbox(x); });
   sc.querySelectorAll("[data-retry]").forEach(b => b.onclick = () => { const m = T.items.find(x => x.id === b.dataset.retry); if (m) { T.items = T.items.filter(x => x !== m); thread(true); sendText(m.text); } });
 }
+/* ---- présence : signalée toutes les 20 s tant qu'une conversation est ouverte (requêtes vers le site seulement, rien vers Twizz) ---- */
+let HEREO = [], HERE_T = null, HERE_TY = 0;
+const hereHtml = () => { const L = HEREO; if (!L.length) return "";
+  const nm = L.map(x => esc(x.name)).join(", "), ty = L.some(x => x.typing);
+  return `<span class="hr-hd${ty ? " ty" : ""}" title="${nm} ${L.length > 1 ? "sont" : "est"} aussi sur cette conversation"><i></i>${nm} ${ty ? "écrit…" : L.length > 1 ? "sont dessus" : "est dessus"}</span>`; };
+const paintHere = () => { const w = $("hrw"); if (w) w.innerHTML = hereHtml(); };
+const hereNeed = () => !!ST && (ST.open || !ST.founder);
+async function hereBeat(typing) { clearTimeout(HERE_T); const c = CUR; if (!c || !CID || !hereNeed()) return;
+  try { const r = await api2(`/here/${enc(c.id)}`, { body: typing ? { typing: true } : {} }); if (CUR === c) { HEREO = r.others || []; paintHere(); } } catch (e) {}
+  HERE_T = setTimeout(() => { if (!document.hidden) hereBeat(); else HERE_T = setTimeout(hereBeat, 20e3); }, 20e3); }
+function hereTyping() { if (!hereNeed() || Date.now() - HERE_TY < 8e3) return; HERE_TY = Date.now(); hereBeat(true); }
+function hereLeave() { clearTimeout(HERE_T); const c = CUR; if (c && CID && hereNeed()) api2(`/here/${enc(c.id)}`, { body: { leave: true } }).catch(() => {}); HEREO = []; }
+// avant d'envoyer : quelqu'un d'autre est sur ce fan ? (on revérifie à l'instant)
+async function hereOk() { const c = CUR; if (!c) return false; if (!hereNeed()) return true;
+  try { const r = await api2(`/here/${enc(c.id)}`, { body: { typing: true } }); HEREO = r.others || []; paintHere(); } catch (e) {}
+  if (!HEREO.length) return true;
+  return confirm(`${HEREO.map(x => x.name).join(", ")} ${HEREO.length > 1 ? "sont" : "est"} aussi sur cette conversation${HEREO.some(x => x.typing) ? " et écrit en ce moment" : ""}.\n\nEnvoyer quand même ?`); }
+addEventListener("pagehide", () => { const c = CUR; if (c && CID) try { navigator.sendBeacon(`/api/twizz/inbox/${enc(CID)}/here/${enc(c.id)}`, new Blob([JSON.stringify({ leave: true })], { type: "application/json" })); } catch (e) {} });
+
+/* ---- accès de l'équipe (fondateur) ---- */
+async function teamBox() {
+  let D; try { D = await api("/api/twizz/inbox/team"); } catch (e) { return notify("Équipe", e.message, "err"); }
+  const m = document.createElement("div"); m.className = "mx-mod"; document.body.appendChild(m);
+  const LV = [["0", "Aucun"], ["1", "Lecture"], ["2", "Envoi"]];
+  const paint = () => { m.innerHTML = `<div class="ta-b"><div class="ta-h"><h2>Accès à la <em>messagerie</em></h2><button class="px" id="tmX" aria-label="Fermer">✕</button></div>
+    <div class="ta-o"><div><b>Ouvrir à l'équipe</b><small>${D.open ? "Les personnes ci-dessous voient la messagerie selon leur accès." : "Fermée : toi seul la vois. Choisis les accès, puis ouvre."}</small></div><button type="button" class="ta-sw ${D.open ? "on" : ""}" id="tmO" aria-label="Ouvrir à l'équipe"><i></i></button></div>
+    <div class="ta-n">Un chatter ne voit que ses <b>créatrices habituelles</b> (Gestion) et celle de son <b>shift en cours</b>. Un manager voit toutes les créatrices. « Envoi » ne marche que si l'interrupteur « Envoi activé » est allumé${D.send ? " (il l'est)" : " (il est coupé)"}.</div>
+    <div class="ta-l">${D.users.length ? D.users.map(u => `<div class="ta-r"><span class="ta-a">${esc((u.username[0] || "?").toUpperCase())}</span><div class="ta-u"><b>${esc(u.username)}${u.manager ? ` <em>manager</em>` : u.tl ? ` <em>team leader</em>` : ""}</b><small>${u.manager ? "Toutes les créatrices" : u.creators.length ? esc(u.creators.join(" · ")) + " + son shift" : "Seulement la créatrice de son shift"}</small></div>
+      <div class="ta-sg" role="radiogroup" aria-label="Accès de ${esc(u.username)}">${LV.map(([v, l]) => `<button type="button" data-u="${u.id}" data-lv="${v}" class="${String(u.level) === v ? "on lv" + v : ""}">${l}</button>`).join("")}</div></div>`).join("") : `<div class="pempty">Personne dans l'équipe</div>`}</div></div>`;
+    m.querySelector("#tmX").onclick = () => m.remove();
+    m.querySelector("#tmO").onclick = async () => { if (!D.open && !confirm("Ouvrir la messagerie à l'équipe ?\n\nChaque personne verra les conversations selon l'accès que tu lui as donné.")) return;
+      try { D = await api("/api/twizz/inbox/team", { body: { open: !D.open } }); paint(); notify(D.open ? "Messagerie ouverte à l'équipe" : "Messagerie refermée", "", D.open ? "ok" : "info"); } catch (e) { notify("Erreur", e.message, "err"); } };
+    m.querySelectorAll("[data-lv]").forEach(b => b.onclick = async () => { try { D = await api("/api/twizz/inbox/team", { body: { user_id: +b.dataset.u, level: +b.dataset.lv } }); paint(); } catch (e) { notify("Erreur", e.message, "err"); } }); };
+  paint(); m.onclick = e => { if (e.target === m) m.remove(); };
+}
+$("teamB").onclick = teamBox;
 // le moment où le fan achète : bordure qui fait le tour, ondes, étincelles, montant qui monte, notification
 function celebrate(m) {
   chime();
@@ -1028,7 +1087,8 @@ function celebrate(m) {
   $("th").appendChild(n); setTimeout(() => n.remove(), 4800);
 }
 async function sendText(again) {
-  const tx = $("tx"), t = typeof again === "string" ? again : tx.value.trim(); if (!t || !CUR || !ST.send) return;
+  const tx = $("tx"), t = typeof again === "string" ? again : tx.value.trim(); if (!t || !CUR || !CANSEND()) return;
+  if (typeof again !== "string" && !(await hereOk())) return;
   if (typeof again !== "string") { tx.value = ""; tx.style.height = "auto"; }
   const T = THREADS[CUR.id] || (THREADS[CUR.id] = { items: [], page: 1, totalPages: 1 }), conv = CUR;
   const m = { id: "tmp" + Date.now(), tmp: true, fromFan: false, text: t, medias: [], at: new Date().toISOString(), sentAt: Date.now(), type: "TEXT" };
@@ -1046,7 +1106,7 @@ function lightbox(x) {
 /* ================= scripts et assistant IA (au-dessus de la barre d'envoi) ================= */
 let PANEL = null, SCRIPTS = null; const SQ = { q: "", cat: "", sel: 0, slash: false, form: null }, AIRES = {};
 const fillVars = t => String(t || "").replace(/\{pr[ée]nom\}/gi, ((CUR && CUR.fan.name) || "").split(" ")[0]).replace(/\{cr[ée]atrice\}/gi, crLabel());
-function putText(t) { const tx = $("tx"); if (!tx) return; if (tx.disabled) return notify("Envoi coupé", "Active « Envoi activé » pour l'utiliser", "info");
+function putText(t) { const tx = $("tx"); if (!tx) return; if (tx.disabled) return notify(ST.canSend ? "Envoi coupé" : "Lecture seule", ST.canSend ? (ST.founder ? "Active « Envoi activé » pour l'utiliser" : "Le fondateur a coupé l'envoi pour le moment") : "Demande au fondateur le droit d'envoyer", "info");
   tx.value = t; tx.dispatchEvent(new Event("input")); tx.focus(); tx.setSelectionRange(t.length, t.length); }
 function openPanel(kind, opt) { PANEL = kind; SQ.slash = !!(opt && opt.slash); SQ.q = ""; SQ.sel = 0;
   if (kind === "scripts" && SCRIPTS && SCRIPTS.cid === CID) getScripts(true).then(() => PANEL === "scripts" && paintScripts()).catch(() => {});   // à jour si la page Scripts a changé
@@ -1081,6 +1141,7 @@ function paintScripts() {
   pn.querySelectorAll("[data-e]").forEach(b => b.onclick = () => window.open(`/scripts?id=${L[+b.dataset.e].id}`, "_blank"));
   pn.querySelectorAll("[data-d]").forEach(b => b.onclick = async () => { const x = L[+b.dataset.d]; if (!confirm(`Supprimer le script « ${x.title || x.body.slice(0, 30)} » ?`)) return;
     try { await api(`/api/twizz/scripts/${x.id}`, { method: "DELETE" }); await getScripts(true); paintScripts(); } catch (e) { notify("Impossible", e.message, "err"); } });
+  if (!ST.manager) pn.querySelectorAll("#psN,[data-e],[data-d]").forEach(b => b.remove());
 }
 function slashKey(k) { const L = scriptList();
   if (k === "Escape") return openPanel(null);
@@ -1499,6 +1560,7 @@ async function vault(acceptId, preset) {
   intel(); presetCheck(); const hT = setInterval(() => { if (!document.body.contains(m)) return clearInterval(hT); if (H()) { intel(); presetCheck(); if (files.length) { comp(); grid(); } clearInterval(hT); } }, 500);
   $("vGo").onclick = async () => {
     const go = $("vGo"); if (go.disabled) return;
+    if (!(await hereOk())) return;
     if (!confirm(`Envoyer ${SEL.length} média${SEL.length > 1 ? "s" : ""} à ${conv.fan.name} ${price ? "pour " + E(price) : "gratuitement"} ?`)) return;
     go.disabled = true; $("vGl").textContent = "Envoi…";
     try { const sr = await api2("/send-media", { body: { conversationId: conv.id, fan: conv.fan.id, files: SEL.slice(), price, text: $("vTxt").value, acceptId: acceptId || null } });
@@ -1530,7 +1592,7 @@ document.addEventListener("keydown", e => { if (e.key !== "ArrowDown" || e.metaK
 (async () => {
   const me = await api("/api/me"); renderShell("messagerie", me);
   const sb = $("sidebar"); if (sb && !sb.classList.contains("mini")) { sb.classList.add("mini"); document.documentElement.classList.add("sb-mini"); }
-  if (me.rk !== "founder" || me.viewAs) { $("mx").innerHTML = `<div class="mx-empty">La messagerie Twizz est en test : réservée au fondateur.</div>`; return; }
+  if (!(me.rk === "founder" && !me.viewAs) && !me.inbox) { $("mx").innerHTML = `<div class="mx-empty">La messagerie n'est pas encore ouverte pour toi : demande au fondateur.</div>`; return; }
   try { if (localStorage.getItem("mx:blur") === "0") $("swBlur").click(); } catch (e) {}
   try { ST = await api("/api/twizz/inbox/state"); } catch (e) { $("mx").innerHTML = `<div class="mx-empty">${esc(e.message)}</div>`; return; }
   let saved = null, ty = null; try { saved = localStorage.getItem("mx:cid"); ty = localStorage.getItem("mx:ty"); } catch (e) {}

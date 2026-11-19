@@ -89,7 +89,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const IN = `(${ids.map(() => "?").join(",")})`;
     // semaine (lundi → aujourd'hui) et semaine d'avant
     const dow = (new Date(today + "T12:00:00Z").getUTCDay() + 6) % 7, mon = addDays(today, -dow), wk0 = parisMidnight(mon), pw0 = wk0 - 7 * 864e5, d7 = parisMidnight(addDays(today, -6));
-    const sales = db.prepare(`SELECT s.id, s.user_id, s.amount, s.sold_at, s.status, s.created_at, m.name model FROM sales s JOIN models m ON m.id = s.model_id WHERE s.user_id IN ${IN} AND s.status != 'refused' AND s.sold_at >= ?`).all(...ids, Math.min(pw0, d7));
+    const sales = db.prepare(`SELECT s.id, s.user_id, s.amount, s.sold_at, s.status, s.created_at, s.source, m.name model FROM sales s JOIN models m ON m.id = s.model_id WHERE s.user_id IN ${IN} AND s.status != 'refused' AND s.sold_at >= ?`).all(...ids, Math.min(pw0, d7));
     const pkey = compta.periodOfDate(today);
     let comp = null; try { comp = compta.computeCompta(pkey); } catch (e) {}
     // shifts du jour (et de la veille s'ils débordent)
@@ -127,7 +127,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     out.members.sort((x, y) => y.ca - x.ca || x.username.localeCompare(y.username));
     // fil en direct : ventes, débuts de shift, pauses (12 dernières heures)
     const ev = [], nm = id => (mem.find(m => m.id === id) || {}).username || "?";
-    sales.filter(s => s.created_at > now - 12 * 3.6e6).forEach(s => ev.push({ id: "s" + s.id, k: "sale", at: s.created_at, who: nm(s.user_id), uid: s.user_id, amount: s.amount, text: `déclare une vente · ${s.model}`, pending: s.status === "pending" }));
+    sales.filter(s => s.created_at > now - 12 * 3.6e6).forEach(s => ev.push({ id: "s" + s.id, k: "sale", at: s.created_at, who: nm(s.user_id), uid: s.user_id, amount: s.amount, text: s.source === "twizz" ? `vend sur Twizz · ${s.model}` : `déclare une vente · ${s.model}`, pending: s.status === "pending" }));
     clocks.filter(c => c.start_at > now - 12 * 3.6e6).forEach(c => ev.push({ id: "c" + c.id, k: c.reinforce ? "renfort" : "shift", at: c.start_at, who: nm(c.user_id), uid: c.user_id, text: c.reinforce ? `part en renfort sur ${c.model}` : `commence son shift · ${c.model}` }));
     pauses.filter(p => p.start_at > now - 12 * 3.6e6).forEach(p => ev.push({ id: "p" + p.id, k: "pause", at: p.start_at, who: nm(p.user_id), uid: p.user_id, text: p.end_at ? `fait une pause de ${Math.max(1, Math.round((p.end_at - p.start_at) / 60000))} min` : "part en pause" }));
     shifts.filter(s => s.state === "missing").forEach(s => ev.push({ id: "m" + s.id, k: "late", at: s.start_ms, who: s.username, uid: s.user_id, text: `n'a pas pointé son shift de ${s.start}` }));
@@ -238,7 +238,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
         { k: "attrib", label: "Corrections manuelles de ventes par chatter", sub: att.n ? `${att.n} correction${att.n > 1 ? "s" : ""}` : "Aucune", n: att.n, amount: r2(att.s), on: att.n > 0 },
         { k: "payouts", label: "Paies marquées versées", sub: pay.n ? `${pay.n} chatter${pay.n > 1 ? "s" : ""}` : "Aucune", n: pay.n, amount: r2(pay.s), on: pay.n > 0 },
         { k: "creatorpaid", label: "Parts créatrices marquées versées (tout le mois)", sub: cpd.n ? `${cpd.n} créatrice${cpd.n > 1 ? "s" : ""}` : "Aucune", n: cpd.n, amount: r2(cpd.s), on: cpd.n > 0 },
-        { k: "sales", label: "Ventes déclarées de la quinzaine", sub: sales.length ? `${sales.filter(x => x.status === "validated").length} validées · ${sales.filter(x => x.status === "pending").length} en attente · ${sales.filter(x => x.status === "refused").length} refusées` : "Aucune", n: sales.length, amount: r2(sales.filter(x => x.status !== "refused").reduce((x, y) => x + y.amount, 0)), on: false }
+        { k: "sales", label: "Ventes de la quinzaine", sub: sales.length ? `${sales.filter(x => x.status === "validated").length} validées · ${sales.filter(x => x.status === "pending").length} en attente · ${sales.filter(x => x.status === "refused").length} refusées` : "Aucune", n: sales.length, amount: r2(sales.filter(x => x.status !== "refused").reduce((x, y) => x + y.amount, 0)), on: false }
       ] };
   }
   app.get("/api/admin/founder/reset", auth, admin, (req, res) => {

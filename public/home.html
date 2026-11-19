@@ -917,6 +917,8 @@ function openSound() {
   });
 }
 function afterRender() {
+  // ventes automatiques Twizz : plus rien à déclarer, le raccourci mène aux ventes du chatter
+  api("/api/twizz/mode").then(m => { if (m && m.auto) document.querySelectorAll('.act.hot[href="/ventes"]').forEach(a => { a.innerHTML = `${icon("receipt")}<span>Mes<span class="lx"> ventes</span></span>`; a.title = "Tes ventes Twizz arrivent toutes seules"; }); }).catch(() => {});
   if (D && D.role !== "admin" && window.HANDOVER) HANDOVER.inbox(document.getElementById("hm"));
   if (D && window.WALL && (!ME || ME.role !== "trainee")) WALL.mount(document.getElementById("hm"), D.role === "admin");
   if (D && window.TEAMUI && ME) TEAMUI.mount(document.getElementById("hm"), ME);
