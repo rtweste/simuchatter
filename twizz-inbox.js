@@ -4,7 +4,11 @@
 module.exports = function mount(app, db, auth, admin, { twizz }) {
   const { call, S } = twizz;
   const founder = (req, res, next) => req.user.rk === "founder" && !req.viewAs ? next() : res.status(403).json({ error: "Messagerie en test : réservée au fondateur" });
-  const G = (path) => call("GET", path, null, true);
+  // petit cache mémoire : une conversation déjà ouverte se réaffiche tout de suite (vidé par le temps réel et les envois)
+  const CACHE = new Map();
+  const G = (path, ttl = 0) => { const c = ttl && CACHE.get(path); if (c && Date.now() - c.at < ttl) return Promise.resolve(c.data);
+    return call("GET", path, null, true).then(d => { if (ttl) CACHE.set(path, { at: Date.now(), data: d }); if (CACHE.size > 400) CACHE.delete(CACHE.keys().next().value); return d; }); };
+  const drop = (...needles) => { for (const k of [...CACHE.keys()]) if (!needles.length || needles.some(n => n && k.includes(n))) CACHE.delete(k); };
   const enc = encodeURIComponent;
   const arr = j => { const d = j && (j.data !== undefined ? j.data : j); if (Array.isArray(d)) return d; if (d && Array.isArray(d.data)) return d.data;
     for (const k of ["conversations", "items", "results", "albums", "files", "list"]) if (d && Array.isArray(d[k])) return d[k]; return []; };
@@ -39,6 +43,43 @@ module.exports = function mount(app, db, auth, admin, { twizz }) {
   const file = f => ({ id: str(f._id || f.id || f.fileId), url: str(f.url || f.Location || f.path || ""), thumb: thumbOf(f) || str(f.absolutePath || f.url || ""),
     type: str(f.type || f.mimeType || f.fileType || ""), name: str(f.originalFileName || f.name || f.filename || "") });
 
+  /* ---------- temps réel : socket Twizz -> flux vers la page ---------- */
+  const SUBS = new Set(); let sock = null, live = false, idleT = null;
+  const push = (ev, data) => SUBS.forEach(r => { try { r.write(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`); } catch (e) {} });
+  // cherche un identifiant de conversation / de créatrice dans un événement, quelle que soit sa forme
+  const findId = (o, keys, d = 0) => { if (!o || typeof o !== "object" || d > 4) return ""; for (const k of keys) if (typeof o[k] === "string" && o[k]) return o[k];
+    for (const v of Object.values(o)) { const r = findId(v, keys, d + 1); if (r) return r; } return ""; };
+  async function connect() {
+    if (sock) return; let io; try { io = require("socket.io-client").io; } catch (e) { return; }
+    try { await twizz.ensureAuth(); } catch (e) { return; }
+    sock = io(process.env.TWIZZ_BASE || "https://api.twizz.com", { transports: ["websocket"], auth: { token: twizz.token(), userId: twizz.accountId() },
+      extraHeaders: { Origin: "https://business.twizz.com", "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" },
+      reconnectionDelay: 3000, reconnectionDelayMax: 30000 });
+    sock.on("connect", () => { live = true; push("live", { on: true }); });
+    sock.on("disconnect", () => { live = false; push("live", { on: false }); });
+    let authTries = 0;
+    sock.on("connect", () => { authTries = 0; });
+    sock.on("connect_error", async e => { live = false; push("live", { on: false });
+      const m = String(e && e.message); if (authTries < 3) console.error("Twizz temps réel :", m);
+      // badge refusé : on le renouvelle et on relance (socket.io ne réessaie pas seul dans ce cas)
+      if (/auth|token|jwt|unauthor|forbidden/i.test(m) && authTries++ < 3) { try { await twizz.reauth(); sock.auth = { token: twizz.token(), userId: twizz.accountId() }; setTimeout(() => sock && sock.connect(), 1500); } catch (er) {} } });
+    sock.onAny(async (ev, ...args) => {
+      if (/token_exp/.test(ev)) { try { await twizz.reauth(); sock.auth = { token: twizz.token(), userId: twizz.accountId() }; sock.disconnect().connect(); } catch (e) {} return; }
+      const conv = findId(args[0], ["conversationId", "conversation_id"]) || (args[0] && args[0].conversation && str(args[0].conversation._id)) || "";
+      const creator = findId(args[0], ["creatorId", "creator_id"]);
+      drop(conv || "find-all-messages", "/conversations/user/");
+      push("tw", { ev, conv, creator });
+    });
+  }
+  function disconnectSoon() { clearTimeout(idleT); idleT = setTimeout(() => { if (!SUBS.size && sock) { try { sock.close(); } catch (e) {} sock = null; live = false; } }, 120e3); }
+  app.get("/api/twizz/inbox/stream", auth, founder, (req, res) => {
+    res.set({ "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no" }); res.flushHeaders?.();
+    res.write("retry: 3000\n\n"); SUBS.add(res); clearTimeout(idleT); connect().catch(() => {});
+    res.write(`event: live\ndata: ${JSON.stringify({ on: live })}\n\n`);
+    const ka = setInterval(() => { try { res.write(": ping\n\n"); } catch (e) {} }, 25e3);
+    req.on("close", () => { clearInterval(ka); SUBS.delete(res); if (!SUBS.size) disconnectSoon(); });
+  });
+
   /* ---------- lecture ---------- */
   app.get("/api/twizz/inbox/state", auth, founder, (req, res) => res.json({ send: sendOn(), creators: mapped(), configured: twizz.configured() }));
   app.post("/api/twizz/inbox/state", auth, founder, (req, res) => { if (typeof req.body?.send === "boolean") S.set("twizz_inbox_send", req.body.send); res.json({ send: sendOn() }); });
@@ -47,32 +88,38 @@ module.exports = function mount(app, db, auth, admin, { twizz }) {
   app.get("/api/twizz/inbox/:cid/conversations", auth, founder, wrap(async req => {
     const cid = creatorOk(req.params.cid), type = ["GENERAL", "TO_DELIVER"].includes(req.query.type) ? req.query.type : "GENERAL", page = Math.max(1, +req.query.page || 1);
     const q = String(req.query.q || "").trim().slice(0, 60);
-    const j = q ? await G(`/conversations/user/${enc(cid)}/search?search=${enc(q)}`) : await G(`/conversations/user/${enc(cid)}?page=${page}&type=${type}&creatorId=${enc(cid)}`);
+    const fresh = req.query.fresh === "1"; if (fresh) drop(`/conversations/user/${enc(cid)}?page=${page}&type=${type}`);
+    const j = q ? await G(`/conversations/user/${enc(cid)}/search?search=${enc(q)}`, 10e3) : await G(`/conversations/user/${enc(cid)}?page=${page}&type=${type}&creatorId=${enc(cid)}`, 20e3);
     const d = j && j.data; return { items: arr(j).map(c => conv(c, cid)), page, more: !!(d && (d.totalPages ? page < d.totalPages : arr(j).length >= 10)), sample: req.query.debug ? arr(j)[0] : undefined };
   }));
   app.get("/api/twizz/inbox/:cid/messages/:conv", auth, founder, wrap(async req => {
     const cid = creatorOk(req.params.cid), page = Math.max(1, +req.query.page || 1), fanId = str(req.query.fan);
-    const j = await G(`/messages/find-all-messages?conversationId=${enc(req.params.conv)}&creatorId=${enc(cid)}&page=${page}`);
+    const path = `/messages/find-all-messages?conversationId=${enc(req.params.conv)}&creatorId=${enc(cid)}&page=${page}`;
+    if (req.query.fresh === "1") drop(path);
+    const j = await G(path, 15e3);
     const d = (j && j.data) || {}, L = (d.data || []).map(m => msg(m, fanId)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
     return { items: L, page, totalPages: d.totalPages || 1, note: d.creatorFanNote || null, sample: req.query.debug ? (d.data || [])[0] : undefined };
   }));
   app.get("/api/twizz/inbox/:cid/fan/:fan", auth, founder, wrap(async req => {
     const cid = creatorOk(req.params.cid), fan = enc(req.params.fan);
-    const [stats, tags] = [await G(`/business/get-fan-purchase-stats/${fan}?creatorId=${enc(cid)}`).catch(e => ({ error: e.message })), await G(`/creator-fan-tags/${fan}?creatorId=${enc(cid)}`).catch(() => null)];
+    const [stats, tags, recent] = await Promise.all([G(`/business/get-fan-purchase-stats/${fan}?creatorId=${enc(cid)}`, 120e3).catch(e => ({ error: e.message })),
+      G(`/creator-fan-tags/${fan}?creatorId=${enc(cid)}`, 120e3).catch(() => null), G(`/creator-fan-tags/recent-purchase?fanId=${fan}&creatorId=${enc(cid)}`, 120e3).catch(() => null)]);
     // on garde les chiffres et textes courts, quelle que soit la forme exacte de la réponse
     const flat = {}; const walk = (o, pre) => { if (!o || typeof o !== "object") return; for (const [k, v] of Object.entries(o)) { if (["_id", "__v", "fanId", "creatorId"].includes(k)) continue;
       if (typeof v === "number" || typeof v === "boolean" || (typeof v === "string" && v.length < 40)) flat[pre + k] = v; else if (v && typeof v === "object" && !Array.isArray(v) && pre.split(".").length < 3) walk(v, pre + k + "."); } };
     walk(stats && (stats.data ?? stats), "");
-    return { stats: flat, error: stats && stats.error, tags: arr(tags).map(t => str(t.name || t.label || t.tag || t)).filter(Boolean) };
+    // derniers achats : on garde montant, type et date, quel que soit le nom exact des champs
+    const rec = arr(recent).slice(0, 8).map(x => ({ amount: +(x.netPrice ?? x.amount ?? x.price ?? x.total ?? 0) || 0, type: str(x.type || x.category || x.kind || ""), at: x.createdAt || x.date || x.purchasedAt || null })).filter(x => x.amount > 0);
+    return { stats: flat, error: stats && stats.error, tags: arr(tags).map(t => ({ name: str(t.name || t.label || t.tag || t), color: str(t.color || "") })).filter(t => t.name), recent: rec };
   }));
   // coffre de la créatrice (albums « quick-files » de Twizz)
   app.get("/api/twizz/inbox/:cid/vault", auth, founder, wrap(async req => {
-    const cid = creatorOk(req.params.cid), j = await G(`/quick-files/albums?creatorId=${enc(cid)}`);
+    const cid = creatorOk(req.params.cid), j = await G(`/quick-files/albums?creatorId=${enc(cid)}`, 300e3);
     return { albums: arr(j).map(a => ({ id: str(a._id || a.id), name: str(a.name || a.title || "Album"), count: +(a.filesCount ?? a.count ?? (a.files || []).length ?? 0) || 0,
       cover: file((a.files || [])[0] || a.cover || {}).thumb })), sample: req.query.debug ? arr(j)[0] : undefined };
   }));
   app.get("/api/twizz/inbox/:cid/vault/:album", auth, founder, wrap(async req => {
-    const cid = creatorOk(req.params.cid), j = await G(`/quick-files/album/${enc(req.params.album)}?creatorId=${enc(cid)}`);
+    const cid = creatorOk(req.params.cid), j = await G(`/quick-files/album/${enc(req.params.album)}?creatorId=${enc(cid)}`, 300e3);
     const d = j && (j.data ?? j), L = Array.isArray(d) ? d : (d && (d.files || d.quickFiles || d.items)) || [];
     return { files: L.map(file).filter(f => f.id), sample: req.query.debug ? L[0] : undefined };
   }));
@@ -82,6 +129,7 @@ module.exports = function mount(app, db, auth, admin, { twizz }) {
     mustSend(); const cid = creatorOk(req.params.cid), text = String(req.body?.text || "").trim().slice(0, 4000), conversationId = str(req.body?.conversationId);
     if (!text || !conversationId) throw bad("Message vide");
     const j = await call("POST", "/messages/send-message", { temp_id: `temp_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`, conversationId, type: "TEXT", text, creatorId: cid }, true);
+    drop(conversationId, `/conversations/user/${enc(cid)}`);
     return { ok: true, message: j && j.data ? msg(j.data, str(req.body?.fan)) : null };
   }));
   // média du coffre envoyé dans la conversation, payant ou gratuit
@@ -98,16 +146,17 @@ module.exports = function mount(app, db, auth, admin, { twizz }) {
     if (!nm && d.message) throw bad("Twizz a refusé l'envoi : " + d.message);
     db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at) VALUES (?,?,?,?,?,?,?)").run(str(nm && nm._id), conversationId, fan, cid, req.user.id, price, Date.now());
     if (b.acceptId) await call("PATCH", "/messages/update-message-status", { messageId: str(b.acceptId), action: "accepted", creatorId: cid, userType: "creator" }, true).catch(() => {});
+    drop(conversationId, `/conversations/user/${enc(cid)}`);
     return { ok: true, message: nm ? msg(nm, fan) : null };
   }));
   // demande d'un fan : accepter (après envoi du contenu) ou refuser
   app.post("/api/twizz/inbox/:cid/request", auth, founder, wrap(async req => {
     mustSend(); const cid = creatorOk(req.params.cid), action = req.body?.action === "accepted" ? "accepted" : "refused";
-    await call("PATCH", "/messages/update-message-status", { messageId: str(req.body?.messageId), action, creatorId: cid, userType: "creator" }, true); return { ok: true };
+    await call("PATCH", "/messages/update-message-status", { messageId: str(req.body?.messageId), action, creatorId: cid, userType: "creator" }, true); drop("find-all-messages", `/conversations/user/${enc(cid)}`); return { ok: true };
   }));
   // marquer une conversation comme lue (seulement quand on le demande)
   app.post("/api/twizz/inbox/:cid/read", auth, founder, wrap(async req => {
     mustSend(); const cid = creatorOk(req.params.cid);
-    await call("PATCH", "/messages/read-all-messages", { conversationId: str(req.body?.conversationId), creatorId: cid }, true); return { ok: true };
+    await call("PATCH", "/messages/read-all-messages", { conversationId: str(req.body?.conversationId), creatorId: cid }, true); drop(str(req.body?.conversationId), `/conversations/user/${enc(cid)}`); return { ok: true };
   }));
 };

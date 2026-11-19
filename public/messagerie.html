@@ -7,84 +7,138 @@
 <meta name="theme-color" content="#0a0a0a">
 <link rel="stylesheet" href="/style.css">
 <style>
-.mx{height:100dvh;display:flex;flex-direction:column;min-width:0}
-.mx-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 20px 12px;border-bottom:1px solid #1a1a1a}
-.mx-top h1{margin:0;font:900 22px Inter;letter-spacing:-.03em}.mx-top h1 em{font-style:italic;color:#5fd3a2}
-.mx-badge{height:24px;padding:0 10px;border-radius:999px;background:rgba(240,181,74,.12);border:1px solid rgba(240,181,74,.4);color:#f0b54a;font:800 10.5px/22px Inter;letter-spacing:.1em}
-.mx-cr{display:flex;gap:6px;flex-wrap:wrap}.mx-cr button{height:34px;padding:0 13px;border-radius:999px;border:1px solid #262626;background:#121212;color:#aaa;font:700 12.5px Inter;cursor:pointer}
-.mx-cr button.on{background:#f5f5f5;color:#0a0a0a;border-color:#f5f5f5}
-.mx-tg{margin-left:auto;display:flex;align-items:center;gap:14px}
-.mx-sw{display:flex;align-items:center;gap:8px;font:700 12.5px Inter;color:#aaa;cursor:pointer;user-select:none}
-.mx-sw i{width:38px;height:22px;border-radius:999px;background:#2a2a2a;position:relative;transition:.2s;flex:none}.mx-sw i:after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#888;transition:.2s}
-.mx-sw.on i{background:#5fd3a2}.mx-sw.on i:after{left:19px;background:#fff}.mx-sw.on{color:#fff}.mx-sw.red.on i{background:#e0484a}
-.mx-body{flex:1;min-height:0;display:grid;grid-template-columns:320px minmax(0,1fr) 290px}
-.mx-ls{border-right:1px solid #1a1a1a;display:flex;flex-direction:column;min-height:0}
-.mx-tabs{display:flex;gap:6px;padding:12px 12px 8px}.mx-tabs button{flex:1;height:34px;border-radius:10px;border:1px solid #232323;background:#111;color:#999;font:700 12.5px Inter;cursor:pointer}
-.mx-tabs button.on{background:#1b1b1b;color:#fff;border-color:#333}
-.mx-se{box-sizing:border-box;width:calc(100% - 24px);margin:0 12px 8px;height:36px;border-radius:10px;border:1px solid #232323;background:#0f0f0f;color:#eee;font:500 13px Inter;padding:0 12px}
-.mx-cl{flex:1;overflow:auto;padding:0 6px 10px}
-.mx-c{display:flex;gap:10px;align-items:center;width:100%;padding:9px 8px;border:0;border-radius:12px;background:none;color:#ccc;text-align:left;cursor:pointer}
-.mx-c:hover{background:#141414}.mx-c.on{background:#1a1a1a}
-.mx-av{width:40px;height:40px;border-radius:50%;flex:none;display:grid;place-items:center;font:900 15px Inter;color:#fff;background:#2c2c2c center/cover}
-.mx-c .t{flex:1;min-width:0}.mx-c b{display:block;font:700 13.5px Inter;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mx-c small{display:block;font-size:12px;color:#777;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}.mx-c.un small{color:#ddd;font-weight:600}
-.mx-c .r{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:11px;color:#666}
-.mx-c .n{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#5fd3a2;color:#05261a;font:800 10.5px/18px Inter;text-align:center}
-.mx-more{margin:6px auto;display:block;height:32px;padding:0 14px;border-radius:9px;border:1px solid #2a2a2a;background:#141414;color:#bbb;font:700 12px Inter;cursor:pointer}
-.mx-th{display:flex;flex-direction:column;min-height:0;min-width:0}
-.mx-hd{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #1a1a1a}.mx-hd b{font:800 15px Inter}.mx-hd small{color:#777;font-size:12px}
-.mx-hd .sp{margin-left:auto;display:flex;gap:6px}.mx-hb{height:32px;padding:0 11px;border-radius:9px;border:1px solid #2a2a2a;background:#141414;color:#ccc;font:700 12px Inter;cursor:pointer}
-.mx-sc{flex:1;overflow:auto;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
-.mx-m{max-width:72%;display:flex;flex-direction:column;gap:5px}.mx-m.me{align-self:flex-end;align-items:flex-end}
-.mx-b{padding:9px 13px;border-radius:16px;background:#1b1b1b;color:#eee;font-size:14px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
-.mx-m.me .mx-b{background:#1f3a2f;color:#e6fff3}
-.mx-m time{font-size:10.5px;color:#666}
-.mx-md{display:flex;gap:6px;flex-wrap:wrap}.mx-md a{width:120px;height:120px;border-radius:12px;overflow:hidden;background:#222;display:block;position:relative}
-.mx-md img{width:100%;height:100%;object-fit:cover;transition:filter .2s}.blur .mx-md img,.blur .mx-vf img{filter:blur(18px)}.blur .mx-md a:hover img,.blur .mx-vf label:hover img{filter:none}
-.mx-pr{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;font:800 11.5px Inter;background:#222;color:#ddd}
-.mx-pr.accepted{background:rgba(95,211,162,.15);color:#5fd3a2}.mx-pr.refused{background:rgba(224,122,122,.15);color:#ff9a9a}.mx-pr.pending{background:rgba(240,181,74,.13);color:#f0b54a}
-.mx-rq{display:flex;gap:6px}.mx-rq button{height:30px;padding:0 12px;border-radius:9px;border:0;font:800 12px Inter;cursor:pointer}.mx-rq .y{background:#5fd3a2;color:#05261a}.mx-rq .n{background:#2a1616;color:#ff9a9a}
-.mx-cp{display:flex;gap:8px;align-items:flex-end;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid #1a1a1a}
-.mx-cp textarea{flex:1;min-height:44px;max-height:160px;resize:none;border-radius:14px;border:1px solid #262626;background:#111;color:#eee;font:500 14px/1.4 Inter;padding:11px 14px}
-.mx-cp button{height:44px;padding:0 16px;border-radius:12px;border:0;font:800 13px Inter;cursor:pointer;flex:none}.mx-cp .md{background:#1b1b1b;color:#ddd;border:1px solid #2a2a2a}.mx-cp .go{background:#5fd3a2;color:#05261a}
-.mx-cp button[disabled]{opacity:.4;cursor:not-allowed}
-.mx-off{padding:8px 16px;font-size:12px;color:#f0b54a;background:rgba(240,181,74,.06);border-top:1px solid #1a1a1a}
-.mx-fan{border-left:1px solid #1a1a1a;overflow:auto;padding:18px 16px}
-.mx-fan .big{width:72px;height:72px;font-size:26px;margin:0 auto 10px}.mx-fan h3{text-align:center;margin:0;font:900 17px Inter}.mx-fan .u{text-align:center;color:#777;font-size:12.5px;margin-top:2px}
-.mx-sec{font:800 10.5px Inter;letter-spacing:.14em;color:#666;text-transform:uppercase;margin:18px 0 8px}
-.mx-kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #191919;font-size:12.5px;color:#999}.mx-kv b{color:#fff}
-.mx-tags{display:flex;flex-wrap:wrap;gap:5px}.mx-tags span{height:24px;padding:0 9px;border-radius:999px;background:#1d1d1d;color:#ccc;font:700 11.5px/24px Inter}
-.mx-note{font-size:13px;color:#ccc;line-height:1.5;background:#141414;border-radius:12px;padding:10px 12px;white-space:pre-wrap}
-.mx-empty{flex:1;display:grid;place-items:center;color:#666;font-size:14px;text-align:center;padding:30px}
-.mx-mod{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.7);display:grid;place-items:center;padding:20px}
-.mx-box{width:min(760px,100%);max-height:88vh;display:flex;flex-direction:column;background:#111;border:1px solid #262626;border-radius:20px;overflow:hidden}
-.mx-box .h{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #1f1f1f}.mx-box .h b{font:900 16px Inter}.mx-box .h button{margin-left:auto}
-.mx-box .c{flex:1;overflow:auto;padding:14px 16px}
-.mx-al{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.mx-al button{border:1px solid #262626;background:#161616;border-radius:14px;padding:12px;color:#eee;text-align:left;cursor:pointer;font:700 13px Inter}
-.mx-al small{display:block;color:#777;font-weight:600;margin-top:3px}
-.mx-vf{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}.mx-vf label{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:#222;cursor:pointer;border:2px solid transparent}
-.mx-vf label.on{border-color:#5fd3a2}.mx-vf img{width:100%;height:100%;object-fit:cover}.mx-vf input{position:absolute;top:8px;left:8px;width:18px;height:18px;accent-color:#5fd3a2;z-index:2}
-.mx-vf .ty{position:absolute;bottom:6px;right:6px;font:800 9.5px Inter;background:rgba(0,0,0,.65);color:#fff;border-radius:6px;padding:2px 6px}
-.mx-box .f{display:flex;gap:8px;align-items:center;padding:12px 16px;border-top:1px solid #1f1f1f;flex-wrap:wrap}
-.mx-box .f input{height:42px;border-radius:11px;border:1px solid #2a2a2a;background:#151515;color:#eee;font:600 13.5px Inter;padding:0 12px}
-.mx-box .f .go{margin-left:auto;height:42px;padding:0 18px;border-radius:11px;border:0;background:#5fd3a2;color:#05261a;font:900 13.5px Inter;cursor:pointer}
-.mx-bk{display:none}
-@media(max-width:1150px){.mx-body{grid-template-columns:300px minmax(0,1fr)}.mx-fan{display:none}.mx-fan.show{display:block;position:fixed;right:0;top:0;bottom:0;width:300px;background:#0d0d0d;z-index:40}}
-@media(max-width:860px){.mx-body{grid-template-columns:1fr}.mx-th{display:none}.mx.open .mx-ls{display:none}.mx.open .mx-th{display:flex}.mx-bk{display:inline-block}.mx-top{padding:12px}.mx-tg{margin-left:0}}
+:root{--bd:#1b1b1b;--ac:#5fd3a2;--am:#f0b54a}
+.main-area.mxm{padding:0!important;height:100dvh;overflow:hidden}
+.mx{height:100dvh;display:flex;flex-direction:column;min-width:0;background:#0a0a0a}
+/* ---- barre du haut ---- */
+.mx-top{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.mx-top h1{margin:0;font:900 21px Inter;letter-spacing:-.035em;white-space:nowrap}.mx-top h1 em{font-style:italic;background:linear-gradient(90deg,#7ee8bd,#5fd3a2);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:2px}
+.mx-badge{height:22px;padding:0 9px;border-radius:999px;background:rgba(240,181,74,.1);border:1px solid rgba(240,181,74,.35);color:var(--am);font:800 10px/20px Inter;letter-spacing:.12em}
+.mx-cr{display:flex;gap:4px;padding:4px;border-radius:14px;background:#111;border:1px solid var(--bd)}
+.mx-cr button{display:flex;align-items:center;gap:7px;height:32px;padding:0 12px 0 5px;border-radius:10px;border:0;background:none;color:#8f8f8f;font:700 12.5px Inter;cursor:pointer;transition:background .2s,color .2s}
+.mx-cr button i{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:900 10px Inter;font-style:normal;color:#fff;background:#2a2a2a}
+.mx-cr button.on{background:#f5f5f5;color:#0a0a0a}.mx-cr button.on i{background:#0a0a0a}
+.mx-cr button:not(.on):hover{color:#ddd;background:#181818}
+.mx-tg{margin-left:auto;display:flex;align-items:center;gap:16px}
+.mx-live{display:inline-flex;align-items:center;gap:7px;font:800 10.5px Inter;letter-spacing:.1em;color:#6f6f6f}
+.mx-live i{width:7px;height:7px;border-radius:50%;background:#555}.mx-live.on{color:var(--ac)}.mx-live.on i{background:var(--ac);box-shadow:0 0 0 0 rgba(95,211,162,.6);animation:mxP 1.8s infinite}
+@keyframes mxP{70%{box-shadow:0 0 0 7px rgba(95,211,162,0)}100%{box-shadow:0 0 0 0 rgba(95,211,162,0)}}
+.mx-sw{display:flex;align-items:center;gap:8px;font:700 12.5px Inter;color:#8a8a8a;cursor:pointer;user-select:none;white-space:nowrap}
+.mx-sw i{width:36px;height:21px;border-radius:999px;background:#262626;position:relative;transition:.25s;flex:none}.mx-sw i:after{content:"";position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;background:#7a7a7a;transition:.25s cubic-bezier(.34,1.56,.64,1)}
+.mx-sw.on i{background:var(--ac)}.mx-sw.on i:after{left:18px;background:#fff}.mx-sw.on{color:#eee}.mx-sw.red.on i{background:#e0484a}
+/* ---- 3 colonnes ---- */
+.mx-body{flex:1;min-height:0;display:grid;grid-template-columns:340px minmax(0,1fr) 300px;position:relative;overflow:hidden}
+.mx-ls{border-right:1px solid var(--bd);display:flex;flex-direction:column;min-height:0;background:#0a0a0a}
+.mx-seg{display:flex;gap:4px;margin:14px 14px 10px;padding:4px;border-radius:12px;background:#111;border:1px solid var(--bd)}
+.mx-seg button{flex:1;height:32px;border-radius:9px;border:0;background:none;color:#8a8a8a;font:700 12.5px Inter;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.mx-seg button.on{background:#1f1f1f;color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.04) inset}
+.mx-se{display:flex;align-items:center;gap:8px;margin:0 14px 8px;height:38px;border-radius:11px;border:1px solid var(--bd);background:#0f0f0f;padding:0 12px;color:#666}
+.mx-se input{flex:1;min-width:0;border:0;background:none;color:#eee;font:500 13px Inter;outline:none}
+.mx-cl{flex:1;overflow:auto;padding:2px 8px 14px;scrollbar-width:thin}
+.mx-c{position:relative;display:flex;gap:11px;align-items:center;width:100%;padding:10px;border:0;border-radius:14px;background:none;color:#ccc;text-align:left;cursor:pointer;transition:background .15s;animation:mxIn .3s both}
+@keyframes mxIn{from{opacity:0;transform:translateY(4px)}}
+.mx-c:hover{background:#121212}.mx-c.on{background:#171717}
+.mx-c.wait:before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:3px;background:var(--am)}
+.mx-av{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;font:900 16px Inter;color:#fff;background:var(--c,#2a2a2a) center/cover}
+.mx-c .t{flex:1;min-width:0}.mx-c b{display:block;font:700 14px Inter;color:#f2f2f2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mx-c small{display:block;font-size:12.5px;color:#6f6f6f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px}
+.mx-c.un small{color:#e8e8e8;font-weight:600}.mx-c .wt{color:var(--am);font-weight:700}
+.mx-c .r{display:flex;flex-direction:column;align-items:flex-end;gap:6px;font-size:11px;color:#5f5f5f;flex:none}
+.mx-c .n{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--ac);color:#05261a;font:800 11px/20px Inter;text-align:center;animation:mxPop .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes mxPop{from{transform:scale(.4)}}
+.mx-more{margin:8px auto;display:block;height:34px;padding:0 16px;border-radius:10px;border:1px solid #262626;background:#121212;color:#bbb;font:700 12px Inter;cursor:pointer}
+.sk{background:linear-gradient(90deg,#141414 25%,#1c1c1c 50%,#141414 75%);background-size:200% 100%;animation:sk 1.2s infinite linear;border-radius:8px}
+@keyframes sk{to{background-position:-200% 0}}
+/* ---- conversation ---- */
+.mx-th{display:flex;flex-direction:column;min-height:0;min-width:0;background:radial-gradient(900px 400px at 50% -200px,rgba(95,211,162,.05),transparent 70%),#0a0a0a;transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+.mx-hd{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--bd);min-height:68px;box-sizing:border-box}
+.mx-hd .av{width:40px;height:40px;font-size:15px}.mx-hd b{display:block;font:800 15.5px Inter}.mx-hd small{color:#6f6f6f;font-size:12px}
+.mx-hd .sp{margin-left:auto;display:flex;gap:6px}
+.mx-ib{height:34px;padding:0 12px;border-radius:10px;border:1px solid #262626;background:#121212;color:#cfcfcf;font:700 12px Inter;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s}
+.mx-ib:hover{background:#1a1a1a}.mx-ib svg{width:15px;height:15px}
+.mx-bk,.mx-fb{display:none}
+.mx-sc{flex:1;overflow:auto;padding:18px 22px 10px;display:flex;flex-direction:column;scrollbar-width:thin}
+.mx-day{align-self:center;margin:14px 0 10px;font:800 10.5px Inter;letter-spacing:.12em;color:#5f5f5f;text-transform:uppercase}
+.mx-g{display:flex;flex-direction:column;gap:3px;max-width:68%;margin-bottom:10px;animation:mxIn .25s both}.mx-g.me{align-self:flex-end;align-items:flex-end}
+.mx-b{padding:9px 14px;border-radius:18px;background:#191919;color:#ededed;font-size:14.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word;border-bottom-left-radius:6px}
+.mx-g.me .mx-b{background:linear-gradient(135deg,#1f4a39,#1a3b2e);color:#e9fff5;border-bottom-left-radius:18px;border-bottom-right-radius:6px}
+.mx-g time{font-size:10.5px;color:#565656;margin-top:3px;padding:0 4px}
+.mx-g .st{font-size:10.5px;color:#888}.mx-g .st.ko{color:#ff8a8a;cursor:pointer;text-decoration:underline}
+.mx-md{display:grid;gap:4px;border-radius:16px;overflow:hidden}.mx-md.n1{grid-template-columns:240px}.mx-md.n2{grid-template-columns:repeat(2,150px)}.mx-md.n3{grid-template-columns:repeat(3,110px)}
+.mx-md button{padding:0;border:0;background:#1d1d1d;aspect-ratio:1;cursor:zoom-in;position:relative;overflow:hidden}
+.mx-md img{width:100%;height:100%;object-fit:cover;display:block;transition:filter .25s}
+.mx-md .pl{position:absolute;inset:0;display:grid;place-items:center;color:#fff}.mx-md .pl svg{width:34px;height:34px;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6))}
+.blur .mx-md img,.blur .mx-vf img,.blur .mx-al img{filter:blur(16px) saturate(.8)}.blur .mx-md button:hover img,.blur .mx-vf label:hover img{filter:none}
+.mx-pr{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border-radius:999px;font:800 11.5px Inter;background:#1d1d1d;color:#bbb;margin-top:2px}
+.mx-pr.accepted{background:rgba(95,211,162,.14);color:var(--ac)}.mx-pr.refused{background:rgba(224,122,122,.14);color:#ff9a9a}.mx-pr.pending{background:rgba(240,181,74,.12);color:var(--am)}
+.mx-rq{display:flex;gap:6px;margin-top:4px}.mx-rq button{height:32px;padding:0 13px;border-radius:10px;border:0;font:800 12px Inter;cursor:pointer}
+.mx-rq .y{background:var(--ac);color:#05261a}.mx-rq .n{background:#241414;color:#ff9a9a}
+.mx-old{align-self:center;margin:4px 0 12px;font-size:12px;color:#666}
+.mx-cpw{padding:10px 18px calc(14px + env(safe-area-inset-bottom))}
+.mx-off{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:9px 12px;border-radius:12px;background:rgba(240,181,74,.07);border:1px solid rgba(240,181,74,.25);font-size:12.5px;color:#e9cf9a}
+.mx-cp{display:flex;align-items:flex-end;gap:6px;padding:6px;border-radius:20px;border:1px solid #262626;background:#111;transition:border-color .2s}
+.mx-cp:focus-within{border-color:#3a3a3a}
+.mx-cp textarea{flex:1;min-height:22px;max-height:170px;resize:none;border:0;background:none;color:#eee;font:500 14.5px/1.45 Inter;padding:9px 6px;outline:none}
+.mx-cp button{width:40px;height:40px;border-radius:14px;border:0;display:grid;place-items:center;cursor:pointer;flex:none;transition:transform .12s,background .2s}
+.mx-cp button:active{transform:scale(.93)}.mx-cp .md{background:#1b1b1b;color:#cfcfcf}.mx-cp .go{background:var(--ac);color:#05261a}
+.mx-cp button[disabled]{opacity:.35;cursor:not-allowed}.mx-cp svg{width:19px;height:19px}
+.mx-empty{flex:1;display:grid;place-items:center;color:#5f5f5f;font-size:14px;text-align:center;padding:30px}
+.mx-empty .big{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;margin:0 auto 12px;background:#121212;color:#444}
+/* ---- fiche fan ---- */
+.mx-fan{border-left:1px solid var(--bd);overflow:auto;padding:22px 18px;background:#0a0a0a}
+.mx-fan .av{width:76px;height:76px;font-size:28px;margin:0 auto 12px}.mx-fan h3{text-align:center;margin:0;font:900 18px Inter;letter-spacing:-.02em}.mx-fan .u{text-align:center;color:#6f6f6f;font-size:12.5px;margin-top:3px}
+.mx-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}
+.mx-tile{padding:12px;border-radius:14px;background:#111;border:1px solid var(--bd)}.mx-tile small{display:block;font:700 10.5px Inter;letter-spacing:.08em;color:#6a6a6a;text-transform:uppercase}
+.mx-tile b{display:block;font:900 18px Inter;margin-top:5px;letter-spacing:-.02em}.mx-tile.w{grid-column:1/-1;background:linear-gradient(135deg,rgba(95,211,162,.1),rgba(95,211,162,.02));border-color:rgba(95,211,162,.25)}
+.mx-tile.w b{font-size:26px;color:#c9f5e2}
+.mx-sec{font:800 10.5px Inter;letter-spacing:.14em;color:#5f5f5f;text-transform:uppercase;margin:20px 0 9px}
+.mx-tags{display:flex;flex-wrap:wrap;gap:6px}.mx-tags span{height:26px;padding:0 10px;border-radius:999px;font:700 11.5px/26px Inter;background:color-mix(in srgb,var(--c) 18%,transparent);color:color-mix(in srgb,var(--c) 75%,#fff);border:1px solid color-mix(in srgb,var(--c) 35%,transparent)}
+.mx-buy{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #161616;font-size:12.5px;color:#999}.mx-buy b{margin-left:auto;color:#fff}
+.mx-note{font-size:13px;color:#cfcfcf;line-height:1.55;background:#111;border:1px solid var(--bd);border-radius:12px;padding:10px 12px;white-space:pre-wrap}
+/* ---- fenêtres ---- */
+.mx-lb{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.92);display:grid;place-items:center;padding:30px;animation:mxF .2s}
+@keyframes mxF{from{opacity:0}}.mx-lb img,.mx-lb video{max-width:100%;max-height:100%;border-radius:12px}
+.mx-lb button{position:absolute;top:18px;right:18px;width:42px;height:42px;border-radius:50%;border:0;background:#1d1d1d;color:#fff;font-size:18px;cursor:pointer}
+.mx-mod{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.72);display:grid;place-items:center;padding:20px;animation:mxF .2s}
+.mx-box{width:min(820px,100%);max-height:88vh;display:flex;flex-direction:column;background:#0f0f0f;border:1px solid #262626;border-radius:22px;overflow:hidden;box-shadow:0 40px 90px -20px #000;animation:mxUp .3s cubic-bezier(.2,.8,.2,1)}
+@keyframes mxUp{from{transform:translateY(16px);opacity:0}}
+.mx-box .h{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid #1c1c1c}.mx-box .h b{font:900 17px Inter;letter-spacing:-.02em}.mx-box .h .x{margin-left:auto}
+.mx-box .c{flex:1;overflow:auto;padding:16px 18px}
+.mx-al{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.mx-al button{border:1px solid #232323;background:#141414;border-radius:16px;padding:0;color:#eee;text-align:left;cursor:pointer;overflow:hidden;transition:border-color .2s,transform .15s}
+.mx-al button:hover{border-color:#3a3a3a;transform:translateY(-2px)}.mx-al .cv{aspect-ratio:16/10;background:#1c1c1c;display:grid;place-items:center;color:#444;overflow:hidden}.mx-al .cv img{width:100%;height:100%;object-fit:cover}
+.mx-al .tx{padding:10px 12px;font:800 13px Inter}.mx-al small{display:block;color:#6f6f6f;font-weight:600;margin-top:2px}
+.mx-vf{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.mx-vf label{position:relative;aspect-ratio:1;border-radius:14px;overflow:hidden;background:#1a1a1a;cursor:pointer;outline:2px solid transparent;outline-offset:-2px;transition:outline-color .15s}
+.mx-vf label.on{outline-color:var(--ac)}.mx-vf img{width:100%;height:100%;object-fit:cover}
+.mx-vf input{position:absolute;opacity:0}.mx-vf .ck{position:absolute;top:8px;left:8px;width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.8);background:rgba(0,0,0,.35);display:grid;place-items:center;color:#05261a;z-index:2}
+.mx-vf label.on .ck{background:var(--ac);border-color:var(--ac)}.mx-vf .ty{position:absolute;bottom:7px;right:7px;font:800 9.5px Inter;background:rgba(0,0,0,.7);color:#fff;border-radius:6px;padding:2px 6px;z-index:2}
+.mx-box .f{display:flex;flex-direction:column;gap:10px;padding:14px 18px;border-top:1px solid #1c1c1c;background:#0c0c0c}
+.mx-pc{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.mx-pc button{height:34px;padding:0 13px;border-radius:10px;border:1px solid #262626;background:#151515;color:#ccc;font:800 12.5px Inter;cursor:pointer}
+.mx-pc button.on{background:#f5f5f5;color:#0a0a0a;border-color:#f5f5f5}
+.mx-pc input,.mx-box .f .tx{height:38px;border-radius:10px;border:1px solid #262626;background:#151515;color:#eee;font:600 13.5px Inter;padding:0 12px;box-sizing:border-box}
+.mx-box .go{height:44px;border-radius:12px;border:0;background:var(--ac);color:#05261a;font:900 14px Inter;cursor:pointer}.mx-box .go[disabled]{opacity:.4;cursor:not-allowed}
+@media(max-width:1180px){.mx-body{grid-template-columns:320px minmax(0,1fr)}.mx-fan{position:absolute;right:0;top:0;bottom:0;width:300px;z-index:30;transform:translateX(105%);transition:transform .3s cubic-bezier(.2,.8,.2,1);box-shadow:-30px 0 60px -20px #000}.mx-fan.show{transform:none}.mx-fb{display:inline-flex}}
+@media(max-width:900px){.main-area.mxm,.mx{height:calc(100dvh - 55px)}}
+@media(max-width:860px){.mx-body{grid-template-columns:1fr}.mx-th{position:absolute;inset:0;transform:translateX(100%);z-index:20}.mx.open .mx-th{transform:none}.mx-bk{display:inline-flex}.mx-top{padding:12px 14px;gap:10px}.mx-tg{margin-left:0;width:100%;justify-content:space-between}.mx-g{max-width:84%}.mx-md.n1{grid-template-columns:200px}
+  .mx-cpw{padding-bottom:calc(92px + env(safe-area-inset-bottom))}.mx-cl{padding-bottom:96px}.mx-ib .lb{display:none}.mx-hd{padding:10px 12px;gap:10px}}
 </style>
 </head>
 <body>
 <div class="shell">
 <aside class="sidebar" id="sidebar"></aside>
-<main class="main-area" style="padding:0">
+<main class="main-area mxm">
   <div class="mx" id="mx">
     <div class="mx-top"><h1>Messagerie <em>Twizz</em></h1><span class="mx-badge">TEST · FONDATEUR</span>
       <div class="mx-cr" id="crs"></div>
-      <div class="mx-tg"><span class="mx-sw on" id="swBlur" title="Floute les photos et vidéos ; survole pour voir"><i></i>Flouter les médias</span><span class="mx-sw red" id="swSend" title="Tant que c'est coupé, rien ne peut être envoyé aux fans"><i></i>Envoi activé</span></div></div>
+      <div class="mx-tg"><span class="mx-live" id="live" title="Les nouveaux messages arrivent tout seuls"><i></i><span>CONNEXION…</span></span>
+        <span class="mx-sw on" id="swBlur" title="Floute les photos et vidéos ; survole pour voir"><i></i>Flouter</span>
+        <span class="mx-sw red" id="swSend" title="Tant que c'est coupé, rien ne peut partir vers les fans"><i></i>Envoi activé</span></div></div>
     <div class="mx-body blur" id="body">
-      <section class="mx-ls"><div class="mx-tabs"><button class="on" data-ty="GENERAL">Général</button><button data-ty="TO_DELIVER">À livrer</button></div>
-        <input class="mx-se" id="q" placeholder="Rechercher un fan"><div class="mx-cl" id="cl"></div></section>
-      <section class="mx-th" id="th"><div class="mx-empty">Choisis une conversation</div></section>
+      <section class="mx-ls"><div class="mx-seg"><button class="on" data-ty="GENERAL">Général</button><button data-ty="TO_DELIVER">À livrer</button></div>
+        <label class="mx-se"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" placeholder="Rechercher un fan"></label>
+        <div class="mx-cl" id="cl"></div></section>
+      <section class="mx-th" id="th"></section>
       <aside class="mx-fan" id="fan"></aside>
     </div>
   </div>
@@ -94,130 +148,216 @@
 <script>
 (() => {
 const $ = id => document.getElementById(id);
-let ST = null, CID = null, TYPE = "GENERAL", CONVS = [], PAGE = 1, MORE = false, CUR = null, MSGS = [], Q = "";
-const E = n => (Math.round(n * 100) / 100).toLocaleString("fr-FR", { maximumFractionDigits: 2 }) + " €";
-const hm = d => { const t = new Date(d); if (isNaN(t)) return ""; const today = new Date().toDateString() === t.toDateString();
-  return today ? t.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : t.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) + " " + t.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }); };
-const av = (p, cls = "") => `<span class="mx-av ${cls}" style="${p.avatar ? `background-image:url(${esc(p.avatar)});font-size:0` : ""}">${esc((p.name || "?")[0].toUpperCase())}</span>`;
-const LBL = { averagePurchase: "Achat moyen", highestPurchase: "Plus gros achat", lowestPurchase: "Plus petit achat", totalSpent: "Total dépensé", total: "Total", totalAmount: "Total", count: "Achats", totalPurchases: "Achats", lastPurchase: "Dernier achat", mediaPush: "Médias push", privateMedia: "Médias privés", tips: "Pourboires", subscription: "Abonnement" };
-const pretty = k => LBL[k.split(".").pop()] || k.replace(/\./g, " › ").replace(/([a-z])([A-Z])/g, "$1 $2");
+const IC = { img: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>', send: '<path d="M5 12h14M13 6l6 6-6 6"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/>',
+  play: '<path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/>', back: '<path d="M15 18l-6-6 6-6"/>' };
+const SV = (p, s = 16, w = 2.2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+let ST = null, CID = null, TYPE = "GENERAL", Q = "", CUR = null, LIVE = false;
+const LISTS = {}, THREADS = {}, FANS = {};
+const lkey = () => `${CID}|${TYPE}|${Q}`;
+const E = n => (Math.round(n * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + " €";
+const tm = d => new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+const ago = d => { const t = Date.parse(d); if (!t) return ""; const m = (Date.now() - t) / 60e3; if (m < 1) return "maintenant"; if (m < 60) return Math.round(m) + " min";
+  const sameDay = new Date(t).toDateString() === new Date().toDateString(); if (sameDay) return tm(t); const y = new Date(Date.now() - 864e5).toDateString() === new Date(t).toDateString(); return y ? "hier" : new Date(t).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }); };
+const dayLbl = d => { const t = new Date(d), n = new Date(); if (t.toDateString() === n.toDateString()) return "Aujourd'hui"; if (t.toDateString() === new Date(Date.now() - 864e5).toDateString()) return "Hier";
+  return t.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }); };
+const hue = s => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 45% 34%)`; };
+const av = (p, cls = "") => `<span class="mx-av ${cls}" style="--c:${hue(p.id || p.name)};${p.avatar ? `background-image:url(${esc(p.avatar)});font-size:0` : ""}">${esc((p.name || "?")[0].toUpperCase())}</span>`;
+const isVid = u => /\.(mp4|mov|webm|m3u8)$/i.test(String(u).split("?")[0]);
+const api2 = (u, o) => api(`/api/twizz/inbox/${encodeURIComponent(CID)}${u}`, o);
 
-/* ---------- haut de page ---------- */
+/* ================= haut de page ================= */
 function top() {
-  $("crs").innerHTML = ST.creators.filter(c => c.id).map(c => `<button data-cid="${esc(c.id)}" class="${c.id === CID ? "on" : ""}">${esc(c.label)}</button>`).join("") || `<span style="color:#888;font-size:13px">Teste d'abord la connexion Twizz dans Réglages fondateur</span>`;
-  $("crs").querySelectorAll("[data-cid]").forEach(b => b.onclick = () => { CID = b.dataset.cid; try { localStorage.setItem("mx:cid", CID); } catch (e) {} CUR = null; top(); loadList(true); thread(); fanCard(); });
+  $("crs").innerHTML = ST.creators.filter(c => c.id).map(c => `<button data-cid="${esc(c.id)}" class="${c.id === CID ? "on" : ""}"><i>${esc(c.label[0] || "?")}</i>${esc(c.label)}</button>`).join("") || `<span style="color:#777;font-size:13px;padding:0 10px">Teste la connexion Twizz dans Réglages fondateur</span>`;
+  $("crs").querySelectorAll("[data-cid]").forEach(b => b.onclick = () => { if (b.dataset.cid === CID) return; CID = b.dataset.cid; try { localStorage.setItem("mx:cid", CID); } catch (e) {} CUR = null; $("mx").classList.remove("open"); top(); loadList(); thread(); fanCard(); });
   $("swSend").classList.toggle("on", ST.send);
 }
+function liveUi() { $("live").classList.toggle("on", LIVE); $("live").lastElementChild.textContent = LIVE ? "EN DIRECT" : "ACTUALISATION AUTO"; }
 $("swSend").onclick = async () => { const on = !ST.send;
   if (on && !confirm("Activer l'envoi ?\n\nTout ce que tu envoies d'ici part VRAIMENT au fan sur Twizz, au nom de la créatrice.")) return;
-  try { ST.send = (await api("/api/twizz/inbox/state", { body: { send: on } })).send; top(); thread(true); notify(ST.send ? "Envoi activé" : "Envoi coupé", "", ST.send ? "ok" : "info"); } catch (e) { notify("Erreur", e.message, "err"); } };
+  try { ST.send = (await api("/api/twizz/inbox/state", { body: { send: on } })).send; top(); if (CUR) thread(); notify(ST.send ? "Envoi activé" : "Envoi coupé", "", ST.send ? "ok" : "info"); } catch (e) { notify("Erreur", e.message, "err"); } };
 $("swBlur").onclick = () => { const on = !$("swBlur").classList.contains("on"); $("swBlur").classList.toggle("on", on); $("body").classList.toggle("blur", on); try { localStorage.setItem("mx:blur", on ? "1" : "0"); } catch (e) {} };
-document.querySelectorAll(".mx-tabs [data-ty]").forEach(b => b.onclick = () => { TYPE = b.dataset.ty; document.querySelectorAll(".mx-tabs [data-ty]").forEach(x => x.classList.toggle("on", x === b)); loadList(true); });
-let qT = null; $("q").oninput = () => { clearTimeout(qT); qT = setTimeout(() => { Q = $("q").value.trim(); loadList(true); }, 450); };
+document.querySelectorAll(".mx-seg [data-ty]").forEach(b => b.onclick = () => { TYPE = b.dataset.ty; document.querySelectorAll(".mx-seg [data-ty]").forEach(x => x.classList.toggle("on", x === b)); loadList(); });
+let qT = null; $("q").oninput = () => { clearTimeout(qT); qT = setTimeout(() => { Q = $("q").value.trim(); loadList(); }, 400); };
 
-/* ---------- conversations ---------- */
-async function loadList(reset) {
-  if (!CID) return; if (reset) { PAGE = 1; CONVS = []; $("cl").innerHTML = `<div class="mx-empty" style="padding:30px">Chargement…</div>`; }
-  try { const r = await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/conversations?type=${TYPE}&page=${PAGE}${Q ? "&q=" + encodeURIComponent(Q) : ""}`);
-    CONVS = PAGE === 1 ? r.items : CONVS.concat(r.items.filter(x => !CONVS.some(y => y.id === x.id))); MORE = r.more && !Q; list(); }
-  catch (e) { $("cl").innerHTML = `<div class="mx-empty" style="padding:24px;color:#e07a7a">${esc(e.message)}</div>`; }
+/* ================= conversations ================= */
+async function loadList(fresh, more) {
+  if (!CID) return; const k = lkey(), L = LISTS[k];
+  if (!more) { if (L) renderList(); else $("cl").innerHTML = Array.from({ length: 8 }, (_, i) => `<div class="mx-c" style="animation-delay:${i * .03}s;cursor:default"><span class="mx-av sk"></span><span class="t"><span class="sk" style="display:block;height:12px;width:${50 + (i * 17) % 40}%"></span><span class="sk" style="display:block;height:10px;width:${60 + (i * 13) % 30}%;margin-top:8px"></span></span></div>`).join(""); }
+  const page = more && L ? L.page + 1 : 1;
+  try { const r = await api2(`/conversations?type=${TYPE}&page=${page}${Q ? "&q=" + encodeURIComponent(Q) : ""}${fresh ? "&fresh=1" : ""}`); if (lkey() !== k) return;
+    LISTS[k] = page === 1 ? { items: r.items, page: 1, more: r.more && !Q } : { items: L.items.concat(r.items.filter(x => !L.items.some(y => y.id === x.id))), page, more: r.more };
+    renderList(); if (CUR) { const c = LISTS[k].items.find(x => x.id === CUR.id); if (c) Object.assign(CUR, { last: c.last, unread: c.unread }); } }
+  catch (e) { if (!LISTS[k]) $("cl").innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; else notify("Twizz", e.message, "err"); }
 }
-function list() {
-  $("cl").innerHTML = (CONVS.map(c => `<button class="mx-c ${c.id === (CUR && CUR.id) ? "on" : ""} ${c.unread ? "un" : ""}" data-conv="${esc(c.id)}">${av(c.fan)}<span class="t"><b>${esc(c.fan.name)}</b><small>${c.last.fromFan ? "" : "Toi : "}${esc(c.last.text || (c.last.type === "FILE" ? "📷 Média" : ""))}</small></span>
-    <span class="r">${hm(c.last.at)}${c.unread ? `<span class="n">${c.unread}</span>` : ""}</span></button>`).join("") || `<div class="mx-empty" style="padding:30px">Aucune conversation</div>`)
-    + (MORE ? `<button class="mx-more" id="more">Charger plus</button>` : "");
-  $("cl").querySelectorAll("[data-conv]").forEach(b => b.onclick = () => openConv(CONVS.find(c => c.id === b.dataset.conv)));
-  if ($("more")) $("more").onclick = () => { PAGE++; loadList(); };
+function renderList() {
+  const L = LISTS[lkey()]; if (!L) return;
+  $("cl").innerHTML = (L.items.map((c, i) => { const waitMin = c.last.fromFan && c.last.at ? (Date.now() - Date.parse(c.last.at)) / 60e3 : 0, wait = waitMin > 5;
+    const prev = c.last.text || (c.last.type === "FILE" ? "📷 Média" : "");
+    return `<button class="mx-c ${c.id === (CUR && CUR.id) ? "on" : ""} ${c.unread ? "un" : ""} ${wait ? "wait" : ""}" data-conv="${esc(c.id)}" style="animation-delay:${Math.min(i, 12) * .02}s">${av(c.fan)}
+      <span class="t"><b>${esc(c.fan.name)}</b><small>${wait ? `<span class="wt">Attend depuis ${waitMin < 60 ? Math.round(waitMin) + " min" : Math.round(waitMin / 60) + " h"} · </span>` : c.last.fromFan ? "" : "Toi : "}${esc(prev)}</small></span>
+      <span class="r">${ago(c.last.at)}${c.unread ? `<span class="n">${c.unread > 99 ? "99+" : c.unread}</span>` : ""}</span></button>`; }).join("") || `<div class="mx-empty"><div><div class="big">${SV(IC.chat, 28)}</div>${Q ? "Aucun fan trouvé" : "Aucune conversation"}</div></div>`)
+    + (L.more ? `<button class="mx-more" id="more">Charger plus</button>` : "");
+  $("cl").querySelectorAll("[data-conv]").forEach(b => b.onclick = () => openConv(L.items.find(c => c.id === b.dataset.conv)));
+  if ($("more")) $("more").onclick = () => { $("more").textContent = "…"; loadList(false, true); };
 }
 
-/* ---------- fil de discussion ---------- */
-async function openConv(c) { if (!c) return; CUR = c; MSGS = []; $("mx").classList.add("open"); list(); thread(); fanCard(); await loadMsgs(); }
-async function loadMsgs() {
-  if (!CUR) return; const id = CUR.id;
-  try { const r = await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/messages/${encodeURIComponent(id)}?fan=${encodeURIComponent(CUR.fan.id)}`); if (!CUR || CUR.id !== id) return;
-    const changed = JSON.stringify(r.items.map(m => m.id + m.status)) !== JSON.stringify(MSGS.map(m => m.id + m.status)); MSGS = r.items; CUR.note = r.note; if (changed) thread(); }
-  catch (e) { if ($("sc")) $("sc").innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; }
+/* ================= fil de discussion ================= */
+async function openConv(c) {
+  if (!c) return; CUR = c; $("mx").classList.add("open"); renderList(); thread(); loadMsgs(); setTimeout(fanCard, 150);
 }
-function bubble(m) {
-  const pr = m.price != null && m.type === "FILE" ? (m.price > 0 ? `<span class="mx-pr ${esc(m.status)}">${E(m.price)} · ${m.status === "accepted" ? "acheté" : m.status === "refused" ? "refusé" : "pas encore acheté"}</span>` : `<span class="mx-pr">Gratuit</span>`) : "";
-  const req = m.fromFan && m.status === "pending" ? `<div class="mx-rq"><button class="y" data-acc="${esc(m.id)}">Accepter (envoyer un média)</button><button class="n" data-ref="${esc(m.id)}">Refuser</button></div>` : "";
-  const md = m.medias.length ? `<div class="mx-md">${m.medias.map(x => x.audio ? `<audio controls src="${esc(x.url)}" style="width:220px"></audio>` : `<a href="${esc(x.url)}" target="_blank" rel="noopener"><img src="${esc(x.thumb || x.url)}" alt="" loading="lazy"></a>`).join("")}</div>` : "";
-  return `<div class="mx-m ${m.fromFan ? "" : "me"}">${md}${m.text ? `<div class="mx-b">${esc(m.text)}</div>` : ""}${pr}${req}<time>${hm(m.at)}</time></div>`;
+async function loadMsgs(fresh) {
+  if (!CUR) return; const id = CUR.id, T = THREADS[id];
+  try { const r = await api2(`/messages/${encodeURIComponent(id)}?fan=${encodeURIComponent(CUR.fan.id)}${fresh ? "&fresh=1" : ""}`); if (!CUR || CUR.id !== id) return;
+    const pend = (T ? T.items : []).filter(m => m.tmp && !r.items.some(x => !x.fromFan && x.text === m.text && Math.abs(Date.parse(x.at) - m.sentAt) < 120e3));
+    const older = T && T.page > 1 ? T.items.filter(m => !m.tmp && !r.items.some(x => x.id === m.id) && Date.parse(m.at) < Date.parse((r.items[0] || {}).at || 0)) : [];
+    const before = T ? JSON.stringify(T.items.map(m => m.id + m.status)) : "";
+    THREADS[id] = { items: older.concat(r.items, pend), page: T ? T.page : 1, totalPages: r.totalPages, note: r.note };
+    if (JSON.stringify(THREADS[id].items.map(m => m.id + m.status)) !== before) thread(true); }
+  catch (e) { if (!T && $("sc")) $("sc").innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; }
 }
-function thread(keepScroll) {
-  if (!CUR) { $("th").innerHTML = `<div class="mx-empty">${CID ? "Choisis une conversation" : "Choisis une créatrice en haut"}</div>`; return; }
-  const sc = $("sc"), atBottom = !sc || sc.scrollHeight - sc.scrollTop - sc.clientHeight < 80;
-  const draft = $("tx") ? $("tx").value : "", hadFocus = document.activeElement && document.activeElement.id === "tx";   // on ne perd pas ce qui est en cours d'écriture
-  $("th").innerHTML = `<div class="mx-hd"><button class="mx-hb mx-bk" id="bk">‹</button>${av(CUR.fan)}<div><b>${esc(CUR.fan.name)}</b><br><small>${CUR.fan.username ? "@" + esc(CUR.fan.username) : ""}</small></div>
-      <span class="sp"><button class="mx-hb" id="rd" title="Marque la conversation comme lue sur Twizz">Marquer comme lu</button><button class="mx-hb" id="fanB">Fiche fan</button></span></div>
-    <div class="mx-sc" id="sc">${MSGS.length ? MSGS.map(bubble).join("") : `<div class="mx-empty">Chargement…</div>`}</div>
-    ${ST.send ? "" : `<div class="mx-off">Envoi coupé : active « Envoi activé » en haut pour répondre. Tu peux tout lire sans rien changer côté Twizz.</div>`}
-    <div class="mx-cp"><button class="md" id="mdB" ${ST.send ? "" : "disabled"}>📎 Média</button><textarea id="tx" placeholder="Écris ton message…" ${ST.send ? "" : "disabled"}></textarea><button class="go" id="goB" ${ST.send ? "" : "disabled"}>Envoyer</button></div>`;
-  const s2 = $("sc"); if (!keepScroll || atBottom) s2.scrollTop = s2.scrollHeight;
-  if (draft) $("tx").value = draft; if (hadFocus) $("tx").focus();
-  $("bk").onclick = () => { $("mx").classList.remove("open"); CUR = null; list(); };
+async function loadOlder() {
+  const T = CUR && THREADS[CUR.id]; if (!T || T.loading || T.page >= T.totalPages) return; T.loading = true;
+  const sc = $("sc"), h0 = sc.scrollHeight; if ($("old")) $("old").textContent = "Chargement…";
+  try { const r = await api2(`/messages/${encodeURIComponent(CUR.id)}?fan=${encodeURIComponent(CUR.fan.id)}&page=${T.page + 1}`);
+    T.items = r.items.filter(x => !T.items.some(y => y.id === x.id)).concat(T.items); T.page++; T.totalPages = r.totalPages; thread(true, true); const s2 = $("sc"); s2.scrollTop = s2.scrollHeight - h0; }
+  catch (e) {} finally { T.loading = false; }
+}
+function groupHtml(G) {
+  const m0 = G[0], me = !m0.fromFan, last = G[G.length - 1];
+  const parts = G.map(m => {
+    const md = m.medias.length ? `<div class="mx-md n${Math.min(3, m.medias.length)}">${m.medias.map((x, i) => x.audio ? `<audio controls src="${esc(x.url)}" style="width:240px"></audio>`
+      : `<button data-lb="${esc(m.id)}:${i}">${x.thumb ? `<img src="${esc(x.thumb)}" alt="" loading="lazy">` : ""}${isVid(x.url) ? `<span class="pl">${SV(IC.play, 34)}</span>` : ""}</button>`).join("")}</div>` : "";
+    const pr = m.type === "FILE" && m.price != null ? (m.price > 0 ? `<span class="mx-pr ${esc(m.status)}">${E(m.price)} · ${m.status === "accepted" ? "acheté" : m.status === "refused" ? "refusé" : "pas encore acheté"}</span>` : `<span class="mx-pr">Gratuit</span>`) : "";
+    const rq = m.fromFan && m.status === "pending" ? `<div class="mx-rq"><button class="y" data-acc="${esc(m.id)}">Accepter</button><button class="n" data-ref="${esc(m.id)}">Refuser</button></div>` : "";
+    return `${md}${m.text ? `<div class="mx-b">${esc(m.text)}</div>` : ""}${pr}${rq}`; }).join("");
+  const st = last.tmp ? (last.failed ? `<span class="st ko" data-retry="${esc(last.id)}">Échec · réessayer</span>` : `<span class="st">envoi…</span>`) : `<time>${tm(last.at)}</time>`;
+  return `<div class="mx-g ${me ? "me" : ""}">${parts}${st}</div>`;
+}
+function thread(keep, noScroll) {
+  if (!CUR) { $("th").innerHTML = `<div class="mx-empty"><div><div class="big">${SV(IC.chat, 28)}</div>${CID ? "Choisis une conversation" : "Choisis une créatrice en haut"}</div></div>`; return; }
+  const T = THREADS[CUR.id], sc0 = $("sc"), atBottom = !sc0 || sc0.scrollHeight - sc0.scrollTop - sc0.clientHeight < 90;
+  const draft = $("tx") ? $("tx").value : "", focus = document.activeElement && document.activeElement.id === "tx";
+  let body = "";
+  if (!T) body = Array.from({ length: 6 }, (_, i) => `<div class="mx-g ${i % 2 ? "me" : ""}"><div class="sk" style="height:${34 + (i * 11) % 30}px;width:${140 + (i * 47) % 160}px;border-radius:18px"></div></div>`).join("");
+  else {
+    let day = "", G = [];
+    const flush = () => { if (G.length) { body += groupHtml(G); G = []; } };
+    if (T.page < T.totalPages) body += `<div class="mx-old" id="old">↑ Remonte pour voir les anciens messages</div>`;
+    T.items.forEach(m => { const d = dayLbl(m.at); if (d !== day) { flush(); body += `<div class="mx-day">${esc(d)}</div>`; day = d; }
+      const p = G[G.length - 1]; if (p && (p.fromFan !== m.fromFan || Date.parse(m.at) - Date.parse(p.at) > 5 * 60e3 || p.tmp)) flush(); G.push(m); });
+    flush(); if (!T.items.length) body = `<div class="mx-empty">Pas encore de message</div>`;
+  }
+  $("th").innerHTML = `<div class="mx-hd"><button class="mx-ib mx-bk" id="bk">${SV(IC.back, 16)}</button>${av(CUR.fan, "av")}<div style="min-width:0"><b>${esc(CUR.fan.name)}</b><small>${CUR.fan.username ? "@" + esc(CUR.fan.username) : ""}</small></div>
+      <span class="sp"><button class="mx-ib" id="rd" title="Marque la conversation comme lue sur Twizz">${SV(IC.eye, 15)}<span class="lb">Marquer lu</span></button><button class="mx-ib mx-fb" id="fanB">${SV(IC.user, 15)}<span class="lb">Fiche</span></button></span></div>
+    <div class="mx-sc" id="sc">${body}</div>
+    <div class="mx-cpw">${ST.send ? "" : `<div class="mx-off">🔒 Envoi coupé : tu peux tout lire sans rien changer côté Twizz. Active « Envoi activé » pour répondre.</div>`}
+      <div class="mx-cp"><button class="md" id="mdB" title="Envoyer un média du coffre" ${ST.send ? "" : "disabled"}>${SV(IC.img, 19)}</button><textarea id="tx" rows="1" placeholder="Écris ton message…" ${ST.send ? "" : "disabled"}></textarea><button class="go" id="goB" title="Envoyer" ${ST.send ? "" : "disabled"}>${SV(IC.send, 19, 2.6)}</button></div></div>`;
+  const sc = $("sc"); if (!noScroll && (!keep || atBottom)) sc.scrollTop = sc.scrollHeight;
+  sc.onscroll = () => { if (sc.scrollTop < 60) loadOlder(); };
+  const tx = $("tx"); if (draft) tx.value = draft; if (focus) tx.focus();
+  const fit = () => { tx.style.height = "auto"; tx.style.height = Math.min(170, tx.scrollHeight) + "px"; }; tx.oninput = fit; fit();
+  tx.onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendText(); } };
+  $("goB").onclick = () => sendText(); $("mdB").onclick = () => vault();
+  $("bk").onclick = () => { $("mx").classList.remove("open"); CUR = null; renderList(); };
   $("fanB").onclick = () => $("fan").classList.toggle("show");
-  $("rd").onclick = async () => { try { await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/read`, { body: { conversationId: CUR.id } }); CUR.unread = 0; list(); notify("Marquée comme lue", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
-  $("goB").onclick = sendText; $("tx").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendText(); } };
-  $("mdB").onclick = () => vault();
-  s2.querySelectorAll("[data-acc]").forEach(b => b.onclick = () => ST.send ? vault(b.dataset.acc) : notify("Envoi coupé", "Active « Envoi activé » d'abord", "info"));
-  s2.querySelectorAll("[data-ref]").forEach(b => b.onclick = async () => { if (!ST.send) return notify("Envoi coupé", "Active « Envoi activé » d'abord", "info"); if (!confirm("Refuser la demande de ce fan ?")) return;
-    try { await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/request`, { body: { messageId: b.dataset.ref, action: "refused" } }); notify("Demande refusée", "", "ok"); loadMsgs(); } catch (e) { notify("Impossible", e.message, "err"); } });
+  $("rd").onclick = async () => { if (!ST.send) return notify("Envoi coupé", "Active « Envoi activé » pour marquer comme lu sur Twizz", "info");
+    try { await api2("/read", { body: { conversationId: CUR.id } }); CUR.unread = 0; renderList(); notify("Marquée comme lue", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
+  sc.querySelectorAll("[data-lb]").forEach(b => b.onclick = () => { const [mid, i] = b.dataset.lb.split(":"), m = T.items.find(x => x.id === mid), x = m && m.medias[+i]; if (x) lightbox(x); });
+  sc.querySelectorAll("[data-acc]").forEach(b => b.onclick = () => ST.send ? vault(b.dataset.acc) : notify("Envoi coupé", "Active « Envoi activé » d'abord", "info"));
+  sc.querySelectorAll("[data-ref]").forEach(b => b.onclick = async () => { if (!ST.send) return notify("Envoi coupé", "Active « Envoi activé » d'abord", "info"); if (!confirm("Refuser la demande de ce fan ?")) return;
+    try { await api2("/request", { body: { messageId: b.dataset.ref, action: "refused" } }); notify("Demande refusée", "", "ok"); loadMsgs(true); } catch (e) { notify("Impossible", e.message, "err"); } });
+  sc.querySelectorAll("[data-retry]").forEach(b => b.onclick = () => { const m = T.items.find(x => x.id === b.dataset.retry); if (m) { T.items = T.items.filter(x => x !== m); thread(true); sendText(m.text); } });
 }
-async function sendText() {
-  const t = $("tx").value.trim(); if (!t || !CUR) return; $("goB").disabled = true;
-  try { await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/send`, { body: { conversationId: CUR.id, text: t, fan: CUR.fan.id } }); $("tx").value = ""; await loadMsgs(); thread(); }
-  catch (e) { notify("Message non envoyé", e.message, "err"); } finally { if ($("goB")) $("goB").disabled = !ST.send; }
+async function sendText(again) {
+  const tx = $("tx"), t = typeof again === "string" ? again : tx.value.trim(); if (!t || !CUR || !ST.send) return;
+  if (typeof again !== "string") { tx.value = ""; tx.style.height = "auto"; }
+  const T = THREADS[CUR.id] || (THREADS[CUR.id] = { items: [], page: 1, totalPages: 1 }), conv = CUR;
+  const m = { id: "tmp" + Date.now(), tmp: true, fromFan: false, text: t, medias: [], at: new Date().toISOString(), sentAt: Date.now(), type: "TEXT" };
+  T.items.push(m); thread();   // le message s'affiche tout de suite
+  try { await api2("/send", { body: { conversationId: conv.id, text: t, fan: conv.fan.id } }); if (CUR === conv) { T.items = T.items.filter(x => x !== m); await loadMsgs(true); thread(true); } loadList(true); }
+  catch (e) { m.failed = true; if (CUR === conv) thread(true); notify("Message non envoyé", e.message, "err"); }
+}
+function lightbox(x) {
+  const d = document.createElement("div"); d.className = "mx-lb";
+  d.innerHTML = (isVid(x.url) ? `<video src="${esc(x.url)}" controls autoplay playsinline></video>` : `<img src="${esc(x.url || x.thumb)}" alt="">`) + `<button aria-label="Fermer">✕</button>`;
+  const k = e => { if (e.key === "Escape") close(); }, close = () => { d.remove(); document.removeEventListener("keydown", k); };
+  d.onclick = e => { if (e.target === d || e.target.tagName === "BUTTON") close(); }; document.addEventListener("keydown", k); document.body.appendChild(d);
 }
 
-/* ---------- coffre ---------- */
+/* ================= coffre ================= */
 async function vault(acceptId) {
   const m = document.createElement("div"); m.className = "mx-mod" + ($("body").classList.contains("blur") ? " blur" : "");
-  m.innerHTML = `<div class="mx-box"><div class="h"><b>Coffre de la créatrice</b><button class="mx-hb" data-x>Fermer</button></div><div class="c" id="vc"><div class="mx-empty">Chargement des albums…</div></div>
-    <div class="f"><input id="vPrice" type="number" min="0" step="0.5" placeholder="Prix (€)" style="width:110px"><input id="vTxt" placeholder="Message avec le média (facultatif)" style="flex:1;min-width:160px"><button class="go" id="vGo" disabled>Envoyer</button></div></div>`;
+  m.innerHTML = `<div class="mx-box"><div class="h"><b>${acceptId ? "Répondre à la demande" : "Envoyer un média"}</b><span style="color:#6f6f6f;font-size:12.5px">à ${esc(CUR.fan.name)}</span><button class="mx-ib x" data-x>Fermer</button></div>
+    <div class="c" id="vc"></div>
+    <div class="f"><div class="mx-pc" id="vpc">${[0, 5, 10, 15, 20, 30, 50].map(p => `<button data-p="${p}">${p ? p + " €" : "Gratuit"}</button>`).join("")}<input id="vPrice" type="number" min="0" step="0.5" placeholder="Autre prix" style="width:110px"></div>
+      <input class="tx" id="vTxt" placeholder="Message avec le média (facultatif)"><button class="go" id="vGo" disabled>Choisis un ou plusieurs médias</button></div></div>`;
   document.body.appendChild(m); const close = () => m.remove(); m.querySelector("[data-x]").onclick = close; m.onclick = e => { if (e.target === m) close(); };
-  const SEL = new Set(), vc = m.querySelector("#vc"), go = m.querySelector("#vGo");
-  const upd = () => { go.disabled = !SEL.size; go.textContent = SEL.size ? `Envoyer ${SEL.size} média${SEL.size > 1 ? "s" : ""}` : "Envoyer"; };
+  const SEL = new Set(), vc = m.querySelector("#vc"), go = m.querySelector("#vGo"), pin = m.querySelector("#vPrice"); let price = null;
+  const upd = () => { go.disabled = !SEL.size || price === null; go.textContent = !SEL.size ? "Choisis un ou plusieurs médias" : price === null ? "Choisis un prix" : `Envoyer ${SEL.size} média${SEL.size > 1 ? "s" : ""} · ${price ? E(price) : "gratuit"}`; };
+  m.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { price = +b.dataset.p; pin.value = ""; m.querySelectorAll("[data-p]").forEach(x => x.classList.toggle("on", x === b)); upd(); });
+  pin.oninput = () => { price = pin.value === "" ? null : Math.max(0, +pin.value); m.querySelectorAll("[data-p]").forEach(x => x.classList.remove("on")); upd(); };
+  const skel = n => `<div class="mx-al">${Array.from({ length: n }, () => `<div class="sk" style="aspect-ratio:16/13;border-radius:16px"></div>`).join("")}</div>`;
   async function albums() {
-    try { const r = await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/vault`);
-      vc.innerHTML = r.albums.length ? `<div class="mx-al">${r.albums.map(a => `<button data-al="${esc(a.id)}">${esc(a.name)}<small>${a.count ? a.count + " média" + (a.count > 1 ? "s" : "") : ""}</small></button>`).join("")}</div>` : `<div class="mx-empty">Le coffre est vide</div>`;
-      vc.querySelectorAll("[data-al]").forEach(b => b.onclick = () => files(b.dataset.al, b.firstChild.textContent)); }
+    vc.innerHTML = skel(6);
+    try { const r = await api2("/vault");
+      vc.innerHTML = r.albums.length ? `<div class="mx-al">${r.albums.map(a => `<button data-al="${esc(a.id)}" data-n="${esc(a.name)}"><div class="cv">${a.cover ? `<img src="${esc(a.cover)}" alt="" loading="lazy">` : SV(IC.img, 30, 1.6)}</div><div class="tx">${esc(a.name)}<small>${a.count ? a.count + " média" + (a.count > 1 ? "s" : "") : "Album"}</small></div></button>`).join("")}</div>` : `<div class="mx-empty">Le coffre est vide</div>`;
+      vc.querySelectorAll("[data-al]").forEach(b => b.onclick = () => files(b.dataset.al, b.dataset.n)); }
     catch (e) { vc.innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; }
   }
   async function files(id, name) {
-    vc.innerHTML = `<div class="mx-empty">Chargement…</div>`;
-    try { const r = await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/vault/${encodeURIComponent(id)}`);
-      vc.innerHTML = `<button class="mx-hb" id="vBack" style="margin-bottom:10px">‹ Albums</button> <b style="font:800 14px Inter">${esc(name)}</b><div class="mx-vf" style="margin-top:8px">${r.files.map(f => `<label class="${SEL.has(f.id) ? "on" : ""}"><input type="checkbox" value="${esc(f.id)}" ${SEL.has(f.id) ? "checked" : ""}><img src="${esc(f.thumb)}" alt="" loading="lazy">${/video/i.test(f.type) ? '<span class="ty">VIDÉO</span>' : ""}</label>`).join("") || '<div class="mx-empty">Album vide</div>'}</div>`;
+    vc.innerHTML = `<div class="mx-vf">${Array.from({ length: 10 }, () => `<div class="sk" style="aspect-ratio:1;border-radius:14px"></div>`).join("")}</div>`;
+    try { const r = await api2(`/vault/${encodeURIComponent(id)}`);
+      vc.innerHTML = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button class="mx-ib" id="vBack">${SV(IC.back, 14)}Albums</button><b style="font:800 14px Inter">${esc(name)}</b><span style="color:#666;font-size:12px">${r.files.length} média${r.files.length > 1 ? "s" : ""}</span></div>
+        <div class="mx-vf">${r.files.map(f => `<label class="${SEL.has(f.id) ? "on" : ""}"><input type="checkbox" value="${esc(f.id)}" ${SEL.has(f.id) ? "checked" : ""}><span class="ck">${SV(IC.check, 13, 3.2)}</span><img src="${esc(f.thumb)}" alt="" loading="lazy">${/video/i.test(f.type) || isVid(f.url) ? '<span class="ty">VIDÉO</span>' : ""}</label>`).join("") || '<div class="mx-empty">Album vide</div>'}</div>`;
       vc.querySelector("#vBack").onclick = albums;
       vc.querySelectorAll(".mx-vf input").forEach(i => i.onchange = () => { i.checked ? SEL.add(i.value) : SEL.delete(i.value); i.parentElement.classList.toggle("on", i.checked); upd(); }); }
     catch (e) { vc.innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; }
   }
   go.onclick = async () => {
-    const price = +m.querySelector("#vPrice").value || 0;
     if (!confirm(`Envoyer ${SEL.size} média${SEL.size > 1 ? "s" : ""} à ${CUR.fan.name} ${price ? "pour " + E(price) : "gratuitement"} ?`)) return;
     go.disabled = true; go.textContent = "Envoi…";
-    try { await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/send-media`, { body: { conversationId: CUR.id, fan: CUR.fan.id, files: [...SEL], price, text: m.querySelector("#vTxt").value, acceptId: acceptId || null } });
-      close(); notify("Média envoyé ✓", price ? E(price) : "Gratuit", "ok"); await loadMsgs(); thread(); }
-    catch (e) { go.disabled = false; upd(); notify("Média non envoyé", e.message, "err"); }
+    try { await api2("/send-media", { body: { conversationId: CUR.id, fan: CUR.fan.id, files: [...SEL], price, text: m.querySelector("#vTxt").value, acceptId: acceptId || null } });
+      close(); notify("Média envoyé ✓", price ? E(price) : "Gratuit", "ok"); await loadMsgs(true); loadList(true); }
+    catch (e) { upd(); notify("Média non envoyé", e.message, "err"); }
   };
-  albums();
+  albums(); upd();
 }
 
-/* ---------- fiche fan ---------- */
+/* ================= fiche fan ================= */
 async function fanCard() {
-  if (!CUR) { $("fan").innerHTML = `<div class="mx-empty" style="height:100%">La fiche du fan s'affiche ici</div>`; return; }
-  const c = CUR; $("fan").innerHTML = `${av(c.fan, "big")}<h3>${esc(c.fan.name)}</h3><div class="u">${c.fan.username ? "@" + esc(c.fan.username) : ""}</div><div class="mx-sec">Achats</div><div id="fs" style="color:#666;font-size:12.5px">Chargement…</div>
-    <div id="ft"></div><div id="fn"></div>`;
-  try { const r = await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/fan/${encodeURIComponent(c.fan.id)}`); if (CUR !== c) return;
-    const kv = Object.entries(r.stats).filter(([k, v]) => typeof v !== "boolean");
-    $("fs").innerHTML = kv.length ? kv.slice(0, 14).map(([k, v]) => `<div class="mx-kv"><span>${esc(pretty(k))}</span><b>${typeof v === "number" && /spent|amount|price|revenue|earn|net|sum|average|highest|lowest/i.test(k) && !/count|purchases$|number|nb/i.test(k) ? E(v) : esc(v)}</b></div>`).join("") : (r.error ? esc(r.error) : "Aucun achat");
-    $("ft").innerHTML = r.tags.length ? `<div class="mx-sec">Tags</div><div class="mx-tags">${r.tags.map(t => `<span>${esc(t)}</span>`).join("")}</div>` : "";
-    const note = c.note && (c.note.note || c.note.text || c.note.content || (typeof c.note === "string" ? c.note : ""));
-    $("fn").innerHTML = note ? `<div class="mx-sec">Note</div><div class="mx-note">${esc(note)}</div>` : ""; }
-  catch (e) { $("fs").textContent = e.message; }
+  if (!CUR) { $("fan").innerHTML = `<div class="mx-empty" style="height:100%"><div><div class="big">${SV(IC.user, 28)}</div>La fiche du fan s'affiche ici</div></div>`; return; }
+  const c = CUR, key = CID + "|" + c.fan.id;
+  const paint = r => {
+    const S = r ? r.stats : {}, pick = re => { const k = Object.keys(S).find(k => re.test(k)); return k != null ? S[k] : null; };
+    const total = pick(/totalSpent|spent/i), avg = pick(/average/i), high = pick(/highest|max/i), n = pick(/totalPurchases|purchases$|count/i);
+    const note = THREADS[c.id] && THREADS[c.id].note, noteTx = note && (note.note || note.text || note.content || (typeof note === "string" ? note : ""));
+    $("fan").innerHTML = `${av(c.fan, "av")}<h3>${esc(c.fan.name)}</h3><div class="u">${c.fan.username ? "@" + esc(c.fan.username) : ""}</div>
+      ${!r ? `<div class="mx-tiles"><div class="mx-tile w sk" style="height:62px"></div><div class="sk" style="height:58px;border-radius:14px"></div><div class="sk" style="height:58px;border-radius:14px"></div></div>` : `
+      <div class="mx-tiles"><div class="mx-tile w"><small>Total dépensé</small><b>${total != null ? E(+total) : "—"}</b></div>
+        <div class="mx-tile"><small>Achats</small><b>${n != null ? esc(n) : "—"}</b></div><div class="mx-tile"><small>Achat moyen</small><b>${avg != null ? E(+avg) : "—"}</b></div>
+        <div class="mx-tile" style="grid-column:1/-1"><small>Plus gros achat</small><b>${high != null ? E(+high) : "—"}</b></div></div>
+      ${r.recent && r.recent.length ? `<div class="mx-sec">Derniers achats</div>${r.recent.map(p => `<div class="mx-buy"><span>${esc({ privatemedia: "Média privé", mediapush: "Média push", collection: "Collection", monthly_subscription: "Abonnement" }[p.type] || p.type || "Achat")}</span><span style="color:#5f5f5f">${p.at ? ago(p.at) : ""}</span><b>${E(p.amount)}</b></div>`).join("")}` : ""}
+      ${r.tags.length ? `<div class="mx-sec">Tags</div><div class="mx-tags">${r.tags.map(t => `<span style="--c:${/^#|^rgb|^hsl/.test(t.color) ? esc(t.color) : hue(t.name)}">${esc(t.name)}</span>`).join("")}</div>` : ""}
+      ${noteTx ? `<div class="mx-sec">Note</div><div class="mx-note">${esc(noteTx)}</div>` : ""}`}`;
+  };
+  paint(FANS[key] || null);
+  try { const r = await api2(`/fan/${encodeURIComponent(c.fan.id)}`); FANS[key] = r; if (CUR === c) paint(r); } catch (e) { if (CUR === c && !FANS[key]) paint({ stats: {}, tags: [], recent: [] }); }
 }
 
-/* ---------- démarrage + rafraîchissement ---------- */
+/* ================= temps réel ================= */
+let lT = null;
+function stream() {
+  const ES = new EventSource("/api/twizz/inbox/stream");
+  ES.addEventListener("live", e => { LIVE = !!JSON.parse(e.data).on; liveUi(); });
+  ES.addEventListener("tw", e => { const d = JSON.parse(e.data);
+    if (CUR && (!d.conv || d.conv === CUR.id)) loadMsgs(true);
+    clearTimeout(lT); lT = setTimeout(() => loadList(true), 700); });
+  ES.onerror = () => { LIVE = false; liveUi(); };
+}
+setInterval(() => { if (document.hidden || !CID) return; if (!LIVE) { loadList(true); if (CUR) loadMsgs(true); } }, 30000);
+setInterval(() => { if (!document.hidden && CID) renderList(); }, 60000);   // « attend depuis » se met à jour
+
 (async () => {
   const me = await api("/api/me"); renderShell("messagerie", me);
   if (me.rk !== "founder" || me.viewAs) { $("mx").innerHTML = `<div class="mx-empty">La messagerie Twizz est en test : réservée au fondateur.</div>`; return; }
@@ -225,9 +365,7 @@ async function fanCard() {
   try { ST = await api("/api/twizz/inbox/state"); } catch (e) { $("mx").innerHTML = `<div class="mx-empty">${esc(e.message)}</div>`; return; }
   let saved = null; try { saved = localStorage.getItem("mx:cid"); } catch (e) {}
   CID = ST.creators.some(c => c.id === saved) ? saved : (ST.creators[0] || {}).id || null;
-  top(); thread(); fanCard(); if (CID) loadList(true);
-  setInterval(() => { if (document.hidden || !CID) return; if (PAGE === 1 && !Q) api(`/api/twizz/inbox/${encodeURIComponent(CID)}/conversations?type=${TYPE}&page=1`).then(r => { const keep = CONVS.slice(r.items.length); CONVS = r.items.concat(keep.filter(x => !r.items.some(y => y.id === x.id))); list(); }).catch(() => {}); }, 30000);
-  setInterval(() => { if (!document.hidden && CUR) loadMsgs().then(() => {}); }, 10000);
+  top(); liveUi(); thread(); fanCard(); if (CID) { loadList(); stream(); }
 })();
 })();
 </script>

@@ -42,8 +42,12 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
 
   // une requête à la fois, espacées (on se comporte comme quelqu'un qui navigue)
   let chain = Promise.resolve(), lastAt = 0;
-  // fast : action du fondateur dans la messagerie (on attend moins, comme quelqu'un qui clique)
+  // fast : action dans la messagerie. Un navigateur envoie plusieurs requêtes en même temps quand on ouvre
+  // une conversation : on fait pareil (3 au plus), sans attente. La synchro des ventes reste en file, espacée.
+  let busyFast = 0; const waitFast = [];
+  async function fastRun(fn) { while (busyFast >= 3) await new Promise(r => waitFast.push(r)); busyFast++; try { return await fn(); } finally { busyFast--; const n = waitFast.shift(); if (n) n(); } }
   function queued(fn, fast) {
+    if (fast) return fastRun(fn);
     const p = chain.then(async () => { const w = lastAt + (fast ? 350 + Math.random() * 450 : 1500 + Math.random() * 1200) - now(); if (w > 0) await sleep(w); try { return await fn(); } finally { lastAt = now(); } });
     chain = p.catch(() => {}); return p;
   }
@@ -86,17 +90,19 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     const tok = r.json && ((r.json.data && r.json.data.token) || r.json.token); if (!tok) return false;
     sess.cookies.token = tok; saveSess(); return true;
   }
+  // une seule (re)connexion à la fois, même si plusieurs requêtes trouvent le badge expiré en même temps
+  let authP = null;
+  function reauth(fresh) { if (!authP) authP = (async () => { const ok = !fresh && await refresh().catch(() => false); if (!ok) await login(); })().finally(() => { authP = null; }); return authP; }
   // la synchro des ventes ne fait que des GET ; les envois passent par call() depuis la messagerie (fondateur)
   const get = (path, fast) => call("GET", path, null, fast);
   function call(method, path, body, fast) {
     return queued(async () => {
       const pause = () => sleep(600 + Math.random() * 900);   // comme un navigateur : pas deux appels collés
-      if (!sess.cookies.token) { await login(); await pause(); }
+      if (!sess.cookies.token) { await reauth(true); if (!fast) await pause(); }
       let r = await raw(method, path, body);
       if (isBlocked(r)) throw fail("Twizz bloque les requêtes du serveur (protection Cloudflare)");
       if (r.status === 401 || r.status === 403) {
-        const ok = await refresh().catch(() => false); if (!ok) await login();
-        await pause(); r = await raw(method, path, body);
+        await reauth(); if (!fast) await pause(); r = await raw(method, path, body);
         // dernier recours : certains serveurs attendent le badge dans l'en-tête plutôt qu'en cookie
         if ((r.status === 401 || r.status === 403) && !sess.bearer) { sess.bearer = true; saveSess(); await pause(); r = await raw(method, path, body); }
       }
@@ -265,5 +271,9 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
   // pour la page Ventes : les déclarations sont remplacées par l'import automatique
   app.get("/api/twizz/mode", auth, (req, res) => res.json({ auto: cfg().on }));
 
-  return { auto: () => cfg().on, sync, status: () => status, call, get, S, configured, fail };
+  // pour le temps réel (socket Twizz) : badge courant et identifiant du compte (champ sourceId du badge)
+  const token = () => sess.cookies.token || null;
+  const accountId = () => { try { return JSON.parse(Buffer.from(String(token()).split(".")[1], "base64url").toString()).sourceId || ""; } catch (e) { return ""; } };
+  async function ensureAuth() { if (!token()) await reauth(true); return token(); }
+  return { auto: () => cfg().on, sync, status: () => status, call, get, S, configured, fail, token, accountId, ensureAuth, reauth };
 };
