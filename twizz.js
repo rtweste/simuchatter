@@ -23,6 +23,7 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     CREATE INDEX IF NOT EXISTS twizz_tx_state ON twizz_tx(state, at);
     CREATE TABLE IF NOT EXISTS twizz_sent (id INTEGER PRIMARY KEY, msg_id TEXT, conv_id TEXT, fan_id TEXT, creator_id TEXT, user_id INTEGER, price REAL, at INTEGER);
     CREATE INDEX IF NOT EXISTS twizz_sent_conv ON twizz_sent(conv_id, at);`);
+  if (!db.prepare("PRAGMA table_info(twizz_creators)").all().some(x => x.name === "note")) db.exec("ALTER TABLE twizz_creators ADD COLUMN note TEXT");
   for (const [c, t] of [["source", "TEXT"], ["twizz_id", "TEXT"]])
     if (!db.prepare("PRAGMA table_info(sales)").all().some(x => x.name === c)) db.exec(`ALTER TABLE sales ADD COLUMN ${c} ${t}`);
   const S = {
@@ -120,7 +121,7 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     const id = String(c.creatorId || d._id || c._id || c.id || "");
     const full = [o.firstName || o.creatorFirstName, o.lastName || o.creatorLastName].filter(Boolean).join(" ").trim();
     const label = String(d.name || c.name || full || o.username || id).trim();
-    return { id, label, alts: [d.name, d.firstName, d.username, full].filter(Boolean).map(String) };
+    return { id, label, note: String(d.note || c.note || "").slice(0, 2000), alts: [d.name, d.firstName, d.username, full].filter(Boolean).map(String) };
   };
   async function loadCreators() {
     const j = await get("/business/creators");
@@ -130,8 +131,8 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     const guess = c => { for (const a of c.alts) { const A = norm(a); if (!A) continue; const m = models.find(x => norm(x.name) && (A === norm(x.name) || A.startsWith(norm(x.name)) || norm(x.name).startsWith(A))); if (m) return m.id; } return null; };
     list.forEach(c => {
       const ex = db.prepare("SELECT * FROM twizz_creators WHERE twizz_id = ?").get(c.id);
-      if (ex) return db.prepare("UPDATE twizz_creators SET label = ?, model_id = COALESCE(model_id, ?), seen_at = ? WHERE twizz_id = ?").run(c.label, guess(c), now(), c.id);
-      db.prepare("INSERT INTO twizz_creators (twizz_id, label, model_id, seen_at) VALUES (?,?,?,?)").run(c.id, c.label, guess(c), now());
+      if (ex) return db.prepare("UPDATE twizz_creators SET label = ?, note = ?, model_id = COALESCE(model_id, ?), seen_at = ? WHERE twizz_id = ?").run(c.label, c.note, guess(c), now(), c.id);
+      db.prepare("INSERT INTO twizz_creators (twizz_id, label, note, model_id, seen_at) VALUES (?,?,?,?,?)").run(c.id, c.label, c.note, guess(c), now());
     });
     return list;
   }
@@ -175,7 +176,7 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(t.id, t.tx_id, t.creator_id, t.model_id, t.type, t.net, t.at, t.refund, t.validated, t.fan_id, t.fan_name, t.conv_id, state, now());
     if (state === "pending") {
       let uid = null;
-      if (t.conv_id) { const s = db.prepare("SELECT user_id FROM twizz_sent WHERE conv_id = ? AND at <= ? AND at > ? ORDER BY at DESC LIMIT 1").get(t.conv_id, at + 60e3, at - 7 * 864e5); if (s) uid = s.user_id; }
+      if (t.conv_id) { const s = (db.prepare("SELECT user_id FROM twizz_sent WHERE conv_id = ? AND price IS NOT NULL AND at <= ? AND at > ? ORDER BY at DESC LIMIT 1").get(t.conv_id, at + 60e3, at - 7 * 864e5) || db.prepare("SELECT user_id FROM twizz_sent WHERE conv_id = ? AND at <= ? AND at > ? ORDER BY at DESC LIMIT 1").get(t.conv_id, at + 60e3, at - 7 * 864e5)); if (s) uid = s.user_id; }
       if (!uid && modelId) uid = whoSold(modelId, at);
       if (uid) makeSale(t, uid); else db.prepare("UPDATE twizz_tx SET state = 'no_chatter' WHERE id = ?").run(id);
     }

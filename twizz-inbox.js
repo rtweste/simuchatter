@@ -20,7 +20,10 @@ module.exports = function mount(app, db, auth, admin, { twizz }) {
     return str((x && (x.thumbnail || x.thumbUrl)) || ""); };
   const wrap = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.twizz ? 502 : e.status || 500).json({ error: e.message }); } };
   const bad = msg => { const e = new Error(msg); e.status = 400; return e; };
-  const mapped = () => db.prepare("SELECT t.twizz_id id, t.label, t.model_id, m.name model FROM twizz_creators t LEFT JOIN models m ON m.id = t.model_id ORDER BY t.label").all();
+  const mapped = () => db.prepare("SELECT t.twizz_id id, t.label, t.note, t.model_id, m.name model FROM twizz_creators t LEFT JOIN models m ON m.id = t.model_id ORDER BY t.label").all();
+  // qui a envoyé chaque message depuis le site (les messages envoyés directement sur Twizz n'ont pas d'auteur connu)
+  const authors = ids => { const out = {}; const L = ids.filter(Boolean); if (!L.length) return out;
+    db.prepare(`SELECT s.msg_id, u.username FROM twizz_sent s JOIN users u ON u.id = s.user_id WHERE s.msg_id IN (${L.map(() => "?").join(",")})`).all(...L).forEach(r => out[r.msg_id] = r.username); return out; };
   const creatorOk = cid => { if (!db.prepare("SELECT 1 FROM twizz_creators WHERE twizz_id = ?").get(cid)) throw bad("Créatrice inconnue : teste d'abord la connexion Twizz"); return cid; };
   const sendOn = () => !!S.get("twizz_inbox_send", false);
   const mustSend = () => { if (!sendOn()) throw bad("L'envoi est coupé : active « Envoi activé » en haut de la messagerie"); };
@@ -98,6 +101,7 @@ module.exports = function mount(app, db, auth, admin, { twizz }) {
     if (req.query.fresh === "1") drop(path);
     const j = await G(path, 15e3);
     const d = (j && j.data) || {}, L = (d.data || []).map(m => msg(m, fanId)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+    const by = authors(L.filter(m => !m.fromFan).map(m => m.id)); L.forEach(m => { if (!m.fromFan) m.by = by[m.id] || null; });
     return { items: L, page, totalPages: d.totalPages || 1, note: d.creatorFanNote || null, sample: req.query.debug ? (d.data || [])[0] : undefined };
   }));
   app.get("/api/twizz/inbox/:cid/fan/:fan", auth, founder, wrap(async req => {
@@ -129,6 +133,7 @@ module.exports = function mount(app, db, auth, admin, { twizz }) {
     mustSend(); const cid = creatorOk(req.params.cid), text = String(req.body?.text || "").trim().slice(0, 4000), conversationId = str(req.body?.conversationId);
     if (!text || !conversationId) throw bad("Message vide");
     const j = await call("POST", "/messages/send-message", { temp_id: `temp_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`, conversationId, type: "TEXT", text, creatorId: cid }, true);
+    if (j && j.data && j.data._id) db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at) VALUES (?,?,?,?,?,?,?)").run(str(j.data._id), conversationId, str(req.body?.fan), cid, req.user.id, null, Date.now());
     drop(conversationId, `/conversations/user/${enc(cid)}`);
     return { ok: true, message: j && j.data ? msg(j.data, str(req.body?.fan)) : null };
   }));
