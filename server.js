@@ -313,7 +313,7 @@ app.get("/api/me", auth, (req, res) => {
     sells: req.user.role === "admin" && !!(ob && ob.sells), pushNeeded: !req.viewAs && pushNeeded(req.user),
     viewAs: req.viewAs ? { username: req.user.username, real: req.realUser.username } : null,
     celebrate: !req.viewAs && COMM ? COMM.celebrate(req.user.id) : null,
-    voiceNeeded: !req.viewAs && req.user.role === "chatter" && VOICE ? (!!db.prepare("SELECT 1 FROM clocks WHERE user_id = ? AND end_at IS NULL AND reinforce = 0").get(req.user.id) && !VOICE.inRoom(req.user.id)) : false });
+    voiceNeeded: !req.viewAs && req.user.role === "chatter" && VOICE ? VOICE.needed(req.user.id) : false });
 });
 // nouvelle version de la vidéo : les élèves déjà inscrits la regardent une fois (une seule réinitialisation)
 setTimeout(() => { try { const k = db.prepare("SELECT value FROM settings WHERE key = 'intro_version'").get();

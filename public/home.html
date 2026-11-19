@@ -766,7 +766,7 @@ function bindShiftV3() {
   const go = async () => { if (done) return; done = true; sl.classList.add("anim"); setX(max); SND.shift();
     if (!PICK) { done = false; sl.classList.add("anim"); setX(0); return notify("Choisis une créatrice", "", "err"); }
     const name = PICK.name;
-    try { window.openVoice && openVoice(); } catch (e) {}   // le vocal s'ouvre avec le shift (obligatoire)
+    try { window.openVoice && openVoice("equipe"); } catch (e) {}   // le vocal s'ouvre avec le shift (obligatoire)
     try { await api("/api/clock/in", { body: { model_id: PICK.id } }); window.PAUSEUI && setTimeout(PAUSEUI.refresh, 600); notify("Shift commencé", `${name} · bon courage !`, "ok"); } catch (e) { notify("Impossible de pointer", e.message, "err"); }
     setTimeout(() => { MODE = "static"; load(); }, 450); };
   sl.addEventListener("pointerdown", e => { if (done) return; x0 = e.clientX; max = sl.clientWidth - 56; sl.classList.add("drag"); sl.classList.remove("anim"); sl.setPointerCapture(e.pointerId); });

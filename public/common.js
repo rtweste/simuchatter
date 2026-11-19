@@ -79,8 +79,8 @@ const MODULES = [
     desc: "Déclarez vos ventes avec la capture d'écran. Le manager les valide." },
   { id: "chat", label: "Chat d'équipe", short: "Chat", href: "/chat", icon: "bubbles", section: "Organisation", roles: ["admin", "chatter", "trainee"],
     desc: "Le chat de toute l'équipe : salons, messages privés, annonces, sondages." },
-  { id: "vocal", label: "Salon vocal", short: "Vocal", href: "/vocal", icon: "mic", section: "Organisation", roles: ["admin", "chatter"], nodock: ["admin", "chatter", "tl"],
-    desc: "Le vocal de l'équipe pendant les shifts, avec partage d'écran pour les managers." },
+  { id: "vocal", label: "Salon vocal", short: "Vocal", href: "/vocal", icon: "mic", section: "Organisation", roles: ["admin", "chatter", "trainee"], nodock: ["admin", "chatter", "tl", "trainee"],
+    desc: "Les salons vocaux de l'équipe, avec partage d'écran pour les managers." },
   { id: "creatrices", label: "Créatrices", short: "Créas", href: "/creatrices", icon: "spark", section: "Organisation", roles: ["admin", "chatter"], nodock: ["admin", "tl"],
     desc: "Les fiches des créatrices : personnalité, façon d'écrire, catalogue, à faire et à éviter." },
   { id: "parrainage", label: "Parrainage", href: "/parrainage", icon: "gift", section: "Organisation", roles: ["admin", "chatter"], nodock: ["admin", "chatter"], hide: ["assistant"],
@@ -141,11 +141,24 @@ function loadPush(cb) {
 }
 function openPush() { loadPush(() => PUSH.sheet()); }
 // salon vocal : il vit dans sa propre petite fenêtre pour ne pas couper quand on change de page
-function openVoice() {
+function openVoice(room) {
+  const url = "/vocal" + (room ? "?r=" + encodeURIComponent(room) : "");
   let w = null; try { w = window.open("", "stellads-vocal", "width=460,height=780"); } catch (e) {}
-  if (!w) { location.href = "/vocal"; return false; }
-  try { if (!w.location.href || w.location.href === "about:blank") w.location.href = "/vocal"; } catch (e) {}
+  if (!w) { voiceBlocked(url); return false; }
+  let blank = true; try { blank = !w.location.href || w.location.href === "about:blank"; } catch (e) {}
+  if (blank) w.location.href = url;
+  else if (room) { try { const c = new BroadcastChannel("stellads-voice"); c.postMessage({ cmd: "room", room }); setTimeout(() => c.close(), 500); } catch (e) {} }
   try { w.focus(); } catch (e) {} return true;
+}
+// le navigateur a bloqué la fenêtre : on propose un bouton (un clic l'autorise), sans quitter la page en cours
+function voiceBlocked(url) {
+  document.querySelector(".vo-blk")?.remove(); const b = document.createElement("div"); b.className = "vo-blk";
+  b.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2147481001;display:flex;align-items:center;gap:12px;padding:10px 10px 10px 16px;border-radius:16px;background:#141414;border:1px solid #2f2f2f;box-shadow:0 24px 60px -12px #000;color:#ddd;font:600 13px Inter,system-ui,sans-serif;max-width:calc(100vw - 24px)";
+  b.innerHTML = `<span>🎙 Ton navigateur a bloqué la fenêtre du vocal</span><button type="button" style="height:36px;border-radius:11px;border:0;background:#5fd3a2;color:#05261a;font:800 12.5px Inter,sans-serif;padding:0 14px;cursor:pointer;flex-shrink:0">Ouvrir le vocal</button><button type="button" aria-label="Fermer" style="width:30px;height:30px;border-radius:9px;border:0;background:transparent;color:#888;cursor:pointer;flex-shrink:0">✕</button>`;
+  const [go, x] = b.querySelectorAll("button");
+  go.onclick = () => { let w = null; try { w = window.open(url, "stellads-vocal", "width=460,height=780"); } catch (e) {}
+    if (w) { b.remove(); try { w.focus(); } catch (e) {} } else notify("Fenêtre toujours bloquée", "Autorise les fenêtres pop-up pour ce site (icône dans la barre d'adresse)", "err"); };
+  x.onclick = () => b.remove(); document.body.appendChild(b);
 }
 window.openVoice = openVoice;
 document.addEventListener("click", e => { const a = e.target.closest && e.target.closest('a[href="/vocal"]'); if (!a || location.pathname === "/vocal") return; e.preventDefault(); openVoice(); });
@@ -158,7 +171,7 @@ const VOICE_UI = (() => {
     if (need && !on) { if (!bar) { bar = document.createElement("div"); bar.className = "vo-bar";
         bar.style.cssText = "position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:2147481000;display:flex;align-items:center;gap:12px;padding:8px 8px 8px 16px;border-radius:999px;background:rgba(15,30,24,.92);border:1px solid rgba(95,211,162,.5);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#cdeedd;font:600 13px Inter,system-ui,sans-serif;box-shadow:0 20px 50px -10px rgba(0,0,0,.8);max-width:calc(100vw - 20px)";
         bar.innerHTML = `<span>🎙 Le vocal est obligatoire pendant ton shift</span><button type="button" style="height:32px;border-radius:999px;border:0;background:#5fd3a2;color:#05261a;font:800 12.5px Inter,sans-serif;padding:0 14px;cursor:pointer;flex-shrink:0">Rejoindre</button>`;
-        bar.querySelector("button").onclick = openVoice; document.body.appendChild(bar); } }
+        bar.querySelector("button").onclick = () => openVoice("equipe"); document.body.appendChild(bar); } }
     else if (bar) { bar.remove(); bar = null; }
   };
   let bc = null; try { bc = new BroadcastChannel("stellads-voice"); bc.onmessage = e => { const d = e.data || {}; if (!("on" in d)) return; on = !!d.on; n = d.count || 0; seen = Date.now(); paint(); }; } catch (e) {}
@@ -174,7 +187,7 @@ const VOICE_UI = (() => {
   }
   setInterval(() => { if (on && Date.now() - seen > 12e3) { on = false; paint(); } }, 4e3);
   async function check() { try { const r = await api("/api/voice/presence"); if (r.me) { on = true; seen = Date.now(); } n = r.count; } catch (e) {} paint(); }
-  return { start(me) { need = !!me.voiceNeeded; if (me.role === "trainee" || me.viewAs) return; check(); setInterval(async () => { if (document.hidden) return;
+  return { start(me) { need = !!me.voiceNeeded; if (me.viewAs) return; check(); setInterval(async () => { if (document.hidden) return;
     try { const m = await api("/api/me", { fresh: true }); need = !!m.voiceNeeded; } catch (e) {} check(); }, 30e3); } };
 })();
 function renderShell(active, me) {

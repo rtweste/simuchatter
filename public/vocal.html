@@ -55,6 +55,11 @@ body{margin:0;background:#0a0a0a;color:#f5f5f5;font-family:Inter,system-ui,sans-
 .vc-toast .x{background:transparent;color:#999;border:1px solid #333;margin-left:6px}
 .vc-net{font-size:11.5px;color:#8f8f8f;padding:0 18px 6px}
 [hidden]{display:none!important}
+.vc-rooms{display:flex;gap:6px;overflow-x:auto;padding:2px 14px 10px;scrollbar-width:none}.vc-rooms::-webkit-scrollbar{display:none}
+.vc-rooms button{flex:none;display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;border:1px solid #262626;background:#121212;color:#a8a8a8;font:700 12.5px Inter;cursor:pointer}
+.vc-rooms button em{font-style:normal;font:800 11px Inter;color:#666}
+.vc-rooms button.on{background:rgba(95,211,162,.12);border-color:rgba(95,211,162,.5);color:#fff}.vc-rooms button.on em{color:#5fd3a2}
+.vt .row{display:flex;gap:5px;flex-wrap:wrap;justify-content:center}
 .vt .vol{display:flex;align-items:center;gap:6px;width:100%;color:#777}.vt .vol svg{width:13px;height:13px;flex:none}
 .vt .vol input{flex:1;min-width:0;accent-color:#5fd3a2;height:16px}
 .vt .vol em{font:700 10.5px Inter;font-style:normal;color:#888;width:30px;text-align:right}
@@ -77,6 +82,7 @@ body{margin:0;background:#0a0a0a;color:#f5f5f5;font-family:Inter,system-ui,sans-
 <div class="vc" id="vc">
   <div class="vc-hd"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="18" height="18"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM19 11a7 7 0 0 1-14 0M12 18v3"/></svg></span>
     <div><b>Salon vocal</b><small id="cnt">Connexion…</small></div><span class="live off" id="live"><i></i><span>HORS LIGNE</span></span></div>
+  <div class="vc-rooms" id="rooms" hidden></div>
   <div class="vc-net" id="net" hidden></div>
   <div class="vc-grid" id="grid"></div>
   <div class="vc-ptt" id="ptt" hidden></div>
@@ -103,6 +109,8 @@ const I = {
 };
 // réglages mémorisés sur cet ordinateur
 const LS = { get(k, d) { try { const v = localStorage.getItem("vc:" + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem("vc:" + k, JSON.stringify(v)); } catch (e) {} } };
+let ROOMS = [], ROOMID = null, PRES = {}, LEFTME = false, RETRY = 0, RT = null, FIRST = true;
+const roomName = () => (ROOMS.find(r => r.id === ROOMID) || {}).name || "";
 let VOL = LS.get("vol", {}), MIC = LS.get("mic", ""), SINK = LS.get("sink", ""), PTT = LS.get("ptt", { on: false, code: "Backquote", label: "²" }), HELD = false;
 const SV = (p, s = 22) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 const $ = id => document.getElementById(id);
@@ -132,25 +140,50 @@ function tile(p, me) {
   const watching = SPC.has("in:" + p.id);
   const act = p.sharing ? `<span class="sc">${SV(I.scr, 12)}Écran partagé</span>${MGR && !me ? `<button class="w" data-watch="${p.id}">${watching ? "Ouvrir" : "Regarder"}</button>` : ""}`
     : MGR && !me && !p.mgr ? `<button class="g" data-ask="${p.id}">Demander l'écran</button>` : "";
+  const mute = MGR && !me && !p.muted ? `<button class="g" data-fmute="${p.id}" title="Couper son micro (il pourra le réactiver)">${SV(I.micOff, 12)} Couper</button>` : "";
   const v = VOL[p.id] ?? 100;
   const vol = me ? "" : `<label class="vol" title="Volume de ${esc(p.name)} (pour toi seulement)">${SV(I.vol, 13)}<input type="range" min="0" max="100" step="5" value="${v}" data-vol="${p.id}" aria-label="Volume de ${esc(p.name)}"><em>${v}%</em></label>`;
   return `<div class="vt${me ? " me" : ""}" data-id="${p.id}"><span class="av" style="--ac:${esc(p.color || "#3a3a3a")};${p.avatar ? `background-image:url(${esc(p.avatar)});font-size:0` : ""}">${esc((p.name || "?")[0].toUpperCase())}</span>
-    <div class="st">${st}</div><div class="nm">${esc(p.name)}${me ? " (toi)" : ""}</div>${p.mgr ? `<div class="rl">MANAGER</div>` : ""}${act}${vol}</div>`;
+    <div class="st">${st}</div><div class="nm">${esc(p.name)}${me ? " (toi)" : ""}</div>${p.mgr ? `<div class="rl">MANAGER</div>` : ""}<div class="row">${act}${mute}</div>${vol}</div>`;
 }
 function render() {
   const meP = { id: ME, name: SELF.name, color: SELF.color, avatar: SELF.avatar, mgr: MGR, muted: MUTED, deaf: DEAF, sharing: !!SCREEN };
   const list = [meP, ...[...PEERS.values()].map(x => x.info).sort((a, b) => a.joined - b.joined)];
   $("grid").innerHTML = list.map(p => tile(p, p.id === ME)).join("");
-  $("cnt").textContent = `${list.length} personne${list.length > 1 ? "s" : ""} connectée${list.length > 1 ? "s" : ""}`;
+  $("cnt").textContent = `${roomName() ? roomName() + " · " : ""}${list.length} personne${list.length > 1 ? "s" : ""}`;
+  paintRooms();
   $("grid").querySelectorAll("[data-vol]").forEach(r => r.oninput = () => { const id = +r.dataset.vol, v = +r.value; VOL[id] = v; LS.set("vol", VOL); r.nextElementSibling.textContent = v + "%";
     const P = PEERS.get(id); if (P && P.audio) P.audio.volume = v / 100; });
   $("grid").querySelectorAll("[data-watch]").forEach(b => b.onclick = () => watch(+b.dataset.watch));
+  $("grid").querySelectorAll("[data-fmute]").forEach(b => b.onclick = async () => { try { await api("/api/voice/force-mute", { body: { id: +b.dataset.fmute } }); } catch (e) { notify("Impossible", e.message, "err"); } });
   $("grid").querySelectorAll("[data-ask]").forEach(b => b.onclick = async () => { try { await api("/api/voice/ask-share", { body: { id: +b.dataset.ask } }); notify("Demande envoyée", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } });
   bcast();
 }
+// les salons accessibles, avec le nombre de personnes dans chacun
+function paintRooms() {
+  const el = $("rooms"); el.hidden = ROOMS.length < 2; if (el.hidden) return;
+  el.innerHTML = ROOMS.map(r => { const n = r.id === ROOMID && ES ? PEERS.size + 1 : (PRES[r.id] || 0);
+    return `<button data-room="${r.id}" class="${r.id === ROOMID ? "on" : ""}">${r.emoji} ${esc(r.name)}<em>${n}</em></button>`; }).join("");
+  el.querySelectorAll("[data-room]").forEach(b => b.onclick = () => switchRoom(b.dataset.room));
+}
+async function pollRooms() { try { const r = await api("/api/voice/presence"); ROOMS = r.rooms.map(x => ({ id: x.id, name: x.name, emoji: x.emoji })); PRES = Object.fromEntries(r.rooms.map(x => [x.id, x.people.length])); INSHIFT = !!r.shift; paintRooms(); } catch (e) {} }
+setInterval(() => { if (!document.hidden) pollRooms(); }, 6000);
+function switchRoom(id) {
+  if (id === ROOMID && ES) return; if (!ROOMS.some(r => r.id === id)) return;
+  if (ROOMID === "equipe" && INSHIFT && ES && !confirm("Le vocal Équipe est obligatoire pendant ton shift. Changer de salon quand même ?")) return;
+  ROOMID = id; LS.set("room", id); if (VIEW != null) closeView(); if (SCREEN) shareStop();
+  [...PEERS.keys()].forEach(drop); render();
+  if (LOCAL) connect(); else join();
+}
+/* ---------- petits sons d'arrivée et de départ ---------- */
+function chime(kind) {
+  if (DEAF) return; try { const a = ac(), t = a.currentTime + .03, N = { join: [659.3, 880], leave: [880, 587.3], me: [523.3, 659.3, 784], mute: [440] }[kind] || [];
+    N.forEach((f, i) => { const o = a.createOscillator(), g = a.createGain(), at = t + i * .09; o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(.09, at + .015); g.gain.exponentialRampToValueAtTime(.0001, at + .24); o.connect(g); g.connect(a.destination); o.start(at); o.stop(at + .28); }); } catch (e) {}
+}
 function setLive(on) { $("live").classList.toggle("off", !on); $("live").querySelector("span").textContent = on ? "EN DIRECT" : "HORS LIGNE"; }
 let TALK = [];
-function bcast() { try { BC && BC.postMessage({ on: !!ES, me: ME, muted: MUTED, deaf: DEAF, ptt: PTT.on, count: PEERS.size + 1, talk: TALK }); } catch (e) {} }
+function bcast() { try { BC && BC.postMessage({ on: !!ES, room: ROOMID, me: ME, muted: MUTED, deaf: DEAF, ptt: PTT.on, count: PEERS.size + 1, talk: TALK }); } catch (e) {} }
 function toast(html, btn, fn) { document.querySelector(".vc-toast")?.remove(); const t = document.createElement("div"); t.className = "vc-toast"; t.innerHTML = `<span>${html}</span>${btn ? `<button>${btn}</button>` : ""}<button class="x">✕</button>`;
   document.body.appendChild(t); if (btn) t.querySelector("button").onclick = () => { t.remove(); fn(); }; t.querySelector(".x").onclick = () => t.remove(); setTimeout(() => t.remove(), 20000); }
 
@@ -198,6 +231,9 @@ async function onSignal(d) {
   else if (d.type === "answer" && P.pc) { try { await P.pc.setRemoteDescription(d.data); flush(P); } catch (e) {} }
   else if (d.type === "ice" && P.pc) { if (P.pc.remoteDescription) P.pc.addIceCandidate(d.data).catch(() => {}); else P.pend.push(d.data); }
 }
+const pcOk = P => !!(P && P.pc && P.pc.connectionState === "connected");
+// après une coupure du serveur, on garde 20 s les liaisons audio encore actives (la personne se reconnecte)
+setInterval(() => { let ch = false; PEERS.forEach((P, id) => { if (P.stale && Date.now() - P.stale > 20e3) { drop(id); ch = true; } }); if (ch) render(); }, 3000);
 const flush = P => { (P.pend || []).forEach(c => P.pc.addIceCandidate(c).catch(() => {})); P.pend = []; };
 function drop(id) { const P = PEERS.get(id); if (!P) return; try { P.pc && P.pc.close(); } catch (e) {} if (P.audio) { P.audio.srcObject = null; P.audio.remove(); } PEERS.delete(id);
   ["out:" + id, "in:" + id].forEach(k => { const pc = SPC.get(k); if (pc) { try { pc.close(); } catch (e) {} SPC.delete(k); } }); if (VIEW === id) closeView(); }
@@ -253,7 +289,7 @@ function closeView() { const id = VIEW; VIEW = null; document.querySelector(".vc
   if (id != null) { const pc = SPC.get("in:" + id); if (pc) { try { pc.close(); } catch (e) {} SPC.delete("in:" + id); } api("/api/voice/watch", { body: { id, stop: true } }).catch(() => {}); } render(); }
 
 /* ---------- connexion au salon ---------- */
-let SELF = {};
+let SELF = {}, QUIT = false;
 const getMic = id => navigator.mediaDevices.getUserMedia({ audio: { ...(id ? { deviceId: { exact: id } } : {}), echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
 // changer de micro en plein appel : on remplace la piste chez tout le monde, sans recouper
 async function switchMic(id) {
@@ -298,39 +334,52 @@ async function join() {
 }
 function connect() {
   if (ES) try { ES.close(); } catch (e) {}
-  ES = new EventSource("/api/voice/stream");
-  ES.addEventListener("welcome", e => { const d = JSON.parse(e.data); ME = d.me; MGR = d.mgr; setLive(true);
-    [...PEERS.keys()].forEach(drop); d.peers.forEach(p => { PEERS.set(p.id, { info: p, pend: [] }); callPeer(p.id); });
+  clearTimeout(RT); LEFTME = false;
+  ES = new EventSource("/api/voice/stream" + (ROOMID ? "?room=" + encodeURIComponent(ROOMID) : ""));
+  ES.addEventListener("welcome", e => { const d = JSON.parse(e.data); ME = d.me; MGR = d.mgr; ROOMID = d.room; if (d.self) SELF = { name: d.self.name, color: d.self.color, avatar: d.self.avatar }; ROOMS = d.rooms || ROOMS; INSHIFT = !!d.shift; LS.set("room", ROOMID); setLive(true); RETRY = 0;
+    const listed = new Set(d.peers.map(p => p.id));
+    // liaisons encore actives (petite coupure) : on les garde ; les absents ont 20 s pour revenir
+    PEERS.forEach((P, id) => { if (!listed.has(id)) P.stale = P.stale || Date.now(); });
+    d.peers.forEach(p => { const P = PEERS.get(p.id); if (P && pcOk(P)) { P.info = p; P.stale = 0; return; } if (P) drop(p.id); PEERS.set(p.id, { info: p, pend: [] }); callPeer(p.id); });
     if (MUTED || DEAF || SCREEN) api("/api/voice/state", { body: { muted: MUTED, deaf: DEAF, sharing: !!SCREEN } }).catch(() => {});
-    render(); });
-  ES.addEventListener("join", e => { const p = JSON.parse(e.data); if (p.id === ME) return; drop(p.id); PEERS.set(p.id, { info: p, pend: [] }); render(); try { SND?.notif?.(); } catch (er) {} });
-  ES.addEventListener("rejoin", e => { const p = JSON.parse(e.data); if (p.id === ME) return; drop(p.id); PEERS.set(p.id, { info: p, pend: [] }); render(); });
-  ES.addEventListener("leave", e => { drop(JSON.parse(e.data).id); render(); });
+    if (FIRST) { chime("me"); FIRST = false; } $("net").hidden = true; render(); pollRooms(); });
+  const arrive = (p, sound) => { if (p.id === ME) return; const P = PEERS.get(p.id);
+    if (P && pcOk(P)) { P.info = p; P.stale = 0; render(); return; }   // déjà relié (reconnexion après coupure)
+    drop(p.id); PEERS.set(p.id, { info: p, pend: [] }); render(); if (sound) chime("join"); };
+  ES.addEventListener("join", e => arrive(JSON.parse(e.data), true));
+  ES.addEventListener("rejoin", e => arrive(JSON.parse(e.data), false));
+  ES.addEventListener("leave", e => { const id = JSON.parse(e.data).id; if (PEERS.has(id)) { drop(id); chime("leave"); } render(); });
+  ES.addEventListener("force-mute", e => { const d = JSON.parse(e.data); if (!MUTED) { MUTED = true; applyTx(); api("/api/voice/state", { body: { muted: true } }).catch(() => {}); paintBar(); render(); chime("mute"); }
+    toast(`<b>${esc(d.name)}</b> a coupé ton micro. Tu peux le réactiver quand tu veux.`); });
   ES.addEventListener("state", e => { const p = JSON.parse(e.data), P = PEERS.get(p.id); if (!P) return; const was = P.info.sharing; P.info = { ...P.info, ...p };
     if (was && !p.sharing && VIEW === p.id) { closeView(); notify("Partage terminé", `${p.name} a arrêté de partager son écran`, "info"); } render(); });
   ES.addEventListener("signal", e => onSignal(JSON.parse(e.data)));
   ES.addEventListener("watch", e => { const d = JSON.parse(e.data); sendScreenTo(d.by); });
   ES.addEventListener("unwatch", e => { const d = JSON.parse(e.data), pc = SPC.get("out:" + d.by); if (pc) { try { pc.close(); } catch (er) {} SPC.delete("out:" + d.by); } });
   ES.addEventListener("ask-share", e => { const d = JSON.parse(e.data); if (SCREEN) return; toast(`<b>${esc(d.name)}</b> te demande de partager ton écran`, "Partager", shareStart); });
-  ES.addEventListener("replaced", () => { ES.close(); ES = null; setLive(false); gate("replaced"); });
-  ES.onerror = () => { setLive(false); };
+  ES.addEventListener("replaced", e => { const d = JSON.parse(e.data || "{}"); if (d.moved) return; ES.close(); ES = null; LEFTME = true; setLive(false); gate("replaced"); });
+  // coupure : le navigateur réessaie seul ; si le serveur répond mal (mise en ligne en cours), on réessaie nous-mêmes
+  ES.onerror = () => { setLive(false); $("net").hidden = false; $("net").textContent = "Connexion perdue, reconnexion automatique…"; if (ES && ES.readyState === 2) retry(); };
   ES.onopen = () => setLive(true);
   bcast();
 }
+function retry() { clearTimeout(RT); if (LEFTME || !LOCAL) return; const d = Math.min(20e3, 1500 * 2 ** RETRY++); RT = setTimeout(() => { if (!LEFTME && LOCAL && (!ES || ES.readyState === 2)) connect(); }, d); }
+window.addEventListener("online", () => { if (!LEFTME && LOCAL && (!ES || ES.readyState !== 1)) { RETRY = 0; connect(); } });
 function leave(final) {
+  LEFTME = true; clearTimeout(RT);
   if (ES) { try { ES.close(); } catch (e) {} ES = null; }
   [...PEERS.keys()].forEach(drop); if (SCREEN) shareStop();
   if (LOCAL) LOCAL.getTracks().forEach(t => t.stop()); LOCAL = null; setLive(false); bcast();
-  if (final) { try { BC && BC.postMessage({ on: false }); } catch (e) {} window.close(); setTimeout(() => gate("left"), 300); }
+  if (final) { try { BC && BC.postMessage({ on: false }); } catch (e) {} QUIT = true; window.close(); setTimeout(() => gate("left"), 300); }
 }
 function gate(why) {
   document.querySelector(".vc-gate")?.remove(); const g = document.createElement("div"); g.className = "vc-gate";
-  const T = { start: ["Rejoindre le salon vocal", INSHIFT ? "Le vocal est obligatoire pendant ton shift. Ton micro sera demandé par le navigateur." : "Parle avec l'équipe en direct. Ton micro sera demandé par le navigateur.", "Rejoindre"],
+  const T = { start: [`Rejoindre ${roomName() ? "le salon " + roomName() : "le salon vocal"}`, INSHIFT ? "Le vocal est obligatoire pendant ton shift. Ton micro sera demandé par le navigateur." : "Parle avec l'équipe en direct. Ton micro sera demandé par le navigateur.", "Rejoindre"],
     mic: ["Micro inaccessible", "Autorise le micro pour ce site (icône à gauche de l'adresse), puis réessaie.", "Réessayer"],
     replaced: ["Ouvert ailleurs", "Le salon vocal est ouvert dans une autre fenêtre ou un autre appareil.", "Le reprendre ici"],
     left: ["Tu as quitté le salon", INSHIFT ? "Pense à revenir : le vocal est obligatoire pendant ton shift." : "Tu peux revenir quand tu veux.", "Revenir"] }[why];
   g.innerHTML = `<div class="bx"><span class="big">${SV(I.mic, 38)}</span><b>${T[0]}</b><p>${T[1]}</p><button>${T[2]}</button></div>`;
-  document.getElementById("vc").appendChild(g); g.querySelector("button").onclick = () => { ac(); join(); };
+  document.getElementById("vc").appendChild(g); g.querySelector("button").onclick = () => { ac(); if (LOCAL) { document.querySelector(".vc-gate")?.remove(); connect(); } else join(); };
 }
 
 /* ---------- boutons ---------- */
@@ -351,17 +400,22 @@ document.addEventListener("keyup", e => { if (PTT.on && e.code === PTT.code) set
 window.addEventListener("blur", () => setHeld(false));
 // le site (chat, autres pages) pilote la fenêtre : micro, son, quitter, touche push-to-talk
 if (BC) BC.onmessage = e => { const d = e.data || {}; if ("ptt" in d && typeof d.ptt === "boolean" && !("on" in d)) { if (PTT.on) setHeld(d.ptt); return; }
-  if (d.cmd === "mute") $("bMic").click(); else if (d.cmd === "deaf") $("bDeaf").click(); else if (d.cmd === "leave") leave(true); else if (d.cmd === "ping") bcast(); };
+  if (d.cmd === "mute") $("bMic").click(); else if (d.cmd === "deaf") $("bDeaf").click(); else if (d.cmd === "leave") leave(true); else if (d.cmd === "ping") bcast(); else if (d.cmd === "room" && d.room) switchRoom(d.room); };
 $("bLeave").onclick = () => { if (INSHIFT && !confirm("Le vocal est obligatoire pendant ton shift. Quitter quand même ?")) return; leave(true); };
+// fermer la fenêtre pendant le shift : le navigateur demande confirmation
+window.addEventListener("beforeunload", e => { if (!QUIT && ES && INSHIFT && ROOMID === "equipe") { e.preventDefault(); e.returnValue = ""; } });
 window.addEventListener("pagehide", () => { try { BC && BC.postMessage({ on: false }); } catch (e) {} });
 // raccourci : Ctrl/Cmd + M pour couper le micro
 document.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") { e.preventDefault(); $("bMic").click(); } });
 
 (async () => {
   let me; try { me = await api("/api/me"); } catch (e) { location.href = "/login"; return; }
-  if (me.role === "trainee") { document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#aaa;font-family:Inter">Le salon vocal est réservé à l\'équipe.</div>'; return; }
-  INSHIFT = me.role === "chatter" && !!me.voiceNeeded || false;
-  try { const p = await api("/api/profile"); SELF = { name: p.name || me.username, color: p.color, avatar: p.avatar }; } catch (e) { SELF = { name: me.username }; }
+  await pollRooms();
+  if (!ROOMS.length) { document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#aaa;font-family:Inter">Aucun salon vocal pour toi.</div>'; return; }
+  // salon : celui demandé, sinon Équipe pendant le shift, sinon le dernier utilisé, sinon le premier
+  const ok = id => ROOMS.some(r => r.id === id), want = new URLSearchParams(location.search).get("r");
+  ROOMID = ok(want) ? want : INSHIFT && ok("equipe") ? "equipe" : ok(LS.get("room", "")) ? LS.get("room", "") : ROOMS[0].id;
+  SELF = { name: me.username };
   paintBar();
   // micro déjà autorisé : on rejoint directement, sinon un bouton (le navigateur exige un clic)
   let granted = false; try { granted = (await navigator.permissions.query({ name: "microphone" })).state === "granted"; } catch (e) {}
