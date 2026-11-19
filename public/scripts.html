@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scripts — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="stylesheet" href="/style.css">
+<style>
+@property --fxa{syntax:"<angle>";inherits:false;initial-value:0deg}
+:root{--ac:#5fd3a2;--am:#f0b54a;--bd:#1f1f1f}
+.main-area.scm{padding:0!important;height:100dvh;overflow:hidden}
+.sc{height:100dvh;display:flex;flex-direction:column;min-width:0;position:relative;overflow:hidden;background:radial-gradient(900px 300px at 30% -120px,rgba(95,211,162,.07),transparent 70%),#0a0a0a}
+.sc>.stars{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}.sc>.stars i{position:absolute;border-radius:50%;background:#fff;animation:tw ease-in-out infinite}
+@keyframes tw{50%{opacity:.12}}
+.sc>*{position:relative;z-index:1}
+@keyframes spin{to{--fxa:360deg}}
+.trace{position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;background:conic-gradient(from var(--fxa),transparent 0 58%,var(--tc,#5fd3a2) 78%,#fff 86%,transparent 93%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;z-index:6;animation:spin 2.2s linear infinite}
+.up{animation:up .7s cubic-bezier(.16,1,.3,1) both}
+@keyframes up{from{opacity:0;transform:translateY(12px);filter:blur(4px)}}
+.kbd{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:6px;background:#1a1a1a;border:1px solid #2e2e2e;border-bottom-width:2px;font:800 10.5px Inter;color:#cfcfcf}
+.met{font-style:italic;background:linear-gradient(100deg,#fff,#8a8a8a 55%,#e6e6e6);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.08em}
+.cap{font:800 10px Inter;letter-spacing:.2em;text-transform:uppercase;color:#6a6a6a}
+.rav{position:relative;display:inline-grid;place-items:center;border-radius:50%;flex:none}
+.rav:before{content:"";position:absolute;inset:-3px;border-radius:50%;background:conic-gradient(from var(--fxa),var(--c1),var(--c2),var(--c3),var(--c1));animation:spin 5s linear infinite;-webkit-mask:radial-gradient(circle,transparent 62%,#000 64%);mask:radial-gradient(circle,transparent 62%,#000 64%)}
+.rav>span{position:relative;border-radius:50%;display:grid;place-items:center;font-weight:900;font-family:Inter}
+/* ---- en-tête ---- */
+.hd{display:flex;align-items:flex-end;gap:18px;padding:26px 28px 16px;flex-wrap:wrap}
+.hd h1{margin:6px 0 0;font:900 38px Inter;letter-spacing:-.045em;line-height:1.02}
+.hd .act{margin-left:auto;display:flex;gap:8px}
+.btn2{height:44px;padding:0 16px;border-radius:13px;border:1px solid #262626;background:#121212;color:#e8e8e8;font:800 13px Inter;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .2s,transform .3s cubic-bezier(.3,1.6,.5,1)}
+.btn2:hover{background:#1a1a1a}.btn2:active{transform:scale(.95)}
+.btn2.w{background:#f5f5f5;color:#0a0a0a;border-color:#f5f5f5;box-shadow:0 10px 30px -10px rgba(255,255,255,.4)}.btn2.w:hover{background:#fff}
+.btn2.g{background:#5fd3a2;color:#05261a;border-color:#5fd3a2;box-shadow:0 12px 30px -12px rgba(95,211,162,.7)}
+.btn2.ai{background:linear-gradient(135deg,rgba(95,211,162,.16),rgba(125,180,255,.12));border-color:rgba(95,211,162,.35);color:#bff3dc}
+.btn2.dl:hover{color:#ff8a8a;border-color:#4a2626}
+.btn2[disabled]{opacity:.4;cursor:not-allowed}
+/* ---- chiffres ---- */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:0 28px 16px}
+.kpi{position:relative;padding:13px 15px;border-radius:16px;background:#101010;border:1px solid var(--bd);overflow:hidden}
+.kpi small{display:block;font:800 9.5px Inter;letter-spacing:.16em;color:#6a6a6a;text-transform:uppercase}
+.kpi b{display:block;font:900 24px Inter;letter-spacing:-.04em;margin-top:6px}
+.kpi span{display:block;font:600 11.5px Inter;color:#7a7a7a;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi.hl{background:linear-gradient(135deg,rgba(95,211,162,.12),rgba(95,211,162,.02) 70%),#0f1311;border-color:rgba(95,211,162,.25)}.kpi.hl b{color:#eafff6}
+/* ---- espace de travail ---- */
+.ws{flex:1;min-height:0;display:grid;grid-template-columns:230px minmax(0,1fr) 440px;gap:0;border-top:1px solid #181818}
+.side{border-right:1px solid #181818;padding:16px 12px;overflow:auto;scrollbar-width:thin}
+.side .cap{margin:4px 8px 8px}
+.fl{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:12px;border:0;background:none;color:#bdbdbd;font:700 13px Inter;text-align:left;cursor:pointer;transition:background .2s}
+.fl:hover{background:#141414}.fl.on{background:#191919;color:#fff;box-shadow:inset 0 0 0 1px #262626}
+.fl .n{margin-left:auto;font:800 11px Inter;color:#6a6a6a}
+.fl .d{width:8px;height:8px;border-radius:50%;flex:none}
+.side hr{border:0;border-top:1px solid #181818;margin:12px 4px}
+.mid{display:flex;flex-direction:column;min-height:0;min-width:0}
+.bar{display:flex;align-items:center;gap:10px;padding:14px 18px 10px}
+.srch{flex:1;display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:12px;border:1px solid #232323;background:#0f0f0f;color:#666}
+.srch input{flex:1;min-width:0;border:0;background:none;color:#eee;font:500 13.5px Inter;outline:none;padding:0}
+.sort{display:flex;padding:3px;border-radius:11px;background:#121212;border:1px solid #222}
+.sort button{height:32px;padding:0 11px;border-radius:8px;border:0;background:none;color:#8a8a8a;font:800 11.5px Inter;cursor:pointer;white-space:nowrap}
+.sort button.on{background:#f5f5f5;color:#0a0a0a}
+.lst{flex:1;min-height:0;overflow:auto;padding:4px 18px 30px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;align-content:start;scrollbar-width:thin}
+.card{position:relative;display:flex;flex-direction:column;gap:9px;padding:14px 15px 12px;border-radius:18px;border:1px solid #1f1f1f;background:#101010;color:#e8e8e8;text-align:left;cursor:pointer;transition:border-color .25s,transform .35s cubic-bezier(.3,1.4,.5,1),background .25s;animation:cIn .6s cubic-bezier(.16,1,.3,1) both}
+@keyframes cIn{from{opacity:0;transform:translateY(14px) scale(.98)}}
+.card:hover{border-color:#2c2c2c;transform:translateY(-2px)}
+.card.on{background:linear-gradient(135deg,rgba(95,211,162,.08),transparent 60%),#121212;border-color:rgba(95,211,162,.3)}
+.card .t{display:flex;align-items:center;gap:8px;min-width:0}
+.card .t b{font:900 14px Inter;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .pin{color:#e8c27a;flex:none}
+.chip{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 8px;border-radius:999px;font:800 9.5px Inter;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;flex:none;background:color-mix(in srgb,var(--c) 14%,transparent);color:color-mix(in srgb,var(--c) 80%,#fff);border:1px solid color-mix(in srgb,var(--c) 32%,transparent)}
+.card .body{font:500 13px/1.5 Inter;color:#a8a8a8;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap}
+mark{background:rgba(95,211,162,.14);color:var(--ac);border-radius:4px;padding:0 3px;font-weight:700}
+.card .ft{display:flex;align-items:center;gap:10px;margin-top:auto;font:700 11px Inter;color:#6a6a6a}
+.card .ft .u b{color:#e8e8e8;font-weight:900}
+.spark{display:flex;align-items:flex-end;gap:2px;height:20px;margin-left:auto}
+.spark i{width:4px;border-radius:2px;background:#2a3a33;min-height:2px}.spark i.h{background:var(--ac);box-shadow:0 0 6px rgba(95,211,162,.6)}
+.whos{display:inline-flex}.whos .w{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font:900 8px Inter;border:2px solid #101010;margin-left:-5px;background:color-mix(in srgb,var(--c) 22%,#0f0f0f);color:var(--c)}.whos .w:first-child{margin-left:0}
+.empty{grid-column:1/-1;padding:60px 20px;text-align:center;color:#7a7a7a;font:600 13px/1.6 Inter}.empty b{display:block;color:#fff;font:900 18px Inter;margin-bottom:6px}
+/* ---- éditeur ---- */
+.ed{border-left:1px solid #181818;display:flex;flex-direction:column;min-height:0;background:#0b0b0b}
+.ed .in{flex:1;min-height:0;overflow:auto;padding:18px 20px 20px;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin}
+.ed h2{margin:0;font:900 20px Inter;letter-spacing:-.03em}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld>label{margin:0;font:800 9.5px Inter;letter-spacing:.16em;text-transform:uppercase;color:#6a6a6a}
+.fld input,.fld textarea{border-radius:12px;border:1px solid #242424;background:#0f0f0f;color:#eee;font:500 14px Inter;padding:11px 12px;transition:border-color .2s,box-shadow .2s}
+.fld input:focus,.fld textarea:focus{border-color:#3a3a3a;box-shadow:0 0 0 4px rgba(255,255,255,.03);outline:none}
+.fld textarea{min-height:130px;resize:vertical;line-height:1.55}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vars{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.vars button{height:26px;padding:0 9px;border-radius:999px;border:1px solid rgba(95,211,162,.3);background:rgba(95,211,162,.08);color:var(--ac);font:800 11px Inter;cursor:pointer}
+.vars .cnt{margin-left:auto;font:700 11px Inter;color:#5f5f5f}
+.scope{display:flex;gap:6px;flex-wrap:wrap}
+.scope button{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px 0 5px;border-radius:999px;border:1px solid #242424;background:#121212;color:#9a9a9a;font:800 12px Inter;cursor:pointer;transition:all .3s}
+.scope button.all{padding:0 12px}
+.scope button.on{background:#f5f5f5;color:#0a0a0a;border-color:#f5f5f5}
+/* aperçu dans la bulle Néon de la messagerie */
+.pv{position:relative;border-radius:18px;border:1px solid #1c1c1c;background:radial-gradient(400px 160px at 50% 0%,rgba(95,211,162,.07),transparent 70%),#0a0a0a;padding:14px 14px 12px;display:flex;flex-direction:column;gap:8px}
+.pv .cap{margin:0}
+.pv .fan{display:flex;align-items:flex-end;gap:8px}
+.pv .fav{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:900 10px Inter;background:hsl(140 45% 30%);color:#fff;flex:none}
+.pv .bf{padding:8px 12px;border-radius:16px;border-bottom-left-radius:5px;background:#141414;border:1px solid #1f1f1f;font:500 13.5px Inter;color:#ddd}
+.pv .me{align-self:flex-end;max-width:88%;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.pv .bm{position:relative;padding:9px 13px;border-radius:16px;border-bottom-right-radius:5px;background:#0d1512;color:#d9ffee;font:500 14px/1.45 Inter;white-space:pre-wrap;word-break:break-word;box-shadow:0 0 22px -8px rgba(95,211,162,.55)}
+.pv .bm:before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(135deg,#5fd3a2,#2aa6a0 50%,rgba(95,211,162,.15));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.pv .bm.pop{animation:pop .45s cubic-bezier(.3,1.5,.5,1)}
+@keyframes pop{from{transform:scale(.96);opacity:.6}}
+.pv .lbl{font:800 9px Inter;letter-spacing:.14em;text-transform:uppercase;color:#6a6a6a;display:inline-flex;align-items:center;gap:5px}.pv .lbl i{width:6px;height:6px;border-radius:50%;background:#b49cff;box-shadow:0 0 8px #b49cff}
+.aiv{display:grid;gap:8px}
+.aiv .v{position:relative;display:flex;flex-direction:column;gap:5px;padding:11px 13px;border-radius:14px;border:1px solid #262626;background:#121212;color:#eee;text-align:left;cursor:pointer;transition:transform .35s cubic-bezier(.3,1.4,.5,1),border-color .25s;animation:aiIn .7s cubic-bezier(.16,1,.3,1) both}
+@keyframes aiIn{from{opacity:0;transform:translateY(10px);filter:blur(6px)}}
+.aiv .v:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--c) 55%,transparent)}
+.aiv .v .a{font:900 9.5px Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--c)}
+.aiv .v .x{font:500 13.5px/1.45 Inter;white-space:pre-wrap}
+.aiv .sk{height:60px;border-radius:14px;background:linear-gradient(90deg,#141414 25%,#1b1b1b 50%,#141414 75%);background-size:200% 100%;animation:sk 1.2s infinite linear}
+@keyframes sk{to{background-position:-200% 0}}
+.goal{display:flex;gap:6px;flex-wrap:wrap}
+.goal button{height:28px;padding:0 10px;border-radius:999px;border:1px solid #262626;background:#121212;color:#9a9a9a;font:700 11.5px Inter;cursor:pointer}
+.goal button.on{border-color:rgba(95,211,162,.45);color:var(--ac);background:rgba(95,211,162,.08)}
+.meta{font:600 11.5px/1.5 Inter;color:#6a6a6a}.meta b{color:#cfcfcf}
+.ed .ft{display:flex;gap:8px;padding:12px 20px;border-top:1px solid #181818;background:#0a0a0a}
+.ed .ft .sv{margin-left:auto}
+.saved{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;background:rgba(95,211,162,.12);border:1px solid rgba(95,211,162,.35);color:var(--ac);font:800 11.5px Inter;animation:svd 2.2s cubic-bezier(.3,1.4,.5,1) both;align-self:center}
+@keyframes svd{0%{opacity:0;transform:scale(.6)}10%,80%{opacity:1;transform:none}100%{opacity:0}}
+.ednone{flex:1;display:grid;place-items:center;text-align:center;color:#6a6a6a;font:600 13px/1.6 Inter;padding:30px}
+.ednone b{display:block;color:#fff;font:900 16px Inter;margin-bottom:4px}
+/* ---- import ---- */
+.mod{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);backdrop-filter:blur(3px);display:grid;place-items:center;padding:18px;animation:fd .25s both}
+@keyframes fd{from{opacity:0}}
+.box{width:min(760px,100%);max-height:88vh;display:flex;flex-direction:column;border-radius:22px;background:#0f0f0f;border:1px solid #262626;box-shadow:0 40px 100px -20px #000;overflow:hidden;animation:bx .5s cubic-bezier(.16,1,.3,1) both}
+@keyframes bx{from{transform:translateY(20px) scale(.98);opacity:0}}
+.box .h{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid #1c1c1c}
+.box .h b{font:900 18px Inter;letter-spacing:-.03em}
+.box .h .x{margin-left:auto}
+.tabs{display:flex;gap:4px;padding:3px;border-radius:12px;background:#151515;border:1px solid #222}
+.tabs button{height:32px;padding:0 12px;border-radius:9px;border:0;background:none;color:#8f8f8f;font:800 12px Inter;cursor:pointer}.tabs button.on{background:#ededed;color:#0a0a0a}
+.box .c{flex:1;min-height:0;overflow:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.box textarea{min-height:200px;border-radius:12px;border:1px solid #242424;background:#0b0b0b;color:#eee;font:500 13.5px/1.55 Inter;padding:12px;resize:vertical}
+.hint{font:600 12px/1.55 Inter;color:#7a7a7a}.hint code{color:var(--ac);background:rgba(95,211,162,.1);padding:1px 5px;border-radius:5px;font:700 11.5px Inter}
+.irow{margin:0;display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:#121212;border:1px solid #1f1f1f;cursor:pointer}
+.irow input{margin-top:3px;width:16px;height:16px;accent-color:#5fd3a2;flex:none}
+.irow b{display:block;font:800 13px Inter}.irow small{display:block;font:500 12.5px/1.45 Inter;color:#9a9a9a;margin-top:2px;white-space:pre-wrap}
+.irow.dup{opacity:.5}
+.box .f{display:flex;align-items:center;gap:10px;padding:12px 18px;border-top:1px solid #1c1c1c;flex-wrap:wrap}
+.box .f .sel{display:flex;align-items:center;gap:8px;font:700 12px Inter;color:#8a8a8a}
+.box .f input,.box .f select{height:34px;border-radius:10px;border:1px solid #262626;background:#151515;color:#eee;font:600 12.5px Inter;padding:0 10px}
+@media(max-width:1280px){.ws{grid-template-columns:200px minmax(0,1fr) 380px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:980px){.main-area.scm,.sc{height:auto;min-height:100dvh;overflow:visible}.ws{grid-template-columns:minmax(0,1fr)}.bar{flex-wrap:wrap}.srch{flex:1 1 100%}.ed .in{overflow:visible}.r2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.ed .ft{flex-wrap:wrap}.ed .ft .kbd,.hd .kbd,.srch .kbd{display:none}.ed .ft .sv{flex:1;justify-content:center}.side{border-right:0;border-bottom:1px solid #181818;display:flex;gap:6px;overflow-x:auto}.side .cap,.side hr{display:none}.fl{width:auto;white-space:nowrap}.ed{border-left:0;border-top:1px solid #181818}.hd h1{font-size:30px}.lst{grid-template-columns:1fr}}
+@media(max-width:900px){.main-area.scm{padding-bottom:90px!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area scm">
+<div class="sc" id="sc">
+  <div class="stars" id="stars"></div>
+  <div class="hd up"><div><div class="cap">Manager</div><h1>Scripts <em class="met">de l'équipe.</em></h1></div>
+    <div class="act"><button class="btn2" id="impB"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Importer</button>
+      <button class="btn2 w" id="newB">+ Nouveau script <span class="kbd">N</span></button></div></div>
+  <div class="kpis up" style="animation-delay:.06s" id="kp"></div>
+  <div class="ws">
+    <nav class="side" id="side" aria-label="Filtres"></nav>
+    <section class="mid"><div class="bar"><label class="srch"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" placeholder="Chercher dans les titres et les textes…"><span class="kbd">⌘K</span></label>
+      <div class="sort" id="sort"><button data-s="use" class="on">Plus utilisés</button><button data-s="new">Récents</button><button data-s="az">A → Z</button></div></div>
+      <div class="lst" id="lst"></div></section>
+    <aside class="ed" id="ed"></aside>
+  </div>
+</div>
+</main>
+</div>
+<script src="/common.js"></script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const SV = (p, s = 16, w = 2.2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const IC = { pin: '<path d="M12 17v5"/><path d="M8 3h8l-1.5 6L18 12.5H6L9.5 9z"/>', spark: '<path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><path d="M12 7.5c.6 2.4 2.1 3.9 4.5 4.5-2.4.6-3.9 2.1-4.5 4.5-.6-2.4-2.1-3.9-4.5-4.5 2.4-.6 3.9-2.1 4.5-4.5z"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', copy: '<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>', trash: '<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>' };
+const PAL = [["#b49cff", "#5b46b0", "#e2d8ff"], ["#7db4ff", "#2f5fa8", "#dbeaff"], ["#5fd3a2", "#1f6b4f", "#d2f7e7"], ["#f0b54a", "#7a5418", "#ffeccb"], ["#ff8fb1", "#8a2f4c", "#ffd9e5"], ["#6fe0e0", "#1d6b6b", "#d4f7f7"]];
+const pal = n => PAL[[...String(n || "?")].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 9973, 7) % PAL.length];
+const rav = (letter, size, p) => `<span class="rav" style="width:${size}px;height:${size}px;--c1:${p[0]};--c2:${p[1]};--c3:${p[2]}"><span style="width:${size - 6}px;height:${size - 6}px;font-size:${Math.max(8, Math.round(size / 2.6))}px;background:color-mix(in srgb,${p[0]} 22%,#0f0f0f);color:${p[0]}">${esc(letter)}</span></span>`;
+const ago = t => { if (!t) return ""; const m = (Date.now() - t) / 60e3; return m < 1 ? "à l'instant" : m < 60 ? `il y a ${Math.round(m)} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : `il y a ${Math.round(m / 1440)} j`; };
+const hl = t => esc(t).replace(/\{(pr[ée]nom|cr[ée]atrice)\}/gi, m => `<mark>${m}</mark>`);
+const CATS = ["Accroche", "Relance", "Vente", "Remerciement", "Nouvel abonné", "Fidélité", "Custom"];
+let D = null, F = { creator: "", cat: "", pinned: false }, SORT = "use", Q = "", SEL = null, DRAFT = null, AIV = null, GOAL = "";
+// étoiles du fond (comme l'accueil)
+$("stars").innerHTML = Array.from({ length: 40 }, (_, i) => { const r = k => ((Math.sin(i * 9301 + k * 49297) + 1) / 2); const z = [1, 1, 1.5, 2][Math.floor(r(1) * 4)];
+  return `<i style="left:${(r(2) * 100).toFixed(1)}%;top:${(r(3) * 100).toFixed(1)}%;width:${z}px;height:${z}px;opacity:${(.12 + r(4) * .35).toFixed(2)};animation-duration:${(2.5 + r(5) * 3.5).toFixed(1)}s;animation-delay:-${(r(6) * 6).toFixed(1)}s"></i>`; }).join("");
+
+async function load() { D = await api("/api/scripts/all"); paint(); }
+const crOf = id => (D.creators.find(c => c.id === id) || {});
+const catColor = c => pal(c || "?")[0];
+function list() {
+  const q = Q.trim().toLowerCase();
+  let L = D.items.filter(x => (!F.creator || (F.creator === "_all" ? !x.creator : x.creator === F.creator)) && (!F.cat || x.cat === F.cat) && (!F.pinned || x.pinned) && (!q || (x.title + " " + x.body + " " + x.cat).toLowerCase().includes(q)));
+  if (SORT === "new") L = L.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  else if (SORT === "az") L = L.slice().sort((a, b) => (a.title || a.body).localeCompare(b.title || b.body, "fr"));
+  else L = L.slice().sort((a, b) => (b.pinned - a.pinned) || (b.week - a.week) || (b.uses - a.uses));
+  return L;
+}
+function paint() { kpis(); side(); cards(); editor(); }
+function kpis() {
+  const I = D.items, week = I.reduce((a, x) => a + x.week, 0), top = I.slice().sort((a, b) => b.week - a.week || b.uses - a.uses)[0], who = new Set(I.flatMap(x => x.who.map(w => w.name)));
+  $("kp").innerHTML = `<div class="kpi"><small>Scripts</small><b>${I.length}</b><span>${I.filter(x => !x.creator).length} pour toutes les créatrices</span></div>
+    <div class="kpi hl"><small>Utilisés cette semaine</small><b>${week}</b><span>${I.reduce((a, x) => a + x.uses, 0)} fois au total</span></div>
+    <div class="kpi"><small>Le plus utilisé</small><b style="font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${top && top.uses ? esc(top.title || top.body.slice(0, 30)) : "—"}</b><span>${top && top.uses ? `${top.week} fois cette semaine` : "Pas encore utilisé"}</span></div>
+    <div class="kpi"><small>Chatters qui s'en servent</small><b>${who.size}</b><span>${[...who].slice(0, 4).join(", ") || "Personne pour l'instant"}</span></div>`;
+}
+function side() {
+  const I = D.items, cnt = f => I.filter(f).length, cats = [...new Set(I.map(x => x.cat).filter(Boolean))].sort();
+  const b = (on, label, n, attrs, pre = "") => `<button class="fl ${on ? "on" : ""}" ${attrs}>${pre}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${label}</span><span class="n">${n}</span></button>`;
+  $("side").innerHTML = `<div class="cap">Créatrices</div>${b(!F.creator, "Tous les scripts", I.length, 'data-cr=""')}${b(F.creator === "_all", "Pour toutes", cnt(x => !x.creator), 'data-cr="_all"')}
+    ${D.creators.map(c => b(F.creator === c.id, esc(c.label), cnt(x => x.creator === c.id), `data-cr="${esc(c.id)}"`, rav(c.label[0], 22, pal(c.label)))).join("")}
+    <hr><div class="cap">Catégories</div>${b(!F.cat && !F.pinned, "Toutes", I.length, 'data-cat=""')}${b(F.pinned, "Épinglés", cnt(x => x.pinned), 'data-pin="1"', `<span class="d" style="background:#e8c27a"></span>`)}
+    ${cats.map(c => b(F.cat === c, esc(c), cnt(x => x.cat === c), `data-cat="${esc(c)}"`, `<span class="d" style="background:${catColor(c)}"></span>`)).join("")}`;
+  $("side").querySelectorAll("[data-cr]").forEach(x => x.onclick = () => { F.creator = x.dataset.cr; side(); cards(); });
+  $("side").querySelectorAll("[data-cat]").forEach(x => x.onclick = () => { F.cat = x.dataset.cat; F.pinned = false; side(); cards(); });
+  $("side").querySelectorAll("[data-pin]").forEach(x => x.onclick = () => { F.pinned = !F.pinned; F.cat = ""; side(); cards(); });
+}
+function cards() {
+  const L = list();
+  $("lst").innerHTML = L.length ? L.map((x, i) => { const mx = Math.max(1, ...x.days), cr = x.creator ? crOf(x.creator) : null;
+    return `<button class="card ${SEL === x.id ? "on" : ""}" data-id="${x.id}" style="animation-delay:${Math.min(i, 12) * .03}s">${SEL === x.id ? '<span class="trace"></span>' : ""}
+      <span class="t">${x.pinned ? `<span class="pin">${SV(IC.pin, 13)}</span>` : ""}<b>${esc(x.title || x.body.slice(0, 40))}</b>${x.cat ? `<span class="chip" style="--c:${catColor(x.cat)}">${esc(x.cat)}</span>` : ""}</span>
+      <span class="body">${hl(x.body)}</span>
+      <span class="ft"><span class="chip" style="--c:${cr ? pal(cr.label)[0] : "#9a9a9a"}">${cr ? esc(cr.label) : "Toutes"}</span><span class="u"><b>${x.uses}</b> fois</span>${x.who.length ? `<span class="whos">${x.who.slice(0, 4).map(w => `<span class="w" style="--c:${pal(w.name)[0]}" title="${esc(w.name)} : ${w.n} fois">${esc(w.name[0].toUpperCase())}</span>`).join("")}</span>` : ""}
+        <span class="spark" title="Utilisations des 14 derniers jours">${x.days.map((d, k) => `<i class="${k >= 12 && d ? "h" : ""}" style="height:${Math.max(2, d / mx * 20)}px"></i>`).join("")}</span></span></button>`; }).join("")
+    : D.items.length ? `<div class="empty"><b>Aucun script ne correspond</b>Change de filtre ou de recherche.</div>`
+    : `<div class="empty"><b>Ta bibliothèque est vide</b>Crée le premier script, ou importe ceux de Twizz avec le bouton Importer.<br><br><button class="btn2 w" id="e1">+ Nouveau script</button></div>`;
+  $("lst").querySelectorAll("[data-id]").forEach(c => c.onclick = () => open(+c.dataset.id));
+  if ($("e1")) $("e1").onclick = () => open(null, true);
+}
+function open(id, isNew) {
+  SEL = id; AIV = null; GOAL = "";
+  const x = id ? D.items.find(s => s.id === id) : null;
+  DRAFT = x ? { id: x.id, title: x.title, cat: x.cat, body: x.body, creator: x.creator, pinned: x.pinned } : { id: null, title: "", cat: F.cat || "", body: "", creator: F.creator && F.creator !== "_all" ? F.creator : null, pinned: false };
+  if (isNew || x) { cards(); editor(); if (innerWidth <= 980) $("ed").scrollIntoView({ behavior: "smooth", block: "start" }); setTimeout(() => (isNew ? $("eT") : $("eB")) && (isNew ? $("eT") : $("eB")).focus(), 60); }
+}
+function editor() {
+  const E = $("ed");
+  if (!DRAFT) { E.innerHTML = `<div class="ednone"><div><b>Choisis un script</b>ou crée-en un nouveau avec <span class="kbd">N</span>.<br>Les chatters les retrouvent dans la messagerie en tapant <span class="kbd">/</span>.</div></div>`; return; }
+  const x = DRAFT.id ? D.items.find(s => s.id === DRAFT.id) : null, cats = [...new Set(CATS.concat(D.items.map(s => s.cat).filter(Boolean)))];
+  E.innerHTML = `<div class="in"><div style="display:flex;align-items:center;gap:10px"><h2>${DRAFT.id ? "Modifier" : "Nouveau script"}</h2>${x ? `<span class="chip" style="--c:#9a9a9a">${x.source === "twizz" ? "Importé de Twizz" : "Créé sur le site"}</span>` : ""}<span id="svd" style="margin-left:auto"></span></div>
+    <div class="r2"><div class="fld"><label for="eT">Titre</label><input id="eT" maxlength="80" placeholder="ex. Relance du soir" value="${esc(DRAFT.title)}"></div>
+      <div class="fld"><label for="eC">Catégorie</label><input id="eC" maxlength="30" list="eCl" placeholder="ex. Relance" value="${esc(DRAFT.cat)}"><datalist id="eCl">${cats.map(c => `<option value="${esc(c)}">`).join("")}</datalist></div></div>
+    <div class="fld"><label>Pour quelle créatrice</label><div class="scope" id="eS"><button class="all ${!DRAFT.creator ? "on" : ""}" data-c="">Toutes</button>${D.creators.map(c => `<button class="${DRAFT.creator === c.id ? "on" : ""}" data-c="${esc(c.id)}">${rav(c.label[0], 26, pal(c.label))}${esc(c.label)}</button>`).join("")}</div></div>
+    <div class="fld"><label for="eB">Le message</label><textarea id="eB" maxlength="2000" placeholder="Le message tel qu'il partira au fan…">${esc(DRAFT.body)}</textarea>
+      <div class="vars"><button data-v="{prenom}">+ prénom du fan</button><button data-v="{creatrice}">+ nom de la créatrice</button><span class="cnt" id="eN"></span></div></div>
+    <div class="pv"><span class="cap">Aperçu dans la messagerie</span><div class="fan"><span class="fav">B</span><span class="bf">Coucou toi</span></div><div class="me"><div class="bm" id="eP"></div><span class="lbl"><i></i>Chatter · ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span></div></div>
+    <div class="fld"><label>Variantes avec l'IA</label><div class="goal" id="eG">${["Plus court", "Plus joueur", "Plus doux", "Avec une question", "Pour vendre un PPV"].map(g => `<button class="${GOAL === g ? "on" : ""}" data-g="${esc(g)}">${esc(g)}</button>`).join("")}</div>
+      <button class="btn2 ai" id="eA" style="align-self:flex-start">${SV(IC.spark, 15, 2)}Proposer 3 variantes</button><div class="aiv" id="eV"></div></div>
+    ${x ? `<div class="meta">Utilisé <b>${x.uses} fois</b>${x.week ? `, dont <b>${x.week}</b> cette semaine` : ""}${x.who.length ? ` · par ${x.who.slice(0, 5).map(w => `<b>${esc(w.name)}</b> (${w.n})`).join(", ")}` : ""}<br>${x.updatedBy ? `Modifié par <b>${esc(x.updatedBy)}</b> ` : ""}${ago(x.updatedAt)}</div>` : ""}</div>
+    <div class="ft">${x ? `<button class="btn2" id="eP2" title="Épingler en haut">${SV(IC.pin, 14)}${DRAFT.pinned ? "Désépingler" : "Épingler"}</button><button class="btn2" id="eD" title="Dupliquer">${SV(IC.copy, 14)}</button><button class="btn2 dl" id="eX" title="Supprimer">${SV(IC.trash, 14)}</button>` : `<button class="btn2" id="eQ">Annuler</button>`}
+      <button class="btn2 g sv" id="eSv">${SV(IC.check, 15, 2.6)}Enregistrer <span class="kbd" style="background:rgba(5,38,26,.15);border-color:rgba(5,38,26,.25);color:#05261a">⌘S</span></button></div>`;
+  const pv = () => { const ex = crOf(DRAFT.creator).label || "SARAH", t = $("eB").value.replace(/\{pr[ée]nom\}/gi, "Ben").replace(/\{cr[ée]atrice\}/gi, ex);
+    $("eP").textContent = t || "…"; $("eP").classList.remove("pop"); void $("eP").offsetWidth; $("eP").classList.add("pop"); $("eN").textContent = `${$("eB").value.length} / 2000`; };
+  pv(); let pT = null;
+  $("eB").oninput = () => { DRAFT.body = $("eB").value; clearTimeout(pT); pT = setTimeout(pv, 120); };
+  $("eT").oninput = () => DRAFT.title = $("eT").value; $("eC").oninput = () => DRAFT.cat = $("eC").value;
+  E.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { DRAFT.creator = b.dataset.c || null; E.querySelectorAll("[data-c]").forEach(y => y.classList.toggle("on", y === b)); pv(); });
+  E.querySelectorAll("[data-v]").forEach(b => b.onclick = () => { const ta = $("eB"), a = ta.selectionStart, z = ta.selectionEnd; ta.setRangeText(b.dataset.v, a, z, "end"); ta.focus(); ta.dispatchEvent(new Event("input")); });
+  E.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { GOAL = GOAL === b.dataset.g ? "" : b.dataset.g; E.querySelectorAll("[data-g]").forEach(y => y.classList.toggle("on", y.dataset.g === GOAL)); });
+  $("eA").onclick = variants; paintAI();
+  $("eSv").onclick = save;
+  if ($("eQ")) $("eQ").onclick = () => { DRAFT = null; SEL = null; editor(); cards(); };
+  if ($("eP2")) $("eP2").onclick = async () => { DRAFT.pinned = !DRAFT.pinned; await save(true); };
+  if ($("eD")) $("eD").onclick = async () => { try { const r = await api("/api/twizz/scripts", { body: { ...DRAFT, id: null, title: (DRAFT.title || "Script") + " (copie)" } }); await load(); open(r.id); notify("Script dupliqué", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
+  if ($("eX")) $("eX").onclick = async () => { if (!confirm(`Supprimer le script « ${DRAFT.title || DRAFT.body.slice(0, 30)} » ? Les chatters ne le verront plus.`)) return;
+    try { await api(`/api/twizz/scripts/${DRAFT.id}`, { method: "DELETE" }); DRAFT = null; SEL = null; await load(); notify("Script supprimé", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
+}
+function paintAI() { const V = $("eV"); if (!V) return;
+  if (!AIV) { V.innerHTML = ""; return; }
+  if (AIV.loading) { V.innerHTML = [0, 1, 2].map(i => `<div class="sk" style="animation-delay:${i * .1}s"></div>`).join(""); return; }
+  if (AIV.error) { V.innerHTML = `<div class="meta" style="color:#ff9a9a">${esc(AIV.error)}</div>`; return; }
+  const C = ["#5fd3a2", "#e8c27a", "#7db4ff"];
+  V.innerHTML = AIV.variantes.map((v, i) => `<button class="v" data-i="${i}" style="--c:${C[i % 3]};animation-delay:${i * .09}s"><span class="a">${esc(v.angle)}</span><span class="x">${hl(v.text)}</span></button>`).join("");
+  V.querySelectorAll("[data-i]").forEach(b => b.onclick = () => { const v = AIV.variantes[+b.dataset.i]; $("eB").value = v.text; $("eB").dispatchEvent(new Event("input")); notify("Variante reprise", "Enregistre pour la garder", "ok"); });
+}
+async function variants() { AIV = { loading: true }; paintAI();
+  try { AIV = await api("/api/scripts/ai", { body: { body: $("eB").value, title: $("eT").value, cat: $("eC").value, creator: DRAFT.creator, goal: GOAL } }); } catch (e) { AIV = { error: e.message }; }
+  paintAI(); }
+async function save(quiet) {
+  const body = { id: DRAFT.id, title: $("eT").value, cat: $("eC").value, body: $("eB").value, creator: DRAFT.creator, pinned: DRAFT.pinned };
+  if (!body.body.trim()) return notify("Le script est vide", "", "err");
+  try { const r = await api("/api/twizz/scripts", { body }); await load(); open(r.id); if (quiet !== true) $("svd").innerHTML = `<span class="saved">${SV(IC.check, 12, 3)}Enregistré</span>`; }
+  catch (e) { notify("Script non enregistré", e.message, "err"); }
+}
+// ---------- import : depuis Twizz ou en collant du texte ----------
+function parsePaste(t) {
+  return String(t || "").replace(/\r/g, "").split(/\n\s*\n+/).map(b => b.trim()).filter(Boolean).map(b => {
+    let lines = b.split("\n"), title = "", cat = "";
+    const m = lines[0].match(/^\s*\[([^\]]{1,30})\]\s*(.*)$/); if (m) { cat = m[1].trim(); lines[0] = m[2]; if (!lines[0].trim()) lines.shift(); }
+    if (lines.length > 1 && (/^#+\s*/.test(lines[0]) || /:\s*$/.test(lines[0]))) title = lines.shift().replace(/^#+\s*/, "").replace(/:\s*$/, "").trim();
+    return { title: title.slice(0, 80), cat, body: lines.join("\n").trim().slice(0, 2000) };
+  }).filter(x => x.body);
+}
+function importer() {
+  const m = document.createElement("div"); m.className = "mod";
+  m.innerHTML = `<div class="box"><div class="h"><b>Importer des scripts</b><div class="tabs"><button class="on" data-t="tw">Depuis Twizz</button><button data-t="txt">Coller du texte</button></div><button class="btn2 x" id="iX">Fermer</button></div><div class="c" id="iC"></div>
+    <div class="f"><span class="sel">Catégorie <input id="iCat" list="iCl" placeholder="garder la leur"><datalist id="iCl">${CATS.map(c => `<option value="${esc(c)}">`).join("")}</datalist></span>
+      <span class="sel">Pour <select id="iCr"><option value="">Toutes les créatrices</option>${D.creators.map(c => `<option value="${esc(c.id)}">${esc(c.label)}</option>`).join("")}</select></span>
+      <button class="btn2 g" id="iGo" style="margin-left:auto" disabled>Importer</button></div></div>`;
+  document.body.appendChild(m);
+  let tab = "tw", items = [];
+  const close = () => { m.remove(); document.removeEventListener("keydown", k); }, k = e => { if (e.key === "Escape") close(); };
+  document.addEventListener("keydown", k); $("iX").onclick = close; m.onclick = e => { if (e.target === m) close(); };
+  const rows = () => { const C = $("iC").querySelector("#iL"); if (!C) return;
+    C.innerHTML = items.length ? items.map((x, i) => `<label class="irow ${x.already ? "dup" : ""}"><input type="checkbox" data-i="${i}" ${x.on ? "checked" : ""} ${x.already ? "disabled" : ""}><span><b>${esc(x.title || "Sans titre")}${x.cat ? ` · <span style="color:${catColor(x.cat)}">${esc(x.cat)}</span>` : ""}${x.creatorLabel ? ` · ${esc(x.creatorLabel)}` : ""}${x.already ? " · déjà importé" : ""}</b><small>${hl(x.body)}</small></span></label>`).join("") : "";
+    C.querySelectorAll("[data-i]").forEach(c => c.onchange = () => { items[+c.dataset.i].on = c.checked; upd(); }); upd(); };
+  const upd = () => { const n = items.filter(x => x.on && !x.already).length; $("iGo").disabled = !n; $("iGo").textContent = n ? `Importer ${n} script${n > 1 ? "s" : ""}` : "Importer"; };
+  function paintTab() {
+    m.querySelectorAll("[data-t]").forEach(b => b.classList.toggle("on", b.dataset.t === tab)); items = [];
+    if (tab === "txt") { $("iC").innerHTML = `<div class="hint">Colle tes scripts : <b>une ligne vide entre deux scripts</b>. Facultatif : un titre sur la première ligne finie par <code>:</code>, et une catégorie entre crochets comme <code>[Relance]</code>. Les variables <code>{prenom}</code> et <code>{creatrice}</code> sont reconnues.</div>
+        <textarea id="iT" placeholder="[Relance] Relance du soir :&#10;Coucou {prenom}, tu m'as manqué aujourd'hui…&#10;&#10;[Vente] Teaser :&#10;J'ai fait des photos rien que pour toi 🙈"></textarea><div id="iL" style="display:grid;gap:8px"></div>`;
+      $("iT").oninput = () => { items = parsePaste($("iT").value).map(x => ({ ...x, on: true })); rows(); }; $("iT").focus(); upd(); return; }
+    $("iC").innerHTML = `<div class="hint">Je cherche les scripts enregistrés dans le CRM Twizz de chaque créatrice. Rien n'est modifié sur Twizz.</div><button class="btn2 w" id="iS" style="align-self:flex-start">Chercher sur Twizz</button><div id="iL" style="display:grid;gap:8px"></div>`;
+    $("iS").onclick = async () => { $("iS").disabled = true; $("iS").textContent = "Recherche…";
+      try { const r = await api("/api/scripts/import-twizz", { body: {} });
+        if (!r.found) { $("iC").innerHTML = `<div class="hint" style="color:#e9cf9a"><b style="color:#fff">Je n'ai pas trouvé où Twizz range les scripts.</b><br>Pour que je branche l'import : ouvre la page des scripts dans le CRM Twizz, fais clic droit → Inspecter → onglet Réseau, recharge la page, et envoie-moi une capture de la ligne qui contient les scripts (adresse et réponse).<br><br>En attendant, tu peux copier-coller tes scripts dans l'onglet « Coller du texte ».</div>`; return; }
+        items = r.items.map(x => ({ ...x, on: !x.already, source: "twizz" }));
+        if (!items.length) $("iC").innerHTML = `<div class="hint">Aucun script trouvé sur Twizz.</div>`; else rows(); }
+      catch (e) { $("iS").disabled = false; $("iS").textContent = "Chercher sur Twizz"; notify("Import Twizz", e.message, "err"); } };
+    upd();
+  }
+  m.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { tab = b.dataset.t; paintTab(); });
+  $("iGo").onclick = async () => { const cat = $("iCat").value.trim(), cr = $("iCr").value || null;
+    const L = items.filter(x => x.on && !x.already).map(x => ({ title: x.title, body: x.body, cat: cat || x.cat || "", creator: tab === "tw" && !cr ? x.creator || null : cr, source: tab === "tw" ? "twizz" : "site", ext: x.ext || null }));
+    try { const r = await api("/api/scripts/bulk", { body: { items: L } }); close(); await load(); notify(`${r.added} script${r.added > 1 ? "s" : ""} importé${r.added > 1 ? "s" : ""}`, "", "ok"); } catch (e) { notify("Import impossible", e.message, "err"); } };
+  paintTab();
+}
+$("impB").onclick = importer; $("newB").onclick = () => open(null, true);
+$("sort").querySelectorAll("[data-s]").forEach(b => b.onclick = () => { SORT = b.dataset.s; $("sort").querySelectorAll("[data-s]").forEach(y => y.classList.toggle("on", y === b)); cards(); });
+let qT = null; $("q").oninput = () => { clearTimeout(qT); qT = setTimeout(() => { Q = $("q").value; cards(); }, 120); };
+document.addEventListener("keydown", e => { const a = document.activeElement, typing = a && /INPUT|TEXTAREA|SELECT/.test(a.tagName);
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); $("q").focus(); $("q").select(); }
+  else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s" && DRAFT) { e.preventDefault(); save(); }
+  else if (!typing && !document.querySelector(".mod") && (e.key === "n" || e.key === "N") && !e.metaKey && !e.ctrlKey) { e.preventDefault(); open(null, true); } });
+(async () => {
+  const me = await api("/api/me"); renderShell("scripts", me);
+  if (me.role !== "admin" || me.rk === "assistant") { $("sc").innerHTML = `<div class="ednone"><div><b>Réservé aux managers</b></div></div>`; return; }
+  try { await load(); } catch (e) { $("lst").innerHTML = `<div class="empty"><b>Impossible de charger les scripts</b>${esc(e.message)}</div>`; }
+})();
+})();
+</script>
+</body>
+</html>

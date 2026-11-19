@@ -370,4 +370,23 @@ Reste suggestif sans jamais décrire d'acte sexuel ni de détail explicite. Pas 
   return { style: String(t.input.style || ""), humeur: String(t.input.humeur || ""), suggestions: t.input.suggestions.slice(0, 3).map(x => ({ angle: String(x.angle || ""), text: String(x.text || "") })).filter(x => x.text) };
 }
 
-module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead, assistant, gradeApplicant, replies };
+/* ---------- Page Scripts : l'IA propose des variantes d'un script ---------- */
+const VAR_TOOL = { name: "variantes", description: "Enregistre trois variantes du script.",
+  input_schema: { type: "object", required: ["variantes"], properties: { variantes: { type: "array", minItems: 3, maxItems: 3, items: { type: "object", required: ["angle", "text"], properties: {
+    angle: { type: "string", description: "2 à 3 mots : ce qui change dans cette variante (ex. Plus court, Plus joueur, Avec question)" }, text: { type: "string" } } } } } } };
+async function scriptVariants(c, tag) {
+  if (MOCK) return { variantes: [{ angle: "Plus court [test]", text: "Coucou {prenom}, tu m'as manqué 🙈" }, { angle: "Plus joueur [test]", text: "Devine à qui je pensais ce matin {prenom}… 😏" }, { angle: "Avec question [test]", text: "Hey {prenom} ! Ta journée s'est bien passée ?" }] };
+  const prompt = `Tu aides le manager d'une agence qui écrit des scripts : des messages tout prêts que les chatters envoient aux fans au nom d'une créatrice sur Twizz (plateforme de contenus payants pour adultes consentants).
+${c.creator ? `Créatrice : ${c.creator}.\n` : ""}${c.rules ? `Consignes de la créatrice, à respecter absolument : ${c.rules}\n` : ""}${c.cat ? `Catégorie du script : ${c.cat}.\n` : ""}${c.goal ? `Ce que le manager veut : ${c.goal}.\n` : ""}${c.title ? `Titre du script : ${c.title}.\n` : ""}Script actuel :
+${c.body || "(vide : écris-le à partir du titre)"}
+
+Propose 3 variantes différentes de ce script, prêtes à envoyer : français familier comme un vrai texto, court, naturel, un emoji au plus.
+Garde les variables telles quelles entre accolades si elles servent ({prenom} = prénom du fan, {creatrice} = nom de la créatrice) ; tu peux ajouter {prenom} si ça sonne bien.
+Reste suggestif sans jamais décrire d'acte sexuel ni de détail explicite. Pas de fausse promesse (rencontre, appel, exclusivité), pas de pression.`;
+  const res = await ask(prompt, MODEL_HINT, 700, { ...(tag || {}), kind: "script_ai" }, { tools: [VAR_TOOL], tool_choice: { type: "tool", name: "variantes" } });
+  const t = (res.content || []).find(x => x.type === "tool_use");
+  if (!t || !t.input || !Array.isArray(t.input.variantes)) throw new Error("L'IA n'a pas proposé de variante, réessaie");
+  return { variantes: t.input.variantes.slice(0, 3).map(x => ({ angle: String(x.angle || ""), text: String(x.text || "") })).filter(x => x.text) };
+}
+
+module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead, assistant, gradeApplicant, replies, scriptVariants };
