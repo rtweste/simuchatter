@@ -13,6 +13,14 @@
 <meta name="apple-mobile-web-app-title" content="StellADS">
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/compta-ui.css">
+<style>
+.pc-calc{margin-top:16px;padding:14px 16px;border-radius:16px;background:#121212;border:1px solid #232323}
+.pc-h{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7a7a7a;font-weight:800;margin-bottom:8px}
+.pc-r{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:6px 0;font-size:13.5px;color:#cfcfcf;border-top:1px dashed #222}
+.pc-h+.pc-r{border-top:0}.pc-r small{display:block;font-size:11px;color:#7a7a7a;font-weight:600}.pc-r b{white-space:nowrap;color:#fff}
+.pc-r.t{border-top:1px solid #333;margin-top:2px;font-weight:800;color:#fff}.pc-r.t b{color:#5fd3a2;font-size:15px}
+.pc-n{font-size:11.5px;color:#8a8a8a;line-height:1.45;margin-top:8px}
+</style>
 </head>
 <body>
 <div class="shell">
@@ -47,6 +55,14 @@ let D = null, P = null;
 async function load(p) {
   D = await api("/api/my-pay" + (p || P ? `?period=${p || P}` : "")); P = D.period.key;
   const me = D.me, units = D.base === "brut" ? "brutes" : "nettes";
+  // détail du calcul des ventes nettes : prix payé par les fans → TVA 20 % → commission Twizz (le reste de la retenue plateforme)
+  const calcHtml = me => { const b = me.salesBrut || 0; if (D.base === "brut" || !b) return "";
+    const fee = +D.fee || 0, keep = 1 - fee / 100, tva = Math.abs(fee - 37.5) < .01, ht = b / 1.2;
+    const rows = tva ? [["Ventes validées <small>prix payé par les fans</small>", E(b)], ["TVA 20 % <small>reversée à l'État</small>", "− " + E(b - ht)], ["Commission Twizz 25 % <small>sur le prix hors TVA</small>", "− " + E(ht * .25)]]
+      : [["Ventes validées <small>prix payé par les fans</small>", E(b)], [`Retenue plateforme ${String(fee).replace(".", ",")} %`, "− " + E(b * (1 - keep))]];
+    return `<div class="pc-calc"><div class="pc-h">Comment sont calculées tes ventes nettes</div>${rows.map(r => `<div class="pc-r"><span>${r[0]}</span><b>${r[1]}</b></div>`).join("")}
+      <div class="pc-r t"><span>Ventes nettes <small>base de ta commission</small></span><b>${E(b * keep)}</b></div>
+      <div class="pc-n">C'est ce que l'agence reçoit vraiment de Twizz sur tes ventes : ${String(Math.round(keep * 1000) / 10).replace(".", ",")} % du prix payé par le fan. Ta commission se calcule sur ce montant, selon ton palier.</div></div>`; };
   $("pLab").textContent = D.period.label;
   const today = new Date(), payDay = (() => { const [y, m, h] = P.split("-").map((x, i) => i < 2 ? +x : x); return h === "A" ? new Date(y, m - 1, 16) : new Date(y, m, 1); })();
   const status = me.paid ? `<span class="c-tag v"><i></i>Payée le ${dShort(me.paid.at)}</span>` : D.locked ? `<span class="c-tag w"><i></i>Validée · paiement à venir</span>` : today < payDay ? `<span class="c-tag w"><i></i>Quinzaine en cours</span>` : `<span class="c-tag w"><i></i>À payer</span>`;
@@ -62,6 +78,7 @@ async function load(p) {
   $("hero").innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="c-lab">Ta paie · ${esc(D.period.label)}</div>${status}</div>
     <div class="c-pbig" id="big">0 €</div>
     <div class="c-mut" style="margin-top:6px">Commission sur <b style="color:#fff">${E(me.sales)}</b> de ventes ${units} validées${me.prime || me.adjTotal ? ", primes et ajustements compris" : ""}</div>
+    ${calcHtml(me)}
     <div class="c-ptk"><span class="f" id="tf"></span>${marks}</div>
     <div class="c-nx">${nxTxt}</div>
     ${parts.length ? `<div class="c-lab" style="margin-top:22px">D'où vient ta paie</div><div class="c-stk">${parts.map((p, i) => `<span style="flex:${p[0]};background:${p[2]};color:${p[3]};--dl:${.3 + i * .1}s" title="${E(p[0])}">${p[1]}</span>`).join("")}</div>
