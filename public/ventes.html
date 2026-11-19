@@ -537,7 +537,8 @@ async function compress(file) {
    CHATTER : tableau de bord + feuille « déclarer une vente »
    ====================================================================== */
 let ACTIVE = [], MINE = [], MODELS = [], FILTER = "", SHOWN = 40, FILE = null, WHEN = null, FRESH = null;
-const thumb = s => `<button class="vt-th" data-z="${s.id}" aria-label="Voir la capture"><img src="${img(s.id)}" alt="" loading="lazy" onload="this.classList.add('ld')"></button>`;
+const TWZ_IC = `<span class="vt-th" style="display:grid;place-items:center;background:linear-gradient(135deg,rgba(95,211,162,.18),rgba(125,211,252,.12));color:#5fd3a2;font:900 11px Inter;letter-spacing:.06em" title="Vente importée automatiquement depuis Twizz">TWIZZ</span>`;
+const thumb = s => s.source === "twizz" ? TWZ_IC : `<button class="vt-th" data-z="${s.id}" aria-label="Voir la capture"><img src="${img(s.id)}" alt="" loading="lazy" onload="this.classList.add('ld')"></button>`;
 const amtHtml = s => `${s.amount !== s.declared_amount ? `<s>${E(s.declared_amount)}</s>` : ""}${E(s.amount)}`;
 const comWhyHtml = (s, me) => s.com_amount != null ? `<div class="vt-cw"><b>${s.com_amount > 0 ? E(s.com_amount) + (me ? " comptent pour toi" : " pour le chatter") : "Hors commission"}</b>${s.com_reason ? " · " + esc(s.com_reason) : ""}</div>` : "";
 
@@ -554,7 +555,7 @@ function renderMine() {
         ${s.status === "refused" && s.reason ? `<div class="vt-why">${esc(s.reason)}</div>` : ""}${comWhyHtml(s, 1)}</div>
       <div class="vt-rr"><span class="vt-pill ${s.status}"><i></i>${STATUS[s.status]}</span>
         ${s.status === "pending" ? `<button class="vt-sb del" data-del="${s.id}">Retirer</button>` : ""}
-        ${s.status === "refused" ? `<button class="vt-sb" data-again="${s.id}">Renvoyer</button>` : ""}</div></div>`;
+        ${s.status === "refused" && s.source !== "twizz" ? `<button class="vt-sb" data-again="${s.id}">Renvoyer</button>` : ""}</div></div>`;
   });
   if (list.length > SHOWN) html += `<button class="vt-more" id="moreBtn">Voir plus (${list.length - SHOWN})</button>`;
   $("myList").innerHTML = html; FRESH = null;
@@ -1159,7 +1160,10 @@ function mineTabs() {
     else if (me.rk === "founder" && new URLSearchParams(location.search).has("declarer")) openSheetFor();
     setInterval(() => { if (!document.hidden && !$("adminView").classList.contains("hidden") && !$("t-queue").classList.contains("hidden")) loadQueue().catch(() => {}); }, 20000);
   } else {
-    $("chatterView").classList.remove("hidden"); await startMine();
+    $("chatterView").classList.remove("hidden");
+    // ventes automatiques Twizz : plus de bouton « Déclarer »
+    try { if ((await api("/api/twizz/mode")).auto) $("openSheet").outerHTML = `<span class="vt-wbtn" style="cursor:default;background:rgba(95,211,162,.12);color:#5fd3a2;border:1px solid rgba(95,211,162,.4)" title="Chaque vente Twizz est ajoutée toute seule, attribuée au chatter en shift sur la créatrice">⚡ Ventes automatiques Twizz</span>`; } catch (e) {}
+    await startMine();
     if (new URLSearchParams(location.search).has("declarer")) openSheet();
   }
 })();

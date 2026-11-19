@@ -123,7 +123,7 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     amount: s.amount, declared_amount: s.declared_amount, sold_at: s.sold_at, note: s.note, status: s.status, reason: s.reason,
     // part du chatter : décidée à la validation, ou proposée par le manager qui a déclaré la vente (vente en attente)
     com_amount: s.status !== "refused" ? s.com_amount ?? null : null, com_reason: s.status !== "refused" ? s.com_reason || null : null,
-    declared_by: s.declared_by || null, reviewer: s.reviewer, declarer: s.declared_by && s.declared_by !== s.user_id ? s.declarer || null : null, reviewed_at: s.reviewed_at, created_at: s.created_at, period: periodOfDate(parisDate(s.sold_at)), dup: dupInfo(s), ai: aiInfo(s),
+    source: s.source || null, declared_by: s.declared_by || null, reviewer: s.reviewer, declarer: s.declared_by && s.declared_by !== s.user_id ? s.declarer || null : null, reviewed_at: s.reviewed_at, created_at: s.created_at, period: periodOfDate(parisDate(s.sold_at)), dup: dupInfo(s), ai: aiInfo(s),
     items: itemsOf(s), min_total: minOf(itemsOf(s)), late_h: lateOf(s), ai_when: s.ai_when || null, when_off: whenOff(s) });
   const SELECT = `SELECT s.*, u.username, m.name model_name, r.username reviewer, dd.username declarer FROM sales s
     JOIN users u ON u.id = s.user_id JOIN models m ON m.id = s.model_id LEFT JOIN users r ON r.id = s.reviewed_by LEFT JOIN users dd ON dd.id = s.declared_by`;
@@ -161,6 +161,8 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
 
   /* ---------- Déclarer une vente (image envoyée telle quelle dans le corps de la requête) ---------- */
   app.post("/api/sales", auth, express.raw({ type: "image/*", limit: "12mb" }), (req, res) => {
+    // ventes automatiques Twizz : les chatters ne déclarent plus (les managers peuvent toujours corriger à la main)
+    try { const tw = db.prepare("SELECT value FROM settings WHERE key = 'twizz_on'").get(); if (tw && tw.value === "true" && req.user.role !== "admin") return res.status(400).json({ error: "Les ventes arrivent maintenant automatiquement depuis Twizz : plus besoin de les déclarer" }); } catch (e) {}
     const model_id = parseInt(req.query.model_id, 10);
     const amount = num(String(req.query.amount || "").replace(",", "."), 0.01, 100000);
     const sold_at = num(req.query.sold_at, 1e12, 1e13) || Date.now();

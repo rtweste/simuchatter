@@ -54,6 +54,7 @@
 </main>
 </div>
 <script src="/common.js"></script>
+<script src="/twizz-admin.js"></script>
 <script>
 (() => {
   const root = $("root");
@@ -188,9 +189,9 @@
     root.innerHTML = `<div class="hdr"><div><div class="eb">FONDATEUR${fd ? " · " + esc(ME.username.toUpperCase()) : ""}</div><h1 class="ttl">Réglages <em class="gd">fondateur.</em></h1></div>
       <div class="hr2"><span class="rb f" style="height:30px;padding:0 12px;font-size:12px">${SV(CROWN, 13, 2.4)}Fondateur seulement</span>${fd ? '<button class="sw2" type="button"><span>Aperçu vue manager</span><span class="tg3"></span></button>' : ""}</div></div>
       ${fd ? "" : `<div class="roban">${SV(LOCK, 16, 2)}Ces réglages sont réservés au Fondateur : tu vois les valeurs, sans pouvoir les modifier.</div>`}
-      <div class="fgr"><div class="col">${tiersCard()}${closeCard()}${resetCard()}</div><div class="col">${creaCard()}${mgrCard()}${fd ? bkCard() : ""}${logCard()}</div></div><div class="toast" role="status"></div>`;
+      <div class="fgr"><div class="col">${tiersCard()}${closeCard()}${resetCard()}</div><div class="col">${creaCard()}${mgrCard()}${fd ? '<div id="twz"></div>' + bkCard() : ""}${logCard()}</div></div><div class="toast" role="status"></div>`;
     bind(); setTimeout(drawStair, 60);
-    if (D.founder) { if (RS) bindReset(); else loadReset(); if (BK) bindBk(); else loadBk(); }
+    if (D.founder) { if (RS) bindReset(); else loadReset(); if (BK) bindBk(); else loadBk(); if (window.TWZ) TWZ.mount(q("#twz")); }
     if (location.hash === "#sauvegardes") setTimeout(() => q("#sauvegardes")?.scrollIntoView({ behavior: "smooth", block: "start" }), 400);
   }
   function bind() {

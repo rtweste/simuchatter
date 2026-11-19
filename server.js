@@ -552,6 +552,7 @@ require("./roles")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, gest:
 require("./purge")(app, db, auth, admin, { gest: GEST });
 const NOTIFY = require("./notify")(app, db, auth, admin, { bcrypt, PROD, gest: GEST, planning: PLAN });
 require("./backups")(app, db, auth, admin, { dbPath: DB_PATH, notify: NOTIFY, gest: GEST });   // sauvegardes de nuit + téléchargement fondateur
+const TWIZZ = require("./twizz")(app, db, auth, admin, { gest: GEST });   // CRM Twizz : ventes automatiques (lecture seule)
 require("./profile")(app, db, auth, { bcrypt, PERM });   // Mon profil, Paramètres, carte de profil dans le chat   // notifications sur le téléphone, invitations, premier lancement
 require("./announce")(app, db, auth, admin, { gest: GEST });   // annonces importantes / urgentes : bandeau, écran bloquant, suivi de lecture   // comptes désactivés depuis 24 h : supprimés (historique gardé)   // alertes du shift en cours (cloche manager, salle de contrôle)
 /* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */
