@@ -883,7 +883,18 @@ function rowHtml(c) { const waitMin = c.last.fromFan && c.last.at ? (Date.now() 
 function paintRows(rows, find, outAnim) {
   const cl = $("cl"), first = !cl.querySelector("[data-conv]");
   [...cl.children].forEach(ch => { if (!ch.dataset.conv && !ch.classList.contains("keep")) ch.remove(); });
-  const old = new Map([...cl.querySelectorAll("[data-conv]:not(.out)")].map(n => [n.dataset.conv, n]));
+  const cur = [...cl.querySelectorAll("[data-conv]:not(.out)")], keepIds = new Set(rows.map(r => r[0]));
+  // l'ordre change (un fan remonte en haut) : on redessine toute la liste d'un coup plutôt que de déplacer les lignes
+  // (déplacer des lignes laissait sur certains navigateurs l'ancien nom affiché par-dessus le nouveau)
+  const before = cur.map(n => n.dataset.conv).filter(id => keepIds.has(id)), after = rows.map(r => r[0]).filter(id => before.includes(id));
+  if (!first && before.join("|") !== after.join("|")) {
+    const known = new Set(cur.map(n => n.dataset.conv)), top = cl.scrollTop, frag = document.createDocumentFragment();
+    rows.forEach(([id, html]) => { const t = document.createElement("div"); t.innerHTML = html; const nn = t.firstElementChild; nn.dataset.sig = html;
+      if (!known.has(id)) { nn.classList.add("nw"); nn.addEventListener("animationend", () => nn.classList.remove("nw"), { once: true }); }
+      nn.onclick = () => openConv(find(id)); frag.appendChild(nn); });
+    cl.replaceChildren(frag); cl.scrollTop = top; return;
+  }
+  const old = new Map(cur.map(n => [n.dataset.conv, n]));
   let prev = null;
   rows.forEach(([id, html], i) => {
     let n = old.get(id);
