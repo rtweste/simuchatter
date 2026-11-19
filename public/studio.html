@@ -65,6 +65,9 @@
 .sd-cd .ft{display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap}
 .sd-cd .tg{height:22px;padding:0 8px;border-radius:7px;background:#1e1e1e;font:800 10.5px/22px Inter;color:#bbb}
 .sd-cd .tg.am{color:#5fd3a2;background:rgba(95,211,162,.08)}
+.sd-cd .tg.py{color:#9a9a9a}.sd-cd .tg.py.ok{color:#5fd3a2;background:rgba(95,211,162,.08)}.sd-cd .tg.py.ko{color:#ffb35c;background:rgba(255,179,92,.1)}
+.sd-pay{display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:6px 11px;border-radius:10px;font:700 12px/1.35 Inter;background:#171717;border:1px solid #262626;color:#aaa}
+.sd-pay.ok{color:#5fd3a2;border-color:rgba(95,211,162,.35);background:rgba(95,211,162,.07)}.sd-pay.ko{color:#ffb35c;border-color:rgba(255,179,92,.35);background:rgba(255,179,92,.07)}
 .sd-cd .cu-cd{height:22px;font-size:10.5px;margin-left:auto;padding:0 8px}
 .sd-cd .bar{position:absolute;left:12px;right:12px;bottom:0;height:2px;border-radius:2px;overflow:hidden;background:#222}
 .sd-cd .bar b{display:block;height:100%;width:var(--w);background:var(--cg)}
@@ -168,6 +171,12 @@ const { KI, svg, fmtDur, left } = CUSTOM;
 const COLS = [["todo", "À faire", "#b388ff"], ["prod", "En production", "#7dd3fc"], ["ready", "Chez le chatter", "#5fd3a2"], ["delivered", "Livré au fan", "#6a6a6a"]];
 let ALL = [], MODELS = [], MF = 0, OPEN = null, CDT = null;
 const spec = c => c.kind === "snap" ? "Snap" : c.kind === "photos" && c.qty ? `${c.qty} photos` : c.duration ? fmtDur(c.duration) : c.kindLabel;
+// paiement retrouvé sur Twizz (demandes envoyées sans vente déclarée)
+const PAY = { ok: ["ok", "✓ payé"], wait: ["", "⏳ paiement"], missing: ["ko", "⚠ paiement ?"] };
+const payTag = c => c.pay && PAY[c.pay] ? `<span class="tg py ${PAY[c.pay][0]}" title="${c.pay === "ok" ? "Paiement vu sur Twizz" : c.pay === "wait" ? "Paiement pas encore vu sur Twizz" : "Aucun paiement de ce montant trouvé sur Twizz"}">${PAY[c.pay][1]}</span>` : "";
+const payLine = c => c.pay === "ok" ? `<div class="sd-pay ok">✓ Paiement vu sur Twizz${c.paid_at ? " · " + new Date(c.paid_at).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}</div>`
+  : c.pay === "wait" ? `<div class="sd-pay">⏳ Paiement pas encore vu sur Twizz : le site vérifie toutes les 3 min</div>`
+  : c.pay === "missing" ? `<div class="sd-pay ko">⚠ Aucun paiement de ce montant trouvé sur Twizz pour cette créatrice : vérifie avec ${esc(c.username)} avant de le faire</div>` : "";
 const fanLbl = c => c.kind === "snap" ? `Snap · ${esc(c.fan)}` : `@${esc(c.fan)}`;
 const isLate = c => c.due_at && c.due_at < Date.now() && !["ready", "delivered"].includes(c.status);
 const list = () => ALL.filter(c => !MF || c.model_id === MF);
@@ -204,7 +213,7 @@ function card(c) {
   const late = isLate(c), prog = c.due_at && c.created_at ? Math.max(0, Math.min(1, (Date.now() - c.created_at) / (c.due_at - c.created_at))) : 0;
   const chip = c.status === "delivered" ? `<span class="cu-cd ok"><i></i>livré</span>` : c.status === "ready" ? `<span class="cu-cd ok"><i></i>prêt</span>` : c.due_at ? `<span class="cu-cd ${late ? "late" : c.due_at - Date.now() < 864e5 ? "soon" : ""}"><i></i>${left(c.due_at).replace("dans ", "")}</span>` : "";
   return `<div class="sd-cd ${c.urgent ? "urg" : ""}" data-id="${c.id}"><div class="top"><span class="av">${svg(KI[c.kind] || KI.autre)}</span><div class="t"><b>${fanLbl(c)}</b><small>${esc(c.model_name)} · ${esc(c.username)}</small></div></div>
-    ${c.kind === "snap" && c.request === "Session Snap" ? "" : `<div class="rq">${esc(c.request)}</div>`}<div class="ft"><span class="tg">${esc(spec(c))}</span>${c.amount ? `<span class="tg am">${eur(c.amount)}</span>` : ""}${c.urgent ? `<span class="tg" style="color:#ff8a5c">🔥</span>` : ""}${chip}</div>
+    ${c.kind === "snap" && c.request === "Session Snap" ? "" : `<div class="rq">${esc(c.request)}</div>`}<div class="ft"><span class="tg">${esc(spec(c))}</span>${c.amount ? `<span class="tg am">${eur(c.amount)}</span>` : ""}${payTag(c)}${c.urgent ? `<span class="tg" style="color:#ff8a5c">🔥</span>` : ""}${chip}</div>
     ${["todo", "prod"].includes(c.status) && c.due_at ? `<span class="bar ${late ? "late" : ""}"><b style="--w:${(prog * 100).toFixed(1)}%"></b></span>` : ""}</div>`;
 }
 // glisser-déposer entre colonnes (FLIP à l'arrivée)
@@ -244,12 +253,12 @@ function paintDrawer(c, soft) {
   const pv = c.file ? `<div class="sd-pv">${c.file.mime.startsWith("video") ? `<video src="${src}" controls playsinline preload="metadata"></video>` : c.file.mime.startsWith("image") ? `<img src="${src}" alt="">` : c.file.mime.startsWith("audio") ? `<audio src="${src}" controls style="width:100%;padding:14px;box-sizing:border-box"></audio>` : `<div style="padding:30px;text-align:center;font-size:32px">📦</div>`}
     <div class="bar">${svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>')}<b>${esc(c.file.name)}</b><span>${(c.file.size / 1048576).toFixed(1).replace(".", ",")} Mo</span><a href="${src}?dl=1">Télécharger</a><button id="dwRm">Remplacer</button></div></div>` : "";
   dw.innerHTML = `<div class="hero"><button class="x" id="dwX" aria-label="Fermer">✕</button><div class="kk">${esc(c.kindLabel)} · ${esc(c.model_name)}${c.urgent ? " · 🔥 urgent" : ""}</div><h2>${c.kind === "snap" ? esc(c.fan) : "@" + esc(c.fan)}</h2>
-      <div class="ms">Demandé par <b>${esc(c.username)}</b>${c.amount ? ` · ${c.sale_id ? "vente de" : "payé par le fan :"} <b>${eur(c.amount)}</b>${c.sale_status === "pending" ? " (en attente)" : c.sale_status === "refused" ? " (refusée)" : ""}` : ""}</div>
+      <div class="ms">Demandé par <b>${esc(c.username)}</b>${c.amount ? ` · ${c.sale_id ? "vente de" : "prix indiqué :"} <b>${eur(c.amount)}</b>${c.sale_status === "pending" ? " (en attente)" : c.sale_status === "refused" ? " (refusée)" : ""}` : ""}</div>${payLine(c)}
       ${c.due_at && !["ready", "delivered"].includes(c.status) ? `<div class="sd-cdn ${late ? "late" : ""}" id="dwCd"></div><div class="ms" style="margin-top:8px">${late ? "En retard · devait être livré" : "À livrer"} le <b>${new Date(c.due_at).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</b> à ${new Date(c.due_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</div>` : ""}</div>
     <div class="sd-bd">
       ${c.kind === "snap" ? `<div class="sd-sec"><div class="l">Snap du fan</div><div class="sd-snp"><b>${esc(c.fan)}</b><button type="button" id="dwCp">Copier</button></div></div>
       ${c.request !== "Session Snap" ? `<div class="sd-sec"><div class="l">Note du chatter</div><div class="sd-q">${esc(c.request)}</div></div>` : ""}
-      <div class="sd-sec"><div class="sd-sp"><div><small>Format</small><b>Snap</b></div><div><small>Payé</small><b>${c.amount ? eur(c.amount) : "—"}</b></div><div><small>Créatrice</small><b>${esc(c.model_name)}</b></div></div></div>`
+      <div class="sd-sec"><div class="sd-sp"><div><small>Format</small><b>Snap</b></div><div><small>Prix</small><b>${c.amount ? eur(c.amount) : "—"}</b></div><div><small>Créatrice</small><b>${esc(c.model_name)}</b></div></div></div>`
       : `<div class="sd-sec"><div class="l">La demande du fan</div><div class="sd-q">${esc(c.request)}</div></div>
       <div class="sd-sec"><div class="sd-sp"><div><small>Format</small><b>${esc(c.kindLabel)}</b></div><div><small>${c.kind === "photos" ? "Quantité" : "Durée"}</small><b>${esc(spec(c))}</b></div><div><small>Créatrice</small><b>${esc(c.model_name)}</b></div></div></div>
       <div class="sd-sec"><div class="l">Fichier final</div><div id="dwUp">${pv || upHTML()}</div></div>`}

@@ -317,6 +317,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     try { rows = db.prepare("SELECT model_id, type, net, at, state FROM twizz_tx WHERE refund = 0 AND net > 0 AND model_id IS NOT NULL AND at >= ? AND at <= ?")
       .all(Date.parse(from + "T00:00:00Z") - 3 * 3600e3, Date.parse(to + "T23:59:59Z") + 3 * 3600e3); } catch (e) { return out; }
     rows.forEach(r => { const d = parisDate(r.at); if (d < from || d > to) return; const k = TWMAP(r.type);
+      if (r.state === "imported") return;   // devenue une vente d'un chatter : déjà comptée dans le chatting
       // un PPV relié à un chatter est déjà compté dans le chatting (vente validée) ; avant l'activation, ils étaient déclarés à la main
       if (k === "ppv" && !(since && r.at >= since && (r.state === "ca_only" || r.state === "no_chatter"))) return;
       const o = out[r.model_id] || (out[r.model_id] = { abo: 0, live: 0, coll: 0, push: 0, ppv: 0, autres: 0 }); o[k] = rr2(o[k] + r.net); });

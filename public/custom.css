@@ -94,6 +94,7 @@
 .cu-cd.soon{color:#ffd23f;border-color:rgba(255,210,63,.35)}.cu-cd.soon i{background:#ffd23f;animation:vtBl 1s infinite}
 .cu-cd.late{color:#ff6b6b;border-color:rgba(255,107,107,.4);background:rgba(255,107,107,.08)}.cu-cd.late i{background:#ff6b6b;animation:vtBl .6s infinite}
 .cu-cd.ok{color:#5fd3a2;border-color:rgba(95,211,162,.35)}.cu-cd.ok i{background:#5fd3a2}
+.cu-pay{display:inline-block;margin-top:9px;padding:4px 9px;border-radius:8px;background:#171717;border:1px solid #262626;font:700 11.5px/1.4 Inter;color:#9a9a9a}.cu-pay.ok{color:#5fd3a2;border-color:rgba(95,211,162,.3);background:rgba(95,211,162,.06)}.cu-pay.ko{color:#ffb35c;border-color:rgba(255,179,92,.3);background:rgba(255,179,92,.06)}
 .cu-rq{font-size:13px;color:#bdbdbd;line-height:1.45;margin-top:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .cu-tl{position:relative;display:grid;grid-template-columns:repeat(4,1fr);margin-top:14px}
 .cu-tg[hidden]{display:none!important}.cu-tl.s3{grid-template-columns:repeat(3,1fr)}.cu-tl.s3 .ln{left:16.67%;right:16.67%}

@@ -30,7 +30,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:contact@stellads.fr", VAPID.publicKey, VAPID.privateKey);
     } catch (e) { console.error("VAPID", e.message); VAPID = null; }
   }
-  const KINDS = { dm: "Messages privés", mention: "Mentions dans le chat", announce: "Annonces de #informations", shift: "Rappels de shift", help: "Demandes de renfort", coach: "Conseils et entraînements", sales: "Ventes validées ou refusées" };
+  const KINDS = { dm: "Messages privés", mention: "Mentions dans le chat", announce: "Annonces de #informations", shift: "Rappels de shift", help: "Demandes de renfort", coach: "Conseils et entraînements", sales: "Ventes validées ou refusées", studio: "Studio : Snap et contenus perso" };
   const prefsOf = uid => { const r = db.prepare("SELECT prefs FROM push_prefs WHERE user_id = ?").get(uid); let p = {}; try { p = r ? JSON.parse(r.prefs) : {}; } catch (e) {} const o = {}; for (const k in KINDS) o[k] = p[k] !== false; return o; };
   const once = key => { try { db.prepare("INSERT INTO push_sent (key, at) VALUES (?,?)").run(key, Date.now()); return true; } catch (e) { return false; } };
   async function push(uid, kind, payload) {
@@ -69,7 +69,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
 
   /* ---------- déclencheurs (balayage toutes les 5 s, sans renvoyer l'historique au démarrage) ---------- */
   const max = (t, c = "id") => has(t) ? (db.prepare(`SELECT MAX(${c}) m FROM ${t}`).get().m || 0) : 0;
-  const C = { msg: max("chat_messages"), help: max("help_requests"), tip: max("team_tips"), asg: max("sim_assignments"), rev: Date.now(), sev: max("sale_events") };
+  const C = { msg: max("chat_messages"), help: max("help_requests"), tip: max("team_tips"), asg: max("sim_assignments"), rev: Date.now(), sev: max("sale_events"), cus: max("customs") };
   function chatScan() {
     if (!has("chat_messages")) return;
     const rows = db.prepare(`SELECT m.id, m.channel_id, m.user_id, m.body, m.kind, m.meta, m.thread_root, u.username, u.role u_role, c.kind ch_kind, c.name ch_name, c.slug FROM chat_messages m
@@ -120,6 +120,22 @@ module.exports = function mount(app, db, auth, admin, ctx) {
         : s.status === "validated" ? { title: `Vente validée · +${eur(s.amount)}`, body: `${s.model} · elle compte dans ta paie`, url: "/ventes", tag: "sale-" + s.id }
         : { title: "Vente refusée", body: `${s.model} · ${eur(s.amount)}${s.reason ? " · " + cut(s.reason, 90) : ""}`, url: "/ventes", tag: "sale-" + s.id }).catch(() => {}); }); }
   }
+  // Studio : nouvelle demande → les managers ; contenu prêt ou Snap fait → le chatter qui l'a demandé
+  function studioScan() {
+    if (!has("customs")) return; const now = Date.now();
+    db.prepare("SELECT c.*, u.username, m.name model FROM customs c JOIN users u ON u.id = c.user_id JOIN models m ON m.id = c.model_id WHERE c.id > ? ORDER BY c.id").all(C.cus).forEach(c => {
+      C.cus = Math.max(C.cus, c.id); if (!once("cus:" + c.id + ":new")) return;
+      const ids = activeIds("role = 'admin' AND COALESCE(grade, '') <> 'assistant'").filter(u => u !== c.user_id), price = c.price != null ? " · " + eur(c.price) : "";
+      pushMany(ids, "studio", c.kind === "snap"
+        ? { title: `Nouveau Snap · ${c.model}`, body: `${c.fan}${price} · envoyé par ${c.username}`, url: "/studio", tag: "cus-" + c.id }
+        : { title: `Contenu perso à faire · ${c.model}`, body: `@${c.fan}${price} · ${cut(c.request, 90)}`, url: "/studio", tag: "cus-" + c.id, urgent: !!c.urgent });
+    });
+    db.prepare("SELECT c.*, m.name model FROM customs c JOIN models m ON m.id = c.model_id WHERE (c.status = 'ready' AND c.ready_at > ?) OR (c.kind = 'snap' AND c.status = 'delivered' AND c.delivered_at > ?)").all(now - 15 * 60e3, now - 15 * 60e3).forEach(c => {
+      if (!once("cus:" + c.id + ":" + c.status)) return;
+      push(c.user_id, "studio", c.kind === "snap" ? { title: `Snap fait · ${c.model}`, body: `Le Studio s'est occupé de ${c.fan}`, url: "/ventes", tag: "cus-" + c.id }
+        : { title: `Contenu perso prêt pour @${c.fan}`, body: `${c.model} · télécharge-le et envoie-le au fan`, url: "/ventes", tag: "cus-" + c.id }).catch(() => {});
+    });
+  }
   // rappels de shift : X minutes avant, puis si le shift a commencé sans pointage
   function shiftScan() {
     try {
@@ -131,7 +147,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       });
     } catch (e) { console.error("rappels shift", e.message); }
   }
-  setInterval(() => { try { chatScan(); otherScan(); } catch (e) { console.error("notifications", e.message); } }, 5000).unref();
+  setInterval(() => { try { chatScan(); otherScan(); } catch (e) { console.error("notifications", e.message); } try { studioScan(); } catch (e) { console.error("notifications studio", e.message); } }, 5000).unref();
   setInterval(shiftScan, 60e3).unref();
   setInterval(() => { try { db.prepare("DELETE FROM push_sent WHERE at < ?").run(Date.now() - 14 * 864e5); db.prepare("DELETE FROM push_subs WHERE fails >= 15").run(); } catch (e) {} }, 6 * 3600e3).unref();
 

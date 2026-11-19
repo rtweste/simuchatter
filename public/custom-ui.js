@@ -118,17 +118,19 @@ window.CUSTOM = (() => {
   const fileUrl = (c, dl) => `/api/customs/${c.id}/file${dl ? "?dl=1" : ""}`;
   const media = c => !c.file ? "" : c.file.mime.startsWith("video") ? `<video src="${fileUrl(c)}#t=0.5" preload="metadata" muted playsinline></video>`
     : c.file.mime.startsWith("image") ? `<img src="${fileUrl(c)}" alt="">` : `<div style="display:grid;place-items:center;height:100%;font-size:30px">${c.file.mime.startsWith("audio") ? "🎧" : "📦"}</div>`;
+  const payHTML = c => c.pay === "ok" ? `<div class="cu-pay ok">✓ Paiement vu sur Twizz</div>` : c.pay === "wait" ? `<div class="cu-pay">⏳ Paiement pas encore vu sur Twizz</div>`
+    : c.pay === "missing" ? `<div class="cu-pay ko">⚠ Paiement introuvable sur Twizz : vérifie le prix et la créatrice</div>` : "";
   function itemHTML(c, i) {
     // Snap : pas de fichier, la demande est faite quand le Studio s'en est occupé
     if (c.kind === "snap") { const k = { todo: 0, prod: 1, ready: 1, delivered: 2 }[c.status] ?? 0;
       return `<div class="cu-it ${c.status}" style="--i:${i}" data-cu="${c.id}"><div class="cu-hd"><span class="cu-av">${svg(KI.snap)}<em>${esc(c.model_name[0])}</em></span>
-      <div class="t"><b>Snap · ${esc(c.fan)}</b><small>${esc(c.model_name)}${c.amount ? " · " + eur(c.amount) : ""}</small></div>${c.status === "delivered" ? `<span class="cu-cd ok"><i></i>fait</span>` : ""}</div>
+      <div class="t"><b>Snap · ${esc(c.fan)}</b><small>${esc(c.model_name)}${c.amount ? " · " + eur(c.amount) : ""}</small></div>${c.status === "delivered" ? `<span class="cu-cd ok"><i></i>fait</span>` : ""}</div>${payHTML(c)}
       ${c.request && c.request !== "Session Snap" ? `<div class="cu-rq">${esc(c.request)}</div>` : ""}
       <div class="cu-tl s3" style="--p:${k / 2}"><span class="ln"><b style="--p:${k / 2}"></b></span>${["Envoyé au Studio", "Pris en charge", "Fait"].map((s, j) => `<div class="${j < k || (k === 2 && j === 2) ? "ok" : j === k ? "cur" : ""}"><i></i>${s}</div>`).join("")}</div>
       ${c.mgr_note ? `<div class="cu-note">💬 ${esc(c.mgr_note)}</div>` : ""}</div>`; }
     const k = IDX[c.status] ?? 0, spec = c.kind === "photos" && c.qty ? `${c.qty} photos` : c.duration ? fmtDur(c.duration) : c.kindLabel;
     return `<div class="cu-it ${c.status}" style="--i:${i}" data-cu="${c.id}"><div class="cu-hd"><span class="cu-av">${svg(KI[c.kind] || KI.autre)}<em>${esc(c.model_name[0])}</em></span>
-      <div class="t"><b>@${esc(c.fan)}</b><small>${esc(c.model_name)} · ${esc(spec)}${c.amount ? " · " + eur(c.amount) : ""}${c.urgent ? " · 🔥 urgent" : ""}</small></div>${cdChip(c)}</div>
+      <div class="t"><b>@${esc(c.fan)}</b><small>${esc(c.model_name)} · ${esc(spec)}${c.amount ? " · " + eur(c.amount) : ""}${c.urgent ? " · 🔥 urgent" : ""}</small></div>${cdChip(c)}</div>${payHTML(c)}
       <div class="cu-rq">${esc(c.request)}</div>
       <div class="cu-tl" style="--p:${k / 3}"><span class="ln"><b style="--p:${k / 3}"></b></span>${STEPS.map((s, j) => `<div class="${j < k || (k === 3 && j === 3) ? "ok" : j === k ? "cur" : ""}"><i></i>${s}</div>`).join("")}</div>
       ${c.mgr_note ? `<div class="cu-note">💬 ${esc(c.mgr_note)}</div>` : ""}

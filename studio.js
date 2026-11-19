@@ -23,6 +23,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
   CREATE INDEX IF NOT EXISTS pauses_clock ON pauses(clock_id);
   `);
   col("customs", "price", "REAL");   // prix payé par le fan (demande envoyée sans vente déclarée : la vente arrive de Twizz)
+  col("customs", "tw_tx", "TEXT"); col("customs", "paid_at", "INTEGER");   // vente Twizz retrouvée pour cette demande
   col("models", "profile", "TEXT"); col("models", "photos", "TEXT"); col("models", "photo_focus", "TEXT");
   const J = (s, d) => { try { return s ? JSON.parse(s) : d; } catch (e) { return d; } };
   const user = id => db.prepare("SELECT id, username, role FROM users WHERE id = ?").get(id);
@@ -36,8 +37,11 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
   const SEL = `SELECT c.*, u.username, m.name model_name, s.amount, s.status sale_status FROM customs c JOIN users u ON u.id = c.user_id JOIN models m ON m.id = c.model_id LEFT JOIN sales s ON s.id = c.sale_id`;
   const pubC = c => ({ id: c.id, sale_id: c.sale_id, user_id: c.user_id, username: c.username, model_id: c.model_id, model_name: c.model_name, fan: c.fan, kind: c.kind, kindLabel: KINDS[c.kind] || c.kind,
     duration: c.duration, qty: c.qty, request: c.request, due_at: c.due_at, urgent: !!c.urgent, status: c.status, amount: c.amount != null ? c.amount : c.price, price: c.price, sale_status: c.sale_status, mgr_note: c.mgr_note,
-    file: c.file ? { mime: c.mime, size: c.size, name: c.fname } : null, created_at: c.created_at, started_at: c.started_at, ready_at: c.ready_at, delivered_at: c.delivered_at, seen: !!c.seen });
+    file: c.file ? { mime: c.mime, size: c.size, name: c.fname } : null, pay: payOf(c), paid_at: c.paid_at || null, created_at: c.created_at, started_at: c.started_at, ready_at: c.ready_at, delivered_at: c.delivered_at, seen: !!c.seen });
   const getC = id => db.prepare(`${SEL} WHERE c.id = ?`).get(id);
+  // paiement de la demande sur Twizz : vu, en attente (on cherche pendant 2 h après la demande), introuvable
+  const twOn = () => { try { const r = db.prepare("SELECT value FROM settings WHERE key = 'twizz_on'").get(); return !!r && r.value === "true"; } catch (e) { return false; } };
+  const payOf = c => c.paid_at ? "ok" : c.price == null || c.sale_id || !twOn() ? null : Date.now() - c.created_at > 2.2 * 3600e3 ? "missing" : "wait";
 
   app.post("/api/customs", auth, (req, res) => {
     const b = req.body || {}, sale = db.prepare("SELECT * FROM sales WHERE id = ?").get(parseInt(b.sale_id, 10));
@@ -71,8 +75,9 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
     const dur = !snap && b.duration != null && b.duration !== "" ? Math.max(0, Math.min(36000, Math.round(Number(b.duration)))) : null, qty = !snap && b.qty ? Math.max(1, Math.min(200, Math.round(Number(b.qty)))) : null;
     const id = db.prepare("INSERT INTO customs (sale_id, user_id, model_id, fan, kind, duration, qty, request, due_at, urgent, created_at, price) VALUES (NULL,?,?,?,?,?,?,?,?,?,?,?)")
       .run(req.user.id, model.id, fan, kind, dur, qty, request, due, b.urgent ? 1 : 0, Date.now(), price).lastInsertRowid;
+    try { app.locals.twizzMatch && app.locals.twizzMatch(id); } catch (e) {}   // la vente est peut-être déjà arrivée de Twizz
     log(req.user.id, "v", snap ? `**${req.user.username}** a envoyé un Snap au Studio : **${fan}**` : `**${req.user.username}** a demandé un contenu perso pour **${fan}**`, `${snap ? "Snap" : KINDS[kind]} · ${model.name} · ${eur(price)}`);
-    res.json({ ok: true, id });
+    res.json({ ok: true, id, pay: payOf(db.prepare("SELECT * FROM customs WHERE id = ?").get(id)) });
   });
   app.get("/api/customs/mine", auth, (req, res) => {
     const rows = db.prepare(`${SEL} WHERE c.user_id = ? AND (c.status <> 'delivered' OR c.delivered_at > ?) ORDER BY c.created_at DESC LIMIT 60`).all(req.user.id, Date.now() - 30 * 864e5).map(pubC);

@@ -182,6 +182,32 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     }
     return 1;
   }
+  /* ---------- demandes Studio (Snap, contenu perso) : on retrouve la vente Twizz qui correspond ----------
+     même créatrice, même montant (prix payé par le fan, ou déjà net), entre 6 h avant la demande et 2 h après ;
+     à égalité, le même pseudo de fan puis le plus proche dans le temps. La vente va au chatter qui a envoyé la demande. */
+  const near = (a, b) => Math.abs(a - b) <= Math.max(0.6, b * 0.03);
+  const norm = v => String(v || "").toLowerCase().replace(/^@/, "").replace(/[^a-z0-9]/g, "");
+  function matchOne(cid) {
+    let c; try { c = db.prepare("SELECT * FROM customs WHERE id = ?").get(cid); } catch (e) { return null; }
+    if (!c || c.price == null || c.tw_tx || c.sale_id || c.status === "cancelled") return null;
+    const k = keep(), used = new Set(db.prepare("SELECT tw_tx FROM customs WHERE tw_tx IS NOT NULL").all().map(r => r.tw_tx));
+    const L = db.prepare("SELECT * FROM twizz_tx WHERE model_id = ? AND refund = 0 AND net > 0 AND at BETWEEN ? AND ? AND type <> 'monthly_subscription'")
+      .all(c.model_id, c.created_at - 6 * 3600e3, c.created_at + 2 * 3600e3).filter(t => !used.has(t.id) && (near(t.net, c.price * k) || near(t.net, c.price)));
+    if (!L.length) return null;
+    const fan = norm(c.fan); L.sort((a, b) => ((fan && norm(b.fan_name) === fan) - (fan && norm(a.fan_name) === fan)) || Math.abs(a.at - c.created_at) - Math.abs(b.at - c.created_at));
+    const t = L[0];
+    db.prepare("UPDATE customs SET tw_tx = ?, paid_at = ? WHERE id = ?").run(t.id, t.at, c.id);
+    // la vente compte pour le chatter qui a envoyé la demande (seulement depuis l'activation des ventes automatiques)
+    const u = db.prepare("SELECT id, role, sells FROM users WHERE id = ?").get(c.user_id), C = cfg();
+    if (u && (u.role === "chatter" || u.sells) && C.on && C.since && t.at >= C.since) {
+      if (t.sale_id) { const sa = db.prepare("SELECT id, user_id, source FROM sales WHERE id = ?").get(t.sale_id);
+        if (sa && sa.source === "twizz" && sa.user_id !== u.id) { db.prepare("UPDATE sales SET user_id = ? WHERE id = ?").run(u.id, sa.id); db.prepare("UPDATE twizz_tx SET user_id = ? WHERE id = ?").run(u.id, t.id); } }
+      else if (["ca_only", "no_chatter", "pending"].includes(t.state)) makeSale(t, u.id);
+    }
+    return t.id;
+  }
+  function matchCustoms() { try { db.prepare("SELECT id FROM customs WHERE price IS NOT NULL AND tw_tx IS NULL AND sale_id IS NULL AND status <> 'cancelled' AND created_at > ?").all(now() - 2 * 864e5).forEach(r => matchOne(r.id)); } catch (e) {} }
+  app.locals.twizzMatch = id => { try { return matchOne(id); } catch (e) { console.error("Twizz : demande Studio", e.message); return null; } };
   const ymd = ms => new Date(ms).toISOString().slice(0, 10);
   // les synchros passent l'une après l'autre (jamais deux en même temps)
   let running = Promise.resolve();
@@ -202,6 +228,7 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
         }
       }
       Object.assign(status, { ok: true, error: null, at: now(), lastSync: now(), fails: 0, pausedUntil: null }); saveStatus();
+      matchCustoms();
       if (added) console.log(`Twizz : ${added} transaction(s) importée(s)${reason ? " (" + reason + ")" : ""}`);
       return { added };
     } catch (e) {
