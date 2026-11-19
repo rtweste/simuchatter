@@ -188,6 +188,8 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
+// heure du serveur dans chaque réponse de l'API : le site corrige les téléphones dont l'horloge est fausse
+app.use("/api", (req, res, next) => { res.setHeader("X-Now", String(Date.now())); next(); });
 app.use((req, res, next) => {
   res.set("X-Content-Type-Options", "nosniff");
   res.set("X-Frame-Options", "SAMEORIGIN");   // l'accueil peut être préparé dans la page de connexion (même site uniquement)

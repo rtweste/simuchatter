@@ -1,5 +1,10 @@
 // Fonctions partagées entre les pages
 const $ = id => document.getElementById(id);
+// Horloge du serveur : certains téléphones ont une heure fausse (réglée à la main). Date.now() est corrigé avec l'écart
+// mesuré à chaque réponse de l'API, pour que comptes à rebours, pauses, retards et « à l'instant » soient justes.
+(() => { const raw = Date.now.bind(Date); let skew = 0; try { skew = +localStorage.getItem("stSkew") || 0; } catch (_) {}
+  Date.now = () => raw() + skew;
+  window.__setSkew = srv => { const s = srv - raw(); if (Math.abs(s - skew) < 3000) return; skew = Math.abs(s) < 30e3 ? 0 : s; try { localStorage.setItem("stSkew", String(skew)); } catch (_) {} }; })();
 // Quand l'accueil est affiché dans le cadre de l'ouverture (après l'intro), les liens ouvrent la vraie page
 const EMBED = window !== window.top;
 if (EMBED) document.head.insertAdjacentHTML("afterbegin", '<base target="_top">');
@@ -27,6 +32,7 @@ async function api(path, opts = {}) {
     body: opts.body ? JSON.stringify(opts.body) : undefined,
     credentials: "same-origin"
   });
+  const xn = +res.headers.get("x-now"); if (xn) window.__setSkew(xn);
   if (res.status === 401) try { sessionStorage.removeItem(ME_KEY); } catch (_) {}
   if (res.status === 401 && !opts.noRedirect && !path.includes("/login")) { go("/"); throw new Error("Non connecté"); }
   const data = await res.json().catch(() => ({}));
