@@ -137,6 +137,16 @@ function openPush() { loadPush(() => PUSH.sheet()); }
 function renderShell(active, me) {
   if (me && me.role === "chatter") PLANREM.start();
   if (me && !EMBED) setTimeout(() => loadPush(() => PUSH.sync()), 2500);
+  // aperçu « vue chatter » du fondateur : bandeau permanent avec retour d'un clic
+  if (me && me.viewAs && !document.querySelector(".va-bar")) {
+    const b = document.createElement("div"); b.className = "va-bar";
+    b.innerHTML = `<span>👁 Tu vois le site comme <b>${esc(me.viewAs.username)}</b> · aperçu en lecture seule</span><button type="button">Revenir à mon compte</button>`;
+    const st = document.createElement("style"); st.textContent = `.va-bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:2147482000;display:flex;align-items:center;gap:12px;padding:8px 8px 8px 16px;border-radius:999px;background:rgba(232,194,122,.14);border:1px solid rgba(232,194,122,.55);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#f3d9a4;font:600 13px Inter,system-ui,sans-serif;box-shadow:0 20px 50px -10px rgba(0,0,0,.8);white-space:nowrap;max-width:calc(100vw - 20px)}
+      .va-bar b{color:#fff}.va-bar span{overflow:hidden;text-overflow:ellipsis}.va-bar button{height:32px;border-radius:999px;border:0;background:#f3d9a4;color:#1a1408;font:800 12.5px Inter,system-ui,sans-serif;padding:0 14px;cursor:pointer;flex-shrink:0}
+      @media(max-width:600px){.va-bar{bottom:auto;top:10px}.va-bar span{font-size:12px}}`;
+    document.head.appendChild(st); document.body.appendChild(b);
+    b.querySelector("button").onclick = async () => { try { await api("/api/view-as/stop", { method: "POST" }); } catch (e) {} try { sessionStorage.clear(); } catch (e) {} location.href = "/admin"; };
+  }
   // chatters : notifications obligatoires (écran bloquant tant qu'aucun appareil n'est abonné)
   if (me && me.pushNeeded && !EMBED) loadPush(() => PUSH.gate());
   // accueil : configurer son compte (premier lancement), puis activer les notifications

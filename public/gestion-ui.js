@@ -122,6 +122,7 @@ async function fiche(id) {
     ${isMe || c.role === "admin" ? "" : '<div data-tl></div>'}
     ${c.role === "admin" ? `<div class="sec"><span class="lab">SES PROPRES VENTES</span><div class="ln" style="align-items:center;gap:12px"><span>Déclare ses ventes comme un chatter<br><small class="mut">Un autre manager ou le fondateur les valide · commission fixe de 10 %, sans palier</small></span><div class="pick" data-sells style="flex-shrink:0;margin:0"><button class="${c.sells ? "on" : ""}">${c.sells ? "Activé" : "Désactivé"}</button></div></div></div>` : ""}
     ${c.role === "chatter" ? `<div class="sec"><span class="lab">NOTIFICATIONS</span><div class="ln" style="align-items:center;gap:12px"><span>${c.devices ? `Activées sur <b>${c.devices} appareil${c.devices > 1 ? "s" : ""}</b>` : "<b style=\"color:#e07a7a\">Pas activées</b> : bloqué à sa prochaine connexion"}<br><small class="mut">Obligatoires sur chaque appareil qu'il utilise (téléphone et ordinateur)</small>${""}<br><small class="mut">Dispenser seulement si son téléphone ne peut vraiment pas les recevoir</small></span><div class="pick" data-pushx style="flex-shrink:0;margin:0"><button class="${c.pushExempt ? "on" : ""}">${c.pushExempt ? "Dispensé" : "Obligatoires"}</button></div></div></div>` : ""}
+    ${c.role === "chatter" && c.active && window.GME && GME.rk === "founder" ? `<div class="sec"><span class="lab">VUE CHATTER</span><div class="ln" style="align-items:center;gap:12px"><span>Voir le site exactement comme ${esc(c.username)}<br><small class="mut">Aperçu en lecture seule : rien n'est enregistré, tu reviens d'un clic</small></span><div class="pick" data-viewas style="flex-shrink:0;margin:0"><button>👁 Voir comme lui</button></div></div></div>` : ""}
     ${isMe ? "" : `<div class="sec"><span class="lab">COMPTE</span><div class="acts"><button data-a="pw">Nouveau mot de passe</button><button data-a="role">${c.role === "admin" ? "Repasser chatter" : "Passer manager"}</button><button data-a="copy">Copier l'identifiant</button><button data-a="off" class="r">${c.active ? "Désactiver le compte" : "Réactiver le compte"}</button></div>
       <div class="pw"><code></code><button class="sb" data-a="pwcopy">Copier</button><button class="sb" data-a="pwre" aria-label="Autre mot de passe">↻</button><button class="sb w" data-a="pwset">Valider</button></div></div>`}
     <div class="sec"><span class="lab">NOTES PRIVÉES · VISIBLES PAR LES MANAGERS SEULEMENT</span><div data-notes>${c.notes.map(notes).join("") || '<div class="mut" data-none>Aucune note pour l\'instant.</div>'}</div>
@@ -137,6 +138,8 @@ async function fiche(id) {
   }).catch(() => {});
   dr.querySelectorAll(".nchips button").forEach(b => b.onclick = () => dr.querySelectorAll(".nchips button").forEach(x => x.classList.toggle("on", x === b)));
   // option « déclare ses propres ventes » (managers qui chattent aussi)
+  const va = dr.querySelector("[data-viewas] button"); if (va) va.onclick = async () => {
+    try { await api("/api/view-as", { body: { user_id: c.id } }); try { sessionStorage.clear(); } catch (e) {} location.href = "/home"; } catch (e) { fail(e); } };
   const px = dr.querySelector("[data-pushx] button"); if (px) px.onclick = async () => { const on = !px.classList.contains("on");
     try { await api("/api/admin/users/" + c.id, { method: "PATCH", body: { push_exempt: on } }); px.classList.toggle("on", on); px.textContent = on ? "Dispensé" : "Obligatoires"; S.tick();
       toast(on ? `${esc(c.username)} n'est plus obligé d'activer les notifications` : `${esc(c.username)} doit activer les notifications`, true); } catch (e) { fail(e); } };
@@ -635,7 +638,7 @@ return { tab, loadSanc };
 })();
 
 (async () => {
-  const me = await api("/api/me");
+  const me = await api("/api/me"); window.GME = me;
   if (me.role !== "admin") { location.href = "/home"; return; }
   renderShell("admin", me);
   const h = (location.hash || "").slice(1);
