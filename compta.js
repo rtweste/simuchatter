@@ -626,7 +626,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   const periodElapsed = (p, today) => { const d = +today.slice(8), d1 = +p.from.slice(8), d2 = +p.to.slice(8); return Math.min(1, Math.max(1 / 16, (d - d1 + 1) / (d2 - d1 + 1))); };
   const boardOf = (inP) => {
     const board = {};
-    db.prepare("SELECT s.user_id, u.username, COALESCE(s.com_amount, s.amount) amount, s.sold_at FROM sales s JOIN users u ON u.id = s.user_id WHERE s.status = 'validated'").all()
+    db.prepare("SELECT s.user_id, u.username, COALESCE(s.com_amount, s.amount) amount, s.sold_at FROM sales s JOIN users u ON u.id = s.user_id WHERE s.status = 'validated' AND u.deleted_at IS NULL").all()
       .filter(s => inP(s.sold_at)).forEach(s => { const k = s.user_id; board[k] = board[k] || { user_id: k, username: s.username, total: 0 }; board[k].total += s.amount; });
     return Object.values(board).sort((a, b) => b.total - a.total);
   };

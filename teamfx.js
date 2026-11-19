@@ -15,11 +15,12 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   /* =================== SALLE DE CONTRÔLE =================== */
   app.get("/api/admin/control", auth, admin, (req, res) => {
     const now = Date.now(), d0 = parisMidnight(now), since = Math.max(Number(req.query.since) || 0, now - 6 * 3600e3);
-    const today = db.prepare(`SELECT s.id, s.amount, s.status, s.user_id, s.model_id, s.sold_at, s.created_at, s.reviewed_at, u.username, m.name model_name
+    const today = db.prepare(`SELECT s.id, s.amount, s.status, s.user_id, s.model_id, s.sold_at, s.created_at, s.reviewed_at, u.username, u.deleted_at, m.name model_name
       FROM sales s JOIN users u ON u.id = s.user_id JOIN models m ON m.id = s.model_id WHERE s.sold_at >= ? AND s.status <> 'refused'`).all(d0);
     const val = today.filter(s => s.status === "validated"), pend = today.filter(s => s.status === "pending");
     const sum = a => Math.round(a.reduce((t, s) => t + s.amount, 0) * 100) / 100;
-    const board = {}; today.forEach(s => { const b = board[s.user_id] = board[s.user_id] || { id: s.user_id, username: s.username, ca: 0, n: 0 }; b.ca += s.amount; b.n++; });
+    // classement : sans les comptes supprimés (dont le compte technique « Ancien chatter »)
+    const board = {}; today.filter(s => !s.deleted_at).forEach(s => { const b = board[s.user_id] = board[s.user_id] || { id: s.user_id, username: s.username, ca: 0, n: 0 }; b.ca += s.amount; b.n++; });
     const models = {}; today.forEach(s => { const b = models[s.model_id] = models[s.model_id] || { id: s.model_id, name: s.model_name, ca: 0, n: 0 }; b.ca += s.amount; b.n++; });
     const yest = db.prepare("SELECT COALESCE(SUM(amount),0) t FROM sales WHERE status <> 'refused' AND sold_at >= ? AND sold_at < ?").get(d0 - 864e5, now - 864e5).t;
     const live = db.prepare(`SELECT c.user_id, c.start_at, c.reinforce, u.username, m.name model_name FROM clocks c JOIN users u ON u.id = c.user_id JOIN models m ON m.id = c.model_id WHERE c.end_at IS NULL ORDER BY c.start_at`).all();

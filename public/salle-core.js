@@ -5,6 +5,10 @@ const SALLE = window.SALLE = (() => {
   const eur = n => Math.round(n).toLocaleString("fr-FR") + " €";
   /* ---------- sons (synthétisés, aucun fichier) ---------- */
   let ac = null, on = false, master = null;
+  try { on = localStorage.getItem("salleSon") !== "0"; } catch (e) { on = true; }
+  // le navigateur n'autorise le son qu'après un geste : le premier clic ou touche n'importe où le débloque
+  const unlock = () => { if (on) try { ctx(); } catch (e) {} };
+  ["pointerdown", "keydown"].forEach(ev => addEventListener(ev, unlock, { passive: true }));
   const ctx = () => { if (!ac) { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = .5; master.connect(ac.destination); } if (ac.state !== "running") ac.resume(); return ac; };
   function tone(f, t, len, pk, type, glide) { const a = ctx(), o = a.createOscillator(), g = a.createGain(); o.type = type || "sine"; o.frequency.setValueAtTime(f, t); if (glide) o.frequency.exponentialRampToValueAtTime(glide, t + len);
     g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(pk, t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + len); o.connect(g); g.connect(master); o.start(t); o.stop(t + len + .05); }
@@ -70,12 +74,13 @@ const SALLE = window.SALLE = (() => {
     document.head.appendChild(st);
     const cur = location.pathname.replace(/\.html$/, ""), V = [["/salle", "Classique"], ["/salle-orbite", "Orbite"], ["/salle-bourse", "Bourse"], ["/salle-scene", "Scène"]];
     const bar = document.createElement("div"); bar.className = "sx-bar";
-    bar.innerHTML = V.map(([u, l]) => `<a href="${u}${DEMO ? "?demo" : ""}" class="${cur === u ? "on" : ""}">${l}</a>`).join("") + `<a href="${cur}${DEMO ? "" : "?demo"}" class="demo">${DEMO ? "● Démo" : "Démo"}</a><button data-fs>⛶</button><a href="/admin">✕</a>`;
+    bar.innerHTML = V.map(([u, l]) => `<a href="${u}${DEMO ? "?demo" : ""}" class="${cur === u ? "on" : ""}">${l}</a>`).join("") + `<a href="${cur}${DEMO ? "" : "?demo"}" class="demo">${DEMO ? "● Démo" : "Démo"}</a><button data-snd>${on ? "🔊" : "🔇"}</button><button data-fs>⛶</button><a href="/admin">✕</a>`;
     document.body.appendChild(bar);
+    bar.querySelector("[data-snd]").onclick = ev => { on = !on; try { localStorage.setItem("salleSon", on ? "1" : "0"); } catch (e) {} ev.currentTarget.textContent = on ? "🔊" : "🔇"; if (on) { try { ctx(); SND.tick(); } catch (e) {} } };
     bar.querySelector("[data-fs]").onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
     const g = document.createElement("div"); g.className = "sx-gate"; g.innerHTML = `<button type="button">▶ Lancer la salle de contrôle<small>${DEMO ? "mode démo : des ventes fictives tombent toutes les quelques secondes" : "avec le son à chaque vente"}</small></button>`;
-    document.body.appendChild(g); g.querySelector("button").onclick = () => { on = true; try { ctx(); SND.tick(); } catch (e) {} g.remove(); h.go && h.go(); };
-    g.onclick = e => { if (e.target === g) { g.remove(); h.go && h.go(); } };
+    // un clic n'importe où sur l'écran d'accueil lance la salle avec le son (selon le réglage 🔊 / 🔇)
+    document.body.appendChild(g); g.onclick = () => { if (on) try { ctx(); SND.tick(); } catch (e) {} g.remove(); h.go && h.go(); };
   }
   return { start, SND, eur, reduce, DEMO };
 })();
