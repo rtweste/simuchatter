@@ -87,7 +87,7 @@ const MODULES = [
     desc: "Ton lien d'invitation, tes filleuls et tes primes de parrainage." },
   { id: "paie", label: "Ma paie", href: "/paie", icon: "euro", section: "Organisation", roles: ["chatter"],
     desc: "Ta paie de la quinzaine : commission, paliers, primes et historique." },
-  { id: "boutique", label: "Boutique", href: "/boutique", icon: "bag", section: "Organisation", roles: ["chatter"], nodock: ["chatter", "tl"],
+  { id: "boutique", label: "Boutique", href: "/boutique", icon: "bag", section: "Organisation", roles: ["chatter", "admin"], hide: ["assistant"], nodock: ["chatter", "tl", "admin"],
     desc: "Dépense tes Stella's : cosmétiques, avantages et bonus de paie." },
   { id: "equipe", label: "Mon équipe", short: "Équipe", href: "/equipe", icon: "users", section: "Team Leader", roles: ["chatter"], only: ["tl"],
     desc: "Ton équipe en direct : ventes, shifts, pauses, formation, alertes et coaching." },

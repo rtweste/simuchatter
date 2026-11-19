@@ -93,8 +93,9 @@ function render() {
   const feat = its.find(i => i.featured && i.state !== "equipped" && i.state !== "owned" && i.state !== "off") || its.find(i => i.shelf === "cos" && ["E", "L"].includes(i.rar) && !["equipped", "owned", "off"].includes(i.state));
   const tabs = [["all", "Tout", cos.length + adv.length + rew.length], ["cos", "Cosmétiques", cos.length], ["adv", "Avantages", adv.length], ["rew", "Récompenses", rew.length]];
   const cosF = CHIP === "all" ? cos : cos.filter(i => i.slot === CHIP);
-  R.innerHTML = `<header class="st-hd"><div><div class="st-eb">RÉCOMPENSES</div><h1>La <em>boutique</em></h1><p>Tes ventes, ta ponctualité et ton entraide te rapportent des Stella's. Dépense-les ici.</p></div>
-    <div class="acts"><a class="st-btn" href="/cagnotte">${SV("M4 6h16M4 12h16M4 18h10")}Ma cagnotte</a><a class="st-bal" href="/cagnotte">${C(20)}${N(S.balance)}</a></div></header>
+  R.innerHTML = (S.preview ? `<div class="st-card" style="display:flex;align-items:center;gap:12px;padding:14px 18px;margin-bottom:18px;border-color:rgba(243,217,164,.35);background:rgba(243,217,164,.06)">
+      <span style="font-size:20px">👀</span><div><b style="display:block;font-size:14px">Aperçu manager</b><span style="font-size:13px;color:#a3a3a3">C'est la boutique telle que la voient les chatters. Les achats sont réservés aux chatters ; pour gérer les Stella's, va dans Gestion → Stella's.</span></div></div>` : "") + `<header class="st-hd"><div><div class="st-eb">RÉCOMPENSES</div><h1>La <em>boutique</em></h1><p>Tes ventes, ta ponctualité et ton entraide te rapportent des Stella's. Dépense-les ici.</p></div>
+    ${S.preview ? "" : `<div class="acts"><a class="st-btn" href="/cagnotte">${SV("M4 6h16M4 12h16M4 18h10")}Ma cagnotte</a><a class="st-bal" href="/cagnotte">${C(20)}${N(S.balance)}</a></div>`}</header>
   ${S.open ? "" : `<div class="st-closed">La boutique est fermée pour le moment. Tu continues de gagner des Stella's, tu pourras les dépenser à la réouverture.</div>`}
   <section class="st-hero">
     <div class="st-card st-sold"><div class="top">${C(64)}<div><div class="st-k">TON SOLDE</div><div class="st-big"><b>${N(S.balance)}</b><span>Stella's</span></div></div>
@@ -117,7 +118,7 @@ function render() {
   ${(TAB === "all" || TAB === "rew") && rew.length ? `<section class="st-sec"><div class="sh"><div><h2>Récompenses</h2><p>De l'argent en plus sur ta paie, validé par le fondateur</p></div>
     <div class="st-budget"><div class="h"><span>Encore disponible ce mois-ci</span><span>${eur(S.budget.left)} sur ${eur(S.budget.total)}</span></div><div class="st-bar" style="margin-top:8px"><i style="width:${S.budget.total ? Math.round(S.budget.left / S.budget.total * 100) : 0}%"></i></div></div></div>
     <div class="st-wide">${rew.map(rewCard).join("")}</div></section>` : ""}
-  <a class="st-more" href="/cagnotte">Comment gagner des Stella's${SV("M5 12h14M13 6l6 6-6 6", 15, 2.2)}</a>`;
+  ${S.preview ? "" : `<a class="st-more" href="/cagnotte">Comment gagner des Stella's${SV("M5 12h14M13 6l6 6-6 6", 15, 2.2)}</a>`}`;
   bind();
 }
 function bind() {
@@ -129,7 +130,9 @@ function bind() {
   R.querySelectorAll("[data-goal]").forEach(b => b.onclick = () => act("/api/stellas/goal", { item: b.dataset.goal || null }, b.dataset.goal ? "Objectif enregistré" : "Objectif retiré"));
   R.querySelectorAll("[data-use]").forEach(b => b.onclick = () => b.dataset.use === "joker" ? jokerSheet() : act("/api/stellas/pause-bonus", {}, "+15 min de pause ajoutées ✓"));
 }
-async function act(url, body, ok) {
+// aperçu manager : on regarde, on n'achète pas
+const isPreview = () => { if (S && S.preview) { notify("Aperçu manager", "Les achats sont réservés aux chatters", "info"); return true; } return false; };
+async function act(url, body, ok) { if (isPreview()) return;
   try { const r = await api(url, { body }); if (r.state) S = r.state; render(); if (ok) notify(ok, "", "ok"); try { LOOKS.reload(); } catch (e) {} } catch (e) { notify("Impossible", e.message, "err"); }
 }
 
@@ -163,8 +166,8 @@ function sheet(id) {
     <div class="r"><div style="display:flex;justify-content:space-between;align-items:center"><span class="rar ${it.rar || "A"}">${it.rar ? RAR[it.rar] : it.shelf === "adv" ? "AVANTAGE" : "RÉCOMPENSE"}${cos ? " · " + SLOT[it.slot].replace(/s$/, "").toUpperCase() : ""}</span><button class="x" type="button" aria-label="Fermer">${SV("M6 6l12 12M18 6L6 18", 16, 2.4)}</button></div>
       <div><h2>${esc(it.name)}</h2><p class="desc" style="margin-top:12px">${esc(it.desc)}</p></div>
       <div class="st-checks">${checks.map(c => `<div>${SV(CHECK, 16, 2.6, "#5fd3a2")}${esc(c)}</div>`).join("")}</div>
-      ${owned ? "" : `<div class="st-sum"><div><span>Ton solde</span><b>${C(13)}${N(S.balance)}</b></div><div><span>Prix</span><b>− ${N(it.price)}</b></div><hr><div class="t"><span>Après</span><b>${after >= 0 ? C(14) + N(after) : "—"}</b></div></div>`}
-      ${cta}${goalBtn}</div></div>`);
+      ${owned || S.preview ? "" : `<div class="st-sum"><div><span>Ton solde</span><b>${C(13)}${N(S.balance)}</b></div><div><span>Prix</span><b>− ${N(it.price)}</b></div><hr><div class="t"><span>Après</span><b>${after >= 0 ? C(14) + N(after) : "—"}</b></div></div>`}
+      ${S.preview ? `<div class="st-closed" style="padding:16px">Aperçu manager : seuls les chatters peuvent acheter.</div>` : cta + goalBtn}</div></div>`);
   s.querySelectorAll("[data-pv]").forEach(b => b.onclick = () => { s.querySelectorAll("[data-pv]").forEach(x => x.classList.toggle("on", x === b));
     s.querySelector("#stg").innerHTML = b.dataset.pv === "chat" ? `<div class="pv" style="height:auto;flex-direction:column;gap:12px;display:flex;align-items:center">${pvMsg(it.slot === "name" ? "lk-n-" + it.id.split("_")[1] : "", "Je prends le shift de 18 h si personne ne peut", it.slot === "title" ? (S.equipped.title || "Ton titre") : "").replace('<span class="a"', `<span class="a${it.slot === "frame" ? " lk-fr lk-fr-" + it.id.split("_")[1] : ""}"`)}</div>`
       : `<div class="pv" style="height:auto"><div class="pv-card" style="transform:scale(1.35)"><div class="bn ${it.slot === "banner" ? "lk-bn-nebula" : ""}" style="${it.slot === "banner" ? "" : "background:linear-gradient(120deg,color-mix(in srgb," + esc(P.color || "#6d5bd0") + " 60%,#111),#111)"}"></div><div class="rw"><span class="${it.slot === "frame" ? "lk-fr lk-fr-" + it.id.split("_")[1] : ""}" style="--ac:${esc(P.color || "#6d5bd0")};${avStyle()}">${ini()}</span><b class="${it.slot === "name" ? "lk-n-" + it.id.split("_")[1] : ""}">${esc(P.name || ME.username)}</b></div></div></div>`; });
@@ -183,7 +186,7 @@ function sheet(id) {
     } catch (e) { b.disabled = false; notify("Impossible", e.message, "err"); }
   });
 }
-async function jokerSheet() {
+async function jokerSheet() { if (isPreview()) return;
   let d; try { d = await api("/api/stellas/joker"); } catch (e) { return notify("Erreur", e.message, "err"); }
   const { s, close } = openScrim(`<div class="st-sheet" style="grid-template-columns:1fr;max-width:520px" role="dialog" aria-modal="true" aria-label="Utiliser un joker retard"><div class="r">
     <div style="display:flex;justify-content:space-between;align-items:center"><span class="rar A">JOKER RETARD · ${d.have} EN RÉSERVE</span><button class="x" type="button" aria-label="Fermer">${SV("M6 6l12 12M18 6L6 18", 16, 2.4)}</button></div>
@@ -196,7 +199,7 @@ async function jokerSheet() {
 
 (async () => {
   ME = await api("/api/me");
-  if (ME.role !== "chatter") { location.href = "/home"; return; }
+  if (ME.role !== "chatter" && !(ME.role === "admin" && ME.rk !== "assistant")) { location.href = "/home"; return; }
   renderShell("boutique", ME);
   try { P = await api("/api/profile"); } catch (e) {}
   try { S = await api("/api/stellas/me"); } catch (e) { R.innerHTML = `<div class="st-closed">${esc(e.message)}</div>`; return; }

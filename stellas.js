@@ -163,13 +163,15 @@ module.exports = function mount(app, db, auth, admin, { compta, planning, gest, 
       budget: { total: C.budget, left }, requests: pend, rules: C.rules, cap: C.cap };
   }
   const chatterOnly = (req, res, next) => req.user.role === "chatter" ? next() : res.status(403).json({ error: "La boutique est réservée aux chatters" });
-  app.get("/api/stellas/me", auth, chatterOnly, (req, res) => res.json(meState(req.user.id)));
-  app.get("/api/stellas/history", auth, chatterOnly, (req, res) => {
+  // managers et fondateurs : aperçu de la boutique telle que la voient les chatters (lecture seule, pas d'achat)
+  const canSee = (req, res, next) => req.user.role === "chatter" || (req.user.role === "admin" && req.user.rk !== "assistant") ? next() : res.status(403).json({ error: "La boutique est réservée aux chatters" });
+  app.get("/api/stellas/me", auth, canSee, (req, res) => res.json({ ...meState(req.user.id), preview: req.user.role !== "chatter" }));
+  app.get("/api/stellas/history", auth, canSee, (req, res) => {
     const before = +req.query.before || now() + 1, kind = req.query.kind;
     const where = kind === "gain" ? "AND amount > 0 AND kind NOT IN ('refund')" : kind === "buy" ? "AND kind IN ('buy','refund')" : kind === "loss" ? "AND amount < 0 AND kind NOT IN ('buy')" : "";
     res.json(db.prepare(`SELECT id, amount, kind, label, sub, at FROM stella_tx WHERE user_id = ? AND at < ? AND amount <> 0 ${where} ORDER BY at DESC, id DESC LIMIT 40`).all(req.user.id, before));
   });
-  app.get("/api/stellas/weekly", auth, chatterOnly, (req, res) => {
+  app.get("/api/stellas/weekly", auth, canSee, (req, res) => {
     // 8 dernières semaines (lundi), gains par famille
     const wd = (new Date(pd(now()) + "T12:00:00Z").getUTCDay() + 6) % 7, mon = dayStart(now() - wd * 864e5);
     const out = []; for (let i = 7; i >= 0; i--) { const a = dayStart(mon - i * 7 * 864e5 + 6 * 3600e3), b = i ? dayStart(mon - (i - 1) * 7 * 864e5 + 6 * 3600e3) : now() + 1;
