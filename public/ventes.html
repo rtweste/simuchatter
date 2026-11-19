@@ -411,11 +411,13 @@
 
 <!-- feuille « déclarer une vente » -->
 <div class="vt-scrim" id="scrim"></div>
-<style>.vt-twh{margin:0 0 14px;padding:11px 13px;border-radius:13px;border:1px solid rgba(95,211,162,.3);background:rgba(95,211,162,.07);font:500 12.5px/1.5 Inter;color:#cfeee0}.vt-twh b{color:#fff}
+<style>.vt-sth{margin:0 0 14px;padding:11px 13px;border-radius:13px;border:1px solid rgba(95,211,162,.3);background:rgba(95,211,162,.07);font:500 12.5px/1.5 Inter;color:#cfeee0}.vt-sth b{color:#fff}
+.vt-stk{display:flex;padding:4px;margin:0 0 12px;border-radius:14px;background:#131313;border:1px solid #232323}.vt-stk button{flex:1;height:38px;border:0;border-radius:10px;background:none;color:#8a8a8a;font:800 13.5px Inter;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:background .25s,color .25s}
+.vt-stk button svg{width:17px;height:17px}.vt-stk button.on{background:#ededed;color:#0a0a0a}
+.vt-stl{text-align:center;margin:-2px 0 10px}
 .vt-auto{cursor:default!important;background:rgba(95,211,162,.12)!important;color:#5fd3a2!important;border:1px solid rgba(95,211,162,.4)!important;margin-right:8px}</style>
 <form class="vt-sheet vt" id="sheet" role="dialog" aria-modal="true" aria-labelledby="shTitle" novalidate>
   <div class="vt-shd"><b id="shTitle">Déclarer une <em>vente</em></b><button type="button" class="vt-x" id="shClose" aria-label="Fermer">✕</button></div>
-  <div class="vt-twh" id="twHint" hidden><b>⚡ Les ventes Twizz arrivent toutes seules.</b> Ici, seulement un contenu perso ou une session Snap <b>payés en dehors de Twizz</b>.</div>
   <div class="vt-fl vt-for" id="forRow" style="margin-top:0;margin-bottom:12px"><span class="vt-lab">Vente de</span><div class="vt-chips l" id="forChips"></div><div class="hn" id="forHint"></div>
     <div class="vt-com" id="dCom" style="margin-top:14px;display:none">
       <div class="vt-lab">Commission du chatter</div>
@@ -454,6 +456,22 @@
   <div class="vt-hint" id="edNote" style="margin-top:12px"></div>
   <button class="vt-send" id="edBtn" type="submit">Enregistrer</button>
   <div class="vt-err" id="edErr" role="alert"></div>
+</form>
+
+<!-- ventes automatiques Twizz : un fan a acheté un Snap ou un contenu perso → demande au Studio (la vente arrive toute seule de Twizz) -->
+<form class="vt-sheet vt" id="stSheet" role="dialog" aria-modal="true" aria-labelledby="stTitle" novalidate>
+  <div class="vt-shd"><b id="stTitle">Demande au <em>Studio</em></b><button type="button" class="vt-x" id="stClose" aria-label="Fermer">✕</button></div>
+  <div class="vt-stk" role="tablist"><button type="button" data-sk="snap" class="on" role="tab"></button><button type="button" data-sk="perso" role="tab"></button></div>
+  <div class="vt-sth" id="stHint"></div>
+  <div class="vt-amt"><input id="stPrice" inputmode="decimal" placeholder="0" aria-label="Prix payé par le fan en euros" autocomplete="off"><span>€</span></div>
+  <div class="vt-lab vt-stl">Prix payé par le fan</div>
+  <div class="vt-chips" id="stAmt"><button type="button" data-a="10">10</button><button type="button" data-a="15">15</button><button type="button" data-a="25">25</button><button type="button" data-a="40">40</button><button type="button" data-a="60">60</button><button type="button" data-a="80">80</button></div>
+  <div class="vt-fl"><span class="vt-lab">Créatrice</span><div class="vt-chips l" id="stCrea"></div></div>
+  <div id="stSnap"><div class="vt-fl"><span class="vt-lab">Snap du fan</span><input class="vt-fi" id="stFan" maxlength="60" placeholder="son pseudo Snapchat" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <div class="vt-fl"><span class="vt-lab">Note pour le Studio (facultatif)</span><input class="vt-fi" id="stNote" maxlength="300" placeholder="ex. il veut des snaps ce soir"></div></div>
+  <div id="stPerso" hidden><div id="stCuSlot"></div></div>
+  <button class="vt-send" id="stBtn" type="submit">Envoyer au Studio</button>
+  <div class="vt-err" id="stErr" role="alert"></div>
 </form>
 
 <div class="lightbox hidden" id="lb"><img id="lbImg" alt="Capture d'écran de la vente"></div>
@@ -727,9 +745,7 @@ function openSheet(again) {
   WHEN = null; $("fDate").value = ""; document.querySelectorAll("#whenChips button").forEach(x => x.classList.remove("on")); $("whenChips").classList.remove("need"); $("fDate").classList.add("hidden");
   LAST_WHEN = null; whenCheck();
   if (again) { $("fDate").value = toLocalInput(again.sold_at); setWhen("pick"); }
-  const tw = TWAUTO && ME0 && ME0.role !== "admin";
-  $("shTitle").innerHTML = again ? "Renvoyer la <em>vente</em>" : tw ? "Contenu perso <em>ou Snap</em>" : "Déclarer une <em>vente</em>";
-  $("twHint").hidden = !tw;
+  $("shTitle").innerHTML = again ? "Renvoyer la <em>vente</em>" : "Déclarer une <em>vente</em>";
   dCom("all"); renderFor(again ? null : FOR_DEFAULT()); renderCats(again?.items); renderCrea(again?.model_id); syncAmtChips(); CUSTOM.reset();
   $("scrim").classList.add("on"); $("sheet").classList.add("on"); document.body.style.overflow = "hidden"; document.body.classList.add("modal-open"); VS.open();
 }
@@ -776,9 +792,44 @@ async function openSheetFor() {
   if (!MODELS.length) MODELS = TG.models;
   openSheet();
 }
+/* ---------- ventes automatiques : Snap ou contenu perso → demande au Studio (la vente arrive de Twizz) ---------- */
+let STK = "snap";
+const SKI = { snap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.7l1.4-2h4.8l1.4 2h1.7A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.5" r="3.4"/></svg>',
+  perso: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="3"/><path d="M16 10.5l5-3v9l-5-3z"/></svg>' };
+document.querySelector('#stSheet [data-sk="snap"]').innerHTML = SKI.snap + "Snap"; document.querySelector('#stSheet [data-sk="perso"]').innerHTML = SKI.perso + "Contenu perso";
+function stKind(k) { STK = k; document.querySelectorAll("#stSheet [data-sk]").forEach(b => { b.classList.toggle("on", b.dataset.sk === k); b.setAttribute("aria-selected", b.dataset.sk === k); });
+  $("stSnap").hidden = k !== "snap"; $("stPerso").hidden = k !== "perso"; $("stErr").textContent = "";
+  $("stHint").innerHTML = k === "snap" ? "<b>Le fan a acheté un Snap.</b> La vente arrive toute seule depuis Twizz : ici, tu envoies juste son Snap au Studio."
+    : "<b>Le fan a commandé un contenu perso.</b> La vente arrive toute seule depuis Twizz : ici, tu envoies juste sa demande au Studio."; }
+function openStudio() {
+  $("stErr").textContent = ""; $("stPrice").value = ""; $("stFan").value = ""; $("stNote").value = ""; CUSTOM.reset(); CUSTOM.setOn(true, true); stKind("snap");
+  // créatrices : celle du shift en premier
+  let last = ACTIVE[0] && ACTIVE[0].model_id; try { last = last || +localStorage.getItem("stLastModel"); } catch (e) {}
+  if (!MODELS.some(m => m.id === last)) last = MODELS[0]?.id;
+  const act = id => ACTIVE.find(a => a.model_id === id), list = [...MODELS].sort((a, b) => (act(b.id) ? 1 : 0) - (act(a.id) ? 1 : 0));
+  $("stCrea").innerHTML = list.map(m => `<button type="button" data-m="${m.id}" class="${m.id === last ? "on" : ""}">${esc(m.name)}${act(m.id) ? `<sup style="font-size:9px;opacity:.6;margin-left:4px">${act(m.id).reinforce ? "renfort" : "en shift"}</sup>` : ""}</button>`).join("") || `<span class="vt-lab">Aucune créatrice</span>`;
+  $("stCrea").querySelectorAll("button").forEach(b => b.onclick = () => { $("stCrea").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); VS.tick(); });
+  $("scrim").classList.add("on"); $("stSheet").classList.add("on"); document.body.style.overflow = "hidden"; document.body.classList.add("modal-open"); VS.open();
+}
+function closeStudio() { if (!$("stSheet").classList.contains("on")) return; $("stSheet").classList.remove("on"); $("scrim").classList.remove("on"); document.body.style.overflow = ""; document.body.classList.remove("modal-open"); }
+$("stClose").onclick = closeStudio;
+document.querySelectorAll("#stSheet [data-sk]").forEach(b => b.onclick = () => { stKind(b.dataset.sk); VS.tick(); });
+document.querySelectorAll("#stAmt button").forEach(b => b.onclick = () => { $("stPrice").value = b.dataset.a; VS.tick(); });
+$("stSheet").onsubmit = async e => { e.preventDefault(); const err = $("stErr"); err.textContent = "";
+  const price = parseFloat(String($("stPrice").value).replace(",", ".")), m = $("stCrea").querySelector("button.on");
+  if (!(price > 0)) { err.textContent = "Indique le prix payé par le fan."; return $("stPrice").focus(); }
+  if (!m) { err.textContent = "Choisis la créatrice."; return; }
+  let body;
+  if (STK === "snap") { const fan = $("stFan").value.trim().replace(/^@/, ""); if (!fan) { err.textContent = "Indique le Snap du fan."; return $("stFan").focus(); }
+    body = { kind: "snap", fan, request: $("stNote").value.trim() }; }
+  else { try { body = CUSTOM.read(); } catch (x) { err.textContent = x.message; return; } }
+  const btn = $("stBtn"); btn.disabled = true;
+  try { await CUSTOM.direct({ ...body, model_id: +m.dataset.m, price }); try { localStorage.setItem("stLastModel", m.dataset.m); } catch (x) {}
+    closeStudio(); VS.ok(); notify("Demande envoyée au Studio", STK === "snap" ? `Snap de ${body.fan} · ${E(price)}` : `Contenu perso pour @${body.fan} · ${E(price)}`, "ok"); CUSTOM.mountMine($("cuMine"));
+  } catch (x) { err.textContent = x.message; VS.ko(); } finally { btn.disabled = false; } };
 function closeSheet() { $("scrim").classList.remove("on"); $("sheet").classList.remove("on"); document.body.style.overflow = ""; document.body.classList.remove("modal-open"); }
 $("openSheet").onclick = () => openSheet();
-$("scrim").onclick = () => { closeSheet(); closeEdit(); }; $("shClose").onclick = closeSheet;
+$("scrim").onclick = () => { closeSheet(); closeEdit(); closeStudio(); }; $("shClose").onclick = closeSheet;
 /* ---------- Modifier une vente (manager) : chatter, créatrice, date ---------- */
 let PPL = null, ED = null;
 function chipsInto(id, list, cur, on) {
@@ -811,7 +862,7 @@ $("edSheet").onsubmit = async e => {
   } catch (err) { $("edErr").textContent = err.message; }
   $("edBtn").disabled = false;
 };
-addEventListener("keydown", e => { if (e.key === "Escape") { if (!$("lb").classList.contains("hidden")) $("lb").classList.add("hidden"); else if ($("sheet").classList.contains("on")) closeSheet(); else closeEdit(); } });
+addEventListener("keydown", e => { if (e.key === "Escape") { if (!$("lb").classList.contains("hidden")) $("lb").classList.add("hidden"); else if ($("sheet").classList.contains("on")) closeSheet(); else if ($("stSheet").classList.contains("on")) closeStudio(); else closeEdit(); } });
 
 $("sheet").onsubmit = async e => {
   e.preventDefault(); $("fErr").textContent = "";
@@ -1139,7 +1190,8 @@ let ME0 = null, MINE_ON = false;
 // vue « Mes ventes » (chatters, et managers qui déclarent leurs ventes)
 async function startMine() {
   if (MINE_ON) return loadMine(); MINE_ON = true;
-  $("cuSlot").innerHTML = CUSTOM.formHTML(); CUSTOM.bindForm(); CUSTOM.mountMine($("cuMine")); await loadMine();
+  const stMode = TWAUTO && ME0 && ME0.role !== "admin";
+  (stMode ? $("stCuSlot") : $("cuSlot")).innerHTML = CUSTOM.formHTML(); CUSTOM.bindForm(); if (stMode) CUSTOM.setOn(true, true); CUSTOM.mountMine($("cuMine")); await loadMine();
   setInterval(() => { if (!document.hidden && !$("chatterView").classList.contains("hidden") && !$("sheet").classList.contains("on")) loadMine({ watch: true }).catch(() => {}); }, 20000);
 }
 // manager qui vend : onglets « À valider · Historique · Mes ventes » sur les deux vues
@@ -1168,10 +1220,10 @@ function mineTabs() {
   } else {
     $("chatterView").classList.remove("hidden");
     // ventes automatiques Twizz : plus de bouton « Déclarer »
-    try { if ((await api("/api/twizz/mode")).auto) { const b = $("openSheet"); b.innerHTML = b.innerHTML.replace("Déclarer une vente", "Perso ou Snap"); b.title = "Contenu perso ou session Snap payés en dehors de Twizz";
+    try { if (TWAUTO) { const b = $("openSheet"); b.innerHTML = b.innerHTML.replace("Déclarer une vente", "Snap ou perso"); b.title = "Un fan a acheté un Snap ou un contenu perso : envoie la demande au Studio"; b.onclick = () => openStudio();
       b.insertAdjacentHTML("beforebegin", `<span class="vt-wbtn vt-auto" title="Chaque vente Twizz est ajoutée toute seule : au chatter qui a envoyé le PPV depuis la messagerie, sinon au chatter en shift sur la créatrice">⚡ Ventes Twizz automatiques</span>`); } } catch (e) {}
     await startMine();
-    if (new URLSearchParams(location.search).has("declarer")) openSheet();
+    if (new URLSearchParams(location.search).has("declarer")) TWAUTO ? openStudio() : openSheet();
   }
 })();
 </script>

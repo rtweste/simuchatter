@@ -10,7 +10,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   // ventes automatiques Twizz : l'assistant explique le mode en cours
   const twOn = () => { try { const r = db.prepare("SELECT value FROM settings WHERE key = 'twizz_on'").get(); return !!r && r.value === "true"; } catch (e) { return false; } };
   const faq = () => FAQ.replace("{{VENTES}}", twOn()
-    ? "Ventes (MODE ACTUEL : automatique) : les ventes Twizz arrivent toutes seules sur le site, plus besoin de les déclarer ni de faire de capture. Un PPV envoyé depuis la Messagerie du site est compté au chatter qui l'a envoyé ; sinon la vente va au chatter en shift sur la créatrice ; sinon elle reste au CA de l'agence. Seuls les contenus perso et les sessions Snap payés en dehors de Twizz se déclarent encore, dans Ventes → « Perso ou Snap ». La partie « mode manuel » ci-dessous ne s'applique plus."
+    ? "Ventes (MODE ACTUEL : automatique) : les ventes Twizz arrivent toutes seules sur le site, plus besoin de les déclarer ni de faire de capture. Un PPV envoyé depuis la Messagerie du site est compté au chatter qui l'a envoyé ; sinon la vente va au chatter en shift sur la créatrice ; sinon elle reste au CA de l'agence. Quand un fan achète un Snap ou un contenu perso, le chatter va dans Ventes → « Snap ou perso » : il indique le prix payé, la créatrice et le Snap du fan (ou le pseudo et la demande pour un contenu perso), et la demande part au Studio. La vente elle-même arrive toute seule depuis Twizz. La partie « mode manuel » ci-dessous ne s'applique plus."
     : "Ventes (MODE ACTUEL : manuel) : chaque vente se déclare comme expliqué ci-dessous.");
 
   /* =================== ASSISTANT =================== */

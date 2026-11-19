@@ -244,7 +244,7 @@ h1 em{font-style:italic;background:linear-gradient(100deg,#fff,#9be8c6 45%,#ffd2
     if (ME.role === "trainee") { await api("/api/onboarding/done", { body: {} }).catch(() => {}); location.href = "/home"; return; }
     OB = await api("/api/onboarding").catch(() => ({ models: [], mine: [] }));
     // ventes automatiques Twizz : la visite ne parle plus de déclaration
-    try { if ((await api("/api/twizz/mode")).auto) TOUR_C[1][2] = "Tes ventes Twizz arrivent toutes seules : un PPV envoyé depuis la messagerie compte pour toi. Seuls les contenus perso et les Snap payés en dehors de Twizz se déclarent encore. Tout compte dans ta paie, tes paliers et le classement."; } catch (e) {}
+    try { if ((await api("/api/twizz/mode")).auto) TOUR_C[1][2] = "Tes ventes Twizz arrivent toutes seules : un PPV envoyé depuis la messagerie compte pour toi. Quand un fan achète un Snap ou un contenu perso, tu envoies la demande au Studio depuis Ventes. Tout compte dans ta paie, tes paliers et le classement."; } catch (e) {}
     pick = new Set(OB.mine || []);
     if (ME.role === "chatter") { try { const c = await api("/api/creators"); CR = c.creators.map(x => ({ id: x.id, name: x.name, photo: x.photos[0] || null, fo: (x.focus[0] || [50, 35]).map(v => v + "%").join(" ") })); } catch (e) { CR = (OB.models || []).map(m => ({ id: m.id, name: m.name })); } }
     const first = T || JT;

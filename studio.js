@@ -22,6 +22,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
   CREATE TABLE IF NOT EXISTS pauses (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, clock_id INTEGER NOT NULL, start_at INTEGER NOT NULL, end_at INTEGER, over_logged INTEGER NOT NULL DEFAULT 0);
   CREATE INDEX IF NOT EXISTS pauses_clock ON pauses(clock_id);
   `);
+  col("customs", "price", "REAL");   // prix payé par le fan (demande envoyée sans vente déclarée : la vente arrive de Twizz)
   col("models", "profile", "TEXT"); col("models", "photos", "TEXT"); col("models", "photo_focus", "TEXT");
   const J = (s, d) => { try { return s ? JSON.parse(s) : d; } catch (e) { return d; } };
   const user = id => db.prepare("SELECT id, username, role FROM users WHERE id = ?").get(id);
@@ -31,10 +32,10 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
   const str = (v, n) => String(v ?? "").trim().slice(0, n);
 
   /* ===================== CONTENUS PERSONNALISÉS ===================== */
-  const KINDS = { video: "Vidéo", photos: "Photos", audio: "Audio", autre: "Autre" };
+  const KINDS = { video: "Vidéo", photos: "Photos", audio: "Audio", autre: "Autre", snap: "Snap" };
   const SEL = `SELECT c.*, u.username, m.name model_name, s.amount, s.status sale_status FROM customs c JOIN users u ON u.id = c.user_id JOIN models m ON m.id = c.model_id LEFT JOIN sales s ON s.id = c.sale_id`;
   const pubC = c => ({ id: c.id, sale_id: c.sale_id, user_id: c.user_id, username: c.username, model_id: c.model_id, model_name: c.model_name, fan: c.fan, kind: c.kind, kindLabel: KINDS[c.kind] || c.kind,
-    duration: c.duration, qty: c.qty, request: c.request, due_at: c.due_at, urgent: !!c.urgent, status: c.status, amount: c.amount, sale_status: c.sale_status, mgr_note: c.mgr_note,
+    duration: c.duration, qty: c.qty, request: c.request, due_at: c.due_at, urgent: !!c.urgent, status: c.status, amount: c.amount != null ? c.amount : c.price, price: c.price, sale_status: c.sale_status, mgr_note: c.mgr_note,
     file: c.file ? { mime: c.mime, size: c.size, name: c.fname } : null, created_at: c.created_at, started_at: c.started_at, ready_at: c.ready_at, delivered_at: c.delivered_at, seen: !!c.seen });
   const getC = id => db.prepare(`${SEL} WHERE c.id = ?`).get(id);
 
@@ -51,6 +52,26 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
       .run(sale.id, req.user.id, sale.model_id, fan, kind, dur, qty, request, due, b.urgent ? 1 : 0, Date.now()).lastInsertRowid;
     const m = db.prepare("SELECT name FROM models WHERE id = ?").get(sale.model_id);
     log(req.user.id, "v", `**${req.user.username}** a demandé un contenu perso pour **${fan}**`, `${KINDS[kind]} · ${m ? m.name : ""}${due ? " · pour le " + new Date(due).toLocaleDateString("fr-FR", { day: "numeric", month: "long", timeZone: "Europe/Paris" }) : ""}`);
+    res.json({ ok: true, id });
+  });
+  // ventes automatiques Twizz : le fan a payé sur Twizz (la vente arrive toute seule) ; le chatter envoie juste la demande au Studio
+  // Snap : prix payé, créatrice, Snap du fan · contenu perso : prix payé, créatrice, pseudo du fan et sa demande
+  app.post("/api/customs/direct", auth, (req, res) => {
+    if (!["chatter", "admin"].includes(req.user.role)) return res.status(403).json({ error: "Réservé aux chatters" });
+    const b = req.body || {}, model = db.prepare("SELECT id, name FROM models WHERE id = ?").get(parseInt(b.model_id, 10));
+    if (!model) return res.status(400).json({ error: "Choisis la créatrice" });
+    const price = Math.round(Number(String(b.price ?? "").replace(",", ".")) * 100) / 100;
+    if (!(price > 0 && price <= 100000)) return res.status(400).json({ error: "Indique le prix payé par le fan" });
+    const snap = b.kind === "snap";
+    const fan = str(b.fan, 60).replace(/^@/, ""), kind = snap ? "snap" : KINDS[b.kind] && b.kind !== "snap" ? b.kind : "video";
+    if (!fan) return res.status(400).json({ error: snap ? "Indique le Snap du fan" : "Indique le pseudo du fan" });
+    const request = snap ? (str(b.request, 1500) || "Session Snap") : str(b.request, 1500);
+    if (!snap && request.length < 8) return res.status(400).json({ error: "Décris la demande du fan" });
+    const due = snap ? null : Number(b.due_at) || null; if (due && due < Date.now() - 864e5) return res.status(400).json({ error: "La date de livraison est passée" });
+    const dur = !snap && b.duration != null && b.duration !== "" ? Math.max(0, Math.min(36000, Math.round(Number(b.duration)))) : null, qty = !snap && b.qty ? Math.max(1, Math.min(200, Math.round(Number(b.qty)))) : null;
+    const id = db.prepare("INSERT INTO customs (sale_id, user_id, model_id, fan, kind, duration, qty, request, due_at, urgent, created_at, price) VALUES (NULL,?,?,?,?,?,?,?,?,?,?,?)")
+      .run(req.user.id, model.id, fan, kind, dur, qty, request, due, b.urgent ? 1 : 0, Date.now(), price).lastInsertRowid;
+    log(req.user.id, "v", snap ? `**${req.user.username}** a envoyé un Snap au Studio : **${fan}**` : `**${req.user.username}** a demandé un contenu perso pour **${fan}**`, `${snap ? "Snap" : KINDS[kind]} · ${model.name} · ${eur(price)}`);
     res.json({ ok: true, id });
   });
   app.get("/api/customs/mine", auth, (req, res) => {
@@ -83,8 +104,8 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
     const b = req.body || {};
     if (b.status && ["todo", "prod", "ready", "delivered", "cancelled"].includes(b.status)) {
       if (b.status === "ready" && !c.file) return res.status(400).json({ error: "Ajoute d'abord le fichier" });
-      db.prepare("UPDATE customs SET status = ?, started_at = CASE WHEN ? = 'prod' AND started_at IS NULL THEN ? ELSE started_at END, ready_at = CASE WHEN ? = 'ready' THEN ? ELSE ready_at END, seen = CASE WHEN ? = 'ready' THEN 0 ELSE seen END WHERE id = ?")
-        .run(b.status, b.status, Date.now(), b.status, Date.now(), b.status, c.id);
+      db.prepare("UPDATE customs SET status = ?, started_at = CASE WHEN ? = 'prod' AND started_at IS NULL THEN ? ELSE started_at END, ready_at = CASE WHEN ? = 'ready' THEN ? ELSE ready_at END, seen = CASE WHEN ? = 'ready' THEN 0 ELSE seen END, delivered_at = CASE WHEN ? = 'delivered' THEN COALESCE(delivered_at, ?) ELSE delivered_at END WHERE id = ?")
+        .run(b.status, b.status, Date.now(), b.status, Date.now(), b.status, b.status, Date.now(), c.id);
     }
     if (b.mgr_note !== undefined) db.prepare("UPDATE customs SET mgr_note = ? WHERE id = ?").run(str(b.mgr_note, 600) || null, c.id);
     if (b.due_at !== undefined) db.prepare("UPDATE customs SET due_at = ? WHERE id = ?").run(Number(b.due_at) || null, c.id);

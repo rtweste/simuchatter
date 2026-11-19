@@ -5,7 +5,8 @@ window.CUSTOM = (() => {
     video: '<rect x="3" y="6" width="13" height="12" rx="3"/><path d="M16 10.5l5-3v9l-5-3z"/>',
     photos: '<rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-9 8"/>',
     audio: '<path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
-    autre: '<path d="M12 3l2.2 5.6L20 11l-5.8 2.4L12 19l-2.2-5.6L4 11l5.8-2.4z"/>'
+    autre: '<path d="M12 3l2.2 5.6L20 11l-5.8 2.4L12 19l-2.2-5.6L4 11l5.8-2.4z"/>',
+    snap: '<path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.7l1.4-2h4.8l1.4 2h1.7A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.5" r="3.4"/>'
   };
   const LBL = { video: "Vidéo", photos: "Photos", audio: "Audio", autre: "Autre" };
   const svg = (p, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
@@ -93,6 +94,8 @@ window.CUSTOM = (() => {
     dur.addEventListener("pointerup", up); dur.addEventListener("pointercancel", up);
     dur.addEventListener("wheel", e => { e.preventDefault(); setDur(S.dur + Math.sign(e.deltaY || e.deltaX) * 15, true); }, { passive: false });
   }
+  function setOn(on, lock) { const tg = document.getElementById("cuTg"); if (!tg) return; S.on = !!on; tg.classList.toggle("on", S.on); tg.setAttribute("aria-checked", S.on);
+    document.getElementById("cuPn").classList.toggle("on", S.on); tg.hidden = !!lock; }
   function reset() {
     S.on = false; S.urgent = false; const tg = document.getElementById("cuTg"); if (!tg) return; tg.classList.remove("on"); tg.setAttribute("aria-checked", "false"); document.getElementById("cuPn").classList.remove("on");
     document.getElementById("cuFan").value = ""; document.getElementById("cuReq").value = ""; document.getElementById("cuReq").oninput(); setKind("video"); setDur(180); setQty(5); setDue("2d");
@@ -116,6 +119,13 @@ window.CUSTOM = (() => {
   const media = c => !c.file ? "" : c.file.mime.startsWith("video") ? `<video src="${fileUrl(c)}#t=0.5" preload="metadata" muted playsinline></video>`
     : c.file.mime.startsWith("image") ? `<img src="${fileUrl(c)}" alt="">` : `<div style="display:grid;place-items:center;height:100%;font-size:30px">${c.file.mime.startsWith("audio") ? "🎧" : "📦"}</div>`;
   function itemHTML(c, i) {
+    // Snap : pas de fichier, la demande est faite quand le Studio s'en est occupé
+    if (c.kind === "snap") { const k = { todo: 0, prod: 1, ready: 1, delivered: 2 }[c.status] ?? 0;
+      return `<div class="cu-it ${c.status}" style="--i:${i}" data-cu="${c.id}"><div class="cu-hd"><span class="cu-av">${svg(KI.snap)}<em>${esc(c.model_name[0])}</em></span>
+      <div class="t"><b>Snap · ${esc(c.fan)}</b><small>${esc(c.model_name)}${c.amount ? " · " + eur(c.amount) : ""}</small></div>${c.status === "delivered" ? `<span class="cu-cd ok"><i></i>fait</span>` : ""}</div>
+      ${c.request && c.request !== "Session Snap" ? `<div class="cu-rq">${esc(c.request)}</div>` : ""}
+      <div class="cu-tl s3" style="--p:${k / 2}"><span class="ln"><b style="--p:${k / 2}"></b></span>${["Envoyé au Studio", "Pris en charge", "Fait"].map((s, j) => `<div class="${j < k || (k === 2 && j === 2) ? "ok" : j === k ? "cur" : ""}"><i></i>${s}</div>`).join("")}</div>
+      ${c.mgr_note ? `<div class="cu-note">💬 ${esc(c.mgr_note)}</div>` : ""}</div>`; }
     const k = IDX[c.status] ?? 0, spec = c.kind === "photos" && c.qty ? `${c.qty} photos` : c.duration ? fmtDur(c.duration) : c.kindLabel;
     return `<div class="cu-it ${c.status}" style="--i:${i}" data-cu="${c.id}"><div class="cu-hd"><span class="cu-av">${svg(KI[c.kind] || KI.autre)}<em>${esc(c.model_name[0])}</em></span>
       <div class="t"><b>@${esc(c.fan)}</b><small>${esc(c.model_name)} · ${esc(spec)}${c.amount ? " · " + eur(c.amount) : ""}${c.urgent ? " · 🔥 urgent" : ""}</small></div>${cdChip(c)}</div>
@@ -132,7 +142,7 @@ window.CUSTOM = (() => {
     let d; try { d = await api("/api/customs/mine"); } catch (e) { return; } const R = { ready: 0, prod: 1, todo: 1, delivered: 3 }; LIST = d.customs.sort((a, b) => (R[a.status] ?? 2) - (R[b.status] ?? 2) || (a.due_at || 9e15) - (b.due_at || 9e15));
     if (!LIST.length) { host.innerHTML = ""; host.hidden = true; return; }
     host.hidden = false;
-    host.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h3>Mes contenus <em>perso</em></h3><span class="vt-lab">${d.ready ? `${d.ready} prêt${d.ready > 1 ? "s" : ""} à envoyer` : `${LIST.filter(c => c.status !== "delivered").length} en cours`}</span></div><div class="cu-mine cu">${LIST.map(itemHTML).join("")}</div>`;
+    host.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h3>${LIST.some(c => c.kind === "snap") ? "Mes demandes au <em>Studio</em>" : "Mes contenus <em>perso</em>"}</h3><span class="vt-lab">${d.ready ? `${d.ready} prêt${d.ready > 1 ? "s" : ""} à envoyer` : `${LIST.filter(c => c.status !== "delivered").length} en cours`}</span></div><div class="cu-mine cu">${LIST.map(itemHTML).join("")}</div>`;
     // la ligne de progression se remplit à l'arrivée
     host.querySelectorAll(".cu-tl .ln b").forEach(b => { const p = b.style.getPropertyValue("--p"); b.style.setProperty("--p", 0); requestAnimationFrame(() => requestAnimationFrame(() => b.style.setProperty("--p", p))); });
     host.querySelectorAll("[data-sent]").forEach(b => b.onclick = async () => { b.disabled = true; try { await api(`/api/customs/${b.dataset.sent}/delivered`, { body: {} }); notify("Contenu envoyé", "Bravo, la demande est bouclée ✨", "ok"); mountMine(host); } catch (e) { notify("Erreur", e.message, "err"); b.disabled = false; } });
@@ -160,5 +170,6 @@ window.CUSTOM = (() => {
     if (!c.seen) api(`/api/customs/${c.id}/seen`, { body: {} }).catch(() => {}), c.seen = true;
   }
 
-  return { formHTML, bindForm, reset, read, submit, mountMine, reveal, KI, LBL, fmtDur, left, svg };
+  const direct = data => api("/api/customs/direct", { body: data });
+  return { formHTML, bindForm, reset, setOn, read, submit, direct, mountMine, reveal, KI, LBL, fmtDur, left, svg };
 })();

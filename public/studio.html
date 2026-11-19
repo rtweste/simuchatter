@@ -99,6 +99,8 @@
 .sd-cdn.late b{color:#ff6b6b}
 .sd-bd{padding:4px 22px 22px}
 .sd-sec{margin-top:18px}.sd-sec>.l{font:800 10.5px Inter;letter-spacing:.12em;color:#6a6a6a;text-transform:uppercase;margin-bottom:8px}
+.sd-snp{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:16px;background:#151515;border:1px solid #242424}.sd-snp b{flex:1;min-width:0;font:900 20px Inter;letter-spacing:-.02em;color:#fff;overflow-wrap:anywhere}
+.sd-snp button{flex:none;height:34px;padding:0 14px;border-radius:10px;border:1px solid #333;background:#1d1d1d;color:#e8e8e8;font:800 12.5px Inter;cursor:pointer}
 .sd-q{position:relative;border-radius:16px;background:#151515;border:1px solid #242424;padding:14px 14px 14px 40px;font-size:14px;line-height:1.55;color:#e5e5e5;white-space:pre-wrap}
 .sd-q::before{content:"“";position:absolute;left:12px;top:2px;font:900 44px Georgia,serif;background:var(--cg);-webkit-background-clip:text;background-clip:text;color:transparent}
 .sd-sp{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
@@ -165,7 +167,8 @@ const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const { KI, svg, fmtDur, left } = CUSTOM;
 const COLS = [["todo", "À faire", "#b388ff"], ["prod", "En production", "#7dd3fc"], ["ready", "Chez le chatter", "#5fd3a2"], ["delivered", "Livré au fan", "#6a6a6a"]];
 let ALL = [], MODELS = [], MF = 0, OPEN = null, CDT = null;
-const spec = c => c.kind === "photos" && c.qty ? `${c.qty} photos` : c.duration ? fmtDur(c.duration) : c.kindLabel;
+const spec = c => c.kind === "snap" ? "Snap" : c.kind === "photos" && c.qty ? `${c.qty} photos` : c.duration ? fmtDur(c.duration) : c.kindLabel;
+const fanLbl = c => c.kind === "snap" ? `Snap · ${esc(c.fan)}` : `@${esc(c.fan)}`;
 const isLate = c => c.due_at && c.due_at < Date.now() && !["ready", "delivered"].includes(c.status);
 const list = () => ALL.filter(c => !MF || c.model_id === MF);
 
@@ -200,8 +203,8 @@ function render() {
 function card(c) {
   const late = isLate(c), prog = c.due_at && c.created_at ? Math.max(0, Math.min(1, (Date.now() - c.created_at) / (c.due_at - c.created_at))) : 0;
   const chip = c.status === "delivered" ? `<span class="cu-cd ok"><i></i>livré</span>` : c.status === "ready" ? `<span class="cu-cd ok"><i></i>prêt</span>` : c.due_at ? `<span class="cu-cd ${late ? "late" : c.due_at - Date.now() < 864e5 ? "soon" : ""}"><i></i>${left(c.due_at).replace("dans ", "")}</span>` : "";
-  return `<div class="sd-cd ${c.urgent ? "urg" : ""}" data-id="${c.id}"><div class="top"><span class="av">${svg(KI[c.kind] || KI.autre)}</span><div class="t"><b>@${esc(c.fan)}</b><small>${esc(c.model_name)} · ${esc(c.username)}</small></div></div>
-    <div class="rq">${esc(c.request)}</div><div class="ft"><span class="tg">${esc(spec(c))}</span>${c.amount ? `<span class="tg am">${eur(c.amount)}</span>` : ""}${c.urgent ? `<span class="tg" style="color:#ff8a5c">🔥</span>` : ""}${chip}</div>
+  return `<div class="sd-cd ${c.urgent ? "urg" : ""}" data-id="${c.id}"><div class="top"><span class="av">${svg(KI[c.kind] || KI.autre)}</span><div class="t"><b>${fanLbl(c)}</b><small>${esc(c.model_name)} · ${esc(c.username)}</small></div></div>
+    ${c.kind === "snap" && c.request === "Session Snap" ? "" : `<div class="rq">${esc(c.request)}</div>`}<div class="ft"><span class="tg">${esc(spec(c))}</span>${c.amount ? `<span class="tg am">${eur(c.amount)}</span>` : ""}${c.urgent ? `<span class="tg" style="color:#ff8a5c">🔥</span>` : ""}${chip}</div>
     ${["todo", "prod"].includes(c.status) && c.due_at ? `<span class="bar ${late ? "late" : ""}"><b style="--w:${(prog * 100).toFixed(1)}%"></b></span>` : ""}</div>`;
 }
 // glisser-déposer entre colonnes (FLIP à l'arrivée)
@@ -220,6 +223,7 @@ function bindCards() {
       if (!clone) { if (!moved && Math.hypot(e.clientX - was.x, e.clientY - was.y) < 8) openDrawer(+el.dataset.id); return; }
       const to = over?.dataset.s, c = ALL.find(x => x.id === +el.dataset.id), cr = clone.getBoundingClientRect(); clone.remove(); clone = null; el.classList.remove("ghost");
       if (!to || !c || to === c.status) return;
+      if (to === "ready" && c.kind === "snap") { notify("Un Snap n'a pas de fichier", "Glisse-le dans « Livré au fan » quand c'est fait", "info"); return; }
       if (to === "ready" && !c.file) { notify("Dépose d'abord la vidéo", "Ouvre la demande pour ajouter le fichier", "info"); openDrawer(c.id); return; }
       try { await api(`/api/admin/customs/${c.id}`, { method: "PUT", body: { status: to } }); c.status = to; render();
         const n = document.querySelector(`.sd-cd[data-id="${c.id}"]`); if (n && !reduce) { const r = n.getBoundingClientRect(); n.animate([{ transform: `translate(${cr.left - r.left}px,${cr.top - r.top}px) scale(1.03)` }, { transform: "none" }], { duration: 550, easing: "cubic-bezier(.2,.9,.25,1)" }); }
@@ -239,16 +243,20 @@ function paintDrawer(c, soft) {
   const hist = [["Demande créée par <b>" + esc(c.username) + "</b>", c.created_at], c.started_at && ["Mise en production", c.started_at], c.ready_at && c.file && ["Fichier transmis au chatter", c.ready_at], c.delivered_at && ["Envoyé au fan par le chatter", c.delivered_at]].filter(Boolean);
   const pv = c.file ? `<div class="sd-pv">${c.file.mime.startsWith("video") ? `<video src="${src}" controls playsinline preload="metadata"></video>` : c.file.mime.startsWith("image") ? `<img src="${src}" alt="">` : c.file.mime.startsWith("audio") ? `<audio src="${src}" controls style="width:100%;padding:14px;box-sizing:border-box"></audio>` : `<div style="padding:30px;text-align:center;font-size:32px">📦</div>`}
     <div class="bar">${svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>')}<b>${esc(c.file.name)}</b><span>${(c.file.size / 1048576).toFixed(1).replace(".", ",")} Mo</span><a href="${src}?dl=1">Télécharger</a><button id="dwRm">Remplacer</button></div></div>` : "";
-  dw.innerHTML = `<div class="hero"><button class="x" id="dwX" aria-label="Fermer">✕</button><div class="kk">${esc(c.kindLabel)} · ${esc(c.model_name)}${c.urgent ? " · 🔥 urgent" : ""}</div><h2>@${esc(c.fan)}</h2>
-      <div class="ms">Demandé par <b>${esc(c.username)}</b>${c.amount ? ` · vente de <b>${eur(c.amount)}</b>${c.sale_status === "pending" ? " (en attente)" : c.sale_status === "refused" ? " (refusée)" : ""}` : ""}</div>
+  dw.innerHTML = `<div class="hero"><button class="x" id="dwX" aria-label="Fermer">✕</button><div class="kk">${esc(c.kindLabel)} · ${esc(c.model_name)}${c.urgent ? " · 🔥 urgent" : ""}</div><h2>${c.kind === "snap" ? esc(c.fan) : "@" + esc(c.fan)}</h2>
+      <div class="ms">Demandé par <b>${esc(c.username)}</b>${c.amount ? ` · ${c.sale_id ? "vente de" : "payé par le fan :"} <b>${eur(c.amount)}</b>${c.sale_status === "pending" ? " (en attente)" : c.sale_status === "refused" ? " (refusée)" : ""}` : ""}</div>
       ${c.due_at && !["ready", "delivered"].includes(c.status) ? `<div class="sd-cdn ${late ? "late" : ""}" id="dwCd"></div><div class="ms" style="margin-top:8px">${late ? "En retard · devait être livré" : "À livrer"} le <b>${new Date(c.due_at).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</b> à ${new Date(c.due_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</div>` : ""}</div>
     <div class="sd-bd">
-      <div class="sd-sec"><div class="l">La demande du fan</div><div class="sd-q">${esc(c.request)}</div></div>
+      ${c.kind === "snap" ? `<div class="sd-sec"><div class="l">Snap du fan</div><div class="sd-snp"><b>${esc(c.fan)}</b><button type="button" id="dwCp">Copier</button></div></div>
+      ${c.request !== "Session Snap" ? `<div class="sd-sec"><div class="l">Note du chatter</div><div class="sd-q">${esc(c.request)}</div></div>` : ""}
+      <div class="sd-sec"><div class="sd-sp"><div><small>Format</small><b>Snap</b></div><div><small>Payé</small><b>${c.amount ? eur(c.amount) : "—"}</b></div><div><small>Créatrice</small><b>${esc(c.model_name)}</b></div></div></div>`
+      : `<div class="sd-sec"><div class="l">La demande du fan</div><div class="sd-q">${esc(c.request)}</div></div>
       <div class="sd-sec"><div class="sd-sp"><div><small>Format</small><b>${esc(c.kindLabel)}</b></div><div><small>${c.kind === "photos" ? "Quantité" : "Durée"}</small><b>${esc(spec(c))}</b></div><div><small>Créatrice</small><b>${esc(c.model_name)}</b></div></div></div>
-      <div class="sd-sec"><div class="l">Fichier final</div><div id="dwUp">${pv || upHTML()}</div></div>
+      <div class="sd-sec"><div class="l">Fichier final</div><div id="dwUp">${pv || upHTML()}</div></div>`}
       <div class="sd-sec"><div class="l">Note pour le chatter</div><textarea class="sd-nt" id="dwNote" maxlength="600" placeholder="ex. à envoyer en PPV à 35 €, le fan l'attend ce soir">${esc(c.mgr_note || "")}</textarea></div>
       <div class="sd-sec"><div class="l">Historique</div><div class="sd-hist">${hist.map(([t, at]) => `<div><span style="margin:0">${t}</span><span>${new Date(at).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span></div>`).join("")}</div></div>
-      <div class="sd-ac">${c.status === "todo" ? `<button class="p" data-st="prod">▶ Passer en production</button>` : ""}${c.status === "prod" && c.file ? `<button class="p" data-st="ready">Envoyer au chatter</button>` : ""}
+      <div class="sd-ac">${c.kind === "snap" ? (c.status === "todo" ? `<button class="p" data-st="prod">▶ Prendre en charge</button>` : "") + (["todo", "prod"].includes(c.status) ? `<button class="p" data-st="delivered">✓ C'est fait</button>` : "")
+        : c.status === "todo" ? `<button class="p" data-st="prod">▶ Passer en production</button>` : ""}${c.kind !== "snap" && c.status === "prod" && c.file ? `<button class="p" data-st="ready">Envoyer au chatter</button>` : ""}
         ${c.status === "ready" ? `<button class="s" data-st="delivered">Marquer comme livré</button>` : ""}${["todo", "prod"].includes(c.status) ? `<button class="s" id="dwSave">Enregistrer la note</button>` : `<button class="s" id="dwSave">Enregistrer la note</button>`}
         ${c.status !== "delivered" ? `<button class="d" data-st="cancelled" title="Annuler la demande">Annuler</button>` : ""}</div>
     </div>`;
@@ -256,7 +264,8 @@ function paintDrawer(c, soft) {
   $("dwX").onclick = closeDrawer;
   clearInterval(CDT); const cd = $("dwCd");
   if (cd) { const tick = () => { const p = cdParts(c.due_at); cd.innerHTML = ["jours", "heures", "min", "sec"].map((l, i) => `<div><b>${String(p[i]).padStart(2, "0")}</b><small>${l}</small></div>`).join(""); }; tick(); CDT = setInterval(tick, 1000); }
-  bindUp(c);
+  if ($("dwUp")) bindUp(c);
+  if ($("dwCp")) $("dwCp").onclick = () => { try { navigator.clipboard.writeText(c.fan); notify("Snap copié", c.fan, "ok"); } catch (e) {} };
   if ($("dwRm")) $("dwRm").onclick = () => { $("dwUp").innerHTML = upHTML(); bindUp(c); };
   $("dwSave").onclick = async () => { try { await api(`/api/admin/customs/${c.id}`, { method: "PUT", body: { mgr_note: $("dwNote").value } }); c.mgr_note = $("dwNote").value; notify("Note enregistrée", "Le chatter la verra avec le contenu", "ok"); } catch (e) { notify("Erreur", e.message, "err"); } };
   dw.querySelectorAll("[data-st]").forEach(b => b.onclick = async () => {
