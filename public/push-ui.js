@@ -57,9 +57,9 @@ window.PUSH = (() => {
   // notifications bloquées : comment les débloquer selon le téléphone
   function blocked() { const e = env();
     if (e.android) return e.standalone ? "Les notifications sont bloquées. Va dans <b>Réglages › Applications › StellADS › Notifications</b> et active-les, puis reviens ici."
-      : "Les notifications sont bloquées pour le site. Touche le <b>cadenas</b> à gauche de l’adresse, puis <b>Autorisations › Notifications › Autoriser</b>, et reviens ici.";
+      : "Les notifications sont bloquées pour le site. Dans Chrome : menu <b>⋮</b> en haut à droite › <b>Paramètres › Paramètres des sites › Notifications</b>, touche <b>stellads.fr</b> (dans « Bloqués ») › <b>Autoriser</b>, puis reviens ici.<br><br>Toujours bloquées ? Dans les réglages du téléphone : <b>Applications › Chrome › Notifications</b>, active-les.";
     if (e.ios) return "Les notifications sont bloquées. Va dans <b>Réglages › Notifications › StellADS</b> et active « Autoriser les notifications », puis reviens ici.";
-    return "Les notifications sont bloquées pour le site. Clique sur le <b>cadenas</b> à gauche de l’adresse, autorise les notifications, puis recharge la page."; }
+    return "Les notifications sont bloquées pour le site. Clique sur l’icône à gauche de l’adresse (<b>cadenas</b> ou <b>réglages</b>), autorise les notifications, puis clique sur « J'ai réactivé ». Sur Windows, vérifie aussi <b>Paramètres › Système › Notifications</b> pour ton navigateur."; }
   function toastP(t) { try { notify("Notifications", t, "info"); } catch (e) { alert(t); } }
   // petite carte sur l'accueil tant que les notifications ne sont pas activées
   async function nudge(host) {
