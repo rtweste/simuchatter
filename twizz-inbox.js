@@ -66,7 +66,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   // ouverture à l'équipe : niveau 1 = lecture, 2 = lecture + envoi (posé par le fondateur, personne par personne)
   db.exec("CREATE TABLE IF NOT EXISTS twizz_inbox_access (user_id INTEGER PRIMARY KEY, level INTEGER NOT NULL DEFAULT 0, by INTEGER, at INTEGER)");
   const openOn = () => !!S.get("twizz_inbox_open", false);
-  const levelOf = uid => (db.prepare("SELECT level FROM twizz_inbox_access WHERE user_id = ?").get(uid) || {}).level || 0;
+  // managers : accès d'office (envoi), sauf si le fondateur l'a réglé autrement ; chatters : rien tant que le fondateur ne leur donne pas accès
+  const levelOf = (uid, rk) => { const r = db.prepare("SELECT level FROM twizz_inbox_access WHERE user_id = ?").get(uid); return r ? r.level || 0 : rk === "manager" ? 2 : 0; };
   // créatrices d'un chatter : ses créatrices habituelles (Gestion) + celle(s) de son shift en cours (renfort compris)
   const scopeOf = uid => { const mids = new Set();
     try { db.prepare("SELECT model_id FROM user_models WHERE user_id = ?").all(uid).forEach(r => mids.add(r.model_id)); } catch (e) {}
@@ -75,8 +76,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   function accessOf(req) {
     const u = req.user; if (!u) return null;
     if (u.rk === "founder" && !req.viewAs) return { all: true, send: true, founder: true };
-    if (!openOn() || !["manager", "chatter", "tl"].includes(u.rk)) return null;
-    const lv = levelOf(u.id); if (!lv) return null;
+    if (!["manager", "chatter", "tl"].includes(u.rk) || (u.rk !== "manager" && !openOn())) return null;   // les managers n'attendent pas l'ouverture aux chatters
+    const lv = levelOf(u.id, u.rk); if (!lv) return null;
     // vue « en tant que » du fondateur : il voit ce que voit la personne, sans pouvoir envoyer
     return { all: u.rk === "manager", cids: u.rk === "manager" ? null : scopeOf(u.id), send: lv >= 2 && !req.viewAs, founder: false, manager: u.rk === "manager" };
   }
@@ -214,7 +215,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const lv = {}; db.prepare("SELECT user_id, level FROM twizz_inbox_access").all().forEach(r => lv[r.user_id] = r.level);
     const users = db.prepare("SELECT id, username, role, grade FROM users WHERE active = 1 AND role IN ('admin', 'chatter') ORDER BY role, username").all()
       .filter(u => !(u.role === "admin" && (u.grade === "founder" || u.grade === "assistant")))
-      .map(u => ({ id: u.id, username: u.username, manager: u.role === "admin", tl: u.grade === "tl", level: lv[u.id] || 0,
+      .map(u => ({ id: u.id, username: u.username, manager: u.role === "admin", tl: u.grade === "tl", level: lv[u.id] ?? (u.role === "admin" ? 2 : 0),
         creators: u.role === "admin" ? M.map(c => c.label) : M.filter(c => (um[u.id] || []).includes(c.model_id)).map(c => c.label) }));
     return { open: openOn(), send: sendOn(), users }; };
   app.get("/api/twizz/inbox/team", auth, founder, (req, res) => res.json(teamOut()));
