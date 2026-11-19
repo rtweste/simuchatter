@@ -442,6 +442,7 @@
 .shV .mdl{margin:0}.shV .mdl select{height:56px;border-radius:28px;min-width:0;width:auto;max-width:130px;padding:0 14px}
 /* choix de la créatrice avant de pointer */
 .shV .mpk{margin:16px 0 12px}
+.tzh{color:#e8c27a;font-weight:600;white-space:nowrap}
 .shV .mpk .k{display:block;font-size:11px;letter-spacing:.14em;color:#7a7a7a;font-weight:800;margin-bottom:9px}
 .shV .mpk .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .shV .mpk button{position:relative;display:flex;align-items:center;gap:10px;height:56px;border-radius:16px;border:1px solid #262626;background:#151515;color:#d6d6d6;font:inherit;text-align:left;padding:0 12px 0 8px;cursor:pointer;transition:background .2s,border-color .2s,transform .15s,box-shadow .25s}
@@ -715,7 +716,8 @@ function shiftV3() {
   const busy = name => (D.live || []).filter(l => l.model_name === name && l.username !== ME?.username).map(l => l.username);
   const pick = D.models.map(m => { const b = busy(m.name), pl = nx && nx.model_name === m.name;
     return `<button type="button" data-m="${m.id}" class="${PICK && PICK.id === m.id ? "on" : ""}" style="--c:${colM(m.id)}" aria-pressed="${PICK && PICK.id === m.id}"><span class="mav">${esc(m.name[0])}</span><span class="mtx"><b>${esc(m.name)}</b>${pl ? `<small class="mpl">ton créneau</small>` : b.length ? `<small class="mbz">${esc(b.join(", "))} y ${b.length > 1 ? "sont" : "est"}</small>` : `<small>libre</small>`}</span><span class="mck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></span></button>`; }).join("");
-  const when = nx ? `${nx.date === todayIso ? "aujourd'hui" : dayLbl(nx.date).toLowerCase()} · <b>${nx.start} – ${nx.end}</b>` : "aucun créneau prévu";
+  const ct = nx ? chezToi(nx) : "";
+  const when = nx ? `${nx.date === todayIso ? "aujourd'hui" : dayLbl(nx.date).toLowerCase()} · <b>${nx.start} – ${nx.end}</b>${ct ? ` <span class="tzh">· ${ct}</span>` : ""}` : "aucun créneau prévu";
   const wk = D.weekShifts?.nth ? `${D.weekShifts.nth === 1 ? "1ᵉʳ" : D.weekShifts.nth + "ᵉ"} shift de la semaine · ` : D.weekShifts?.count ? `${D.weekShifts.count} shift${D.weekShifts.count > 1 ? "s" : ""} cette semaine · ` : "";
   const dur = nx ? (() => { const [a, b] = [nx.start, nx.end].map(x => { const [hh, mm] = x.split(":"); return +hh * 60 + +mm; }); return Math.round(((b - a + 1440) % 1440 || 1440) / 60 * 10) / 10; })() : 0;
   const crea = model ? `<div class="crea"><div class="who"><span class="av">${esc(model[0])}</span><div><b>${esc(model)}</b><small>${ls ? "ton dernier shift sur elle" : "premier shift sur elle"}</small></div></div>

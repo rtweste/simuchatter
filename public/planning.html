@@ -160,7 +160,8 @@
 .p-al.r{border-color:rgba(224,122,122,.4);background:linear-gradient(135deg,rgba(224,122,122,.1),#111 70%)}.p-al.r .i{background:rgba(224,122,122,.16);color:#e07a7a;animation:pPulse 1.4s infinite}
 .p-al.w .i{background:rgba(255,255,255,.07);color:#e6e6e6}.p-al.g .i{background:rgba(95,211,162,.12);color:#5fd3a2}
 .p-al .p-sb,.p-al .p-tag{margin-top:8px}
-.p-al{position:relative}.p-al>div{flex:1;padding-right:22px}
+.p-al{position:relative}
+.tzh{color:#e8c27a;font-weight:600;white-space:nowrap}.p-al>div{flex:1;padding-right:22px}
 .p-al .p-alx{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:8px;border:0;background:transparent;color:#6a6a6a;font-size:12px;cursor:pointer;transition:background .2s,color .2s}
 .p-al .p-alx:hover{background:rgba(255,255,255,.07);color:#e6e6e6}
 .p-al.out{animation:pAlOut .32s ease forwards}
@@ -524,7 +525,7 @@ let HS = null;
 function renderHero() {
   const st = heroState(), n = D.next, h = $("hero");
   const who = (name, sub, s) => `<div class="p-who"><span class="p-av">${esc(name[0] || "?")}</span><div><b>${esc(name)}</b><small>${sub}</small></div>${s ? `<span style="margin-left:auto">${slotHtml(s)}</span>` : ""}</div>`;
-  const span = s => `${s.start} → ${s.end}${nextDay(s) ? " · finit le lendemain" : ""}`;
+  const span = s => `${s.start} → ${s.end}${nextDay(s) ? " · finit le lendemain" : ""}${chezToi(s) ? ` <span class="tzh">· ${chezToi(s)}</span>` : ""}`;
   const same = HS === st + (n ? n.id : "") + (D.open ? D.open.id : "") + D.renforts.map(r => r.id).join(",") + (D.myHelp ? "h" : "");
   HS = st + (n ? n.id : "") + (D.open ? D.open.id : "") + D.renforts.map(r => r.id).join(",") + (D.myHelp ? "h" : "");
   if (same) return tick();
@@ -536,7 +537,7 @@ function renderHero() {
   } else if (st === "late") {
     h.innerHTML = `<div><div class="p-lab" style="color:#e07a7a">Shift commencé · non pointé</div>${who(n.model_name, span(n), n)}
       <div class="p-cd" style="color:#e07a7a"><small style="color:#b06060">En retard de</small><span data-late></span></div>
-      <div class="p-late"><span class="i">!</span><div><b>Ton shift a commencé à ${n.start}</b><small>Pointe maintenant : ton retard est noté au moment où tu pointes</small></div></div>
+      <div class="p-late"><span class="i">!</span><div><b>Ton shift a commencé à ${n.start}${chezToi(n) ? ` (${chezToi(n).split(" – ")[0]} chez toi)` : ""}</b><small>Pointe maintenant : ton retard est noté au moment où tu pointes</small></div></div>
       <div class="p-acts"><button class="p-wbtn" id="inBtn">Commencer mon shift</button></div></div>`;
   } else if (st === "shift") {
     const o = D.open, live = n && n.state === "live" ? n : null;
@@ -631,7 +632,7 @@ function renderWeek() {
       else if (s.swap && s.swap.status === "open") { cls += " swap"; r = `<span class="p-tag w live"><i></i>En échange</span><button class="p-sb" data-unswap="${s.swap.id}">Annuler</button>`; }
       else if (s.swap && s.swap.status === "requested") { cls += " swap"; r = `<span class="p-tag w"><i></i>Repris par ${esc(s.swap.to_name)} · à valider</span>`; }
       else r = `${day === t ? '<span class="p-tag w"><i></i>Aujourd\'hui</span>' : ""}<div class="p-menu"><button class="p-sb" aria-label="Options du shift">•••</button><div class="p-pop"><button data-release="${s.id}">Je ne peux pas venir : mettre en échange</button></div></div>`;
-      html += `<div class="p-dy ${cls}" style="animation-delay:${.05 + i++ * .03}s">${j ? '<div class="d"></div>' : lab}<div class="m">${slotHtml(s)} <span style="margin-left:4px">${esc(s.model_name)}</span><small>${s.start} → ${s.end}${s.note ? " · " + esc(s.note) : ""}</small></div><div class="r">${r}</div></div>`;
+      html += `<div class="p-dy ${cls}" style="animation-delay:${.05 + i++ * .03}s">${j ? '<div class="d"></div>' : lab}<div class="m">${slotHtml(s)} <span style="margin-left:4px">${esc(s.model_name)}</span><small>${s.start} → ${s.end}${chezToi(s) ? ` <span class="tzh">· ${chezToi(s)}</span>` : ""}${s.note ? " · " + esc(s.note) : ""}</small></div><div class="r">${r}</div></div>`;
     });
   }
   $("week").innerHTML = html;

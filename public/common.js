@@ -422,6 +422,11 @@ const PLANREM = (() => {
   // heure de Paris (agence) → timestamp, quel que soit le fuseau du téléphone (chatters à l'étranger)
   window.parisTs = (date, hhmm) => { const [y, mo, d] = date.split("-").map(Number), [h, mi] = String(hhmm).split(":").map(Number), utc = Date.UTC(y, mo - 1, d, h, mi || 0);
     const off = (new Date(utc).toLocaleString("en-US", { timeZone: "Europe/Paris", timeZoneName: "shortOffset" }).match(/GMT([+-]\d+)/) || [])[1]; return utc - (off ? +off : 1) * 3600e3; };
+  // heure locale du téléphone pour un créneau en heure de Paris (« 23h – 5h chez toi ») ; vide si le téléphone est à l'heure de Paris
+  window.chezToi = s => { if (!s || !s.date || !s.start || !s.end) return ""; const a = parisTs(s.date, s.start); let b = parisTs(s.date, s.end); if (b <= a) b += 864e5;
+    const par = new Date(a).toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" }), loc = new Date(a).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    if (par === loc) return ""; const f = ms => { const d = new Date(ms); return d.getHours() + "h" + (d.getMinutes() ? String(d.getMinutes()).padStart(2, "0") : ""); };
+    return `${f(a)} – ${f(b)} chez toi`; };
   function push(title, body, url) {
     notify(title, body, "info");
     try { if (window.Notification && Notification.permission === "granted" && navigator.serviceWorker)
