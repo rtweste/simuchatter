@@ -23,6 +23,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   db.exec("CREATE TABLE IF NOT EXISTS twizz_tag_log (creator_id TEXT, fan_id TEXT, tag_id INTEGER, action TEXT, user_id INTEGER, at INTEGER)");
   // ce que l'on sait d'un fan, appris au fil des pages ouvertes (aucune requête Twizz en plus) : sert aux règles
   db.exec("CREATE TABLE IF NOT EXISTS twizz_fan_facts (creator_id TEXT, fan_id TEXT, name TEXT, spend REAL, buys INTEGER, vids INTEGER, first_at INTEGER, team_at INTEGER, fan_at INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id))");
+  // dernier aperçu de chaque conversation vue (liste, recherche) : permet d'afficher un fan tagué ou épinglé sans recharger toutes les pages Twizz
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_conv_snap (creator_id TEXT, conv_id TEXT, fan_id TEXT, data TEXT, at INTEGER, PRIMARY KEY (creator_id, conv_id))");
+  db.exec("CREATE INDEX IF NOT EXISTS twizz_conv_snap_fan ON twizz_conv_snap (creator_id, fan_id)");
+  // fans épinglés par l'équipe (par créatrice) : en haut de la liste et de la file « À traiter »
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_pins (creator_id TEXT, fan_id TEXT, conv_id TEXT, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id))");
   const RULES = { gp: ["Spender", "#3dff8a", 300, 1], vid: ["Vidéos", "#7db4ff", 50, 1], nv: ["Nouveau", "#5fd3a2", 7, 1], in: ["Inactif", "#ff8a8a", 7, 0] };
   for (const [k, [name, color, thr, on]] of Object.entries(RULES))
     if (!db.prepare("SELECT 1 FROM twizz_tags WHERE rule = ?").get(k)) db.prepare("INSERT INTO twizz_tags (name, color, rule, thr, active, at) VALUES (?,?,?,?,?,?)").run(name, color, k, thr, on, Date.now());
@@ -210,6 +215,37 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   app.get("/api/twizz/inbox/state", auth, inbox, (req, res) => { const a = req.acc;
     res.json({ send: sendOn(), canSend: a.send, founder: a.founder, manager: !!(a.founder || a.manager), open: openOn(),
       creators: a.all ? mapped() : mapped().filter(c => a.cids.has(c.id)), configured: twizz.configured() }); });
+  /* ---------- aperçus de conversations, épingles, inbox ---------- */
+  function snapSave(cid, items) { const st = db.prepare("INSERT INTO twizz_conv_snap (creator_id, conv_id, fan_id, data, at) VALUES (?,?,?,?,?) ON CONFLICT(creator_id, conv_id) DO UPDATE SET fan_id = excluded.fan_id, data = excluded.data, at = excluded.at");
+    items.forEach(c => { if (c.id && c.fan && c.fan.id) { const { here, ...d } = c; st.run(cid, c.id, c.fan.id, JSON.stringify(d), Date.now()); } }); }
+  const snapOf = (cid, fan) => { const r = db.prepare("SELECT data FROM twizz_conv_snap WHERE creator_id = ? AND fan_id = ? ORDER BY at DESC LIMIT 1").get(cid, fan); try { return r ? JSON.parse(r.data) : null; } catch (e) { return null; } };
+  // conversations de fans précis (tagués, épinglés) : depuis les aperçus ; sinon une recherche Twizz par pseudo (4 au plus par appel)
+  app.get("/api/twizz/inbox/:cid/snaps", auth, inbox, wrap(async req => {
+    const cid = creatorOk(req.params.cid), fans = [...new Set(String(req.query.fans || "").split(",").map(str).filter(Boolean))].slice(0, 60), out = []; let tries = 0;
+    for (const f of fans) { let c = snapOf(cid, f);
+      if (!c && tries < 4) { const nm = (db.prepare("SELECT name FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, f) || {}).name;
+        if (nm) { tries++; try { const L = arr(await G(`/conversations/user/${enc(cid)}/search?search=${enc(nm.slice(0, 40))}`, 60e3)).map(x => conv(x, cid)); snapSave(cid, L); c = L.find(x => x.fan.id === f) || null; } catch (e) {} } }
+      if (c) { const h = hereOf(c.id, req.user.id); if (h.length) c.here = h.map(x => x.name); out.push(c); } }
+    return { items: out };
+  }));
+  const pinsOf = cid => db.prepare("SELECT p.fan_id fan, p.conv_id conv, p.at, p.user_id uid, u.username by FROM twizz_pins p LEFT JOIN users u ON u.id = p.user_id WHERE p.creator_id = ? ORDER BY p.at").all(cid);
+  app.get("/api/twizz/inbox/:cid/pins", auth, inbox, wrap(async req => ({ pins: pinsOf(creatorOk(req.params.cid)) })));
+  app.post("/api/twizz/inbox/:cid/pin/:fan", auth, inbox, wrap(async req => {
+    const cid = creatorOk(req.params.cid), fan = str(req.params.fan).slice(0, 64);
+    if (req.body?.on) db.prepare("INSERT INTO twizz_pins (creator_id, fan_id, conv_id, user_id, at) VALUES (?,?,?,?,?) ON CONFLICT(creator_id, fan_id) DO UPDATE SET conv_id = excluded.conv_id, user_id = excluded.user_id, at = excluded.at").run(cid, fan, str(req.body.conv).slice(0, 64), req.user.id, Date.now());
+    else db.prepare("DELETE FROM twizz_pins WHERE creator_id = ? AND fan_id = ?").run(cid, fan);
+    push("pin", { creator: cid, fan }); return { pins: pinsOf(cid) };
+  }));
+  // inbox : les chatters en shift sur la créatrice (renfort compris) se partagent les fans moitié-moitié
+  app.get("/api/twizz/inbox/:cid/split", auth, inbox, wrap(async req => {
+    const c = db.prepare("SELECT model_id FROM twizz_creators WHERE twizz_id = ?").get(creatorOk(req.params.cid));
+    const users = c && c.model_id ? db.prepare("SELECT DISTINCT u.id, u.username name FROM clocks k JOIN users u ON u.id = k.user_id WHERE k.model_id = ? AND k.end_at IS NULL ORDER BY u.id").all(c.model_id) : [];
+    // un fan à qui un chatter de l'inbox a écrit il y a moins de 3 h reste chez lui (pas de changement en cours de discussion)
+    const ids = new Set(users.map(u => u.id)), sticky = {};
+    db.prepare("SELECT conv_id, user_id, MAX(at) at FROM twizz_sent WHERE creator_id = ? AND at > ? GROUP BY conv_id").all(req.params.cid, Date.now() - 3 * 3600e3)
+      .forEach(r => { if (ids.has(r.user_id)) sticky[r.conv_id] = r.user_id; });
+    return { users, me: req.user.id, sticky };
+  }));
   // équipe : qui a accès à la messagerie (fondateur)
   const teamOut = () => { const M = mapped(), um = {}; try { db.prepare("SELECT user_id, model_id FROM user_models").all().forEach(r => (um[r.user_id] = um[r.user_id] || []).push(r.model_id)); } catch (e) {}
     const lv = {}; db.prepare("SELECT user_id, level FROM twizz_inbox_access").all().forEach(r => lv[r.user_id] = r.level);
@@ -247,6 +283,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     items.forEach(c => { if (c.last.fromFan) return; c.last.by = by[c.last.id] || null;
       if (!c.last.by && c.last.at) { const r = near.get(c.id); if (r && Math.abs(r.at - Date.parse(c.last.at)) < 120e3) c.last.by = r.name; } });
     try { items.forEach(c => c.fan.id && fact(cid, c.fan.id, { name: c.fan.name, first_at: ts(c.since), [c.last.fromFan ? "fan_at" : "team_at"]: ts(c.last.at) })); } catch (e) {}
+    try { snapSave(cid, items); } catch (e) {}
     items.forEach(c => { const h = hereOf(c.id, req.user.id); if (h.length) c.here = h.map(x => x.name); });
     return { items, page, more: !!(d && (d.totalPages ? page < d.totalPages : arr(j).length >= 10)), sample: req.query.debug ? arr(j)[0] : undefined };
   }));

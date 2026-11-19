@@ -382,8 +382,9 @@
 .fa-d b{font:800 12px Inter;min-width:62px;text-align:right}
 .fa-f{margin-top:11px;padding-top:11px;border-top:1px solid rgba(255,255,255,.06)}
 .fa-fc{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
-.fa-fc button{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 9px;border-radius:9px;border:1px dashed rgba(180,156,255,.45);background:rgba(180,156,255,.07);color:#ddd5ff;font:700 11.5px Inter;cursor:pointer;transition:all .3s}
-.fa-fc button i{font-style:normal;font:800 9.5px Inter;color:#b49cff}
+.fa-fc button{display:flex;align-items:center;gap:10px;min-height:30px;max-width:100%;box-sizing:border-box;padding:6px 10px;border-radius:10px;border:1px dashed rgba(180,156,255,.45);background:rgba(180,156,255,.07);color:#ddd5ff;font:700 11.5px/1.4 Inter;text-align:left;cursor:pointer;transition:all .3s}
+.fa-fc button .v{flex:1;min-width:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.fa-fc button i{flex:none;font-style:normal;font:800 9.5px Inter;color:#b49cff;white-space:nowrap}
 .fa-fc button.ok{border-style:solid;border-color:rgba(95,211,162,.4);background:rgba(95,211,162,.08);color:#d9fbe9;cursor:default}.fa-fc button.ok i{color:#5fd3a2}
 .fa-w{display:flex;align-items:center;gap:8px;margin-top:14px;font:700 12px Inter;color:#8aa59a}
 .fa-w .dots{display:inline-flex;gap:3px}.fa-w .dots i{width:5px;height:5px;border-radius:50%;background:#5fd3a2;animation:faTy 1.2s infinite}.fa-w .dots i:nth-child(2){animation-delay:.15s}.fa-w .dots i:nth-child(3){animation-delay:.3s}
@@ -419,7 +420,7 @@
 .tgc:hover{border-color:color-mix(in srgb,var(--c,#555) 45%,#242424);color:#fff}
 .tgc.on{background:#f5f5f5;color:#0a0a0a;border-color:#f5f5f5;box-shadow:0 8px 22px -8px rgba(255,255,255,.35)}.tgc.on .n{color:#555}.tgc.on>svg{color:#0a0a0a}
 .mx-hd .htg{display:flex;gap:4px;margin-left:8px;min-width:0;overflow:hidden;flex:0 1 auto}
-.ftg{position:relative;margin:0 0 14px;z-index:20}
+.ftg{position:relative;margin:8px 0 14px 72px;z-index:20}
 .ftg .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .tadd{height:30px;padding:0 11px;border-radius:999px;border:1px dashed #3a3a3a;background:transparent;color:#bdbdbd;font:800 12px Inter;display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:all .3s}
 .tadd:hover,.tadd.on{border-style:solid;border-color:#5fd3a2;color:#5fd3a2;background:rgba(95,211,162,.06)}
@@ -567,6 +568,15 @@
 @keyframes mxF{from{opacity:0}}.mx-lb img,.mx-lb video{max-width:100%;max-height:100%;border-radius:12px}
 .mx-lb button{position:absolute;top:18px;right:18px;width:42px;height:42px;border-radius:50%;border:0;background:#1d1d1d;color:#fff;font-size:18px;cursor:pointer}
 /* ---- coffre intelligent ---- */
+.pn-row{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;background:rgba(255,196,107,.14);color:#ffc46b}
+.ow-row{display:inline-flex;align-items:center;height:16px;padding:0 6px;margin-left:6px;border-radius:999px;background:#1d1d1d;color:#8a8a8a;font:800 9.5px Inter;vertical-align:middle;white-space:nowrap}
+.mx-c.pnd{box-shadow:inset 3px 0 0 #ffc46b}
+.pn-i{display:inline-flex;color:#ffc46b;margin-right:5px;vertical-align:-1px}
+.chip.pn{background:rgba(255,196,107,.12);color:#ffc46b}
+.mx-ib.pnb.on{color:#ffc46b;border-color:rgba(255,196,107,.45);background:rgba(255,196,107,.1)}
+.inb{display:flex;flex-direction:column;gap:7px;margin-top:10px}.inb[hidden]{display:none}.inb .lab{font:600 11.5px Inter;color:#8a8a8a}
+.inb .sg{display:flex;flex-wrap:wrap;gap:4px;padding:3px;border-radius:11px;background:#121212;border:1px solid #222;width:max-content;max-width:100%}
+.inb .sg button{height:28px;padding:0 11px;border:0;border-radius:8px;background:none;color:#8a8a8a;font:700 12px Inter;cursor:pointer}.inb .sg button.on{background:#ededed;color:#0a0a0a}
 .hr-row{display:inline-flex;align-items:center;gap:3px;height:17px;padding:0 6px;margin-right:6px;border-radius:999px;background:rgba(255,190,90,.12);color:#ffc46b;font:800 9.5px Inter;letter-spacing:.01em;vertical-align:middle;max-width:90px;overflow:hidden;white-space:nowrap}
 .hr-hd{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;margin-left:8px;border-radius:999px;background:rgba(255,190,90,.1);border:1px solid rgba(255,190,90,.3);color:#ffc46b;font:700 11px Inter;white-space:nowrap;animation:vchIn .5s cubic-bezier(.3,1.4,.5,1) both}
 .hr-hd i{width:6px;height:6px;border-radius:50%;background:#ffc46b;box-shadow:0 0 8px #ffc46b}.hr-hd.ty i{animation:hrP 1s infinite}@keyframes hrP{50%{opacity:.25}}
@@ -708,7 +718,7 @@
       <div class="mx-warn" id="sendWarn"><i></i>Envoi activé : ce que tu envoies part vraiment aux fans</div></div>
     <div class="mx-body blur" id="body">
       <section class="mx-ls"><div class="mx-seg"><button data-ty="QUEUE">À traiter<span class="qn" id="qCount"></span></button><button data-ty="GENERAL">Général</button></div>
-        <div class="qhd" id="qh" hidden><h2><span id="qN"></span><span id="qW">fans <em class="met">à traiter.</em></span></h2><div class="dsh" id="qD"></div>
+        <div class="qhd" id="qh" hidden><h2><span id="qN"></span><span id="qW">fans <em class="met">à traiter.</em></span></h2><div class="dsh" id="qD"></div><div class="inb" id="inb" hidden></div>
           <div class="kh2"><span class="kh"><span class="kbd">↵</span>envoyer</span><span class="kh"><span class="kbd">↓</span>fan suivant</span></div></div>
         <label class="mx-se" id="seBox"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" placeholder="Rechercher un fan"></label>
         <div class="mx-tgf" id="tgf" hidden></div>
@@ -723,7 +733,7 @@
 <script>
 (() => {
 const $ = id => document.getElementById(id);
-const IC = { x: '<path d="M7 7l10 10M17 7L7 17"/>', search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>', tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/>', bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', img: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>', send: '<path d="M5 12h14M13 6l6 6-6 6"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+const IC = { pin: '<path d="M9 3h6l-1 6 3.5 3.5h-11L10 9z"/><path d="M12 12.5V21"/>', x: '<path d="M7 7l10 10M17 7L7 17"/>', search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>', tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/>', bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', img: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>', send: '<path d="M5 12h14M13 6l6 6-6 6"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/>',
   play: '<path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/>', back: '<path d="M15 18l-6-6 6-6"/>',
   lock: '<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', unlock: '<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 7.6-1.7"/>',
@@ -737,6 +747,34 @@ const SV = (p, s = 16, w = 2.2) => `<svg width="${s}" height="${s}" viewBox="0 0
 let ST = null, CID = null, TYPE = "QUEUE", Q = "", CUR = null, LIVE = false;
 const LISTS = {}, THREADS = {}, FANS = {}, HIST = {}, SPEND = {};
 const QDONE = new Map(); let QTREATED = 0;
+/* ---- fans épinglés (pour toute l'équipe), fans tagués ou épinglés hors des pages chargées, inbox moitié-moitié ---- */
+const PINS = {}, EXTRA = {}, ASKED = new Set(); let SPLIT = null, INB = null, XPEND = 0;
+const pinOf = id => (PINS[CID] || []).find(p => p.fan === id);
+const loadedConvs = () => { const m = new Map(); [lkey("GENERAL"), lkey("TO_DELIVER")].forEach(k => (LISTS[k] ? LISTS[k].items : []).forEach(c => m.set(c.id, c))); return m; };
+const extrasOf = fans => fans.map(f => EXTRA[CID + "|" + f]).filter(Boolean);
+async function needExtras(fans) { const cid = CID, have = new Set([...loadedConvs().values()].map(c => c.fan.id));
+  const miss = fans.filter(f => !have.has(f) && !EXTRA[cid + "|" + f] && !ASKED.has(cid + "|" + f)); if (!miss.length) return;
+  miss.forEach(f => ASKED.add(cid + "|" + f)); XPEND++;
+  try { const r = await api2(`/snaps?fans=${enc(miss.join(","))}`); if (cid === CID) r.items.forEach(c => { fixFan(c.fan); c.snap = true; EXTRA[cid + "|" + c.fan.id] = c; }); } catch (e) {}
+  XPEND--; if (cid === CID) renderList(); }
+async function loadPins() { const cid = CID; if (!cid) return; try { const r = await api2("/pins"); if (cid !== CID) return; PINS[cid] = r.pins; needExtras(r.pins.map(p => p.fan)); renderList(); paintPinB(); } catch (e) {} }
+function paintPinB() { const b = $("pinB"); if (!b || !CUR) return; const p = pinOf(CUR.fan.id); b.classList.toggle("on", !!p); b.title = p ? `Épinglé${p.by ? " par " + p.by : ""} : touche pour retirer l'épingle` : "Épingler ce fan : il reste en haut de la file pour toute l'équipe"; b.querySelector(".lb").textContent = p ? "Épinglé" : "Épingler"; }
+async function togglePin(c) { if (!c) return; const on = !pinOf(c.fan.id);
+  try { const r = await api2(`/pin/${enc(c.fan.id)}`, { body: { on, conv: c.id } }); PINS[CID] = r.pins; if (on) EXTRA[CID + "|" + c.fan.id] = EXTRA[CID + "|" + c.fan.id] || c; renderList(); paintPinB();
+    notify(on ? "Fan épinglé" : "Épingle retirée", on ? `${c.fan.name} reste en haut de la file pour toute l'équipe` : c.fan.name, on ? "ok" : "info"); } catch (e) { notify("Impossible", e.message, "err"); } }
+// inbox : les chatters en shift sur la créatrice se partagent les fans (même répartition pour tout le monde)
+async function loadSplit(force) { const cid = CID; if (!cid || (!force && SPLIT && SPLIT.cid === cid && Date.now() - SPLIT.at < 60e3)) return;
+  try { const r = await api2("/split"); if (cid !== CID) return; SPLIT = { cid, at: Date.now(), users: r.users || [], me: r.me, sticky: r.sticky || {} }; renderList(); } catch (e) {} }
+const hsh = v => { let h = 7; for (const ch of String(v)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+const splitOn = () => !!SPLIT && SPLIT.cid === CID && SPLIT.users.length >= 2;
+function ownerOf(c) { if (!splitOn()) return null; const U = SPLIT.users, has = id => U.some(u => u.id === id);
+  const p = pinOf(c.fan.id); if (p && has(p.uid)) return p.uid;   // un fan épinglé reste chez celui qui l'a épinglé
+  const st = SPLIT.sticky[c.id]; if (st && has(st)) return st;      // et chez celui qui lui a écrit il y a moins de 3 h
+  return U[hsh(c.fan.id || c.id) % U.length].id; }
+const inbName = id => (SPLIT && SPLIT.users.find(u => u.id === id) || {}).name || "?";
+// inbox regardée : la sienne si on est en shift sur la créatrice, sinon toutes (on peut choisir)
+const inbView = () => { if (!splitOn()) return "all"; const mine = SPLIT.users.some(u => u.id === SPLIT.me), v = INB && INB.cid === CID ? INB.v : mine ? SPLIT.me : "all";
+  return v === "all" || SPLIT.users.some(u => u.id === v) ? v : "all"; };
 const lkey = (t = TYPE) => `${CID}|${t}|${t === "QUEUE" ? "" : Q}`;
 const E = n => (Math.round(n * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + " €";
 const tm = d => new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
@@ -827,18 +865,20 @@ async function loadList(fresh, more) {
   const k = lkey(), L = LISTS[k];
   if (!more) { if (L) renderList(); else $("cl").innerHTML = skelRows(); }
   tagFilterBar();
-  try { await fetchList(TYPE, fresh, more); if (lkey() !== k) return; renderList(); syncCur(LISTS[k]); loadTags(); }
+  try { await fetchList(TYPE, fresh, more); if (lkey() !== k) return; renderList(); syncCur(LISTS[k]); loadTags(); if (!more) { loadPins(); loadSplit(); } }
   catch (e) { if (!LISTS[k]) $("cl").innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; else notify("Twizz", e.message, "err"); }
 }
 const skelRows = () => Array.from({ length: 8 }, (_, i) => `<div class="mx-c" style="animation-delay:${i * .03}s;cursor:default"><span class="mx-av sk"></span><span class="t"><span class="sk" style="display:block;height:12px;width:${50 + (i * 17) % 40}%"></span><span class="sk" style="display:block;height:10px;width:${60 + (i * 13) % 30}%;margin-top:8px"></span></span></div>`).join("");
 function syncCur(L) { if (CUR && L) { const c = L.items.find(x => x.id === CUR.id); if (c) Object.assign(CUR, { last: c.last, unread: c.unread }); } }
 function prefix(c) { if (c.last.fromFan) return ""; if (c.last.by) return `<span class="pre" style="--c:${pal(c.last.by)[0]}">${esc(c.last.by)} :</span> `; return `<span class="pre tw">Twizz :</span> `; }
 const hereChip = c => c.here && c.here.length ? `<span class="hr-row" title="${esc(c.here.join(", "))} ${c.here.length > 1 ? "sont" : "est"} sur cette conversation">${SV(IC.eye || IC.chat, 11, 2.4)}${esc(c.here[0])}${c.here.length > 1 ? " +" + (c.here.length - 1) : ""}</span>` : "";
+const pinChip = c => { const p = pinOf(c.fan.id), o = ownerOf(c), other = o && SPLIT && o !== SPLIT.me;
+  return (p ? `<span class="pn-row" title="Épinglé${p.by ? " par " + esc(p.by) : ""}">${SV(IC.pin, 11, 2.4)}</span>` : "") + (other ? `<span class="ow-row" title="Inbox de ${esc(inbName(o))}">${esc(inbName(o))}</span>` : ""); };
 function rowHtml(c) { const waitMin = c.last.fromFan && c.last.at ? (Date.now() - Date.parse(c.last.at)) / 60e3 : 0, wait = waitMin > 5;
     const prev = c.last.text || (c.last.type === "FILE" ? "📷 Média" : "");
-    return `<button class="mx-c ${c.id === (CUR && CUR.id) ? "on" : ""} ${c.unread ? "un" : ""} ${wait ? "wait" : ""}" data-conv="${esc(c.id)}">${av(c.fan)}
+    return `<button class="mx-c ${c.id === (CUR && CUR.id) ? "on" : ""} ${c.unread ? "un" : ""} ${wait ? "wait" : ""} ${pinOf(c.fan.id) ? "pnd" : ""}" data-conv="${esc(c.id)}">${av(c.fan)}
       <span class="t"><b>${esc(c.fan.name)}</b><small>${wait ? `<span class="wt">Attend depuis ${since(c.last.at)} · </span>` : prefix(c)}${esc(prev)}</small>${rowTags(c)}</span>
-      <span class="r">${hereChip(c)}${ago(c.last.at)}${c.unread ? `<span class="n">${c.unread > 99 ? "99+" : c.unread}</span>` : ""}</span></button>`; }
+      <span class="r">${hereChip(c)}${pinChip(c)}${ago(c.last.at)}${c.unread ? `<span class="n">${c.unread > 99 ? "99+" : c.unread}</span>` : ""}</span></button>`; }
 // met à jour la liste sans tout redessiner (pas de clignotement) ; les lignes qui partent glissent hors de la liste
 function paintRows(rows, find, outAnim) {
   const cl = $("cl"), first = !cl.querySelector("[data-conv]");
@@ -863,9 +903,17 @@ function renderList() {
   if (TYPE === "QUEUE") return renderQueue();
   const L = LISTS[lkey()]; if (!L) return; const cl = $("cl");
   if (!L.items.length) { cl.innerHTML = `<div class="mx-empty"><div><div class="big">${SV(IC.chat, 28)}</div>${Q ? "Aucun fan trouvé" : "Aucune conversation"}</div></div>`; return; }
-  const items = TAGF ? L.items.filter(c => fanTagIds(c.fan.id).includes(TAGF)) : L.items;
-  if (!items.length) { cl.innerHTML = `<div class="mx-empty"><div><div class="big">${SV(IC.tag, 26)}</div>Aucun fan avec ce tag dans les conversations chargées</div></div>`; }
-  else { if (cl.querySelector(".mx-empty")) cl.innerHTML = ""; paintRows(items.map(c => [c.id, rowHtml(c)]), id => LISTS[lkey()].items.find(x => x.id === id)); }
+  let items = L.items, waitTag = false;
+  if (!Q) { const have = new Set(items.map(c => c.id)), add = [];
+    if (TAGF) { const want = Object.keys((TAGS && TAGS.cid === CID && TAGS.map) || {}).filter(f => fanTagIds(f).includes(TAGF)); needExtras(want); waitTag = XPEND > 0;
+      extrasOf(want).forEach(c => { if (!have.has(c.id)) { have.add(c.id); add.push(c); } }); }
+    extrasOf((PINS[CID] || []).map(p => p.fan)).forEach(c => { if (!have.has(c.id)) { have.add(c.id); add.push(c); } });
+    if (add.length) items = items.concat(add).sort((a, b) => (Date.parse(b.last.at) || 0) - (Date.parse(a.last.at) || 0));
+    const pin = c => pinOf(c.fan.id); items = items.filter(pin).sort((a, b) => pin(a).at - pin(b).at).concat(items.filter(c => !pin(c))); }
+  if (TAGF) items = items.filter(c => fanTagIds(c.fan.id).includes(TAGF));
+  const byId = new Map(items.map(c => [c.id, c]));
+  if (!items.length) { cl.innerHTML = `<div class="mx-empty"><div><div class="big">${SV(IC.tag, 26)}</div>${waitTag ? "Recherche des fans avec ce tag…" : "Aucun fan avec ce tag"}</div></div>`; }
+  else { if (cl.querySelector(".mx-empty")) cl.innerHTML = ""; paintRows(items.map(c => [c.id, rowHtml(c)]), id => byId.get(id) || LISTS[lkey()].items.find(x => x.id === id)); }
   if (L.more) { const b = document.createElement("button"); b.className = "mx-more"; b.textContent = "Charger plus"; b.onclick = () => { b.textContent = "…"; loadList(false, true); }; cl.appendChild(b); }
 }
 
@@ -873,35 +921,43 @@ function renderList() {
 async function loadQueue(fresh) {
   if (!LISTS[lkey("GENERAL")]) $("cl").innerHTML = skelRows();
   tagFilterBar();
-  try { await fetchList("GENERAL", fresh); renderQueue(); syncCur(LISTS[lkey("GENERAL")]); spends(); loadTags(); }
+  try { await fetchList("GENERAL", fresh); renderQueue(); syncCur(LISTS[lkey("GENERAL")]); spends(); loadTags(); loadPins(); loadSplit(); }
   catch (e) { if (!LISTS[lkey("GENERAL")]) $("cl").innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; }
 }
 function queueItems() {
   const G = LISTS[lkey("GENERAL")], D = LISTS[lkey("TO_DELIVER")]; if (!G && !D) return null;
   const req = new Set((D ? D.items : []).map(c => c.id)), all = new Map();
   (G ? G.items : []).concat(D ? D.items : []).forEach(c => { if (!all.has(c.id)) all.set(c.id, c); });
-  const now = Date.now(), out = [];
+  extrasOf((PINS[CID] || []).map(p => p.fan)).forEach(c => { if (![...all.values()].some(x => x.fan.id === c.fan.id)) all.set(c.id, c); });
+  const now = Date.now(); let out = [];
   all.forEach(c => {
     const waitMin = c.last.fromFan && c.last.at ? Math.max(0, (now - Date.parse(c.last.at)) / 60e3) : 0;
-    const isReq = req.has(c.id), isNew = !c.last.at && !c.last.text, done = QDONE.has(c.id);
-    if (!(done || isReq || c.last.fromFan || isNew)) return;
+    const isReq = req.has(c.id), isNew = !c.last.at && !c.last.text, done = QDONE.has(c.id), pin = pinOf(c.fan.id);
+    if (!(done || isReq || c.last.fromFan || isNew || pin)) return;
     const sp = SPEND[c.fan.id], total = sp ? sp.total : null, big = total != null && total >= 300;
-    const score = Math.min(waitMin, 240) + (isReq ? 60 : 0) + (isNew ? 15 : 0) + (big ? 45 : total >= 100 ? 15 : 0);
-    out.push({ c, waitMin, isReq, isNew, big, total, done, score });
+    const score = Math.min(waitMin, 240) + (isReq ? 60 : 0) + (isNew ? 15 : 0) + (big ? 45 : total >= 100 ? 15 : 0) + (pin ? 1e4 : 0);
+    out.push({ c, waitMin, isReq, isNew, big, total, done, score, pin, owner: ownerOf(c) });
   });
+  const v = inbView(); if (v !== "all") out = out.filter(q => q.owner === v);
   return out.sort((a, b) => (b.done - a.done) || b.score - a.score);
 }
 function qRowHtml(q, i) {
   const c = q.c, urgent = !q.done && !q.isReq && q.waitMin >= 10;
   const col = q.done ? "#5fd3a2" : q.isReq ? "#f0b54a" : urgent ? "#f06272" : q.isNew ? "#7db4ff" : "#f0b54a";
   const pct = q.done ? 100 : q.isNew ? 12 : Math.max(6, Math.min(100, (q.waitMin / 15) * 100));
-  const chip = q.done ? `<span class="chip gr">${SV(IC.check, 12, 3)}Répondu</span>` : q.isReq ? `<span class="chip am">${SV(IC.img, 12, 2.4)}Demande un média</span>`
+  const waits = q.isReq || q.isNew || c.last.fromFan;
+  const chip = q.done ? `<span class="chip gr">${SV(IC.check, 12, 3)}Répondu</span>` : q.pin && !waits ? `<span class="chip pn">${SV(IC.pin, 12, 2.4)}Épinglé${q.pin.by ? " par " + esc(q.pin.by) : ""}</span>` : q.isReq ? `<span class="chip am">${SV(IC.img, 12, 2.4)}Demande un média</span>`
     : q.isNew ? `<span class="chip bl">${SV(IC.userplus, 12, 2.2)}Nouveau fan</span>` : `<span class="chip ${urgent ? "red" : "am"}">${SV(IC.clock, 12, 2.6)}Attend ${since(c.last.at)}</span>`;
   const prev = c.last.text || (c.last.type === "FILE" ? "📷 Média" : q.isNew ? "Pas encore de message" : "");
   return `<button class="mx-c q ${c.id === (CUR && CUR.id) ? "on" : ""} ${c.unread && !q.done ? "un" : ""} ${i === 0 && urgent ? "hot" : ""} ${q.big && !q.done ? "gdq" : ""} ${q.done ? "done" : ""}" data-conv="${esc(c.id)}" style="--pc:${col}">${q.big && !q.done ? '<span class="trace"></span>' : ""}
     <span class="qa"><svg width="52" height="52" viewBox="0 0 52 52" fill="none" stroke-width="3" stroke-linecap="round" aria-hidden="true"><circle class="tr" cx="26" cy="26" r="24"/><circle class="vl" cx="26" cy="26" r="24" stroke-dasharray="${(pct * 1.508).toFixed(1)} 160"/></svg>${av(c.fan)}${q.done ? `<span class="dn">${SV(IC.check, 18, 3.2)}</span>` : ""}</span>
-    <span class="t"><b><span class="nm">${esc(c.fan.name)}</span>${q.big && !q.done ? ' <span class="badge gd">Gros dépensier</span>' : ""}${q.total != null ? `<em class="${q.big ? "big" : ""}">${E(q.total)}</em>` : ""}</b><span class="rs">${chip}<span class="pv">${esc(prev)}</span></span></span></button>`;
+    <span class="t"><b>${q.pin ? `<span class="pn-i" title="Épinglé${q.pin.by ? " par " + esc(q.pin.by) : ""}">${SV(IC.pin, 12, 2.6)}</span>` : ""}<span class="nm">${esc(c.fan.name)}</span>${q.owner && inbView() === "all" ? `<span class="ow-row">${q.owner === SPLIT.me ? "toi" : esc(inbName(q.owner))}</span>` : ""}${q.big && !q.done ? ' <span class="badge gd">Gros dépensier</span>' : ""}${q.total != null ? `<em class="${q.big ? "big" : ""}">${E(q.total)}</em>` : ""}</b><span class="rs">${chip}<span class="pv">${esc(prev)}</span></span></span></button>`;
 }
+function paintInb() { const B = $("inb"); if (!B) return; if (!splitOn()) { B.hidden = true; B.innerHTML = ""; return; }
+  const v = inbView(), U = SPLIT.users, mine = U.some(u => u.id === SPLIT.me), others = U.filter(u => u.id !== SPLIT.me).map(u => u.name);
+  B.hidden = false;
+  B.innerHTML = `<span class="lab">${mine ? `Inbox partagée avec ${esc(others.join(", "))} · moitié des fans chacun` : `${U.length} chatters en shift · fans partagés moitié-moitié`}</span><div class="sg">${mine ? `<button data-inb="${SPLIT.me}" class="${v === SPLIT.me ? "on" : ""}">Mon inbox</button>` : ""}${U.filter(u => u.id !== SPLIT.me).map(u => `<button data-inb="${u.id}" class="${v === u.id ? "on" : ""}">${esc(u.name)}</button>`).join("")}<button data-inb="all" class="${v === "all" ? "on" : ""}">Toutes</button></div>`;
+  B.querySelectorAll("[data-inb]").forEach(b => b.onclick = () => { INB = { cid: CID, v: b.dataset.inb === "all" ? "all" : +b.dataset.inb }; renderQueue(); }); }
 function renderQueue() {
   const Q0 = queueItems(); if (!Q0) return; const Qs = TAGF ? Q0.filter(q => fanTagIds(q.c.fan.id).includes(TAGF)) : Q0;
   const todo = Qs.filter(q => !q.done), n = todo.length;
@@ -911,7 +967,10 @@ function renderQueue() {
   const oldest = todo.reduce((m, q) => Math.max(m, q.waitMin), 0), curIn = CUR && todo.some(q => q.c.id === CUR.id);
   const dashes = Array.from({ length: Math.min(QTREATED, 6) }, () => '<i class="d"></i>').join("") + Array.from({ length: Math.min(n, 8) }, (_, i) => `<i class="${i === 0 && curIn ? "c" : ""}"></i>`).join("");
   $("qD").innerHTML = dashes + `<span>${[QTREATED ? `<b>${QTREATED}</b> traité${QTREATED > 1 ? "s" : ""}` : "", oldest ? `plus ancien : <b>${since(Date.now() - oldest * 60e3)}</b>` : n ? "" : "tout est à jour"].filter(Boolean).join(" · ")}</span>`;
-  if (!Qs.length) { $("cl").innerHTML = `<div class="qempty"><div><div class="okc">${SV(IC.check, 30, 2.6)}</div><b>Tout est traité</b>Aucun fan n'attend de réponse.</div></div>`; return; }
+  paintInb();
+  if (!Qs.length) { const tg = TAGF && tagById(TAGF);
+    $("cl").innerHTML = `<div class="qempty"><div><div class="okc">${SV(IC.check, 30, 2.6)}</div><b>${tg ? "Aucun fan « " + esc(tg.name) + " » à traiter" : "Tout est traité"}</b>${tg ? `Ils n'attendent pas de réponse.<button class="mx-more" id="qToG" style="margin:14px auto 0">Les voir dans Général</button>` : "Aucun fan n'attend de réponse."}</div></div>`;
+    if ($("qToG")) $("qToG").onclick = () => setType("GENERAL"); return; }
   if ($("cl").querySelector(".qempty")) $("cl").innerHTML = "";
   paintRows(Qs.map((q, i) => [q.c.id, qRowHtml(q, i)]), id => { const q = (queueItems() || []).find(x => x.c.id === id); return q && q.c; }, true);
 }
@@ -1004,7 +1063,7 @@ function thread(keep, noScroll) {
     T.items.forEach(m => SHOWN.add(m.id)); if (!SHOWN.size) SHOWN.add("_");
   }
   $("th").innerHTML = `${STARS}<div class="mx-hd"><button class="mx-ib mx-bk" id="bk">${SV(IC.back, 16)}</button>${av(CUR.fan, "av")}<div style="min-width:0"><b>${esc(CUR.fan.name)}</b><small>${CUR.fan.username ? "@" + esc(CUR.fan.username) : ""}</small></div><span class="htg" id="htg">${headTagsHtml()}</span><span id="hrw">${hereHtml()}</span>
-      <span class="sp"><span class="crew" id="crew">${crewHtml()}</span>${TYPE === "QUEUE" ? `<button class="mx-ib" id="nxB" title="Fan suivant de la file">${SV(IC.down, 14, 2.4)}<span class="lb">Fan suivant</span><span class="kbd">↓</span></button>` : ""}<button class="mx-ib" id="rd" title="Marque la conversation comme lue sur Twizz">${SV(IC.eye, 15)}<span class="lb">Marquer lu</span></button><button class="mx-ib mx-fb" id="fanB">${SV(IC.user, 15)}<span class="lb">Fiche</span></button></span></div>
+      <span class="sp"><span class="crew" id="crew">${crewHtml()}</span>${TYPE === "QUEUE" ? `<button class="mx-ib" id="nxB" title="Fan suivant de la file">${SV(IC.down, 14, 2.4)}<span class="lb">Fan suivant</span><span class="kbd">↓</span></button>` : ""}<button class="mx-ib pnb ${pinOf(CUR.fan.id) ? "on" : ""}" id="pinB">${SV(IC.pin, 15, 2.2)}<span class="lb">${pinOf(CUR.fan.id) ? "Épinglé" : "Épingler"}</span></button><button class="mx-ib" id="rd" title="Marque la conversation comme lue sur Twizz">${SV(IC.eye, 15)}<span class="lb">Marquer lu</span></button><button class="mx-ib mx-fb" id="fanB">${SV(IC.user, 15)}<span class="lb">Fiche</span></button></span></div>
     <div class="mx-sc" id="sc">${body}</div>
     <div class="mx-cpw"><div id="rnw"></div>${CANSEND() ? "" : `<div class="mx-off">${offMsg()}</div>`}
       <div class="mx-cp"><span class="tools"><button class="md" id="mdB" title="Envoyer un média du coffre" ${CANSEND() ? "" : "disabled"}>${SV(IC.img, 19)}</button><button class="md tl2 ${PANEL === "scripts" ? "act" : ""}" id="scB" title="Scripts (touche /)">${SV(IC.doc, 19)}</button><button class="md tl2 ai ${PANEL === "ai" ? "act" : ""}" id="aiB" title="Assistant IA (⌘J)">${SV(IC.spark, 19, 2)}</button></span><textarea id="tx" rows="1" placeholder="${CANSEND() ? (innerWidth > 860 ? "Écris ton message… ( / pour les scripts )" : "Écris ton message…") : ST.canSend ? "Envoi coupé" : "Lecture seule"}" ${CANSEND() ? "" : "disabled"}></textarea><button class="go" id="goB" title="Envoyer" ${CANSEND() ? "" : "disabled"}>${SV(IC.send, 19, 2.6)}</button></div>
@@ -1033,6 +1092,7 @@ function thread(keep, noScroll) {
   if ($("nxB")) $("nxB").onclick = nextInQueue;
   $("bk").onclick = () => { $("mx").classList.remove("open"); hereLeave(); CUR = null; renderList(); };
   $("fanB").onclick = () => $("fan").classList.toggle("show");
+  $("pinB").onclick = () => togglePin(CUR); paintPinB();
   $("rd").onclick = async () => { if (!CANSEND()) return notify(ST.canSend ? "Envoi coupé" : "Lecture seule", ST.canSend ? (ST.founder ? "Active « Envoi activé » pour marquer comme lu sur Twizz" : "Le fondateur a coupé l'envoi pour le moment") : "Demande au fondateur le droit d'envoyer", "info");
     try { await api2("/read", { body: { conversationId: CUR.id } }); CUR.unread = 0; renderList(); notify("Marquée comme lue", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
   sc.querySelectorAll("[data-lb]").forEach(b => b.onclick = () => { const [mid, i] = b.dataset.lb.split(":"), m = T.items.find(x => x.id === mid), x = m && m.medias[+i]; if (x) lightbox(x); });
@@ -1399,7 +1459,7 @@ function paintBrief(c) {
         ${br.etat ? `<div class="fa-q"><span class="cap">Où on en est</span><p>${esc(br.etat).split(" ").map((w, i) => `<span style="animation-delay:${fresh ? (i * .035).toFixed(3) : 0}s;${fresh ? "" : "animation:none"}">${w}</span>`).join("")}</p></div>` : ""}
         ${br.action ? `<div class="fa-a"><span class="cap">${SV(ARRW, 10, 3)} Prochaine action</span><b>${esc(br.action)}</b><button class="fa-b" id="brAi">${SV(IC.spark, 12, 2.4)}Écrire avec l'IA <span class="kbd">⌘J</span></button></div>` : ""}
         ${D ? `<div class="fa-d" style="--dc:${D[1]}"><span>Difficulté pour vendre</span><span class="fa-mtr">${[1, 2, 3].map(i => `<i class="${i <= D[2] ? "on" : ""}"></i>`).join("")}</span><b style="color:${D[1]}">${D[0]}</b></div>` : ""}
-        ${found.length ? `<div class="fa-f"><span class="cap">Repéré dans la conversation</span><div class="fa-fc">${found.map(x => `<button data-fv="${x.k}" title="Valider : ajouter à son profil">${x.e} ${esc(P[x.k].value)}<i>+ au profil</i></button>`).join("")}</div></div>` : ""}`
+        ${found.length ? `<div class="fa-f"><span class="cap">Repéré dans la conversation</span><div class="fa-fc">${found.map(x => `<button data-fv="${x.k}" title="Valider : ajouter à son profil · ${esc(P[x.k].value)}"><span class="v">${x.e} ${esc(P[x.k].value)}</span><i>+ au profil</i></button>`).join("")}</div></div>` : ""}`
       : q && q.error ? `<p class="fa-e">L'IA n'a pas pu lire la conversation : ${esc(q.error)}</p>` : `<p class="fa-e">L'IA résume la conversation : prénom, où on en est, la prochaine chose à faire.</p>`}</div>`;
   $("brR").onclick = () => askBrief(true);
   if ($("brAi")) $("brAi").onclick = () => openPanel("ai");
@@ -1582,6 +1642,7 @@ function stream() {
     if (CUR && (!d.conv || d.conv === CUR.id)) loadMsgs(true);
     if (d.creator && d.creator !== CID) return;
     clearTimeout(lT); lT = setTimeout(() => loadList(true), 1500); });
+  ES.addEventListener("pin", e => { const d = JSON.parse(e.data); if (d.creator === CID) loadPins(); });
   ES.onerror = () => { LIVE = false; liveUi(); };
 }
 setInterval(() => { if (document.hidden || !CID) return; if (!LIVE) { loadList(true); if (CUR) loadMsgs(true); } }, 30000);
