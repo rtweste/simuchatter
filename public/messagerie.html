@@ -1268,12 +1268,14 @@ async function askBrief(again) {
 }
 function fanStats(c) {
   const r = FANS[CID + "|" + c.fan.id], H = HIST[c.id], S = r ? r.stats : {}, pick = re => { const k = Object.keys(S).find(k => re.test(k)); return k != null && S[k] !== "" ? S[k] : null; };
-  const total = pick(/totalSpent|spent/i), n = pick(/totalPurchases|purchases$|count/i), avg = pick(/average/i), high = pick(/highest|max/i);
+  const total = pick(/totalSpent|spent/i), avg = pick(/average/i), high = pick(/highest|max/i), n0 = pick(/totalPurchases|purchases$|count/i);
+  const n = n0 != null ? n0 : total != null && avg != null && +avg > 0 && +total > 0 ? Math.round(+total / +avg) : total != null && +total === 0 ? 0 : null;
+  const lastAt = pick(/^lastPurchase$|lastPurchase(Date|At)/i), lastWhat = pick(/^lastProductBought(\.(type|name|title|kind))?$/i);
   const paid = H ? H.items.filter(i => i.price > 0) : [], bought = paid.filter(i => i.bought), cnt = {}; bought.forEach(i => cnt[i.price] = (cnt[i.price] || 0) + 1);
   const fav = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0], T = THREADS[c.id];
   const spent = (total != null && +total > 0) || bought.length > 0, team = (T && T.items.some(m => !m.fromFan && !m.tmp)) || (H && H.team.some(t => t.msgs));
   const auto = spent ? 3 : paid.length ? 2 : team ? 1 : 0;
-  return { r, H, total, n, avg, high, paid, bought, fav: fav && fav[1] >= 2 ? +fav[0] : null, spent, auto, loaded: !!r };
+  return { r, H, total, n, avg, high, lastAt, lastWhat, paid, bought, fav: fav && fav[1] >= 2 ? +fav[0] : null, spent, auto, loaded: !!r };
 }
 const buyType = t => /tip|pourboire/i.test(t) ? "Pourboire" : /sub|abonn/i.test(t) ? "Abonnement" : /media|ppv|private|push/i.test(t) ? "Média privé (PPV)" : /message/i.test(t) ? "Message payant" : t ? (t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()).replace(/_/g, " ") : "Achat";
 const daysAgo = d => { const t = Date.parse(d); if (!isFinite(t)) return null; const n = Math.floor((Date.now() - t) / 864e5); return n <= 0 ? "Aujourd'hui" : n === 1 ? "Hier" : n < 30 ? `il y a ${n} j` : day(t); };
@@ -1299,7 +1301,7 @@ function paintFan(c) {
     if (K.dataset.m !== "sp") { K.dataset.m = "sp"; K.innerHTML = `<div class="fc-val"><div class="fc-vt"><div><span class="cap" style="color:#7aa894">Valeur du fan</span><div class="big" style="margin-top:6px"><span id="fTot"></span><span class="sm" id="fCts"></span></div></div><span class="lst" id="fLst"></span></div><div class="fc-mc" id="fMc"></div></div>`; }
     const tv = total != null ? E(+total) : r ? "–" : "…", mt = tv.match(/^([\d\s  ]+)(.*)$/);
     if (mt) { roll($("fTot"), mt[1].trim()); $("fCts").textContent = mt[2]; } else { $("fTot").textContent = tv; delete $("fTot").dataset.v; $("fCts").textContent = ""; }
-    $("fLst").innerHTML = rec ? `Dernier achat<b>${esc(daysAgo(rec.at) || "—")} · ${E(rec.amount)}</b>` : r ? "" : "";
+    $("fLst").innerHTML = rec ? `Dernier achat<b>${esc(daysAgo(rec.at) || "—")} · ${E(rec.amount)}</b>` : X.lastAt && daysAgo(X.lastAt) ? `Dernier achat<b>${esc(daysAgo(X.lastAt))}${X.lastWhat ? " · " + esc(buyType(String(X.lastWhat))) : ""}</b>` : "";
     $("fMc").innerHTML = [["Achats", n != null ? esc(n) : r ? "—" : "…"], ["Panier moyen", avg != null ? E(+avg) : total != null && n ? E(+total / +n) : r ? "—" : "…"], ["Max", high != null ? E(+high) : r ? "—" : "…"]].map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join("");
   }
   // achète ses PPV + abonnement
@@ -1309,8 +1311,10 @@ function paintFan(c) {
   requestAnimationFrame(() => { const g = $("fRg"); if (g) g.style.strokeDashoffset = (113.1 * (1 - pct / 100)).toFixed(1); });
   paintStage(c, X); paintBrief(c); paintFanRun(); paintProf(c);
   // historique : ses derniers achats, les PPV envoyés, l'équipe
-  const R = (r && r.recent) || [];
-  $("fBuy").innerHTML = `<div class="fc-card"><div class="fc-ch"><h4 class="ttl">Ses derniers <em>achats</em></h4></div>${R.length ? R.map(x => { const tip = /tip|pourboire/i.test(x.type); return `<div class="fc-buy"><span class="bi ${tip ? "tp" : ""}">${SV(tip ? IC.coin : IC.img, 14)}</span><span><b>${esc(buyType(x.type))}</b><small>${esc(x.at ? daysAgo(x.at) || "" : "")}</small></span><em>${E(x.amount)}</em></div>`; }).join("") : `<div class="hnone">${r ? "Aucun achat pour l'instant" : "…"}</div>`}</div>`;
+  const R = ((r && r.recent) || []).slice();
+  // pas de liste d'achats chez Twizz pour ce fan : on montre au moins le dernier, donné par ses statistiques
+  const onlyLast = !R.length && X.spent && X.lastAt; if (onlyLast) R.push({ amount: null, type: String(X.lastWhat || ""), at: X.lastAt });
+  $("fBuy").innerHTML = `<div class="fc-card"><div class="fc-ch"><h4 class="ttl">Ses derniers <em>achats</em></h4></div>${R.length ? R.map(x => { const tip = /tip|pourboire/i.test(x.type); return `<div class="fc-buy"><span class="bi ${tip ? "tp" : ""}">${SV(tip ? IC.coin : IC.img, 14)}</span><span><b>${esc(buyType(x.type))}</b><small>${esc(x.at ? daysAgo(x.at) || "" : "")}</small></span><em>${x.amount != null ? E(x.amount) : ""}</em></div>`; }).join("") + (onlyLast ? `<div class="hnone">Twizz ne donne que son dernier achat · ${E(+total)} dépensés au total</div>` : "") : `<div class="hnone">${!r ? "…" : X.spent ? `Twizz ne donne pas le détail de ses achats · ${E(+total)} dépensés au total` : "Aucun achat pour l'instant"}</div>`}</div>`;
   const team = H ? H.team.filter(t => t.msgs || t.sold) : [];
   $("fTm").innerHTML = team.length ? `<div class="hs"><h4 class="ttl">Qui s'occupe <em>de ${first1}</em></h4><span class="cap">par ventes</span></div>${team.map(t => `<div class="who">${chatterAv(t.name, 32)}<span class="tx"><b>${esc(t.name)}</b><small>${t.msgs} message${t.msgs > 1 ? "s" : ""} · ${t.sold} PPV vendu${t.sold > 1 ? "s" : ""}</small></span><em>${E(t.amount)}</em></div>`).join("")}` : "";
   paintHist(c, H);
