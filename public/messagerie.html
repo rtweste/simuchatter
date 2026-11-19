@@ -252,6 +252,30 @@
 .srow .si b{display:flex;align-items:center;gap:8px;font:800 13px Inter;color:#fff}
 .srow .si b .ct{font:800 9.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:#7a7a7a;padding:2px 7px;border-radius:6px;background:#1d1d1d}
 .srow .si b .smd{display:inline-flex;align-items:center;gap:4px;font:800 10px Inter;color:#f3dcae;padding:2px 7px;border-radius:6px;background:rgba(232,194,122,.12);border:1px solid rgba(232,194,122,.3)}
+/* ---- déroulé d'un script sur le fan (au-dessus de la barre d'envoi) ---- */
+.rnb{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0 0 8px;padding:7px 7px 7px 10px;border-radius:16px;border:1px solid rgba(125,180,255,.28);background:linear-gradient(135deg,rgba(125,180,255,.1),rgba(95,211,162,.04) 60%,transparent),#0f1114;box-shadow:0 12px 30px -16px rgba(125,180,255,.55)}
+.rnb.nw{animation:vchIn .5s cubic-bezier(.16,1,.3,1) both}
+.rnb.fin{border-color:rgba(95,211,162,.35);background:linear-gradient(135deg,rgba(95,211,162,.1),transparent 60%),#0f1311}
+.rnh{display:flex;align-items:center;gap:8px;flex:none}
+.rni{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:rgba(125,180,255,.15);color:#9cc6ff;flex:none}
+.rnb.fin .rni{background:rgba(95,211,162,.15);color:#5fd3a2}
+.rnh b{font:800 12.5px Inter;color:#f2f2f2;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rnd{display:flex;gap:3px}.rnd i{width:14px;height:4px;border-radius:2px;background:#2a2a2a;transition:all .4s}.rnd i.ok{background:#5fd3a2}.rnd i.cur{background:#7db4ff;box-shadow:0 0 8px #7db4ff;animation:rnP 1.6s ease-in-out infinite}
+@keyframes rnP{50%{opacity:.45}}
+.rns{font:800 11px Inter;color:#9cc6ff;white-space:nowrap}.rnb.fin .rns{color:#5fd3a2}
+.rnbr{order:2;flex-basis:100%;height:0}.rnbr+.rnx{padding-left:34px}.rnchip{order:3}
+.rnx{order:4;flex:1 1 160px;min-width:0;padding:0 2px 1px 0;font:500 12.5px Inter;color:#9a9a9a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rnx em{font-style:normal;color:#f3dcae;font-weight:800}
+.rna{display:flex;gap:5px;flex:none;margin-left:auto}
+.rng{height:32px;padding:0 12px;border-radius:10px;border:0;background:#7db4ff;color:#06142b;font:800 12px Inter;cursor:pointer;white-space:nowrap;box-shadow:0 8px 20px -8px rgba(125,180,255,.8);transition:transform .3s cubic-bezier(.3,1.6,.5,1)}
+.rng:active{transform:scale(.95)}.rng.rdy{background:#5fd3a2;color:#05261a;box-shadow:0 8px 20px -8px rgba(95,211,162,.8)}
+.rnk,.rnc{height:32px;padding:0 10px;border-radius:10px;border:1px solid #2a2a2a;background:#151515;color:#9a9a9a;font:800 12px Inter;cursor:pointer}
+.rnk:hover,.rnc:hover{color:#fff;border-color:#3a3a3a}.rnc{width:32px;padding:0;display:grid;place-items:center}
+.rnchip{flex:none;order:3;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:999px;font:800 11px Inter;white-space:nowrap;border:1px solid transparent}
+.rnchip.ok{color:#bff3dc;background:rgba(95,211,162,.12);border-color:rgba(95,211,162,.35)}
+.rnchip.rl{color:#f6d79a;background:rgba(240,181,74,.12);border-color:rgba(240,181,74,.45);cursor:pointer;animation:rnP 2.2s ease-in-out infinite}
+.srow .si b .ct.st{color:#9cc6ff;background:rgba(125,180,255,.12)}
+@media(max-width:860px){.rnh b{max-width:110px}}
 /* ---- tags des fans ---- */
 .tgp{--c:#9a9a9a;position:relative;display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px 0 6px;border-radius:999px;font:800 10.5px Inter;white-space:nowrap;flex:none;color:color-mix(in srgb,var(--c) 78%,#fff);background:color-mix(in srgb,var(--c) 13%,transparent);border:1px solid color-mix(in srgb,var(--c) 34%,transparent)}
 .tgp .d{width:5px;height:5px;border-radius:50%;background:var(--c);box-shadow:0 0 7px var(--c);flex:none}
@@ -776,7 +800,7 @@ function markDone(conv) {
 
 /* ================= fil de discussion ================= */
 async function openConv(c) {
-  if (!c) return; if (!CUR || CUR.id !== c.id) { PANEL = null; } CUR = c; $("mx").classList.add("open"); renderList(); thread(); loadMsgs(); loadHist(); setTimeout(fanCard, 150);
+  if (!c) return; if (!CUR || CUR.id !== c.id) { PANEL = null; } CUR = c; $("mx").classList.add("open"); renderList(); thread(); loadMsgs(); loadHist(); loadRun(); setTimeout(fanCard, 150);
 }
 const isPPV = m => !m.fromFan && m.type === "FILE" && m.price != null && m.medias.length;
 async function loadMsgs(fresh) {
@@ -846,7 +870,7 @@ function thread(keep, noScroll) {
   $("th").innerHTML = `${STARS}<div class="mx-hd"><button class="mx-ib mx-bk" id="bk">${SV(IC.back, 16)}</button>${av(CUR.fan, "av")}<div style="min-width:0"><b>${esc(CUR.fan.name)}</b><small>${CUR.fan.username ? "@" + esc(CUR.fan.username) : ""}</small></div><span class="htg" id="htg">${headTagsHtml()}</span>
       <span class="sp"><span class="crew" id="crew">${crewHtml()}</span>${TYPE === "QUEUE" ? `<button class="mx-ib" id="nxB" title="Fan suivant de la file">${SV(IC.down, 14, 2.4)}<span class="lb">Fan suivant</span><span class="kbd">↓</span></button>` : ""}<button class="mx-ib" id="rd" title="Marque la conversation comme lue sur Twizz">${SV(IC.eye, 15)}<span class="lb">Marquer lu</span></button><button class="mx-ib mx-fb" id="fanB">${SV(IC.user, 15)}<span class="lb">Fiche</span></button></span></div>
     <div class="mx-sc" id="sc">${body}</div>
-    <div class="mx-cpw">${ST.send ? "" : `<div class="mx-off">🔒 Envoi coupé : tu peux tout lire sans rien changer côté Twizz. Active « Envoi activé » pour répondre.</div>`}
+    <div class="mx-cpw"><div id="rnw"></div>${ST.send ? "" : `<div class="mx-off">🔒 Envoi coupé : tu peux tout lire sans rien changer côté Twizz. Active « Envoi activé » pour répondre.</div>`}
       <div class="mx-cp"><span class="tools"><button class="md" id="mdB" title="Envoyer un média du coffre" ${ST.send ? "" : "disabled"}>${SV(IC.img, 19)}</button><button class="md tl2 ${PANEL === "scripts" ? "act" : ""}" id="scB" title="Scripts (touche /)">${SV(IC.doc, 19)}</button><button class="md tl2 ai ${PANEL === "ai" ? "act" : ""}" id="aiB" title="Assistant IA (⌘J)">${SV(IC.spark, 19, 2)}</button></span><textarea id="tx" rows="1" placeholder="${ST.send ? (innerWidth > 860 ? "Écris ton message… ( / pour les scripts )" : "Écris ton message…") : "Envoi coupé"}" ${ST.send ? "" : "disabled"}></textarea><button class="go" id="goB" title="Envoyer" ${ST.send ? "" : "disabled"}>${SV(IC.send, 19, 2.6)}</button></div>
       <div class="hintbar"><span class="kh"><span class="kbd">↵</span>envoyer</span><span class="kh"><span class="kbd">/</span>scripts</span><span class="kh"><span class="kbd">⌘</span><span class="kbd">J</span>assistant IA</span><span class="kh"><span class="kbd">↓</span>fan suivant</span></div></div>`;
   // en bas : on y reste, même quand les images finissent de charger ; sinon on garde l'endroit où on lisait
@@ -868,6 +892,7 @@ function thread(keep, noScroll) {
   $("goB").onclick = () => sendText(); $("mdB").onclick = () => vault();
   $("scB").onclick = () => openPanel(PANEL === "scripts" ? null : "scripts"); $("aiB").onclick = () => openPanel(PANEL === "ai" ? null : "ai");
   if (PANEL) paintPanel();
+  paintRun();
   if ($("nxB")) $("nxB").onclick = nextInQueue;
   $("bk").onclick = () => { $("mx").classList.remove("open"); CUR = null; renderList(); };
   $("fanB").onclick = () => $("fan").classList.toggle("show");
@@ -894,7 +919,7 @@ async function sendText(again) {
   const T = THREADS[CUR.id] || (THREADS[CUR.id] = { items: [], page: 1, totalPages: 1 }), conv = CUR;
   const m = { id: "tmp" + Date.now(), tmp: true, fromFan: false, text: t, medias: [], at: new Date().toISOString(), sentAt: Date.now(), type: "TEXT" };
   T.items.push(m); thread();   // le message s'affiche tout de suite
-  try { await api2("/send", { body: { conversationId: conv.id, text: t, fan: conv.fan.id } }); markDone(conv); delete AIRES[conv.id]; if (CUR === conv) { T.items = T.items.filter(x => x !== m); await loadMsgs(true); thread(true); loadHist(true); } loadList(true); }
+  try { await api2("/send", { body: { conversationId: conv.id, text: t, fan: conv.fan.id } }); markDone(conv); runAfterSend(conv, "text"); delete AIRES[conv.id]; if (CUR === conv) { T.items = T.items.filter(x => x !== m); await loadMsgs(true); thread(true); loadHist(true); } loadList(true); }
   catch (e) { m.failed = true; if (CUR === conv) thread(true); notify("Message non envoyé", e.message, "err"); }
 }
 function lightbox(x) {
@@ -909,7 +934,8 @@ let PANEL = null, SCRIPTS = null; const SQ = { q: "", cat: "", sel: 0, slash: fa
 const fillVars = t => String(t || "").replace(/\{pr[ée]nom\}/gi, ((CUR && CUR.fan.name) || "").split(" ")[0]).replace(/\{cr[ée]atrice\}/gi, crLabel());
 function putText(t) { const tx = $("tx"); if (!tx) return; if (tx.disabled) return notify("Envoi coupé", "Active « Envoi activé » pour l'utiliser", "info");
   tx.value = t; tx.dispatchEvent(new Event("input")); tx.focus(); tx.setSelectionRange(t.length, t.length); }
-function openPanel(kind, opt) { PANEL = kind; SQ.slash = !!(opt && opt.slash); SQ.q = ""; SQ.sel = 0; SQ.form = null;
+function openPanel(kind, opt) { PANEL = kind; SQ.slash = !!(opt && opt.slash); SQ.q = ""; SQ.sel = 0;
+  if (kind === "scripts" && SCRIPTS && SCRIPTS.cid === CID) getScripts(true).then(() => PANEL === "scripts" && paintScripts()).catch(() => {});   // à jour si la page Scripts a changé
   const pn = $("pnl"); if (pn) pn.remove(); ["scB", "aiB"].forEach(id => $(id) && $(id).classList.toggle("act", (id === "scB" && kind === "scripts") || (id === "aiB" && kind === "ai")));
   if (!kind) { const tx = $("tx"); if (tx && tx.value.startsWith("/")) { tx.value = ""; tx.dispatchEvent(new Event("input")); } return; }
   if (kind === "scripts" && SQ.slash) { const tx = $("tx"); tx.value = "/"; tx.focus(); }
@@ -927,19 +953,18 @@ function paintScripts() {
   const pn = $("pnl"); if (!pn) return; pn.className = "pnl";
   if (!SCRIPTS || SCRIPTS.cid !== CID) { pn.innerHTML = `<div class="ph"><span class="pt">${SV(IC.doc, 16)}Scripts</span><span style="flex:1"></span><button class="px" id="pX">✕</button></div><div class="plst"><div class="sk" style="height:56px;border-radius:13px;margin:4px"></div><div class="sk" style="height:56px;border-radius:13px;margin:4px"></div></div>`;
     $("pX").onclick = () => openPanel(null); getScripts().then(() => PANEL === "scripts" && paintScripts()).catch(e => notify("Scripts", e.message, "err")); return; }
-  if (SQ.form) return paintScriptForm();
   const L = scriptList(), cats = [...new Set(SCRIPTS.items.map(x => x.cat).filter(Boolean))]; SQ.sel = Math.min(SQ.sel, Math.max(0, L.length - 1));
   const hl = t => esc(t).replace(/\{(pr[ée]nom|cr[ée]atrice)\}/gi, m => `<mark>${m}</mark>`);
   const keepQ = $("psQ") && document.activeElement === $("psQ");
   pn.innerHTML = `<div class="ph"><span class="pt">${SV(IC.doc, 16)}Scripts</span>${SQ.slash ? `<span class="kh" style="flex:1">Tape pour chercher · <span class="kbd">↵</span> insérer · <span class="kbd">↑</span><span class="kbd">↓</span></span>` : `<input id="psQ" placeholder="Chercher un script…" value="${esc(SQ.q)}">`}<button class="mx-ib" id="psN">+ Nouveau</button><button class="px" id="pX">✕</button></div>
     ${cats.length ? `<div class="pcats"><button class="${SQ.cat ? "" : "on"}" data-cat="">Tous</button>${cats.map(c => `<button class="${SQ.cat === c ? "on" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("")}</div>` : ""}
-    <div class="plst">${L.length ? L.map((x, i) => `<div class="srow ${i === SQ.sel && SQ.slash ? "sel" : ""}" style="animation-delay:${Math.min(i, 8) * .03}s"><button class="si" data-i="${i}"><b>${esc(x.title || x.body.slice(0, 40))}${x.cat ? `<span class="ct">${esc(x.cat)}</span>` : ""}${x.creator ? `<span class="sc">${esc(crLabel())}</span>` : ""}${x.media && x.media.length ? `<span class="smd">${SV(IC.lock, 10, 2.6)}${x.media.length} média${x.media.length > 1 ? "s" : ""} · ${x.price == null ? "prix libre" : x.price ? E(x.price) : "gratuit"}</span>` : ""}</b><small>${hl(x.body)}</small></button><span class="sa"><button data-e="${i}" title="Modifier">${SV(IC.edit, 13)}</button><button class="dl" data-d="${i}" title="Supprimer">${SV(IC.trash, 13)}</button></span></div>`).join("")
+    <div class="plst">${L.length ? L.map((x, i) => `<div class="srow ${i === SQ.sel && SQ.slash ? "sel" : ""}" style="animation-delay:${Math.min(i, 8) * .03}s"><button class="si" data-i="${i}"><b>${esc(x.title || ((x.steps[0] || {}).text || "").slice(0, 40) || "Script")}${x.steps.length > 1 ? `<span class="ct st">${x.steps.length} étapes</span>` : ""}${x.cat ? `<span class="ct">${esc(x.cat)}</span>` : ""}${x.creator ? `<span class="sc">${esc(crLabel())}</span>` : ""}${scriptMedia(x) ? `<span class="smd">${SV(IC.lock, 10, 2.6)}${esc(scriptMedia(x))}</span>` : ""}</b><small>${hl((x.steps[0] || {}).text || "")}</small></button><span class="sa"><button data-e="${i}" title="Modifier">${SV(IC.edit, 13)}</button><button class="dl" data-d="${i}" title="Supprimer">${SV(IC.trash, 13)}</button></span></div>`).join("")
       : SCRIPTS.items.length ? `<div class="pempty">Aucun script ne correspond</div>` : `<div class="pempty"><b>Aucun script pour l'instant</b>Crée tes messages tout prêts (accroches, relances, ventes) et insère-les en un clic.<br>Tape <span class="kbd">/</span> dans la barre d'envoi pour les retrouver.</div>`}</div>`;
-  $("pX").onclick = () => openPanel(null); $("psN").onclick = () => { SQ.form = { creator: null }; paintScripts(); };
+  $("pX").onclick = () => openPanel(null); $("psN").onclick = () => window.open(`/scripts?new=1&cr=${enc(CID)}`, "_blank");
   if ($("psQ")) { $("psQ").oninput = () => { SQ.q = $("psQ").value; SQ.sel = 0; paintScripts(); }; if (keepQ) { $("psQ").focus(); $("psQ").setSelectionRange(SQ.q.length, SQ.q.length); } }
   pn.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { SQ.cat = b.dataset.cat; SQ.sel = 0; paintScripts(); });
   pn.querySelectorAll("[data-i]").forEach(b => b.onclick = () => useScript(L[+b.dataset.i]));
-  pn.querySelectorAll("[data-e]").forEach(b => b.onclick = () => { SQ.form = { ...L[+b.dataset.e] }; paintScripts(); });
+  pn.querySelectorAll("[data-e]").forEach(b => b.onclick = () => window.open(`/scripts?id=${L[+b.dataset.e].id}`, "_blank"));
   pn.querySelectorAll("[data-d]").forEach(b => b.onclick = async () => { const x = L[+b.dataset.d]; if (!confirm(`Supprimer le script « ${x.title || x.body.slice(0, 30)} » ?`)) return;
     try { await api(`/api/twizz/scripts/${x.id}`, { method: "DELETE" }); await getScripts(true); paintScripts(); } catch (e) { notify("Impossible", e.message, "err"); } });
 }
@@ -948,23 +973,61 @@ function slashKey(k) { const L = scriptList();
   if (k === "ArrowDown") SQ.sel = Math.min(L.length - 1, SQ.sel + 1); else if (k === "ArrowUp") SQ.sel = Math.max(0, SQ.sel - 1);
   else if (k === "Enter") { if (L[SQ.sel]) useScript(L[SQ.sel]); return; }
   paintScripts(); const r = document.querySelector(".srow.sel"); if (r) r.scrollIntoView({ block: "nearest" }); }
-function useScript(x) { if (!x) return; openPanel(null);
-  // script avec médias : le coffre s'ouvre avec les médias, le prix et le texte déjà prêts ; le chatter vérifie et envoie
-  if (x.media && x.media.length) { if (x.creator && x.creator !== CID) return notify("Script d'une autre créatrice", "Ses médias viennent d'un autre coffre", "err"); vault(null, { files: x.media, price: x.price, text: x.body, title: x.title || "" }); }
-  else putText(fillVars(x.body));
+const scriptMedia = x => { const M = x.steps.filter(s => s.media && s.media.length); if (!M.length) return ""; const P = M.filter(s => s.price).map(s => E(s.price)); return P.length ? P.join(" · ") : M.reduce((a, s) => a + s.media.length, 0) + " média" + (M.reduce((a, s) => a + s.media.length, 0) > 1 ? "s" : ""); };
+function useScript(x) { if (!x || !CUR) return;
+  if (x.creator && x.creator !== CID) return notify("Script d'une autre créatrice", "Ses médias viennent d'un autre coffre", "err");
+  if (x.steps.length > 1) return startScript(x);
+  // un script d'une seule étape : directement dans la barre d'envoi, ou dans le coffre s'il a des médias
+  openPanel(null); const st = x.steps[0] || { text: "" };
+  if (st.media && st.media.length) vault(null, { files: st.media, price: st.price, text: st.text, title: x.title || "" }); else putText(fillVars(st.text));
   api(`/api/twizz/scripts/${x.id}/use`, { body: {} }).then(() => { x.uses++; }).catch(() => {}); }
-function paintScriptForm() {
-  const pn = $("pnl"), f = SQ.form, cats = [...new Set((SCRIPTS ? SCRIPTS.items : []).map(x => x.cat).filter(Boolean))];
-  pn.innerHTML = `<div class="ph"><span class="pt">${SV(IC.doc, 16)}${f.id ? "Modifier le script" : "Nouveau script"}</span><span style="flex:1"></span><button class="px" id="pX">✕</button></div>
-    <div class="sform"><div class="r2"><input id="sfT" style="flex:2" maxlength="80" placeholder="Titre (ex. Relance du soir)" value="${esc(f.title || "")}"><input id="sfC" style="flex:1" maxlength="30" list="sfCl" placeholder="Catégorie" value="${esc(f.cat || "")}"><datalist id="sfCl">${["Accroche", "Relance", "Vente", "Remerciement", "Nouvel abonné"].concat(cats).filter((v, i, a) => a.indexOf(v) === i).map(c => `<option value="${esc(c)}">`).join("")}</datalist></div>
-      <textarea id="sfB" maxlength="2000" placeholder="Le message, tel qu'il partira au fan">${esc(f.body || "")}</textarea>
-      <span class="hint">Variables : <code>{prenom}</code> devient le prénom du fan, <code>{creatrice}</code> le nom de la créatrice.</span>
-      <div class="seg2"><button class="${f.creator ? "" : "on"}" data-w="">Pour toutes les créatrices</button><button class="${f.creator ? "on" : ""}" data-w="1">Seulement ${esc(crLabel())}</button></div>
-      <div class="acts"><button class="mx-ib" id="sfX">Annuler</button><button class="mx-ib k" id="sfS">Enregistrer</button></div></div>`;
-  $("pX").onclick = () => openPanel(null); $("sfX").onclick = () => { SQ.form = null; paintScripts(); }; $("sfB").focus();
-  pn.querySelectorAll("[data-w]").forEach(b => b.onclick = () => { f.creator = b.dataset.w ? CID : null; pn.querySelectorAll("[data-w]").forEach(x => x.classList.toggle("on", x === b)); });
-  $("sfS").onclick = async () => { try { await api("/api/twizz/scripts", { body: { id: f.id || null, title: $("sfT").value, cat: $("sfC").value, body: $("sfB").value, creator: f.creator || null } });
-    SQ.form = null; await getScripts(true); paintScripts(); notify("Script enregistré", "", "ok"); } catch (e) { notify("Script non enregistré", e.message, "err"); } };
+
+/* ================= déroulé d'un script sur le fan : une étape à la fois, envoyée par le chatter ================= */
+const RUNS = {}; let PEND = null, RUN_SIG = "";
+const runKey = () => CUR ? CID + "|" + CUR.fan.id : "";
+async function loadRun(force) { const c = CUR; if (!c) return; const k = runKey(); if (RUNS[k] !== undefined && !force) return paintRun();
+  try { const r = await api2(`/run/${enc(c.fan.id)}`); RUNS[k] = r.run; if (r.run) await getScripts().catch(() => {}); } catch (e) { RUNS[k] = null; }
+  if (CUR === c) paintRun(); }
+function runNow() { const R = RUNS[runKey()]; if (!R) return null; const s = (SCRIPTS && SCRIPTS.cid === CID ? SCRIPTS.items : []).find(x => x.id === R.scriptId); return s ? { R, s } : null; }
+async function saveRun(body) { const c = CUR, k = runKey(); if (!c) return;
+  try { const r = await api2(`/run/${enc(c.fan.id)}`, { body }); RUNS[k] = r.run; } catch (e) { notify("Script", e.message, "err"); } if (CUR === c) paintRun(); }
+async function startScript(x) {
+  const X = runNow(), first1 = (CUR.fan.name || "").split(" ")[0];
+  if (X && X.R.step < X.s.steps.length && X.s.id !== x.id && !confirm(`${first1} est à l'étape ${X.R.step + 1} du script « ${X.s.title || "sans titre"} ». Le remplacer par « ${x.title || "sans titre"} » ?`)) return;
+  openPanel(null); PEND = null;
+  if (X && X.s.id === x.id && X.R.step < x.steps.length) { paintRun(); return prepStep(); }   // déjà en cours : on reprend où il en est
+  await saveRun({ script: x.id, step: 0, ppvMsg: null, ppvStep: null, relanced: false }); prepStep();
+}
+function prepStep() { const X = runNow(); if (!X || !CUR) return; const { R, s } = X, st = s.steps[R.step]; if (!st) return;
+  if (st.media && st.media.length) { PEND = { conv: CUR.id, k: R.step, media: true }; vault(null, { files: st.media, price: st.price, text: st.text, title: `${s.title || "Script"} · étape ${R.step + 1}`, run: true }); }
+  else { PEND = { conv: CUR.id, k: R.step }; putText(fillVars(st.text)); }
+  paintRun(); }
+function prepRelance() { const X = runNow(); if (!X || !CUR) return; const st = X.s.steps[X.R.ppvStep]; if (!st || !st.relance) return; PEND = { conv: CUR.id, relance: true }; putText(fillVars(st.relance)); paintRun(); }
+// après un envoi réussi : l'étape préparée est faite, on passe à la suivante
+function runAfterSend(conv, kind, msgId) {
+  if (!PEND || PEND.conv !== conv.id || CUR !== conv) return; const X = runNow(); if (!X) { PEND = null; return; }
+  const p = PEND; if ((kind === "media") !== !!p.media && !p.relance) return; PEND = null;
+  if (p.relance) return saveRun({ script: X.s.id, step: X.R.step, relanced: true });
+  const st = X.s.steps[p.k], paid = st && st.media && st.media.length && st.price !== 0 && msgId;
+  saveRun(Object.assign({ script: X.s.id, step: p.k + 1 }, paid ? { ppvMsg: msgId, ppvStep: p.k, relanced: false } : {}));
+}
+function paintRun() {
+  const W = $("rnw"); if (!W || !CUR) return; const X = runNow(); if (!X) { W.innerHTML = ""; RUN_SIG = ""; return; }
+  const { R, s } = X, n = s.steps.length, k = R.step, done = k >= n, st = s.steps[k], first1 = esc((CUR.fan.name || "").split(" ")[0]);
+  // le dernier PPV envoyé par le script : acheté, ou pas encore (relance proposée)
+  let ppv = null; const pst = R.ppvStep != null ? s.steps[R.ppvStep] : null;
+  if (R.ppvMsg) { const T = THREADS[CUR.id], m = T && T.items.find(x => x.id === R.ppvMsg); if (m) ppv = m.status === "accepted" ? "bought" : "no"; }
+  const rel = ppv === "no" && !R.relanced && pst && pst.relance, ready = PEND && PEND.conv === CUR.id && !PEND.relance && PEND.k === k;
+  const sig = s.id + ":" + k; const fresh = sig !== RUN_SIG; RUN_SIG = sig;
+  W.innerHTML = `<div class="rnb ${done ? "fin" : ""} ${fresh ? "nw" : ""}"><span class="rnh"><span class="rni">${done ? SV(IC.check, 14, 3) : SV(IC.doc, 14)}</span><b title="${esc(s.title || "")}">${esc(s.title || "Script")}</b><span class="rnd">${s.steps.map((_, i) => `<i class="${i < k ? "ok" : i === k ? "cur" : ""}"></i>`).join("")}</span><span class="rns">${done ? "Terminé" : `Étape ${k + 1}/${n}`}</span></span>
+    <span class="rnbr"></span>${ppv === "bought" && pst ? `<span class="rnchip ok">${SV(IC.check, 11, 3)}${pst.price ? E(pst.price) + " acheté" : "Acheté"}</span>` : ""}${rel ? `<button class="rnchip rl" id="rnR" title="${esc(fillVars(pst.relance))}">${SV(IC.refresh, 11, 2.6)}Pas encore acheté · relancer</button>` : ""}
+    <span class="rnx">${done ? `Toutes les étapes sont envoyées à ${first1}` : ready ? `Étape ${k + 1} prête : vérifie puis envoie` : `${st.media && st.media.length ? `<em>${SV(IC.lock, 10, 2.8)} ${st.price == null ? "prix au choix" : st.price ? E(st.price) : "offert"}</em> · ` : ""}${esc(fillVars(st.text) || "Médias du coffre")}`}</span>
+    <span class="rna">${done ? "" : `<button class="rng ${ready ? "rdy" : ""}" id="rnG">${ready ? (st.media && st.media.length ? "Rouvrir le coffre" : "Dans la barre ↵") : st.media && st.media.length ? `Préparer l'étape ${k + 1}` : `Insérer l'étape ${k + 1}`}</button><button class="rnk" id="rnS" title="Passer à l'étape suivante sans envoyer celle-ci">Passer</button>`}<button class="rnc" id="rnX" title="${done ? "Fermer" : "Arrêter le script"}">${SV(IC.x, 13, 2.6)}</button></span></div>`;
+  if ($("rnG")) $("rnG").onclick = () => { if (ready && !(st.media && st.media.length)) { const tx = $("tx"); if (tx) tx.focus(); } else prepStep(); };
+  if ($("rnS")) $("rnS").onclick = () => { PEND = null; saveRun({ script: s.id, step: k + 1 }); };
+  if ($("rnR")) $("rnR").onclick = prepRelance;
+  $("rnX").onclick = async () => { if (!done && !confirm(`Arrêter le script « ${s.title || "sans titre"} » pour ${CUR.fan.name} ?`)) return; const c = CUR, kk = runKey(); PEND = null;
+    try { await api2(`/run/${enc(c.fan.id)}`, { method: "DELETE" }); RUNS[kk] = null; } catch (e) { notify("Script", e.message, "err"); } if (CUR === c) paintRun(); };
 }
 const AIC = ["#5fd3a2", "#e8c27a", "#7db4ff"];
 async function askAI() { const c = CUR; if (!c) return; AIRES[c.id] = { loading: true }; if (PANEL === "ai") paintAI();
@@ -1221,7 +1284,8 @@ async function vault(acceptId, preset) {
     const go = $("vGo"); if (go.disabled) return;
     if (!confirm(`Envoyer ${SEL.length} média${SEL.length > 1 ? "s" : ""} à ${conv.fan.name} ${price ? "pour " + E(price) : "gratuitement"} ?`)) return;
     go.disabled = true; $("vGl").textContent = "Envoi…";
-    try { await api2("/send-media", { body: { conversationId: conv.id, fan: conv.fan.id, files: SEL.slice(), price, text: $("vTxt").value, acceptId: acceptId || null } });
+    try { const sr = await api2("/send-media", { body: { conversationId: conv.id, fan: conv.fan.id, files: SEL.slice(), price, text: $("vTxt").value, acceptId: acceptId || null } });
+      if (preset && preset.run) runAfterSend(conv, "media", sr && sr.message && sr.message.id);
       const n = SEL.length; m.querySelector(".vbox").insertAdjacentHTML("beforeend", `<div class="done"><div class="dc"><span class="rip"></span><span class="rip" style="animation-delay:.9s"></span>${[["left:30px;top:30px", .75, 14], ["right:34px;top:22px", .9, 11], ["right:24px;bottom:40px", 1, 12], ["left:22px;bottom:50px", .85, 9]].map(([p, d, s]) => `<span class="spk" style="${p};animation-delay:${d}s;width:${s}px;height:${s}px">${SPARK}</span>`).join("")}<svg class="ok" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="#5fd3a2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="36" cy="36" r="31" pathLength="1"/><path d="M23 37l9 9 18-19" pathLength="1"/></svg><b>${n} média${n > 1 ? "s" : ""} envoyé${n > 1 ? "s" : ""} à ${esc(conv.fan.name.split(" ")[0])}</b><small>${price ? E(price) : "Gratuit"} · signé à ton nom dans la conversation</small></div></div>`);
       markDone(conv); setTimeout(close, 1700); await loadMsgs(true); loadList(true); loadHist(true); }
     catch (e) { upd(); notify("Média non envoyé", e.message, "err"); }

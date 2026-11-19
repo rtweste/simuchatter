@@ -43,7 +43,7 @@
 .kpi span{display:block;font:600 11.5px Inter;color:#7a7a7a;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi.hl{background:linear-gradient(135deg,rgba(95,211,162,.12),rgba(95,211,162,.02) 70%),#0f1311;border-color:rgba(95,211,162,.25)}.kpi.hl b{color:#eafff6}
 /* ---- espace de travail ---- */
-.ws{flex:1;min-height:0;display:grid;grid-template-columns:230px minmax(0,1fr) 440px;gap:0;border-top:1px solid #181818}
+.ws{flex:1;min-height:0;display:grid;grid-template-columns:230px minmax(0,1fr) 490px;gap:0;border-top:1px solid #181818}
 .side{border-right:1px solid #181818;padding:16px 12px;overflow:auto;scrollbar-width:thin}
 .side .cap{margin:4px 8px 8px}
 .fl{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:12px;border:0;background:none;color:#bdbdbd;font:700 13px Inter;text-align:left;cursor:pointer;transition:background .2s}
@@ -122,6 +122,61 @@ mark{background:rgba(95,211,162,.14);color:var(--ac);border-radius:4px;padding:0
 @keyframes svd{0%{opacity:0;transform:scale(.6)}10%,80%{opacity:1;transform:none}100%{opacity:0}}
 .ednone{flex:1;display:grid;place-items:center;text-align:center;color:#6a6a6a;font:600 13px/1.6 Inter;padding:30px}
 .ednone b{display:block;color:#fff;font:900 16px Inter;margin-bottom:4px}
+/* ---- déroulé d'étapes ---- */
+.nst{margin-left:6px;color:#7db4ff;letter-spacing:.08em}
+.steps{display:flex;flex-direction:column}
+.st{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;animation:cIn .5s cubic-bezier(.16,1,.3,1) both}
+.rail{position:relative;display:flex;flex-direction:column;align-items:center}
+.rail .num{position:relative;z-index:1;width:28px;height:28px;margin-top:8px;border-radius:50%;display:grid;place-items:center;font:900 12px Inter;background:#151515;border:1px solid #2a2a2a;color:#bdbdbd;transition:all .4s cubic-bezier(.3,1.5,.5,1)}
+.st.on .rail .num{background:#5fd3a2;border-color:#5fd3a2;color:#05261a;box-shadow:0 0 0 4px rgba(95,211,162,.15),0 0 18px rgba(95,211,162,.5);transform:scale(1.08)}
+.rail .ln{position:absolute;top:38px;bottom:-38px;left:50%;width:2px;margin-left:-1px;background:linear-gradient(#2a2a2a,#1c1c1c);border-radius:2px;overflow:hidden}
+.rail .ln i{position:absolute;left:0;width:2px;height:24px;background:linear-gradient(transparent,#5fd3a2,transparent);animation:flow 2.4s linear infinite}
+@keyframes flow{from{top:-24px}to{top:100%}}
+.sb{position:relative;display:flex;flex-direction:column;gap:9px;padding:12px;border-radius:16px;border:1px solid #1f1f1f;background:#0f0f0f;transition:border-color .3s,background .3s}
+.st.on .sb{border-color:rgba(95,211,162,.3);background:linear-gradient(135deg,rgba(95,211,162,.05),transparent 60%),#101010}
+.sh{display:flex;align-items:center;gap:8px;min-width:0}.sh b{font:900 13px Inter;white-space:nowrap}
+.kd{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 8px;border-radius:999px;font:800 10px Inter;color:#9a9a9a;background:#171717;border:1px solid #262626;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.kd.p{color:#f3dcae;background:rgba(232,194,122,.12);border-color:rgba(232,194,122,.35)}
+.kd.f{color:#bff3dc;background:rgba(95,211,162,.1);border-color:rgba(95,211,162,.3)}
+.sa{margin-left:auto;display:flex;gap:3px;opacity:.45;transition:opacity .2s;flex:none}
+.st:hover .sa,.st.on .sa{opacity:1}
+.sa button{width:26px;height:26px;border-radius:8px;border:1px solid #262626;background:#141414;color:#9a9a9a;display:grid;place-items:center;cursor:pointer;padding:0}
+.sa button:hover{color:#fff;border-color:#3a3a3a}.sa button.dl:hover{color:#ff8a8a;border-color:#4a2626}.sa button[disabled]{opacity:.3;cursor:default}
+.sb textarea{border-radius:12px;border:1px solid #242424;background:#0b0b0b;color:#eee;font:500 14px/1.5 Inter;padding:10px 11px;resize:vertical;min-height:70px}
+.sb textarea:focus{border-color:#3a3a3a;outline:none;box-shadow:0 0 0 4px rgba(255,255,255,.03)}
+.mpk{display:flex;align-items:center;justify-content:center;gap:7px;height:38px;border-radius:11px;border:1px dashed #333;background:transparent;color:#bdbdbd;font:800 12px Inter;cursor:pointer;transition:all .3s}
+.mpk:hover{border-style:solid;border-color:#e8c27a;color:#e8c27a;background:rgba(232,194,122,.05)}
+.mpk[disabled]{opacity:.45;cursor:not-allowed}.mpk[disabled]:hover{border-style:dashed;border-color:#333;color:#bdbdbd;background:none}
+.smb{display:flex;flex-direction:column;gap:9px;padding:10px;border-radius:13px;border:1px solid rgba(232,194,122,.25);background:linear-gradient(135deg,rgba(232,194,122,.06),transparent 60%),#0d0d0d}
+.smb .prs input{width:76px}
+.addrel{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:9px;border:1px dashed #4a3d22;background:transparent;color:#cdb78a;font:700 11.5px Inter;cursor:pointer;transition:all .25s}
+.addrel:hover{border-style:solid;border-color:#e8c27a;color:#f3dcae}
+.rel{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:13px;border:1px dashed rgba(240,181,74,.35);background:rgba(240,181,74,.04);animation:cIn .4s both}
+.rlb{display:flex;align-items:center;gap:6px;font:800 11px Inter;color:#f0c97a}
+.rel textarea{min-height:52px}
+.gap{margin-left:40px;height:34px;display:flex;align-items:center}
+.gap span{font:700 10.5px Inter;letter-spacing:.06em;color:#5a5a5a;display:inline-flex;align-items:center;gap:7px}
+.gap span:before{content:"";width:14px;height:1px;background:#2a2a2a}
+.addst{margin-top:10px;margin-left:40px;display:flex;align-items:center;justify-content:center;gap:7px;height:42px;border-radius:13px;border:1px dashed #2f3b35;background:transparent;color:#8fd3b5;font:800 12.5px Inter;cursor:pointer;transition:all .3s}
+.addst:hover{border-style:solid;border-color:#5fd3a2;color:#5fd3a2;background:rgba(95,211,162,.05)}
+.pvs{display:flex;flex-direction:column;gap:8px;max-height:440px;overflow:auto;padding-right:4px;scrollbar-width:thin}
+.pv .me{cursor:pointer;opacity:.5;transition:opacity .35s}
+.pv .me.act{opacity:1}
+.pv .me .stp{font:800 9px Inter;letter-spacing:.14em;text-transform:uppercase;color:#6a6a6a}
+.pv .me.act .stp{color:#5fd3a2}.pv .me.rl .stp{color:#f0c97a}
+.pv .me.rl .bm{background:#15120b;color:#f6e3bd;box-shadow:0 0 22px -8px rgba(240,181,74,.5)}
+.pv .me.rl .bm:before{background:linear-gradient(135deg,#f0b54a,rgba(240,181,74,.15))}
+.pv .bm.ph{color:#555}
+.pv .bf.typ{display:inline-flex;gap:4px;padding:11px 12px}
+.bf.typ i{width:6px;height:6px;border-radius:50%;background:#555;animation:typ 1.2s infinite}.bf.typ i:nth-child(2){animation-delay:.15s}.bf.typ i:nth-child(3){animation-delay:.3s}
+@keyframes typ{0%,60%,100%{transform:none;opacity:.4}30%{transform:translateY(-3px);opacity:1}}
+.card .sq{display:flex;flex-direction:column;gap:5px}
+.sl{display:flex;align-items:center;gap:7px;font:500 12.5px Inter;color:#a8a8a8;min-width:0}
+.sl i{flex:none;min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;font:900 9.5px Inter;font-style:normal;background:#1a1a1a;border:1px solid #2a2a2a;color:#9a9a9a;padding:0 4px}
+.sl>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sl em{flex:none;display:inline-flex;align-items:center;gap:3px;font:800 9.5px Inter;font-style:normal;color:#bff3dc;padding:1px 6px;border-radius:6px;background:rgba(95,211,162,.1)}
+.sl em.p{color:#f3dcae;background:rgba(232,194,122,.12)}
+.sl.more{color:#6a6a6a}
 /* ---- médias du coffre joints au script ---- */
 .mb{display:flex;flex-direction:column;gap:11px;padding:12px;border-radius:16px;border:1px solid #1f1f1f;background:#0e0e0e;transition:border-color .3s}
 .mb.has{border-color:rgba(232,194,122,.28);background:linear-gradient(135deg,rgba(232,194,122,.06),transparent 60%),#0e0e0e}
@@ -195,7 +250,7 @@ body.vblur .vt:hover img{filter:none}
 .box .f .sel{display:flex;align-items:center;gap:8px;font:700 12px Inter;color:#8a8a8a}
 .box .f .eyeb{margin-left:0}
 .box .f input,.box .f select{height:34px;border-radius:10px;border:1px solid #262626;background:#151515;color:#eee;font:600 12.5px Inter;padding:0 10px}
-@media(max-width:1280px){.ws{grid-template-columns:200px minmax(0,1fr) 380px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1280px){.ws{grid-template-columns:200px minmax(0,1fr) 420px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:980px){.vb{grid-template-columns:1fr}.vr{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid #1c1c1c}.al{width:auto;flex:none}.al small{display:none}.main-area.scm,.sc{height:auto;min-height:100dvh;overflow:visible}.ws{grid-template-columns:minmax(0,1fr)}.bar{flex-wrap:wrap}.srch{flex:1 1 100%}.ed .in{overflow:visible}.r2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.ed .ft{flex-wrap:wrap}.ed .ft .kbd,.hd .kbd,.srch .kbd{display:none}.ed .ft .sv{flex:1;justify-content:center}.side{border-right:0;border-bottom:1px solid #181818;display:flex;gap:6px;overflow-x:auto}.side .cap,.side hr{display:none}.fl{width:auto;white-space:nowrap}.ed{border-left:0;border-top:1px solid #181818}.hd h1{font-size:30px}.lst{grid-template-columns:1fr}}
 @media(max-width:900px){.main-area.scm{padding-bottom:90px!important}}
 </style>
@@ -279,13 +334,18 @@ function side() {
   $("side").querySelectorAll("[data-cat]").forEach(x => x.onclick = () => { F.cat = x.dataset.cat; F.pinned = false; side(); cards(); });
   $("side").querySelectorAll("[data-pin]").forEach(x => x.onclick = () => { F.pinned = !F.pinned; F.cat = ""; side(); cards(); });
 }
+const blankStep = () => ({ text: "", media: [], price: null, relance: "" });
+const fillEx = t => String(t || "").replace(/\{pr[ée]nom\}/gi, "Ben").replace(/\{cr[ée]atrice\}/gi, crOf(DRAFT && DRAFT.creator).label || "SARAH");
+const stepKind = s => !s.media || !s.media.length ? "Message" : s.price == null ? "Média · prix au choix" : s.price ? `Média payant · ${eur(s.price)}` : "Média offert";
+let ACT = 0;
 function cards() {
   const L = list();
-  $("lst").innerHTML = L.length ? L.map((x, i) => { const mx = Math.max(1, ...x.days), cr = x.creator ? crOf(x.creator) : null;
+  $("lst").innerHTML = L.length ? L.map((x, i) => { const mx = Math.max(1, ...x.days), cr = x.creator ? crOf(x.creator) : null, S = x.steps || [], nm = S.reduce((a, s) => a + (s.media || []).length, 0);
+    const prices = S.filter(s => s.media && s.media.length && s.price).map(s => eur(s.price));
     return `<button class="card ${SEL === x.id ? "on" : ""}" data-id="${x.id}" style="animation-delay:${Math.min(i, 12) * .03}s">${SEL === x.id ? '<span class="trace"></span>' : ""}
-      <span class="t">${x.pinned ? `<span class="pin">${SV(IC.pin, 13)}</span>` : ""}<b>${esc(x.title || x.body.slice(0, 40) || "Médias")}</b>${x.cat ? `<span class="chip" style="--c:${catColor(x.cat)}">${esc(x.cat)}</span>` : ""}${x.media && x.media.length ? `<span class="mchip">${SV(IC.lock, 11, 2.6)}${pl(x.media.length, "média", "médias")} · ${priceTxt(x.price)}</span>` : ""}</span>
-      <span class="body">${hl(x.body)}</span>
-      <span class="ft"><span class="chip" style="--c:${cr ? pal(cr.label)[0] : "#9a9a9a"}">${cr ? esc(cr.label) : "Toutes"}</span><span class="u"><b>${x.uses}</b> fois</span>${x.who.length ? `<span class="whos">${x.who.slice(0, 4).map(w => `<span class="w" style="--c:${pal(w.name)[0]}" title="${esc(w.name)} : ${w.n} fois">${esc(w.name[0].toUpperCase())}</span>`).join("")}</span>` : ""}
+      <span class="t">${x.pinned ? `<span class="pin">${SV(IC.pin, 13)}</span>` : ""}<b>${esc(x.title || (S[0] && S[0].text.slice(0, 40)) || "Script")}</b>${x.cat ? `<span class="chip" style="--c:${catColor(x.cat)}">${esc(x.cat)}</span>` : ""}</span>
+      <span class="sq">${S.slice(0, 3).map((s, k) => `<span class="sl"><i>${k + 1}</i>${s.media && s.media.length ? `<em class="${s.price ? "p" : ""}">${SV(IC.lock, 9, 2.8)}${s.price ? eur(s.price) : s.price === 0 ? "offert" : "média"}</em>` : ""}<span>${hl(s.text || "")}</span></span>`).join("")}${S.length > 3 ? `<span class="sl more"><i>+${S.length - 3}</i><span>${pl(S.length - 3, "autre étape", "autres étapes")}</span></span>` : ""}</span>
+      <span class="ft"><span class="chip" style="--c:#7db4ff">${pl(S.length, "étape", "étapes")}</span>${nm ? `<span class="mchip">${SV(IC.lock, 11, 2.6)}${prices.length ? prices.join(" · ") : pl(nm, "média", "médias")}</span>` : ""}<span class="chip" style="--c:${cr ? pal(cr.label)[0] : "#9a9a9a"}">${cr ? esc(cr.label) : "Toutes"}</span><span class="u"><b>${x.uses}</b> fois</span>${x.who.length ? `<span class="whos">${x.who.slice(0, 4).map(w => `<span class="w" style="--c:${pal(w.name)[0]}" title="${esc(w.name)} : ${w.n} fois">${esc(w.name[0].toUpperCase())}</span>`).join("")}</span>` : ""}
         <span class="spark" title="Utilisations des 14 derniers jours">${x.days.map((d, k) => `<i class="${k >= 12 && d ? "h" : ""}" style="height:${Math.max(2, d / mx * 20)}px"></i>`).join("")}</span></span></button>`; }).join("")
     : D.items.length ? `<div class="empty"><b>Aucun script ne correspond</b>Change de filtre ou de recherche.</div>`
     : `<div class="empty"><b>Ta bibliothèque est vide</b>Crée le premier script, ou importe ceux de Twizz avec le bouton Importer.<br><br><button class="btn2 w" id="e1">+ Nouveau script</button></div>`;
@@ -293,77 +353,105 @@ function cards() {
   if ($("e1")) $("e1").onclick = () => open(null, true);
 }
 function open(id, isNew) {
-  SEL = id; AIV = null; GOAL = "";
+  SEL = id; AIV = null; GOAL = ""; ACT = 0;
   const x = id ? D.items.find(s => s.id === id) : null;
-  DRAFT = x ? { id: x.id, title: x.title, cat: x.cat, body: x.body, creator: x.creator, pinned: x.pinned, media: (x.media || []).slice(), price: x.price == null ? null : x.price }
-    : { id: null, title: "", cat: F.cat || "", body: "", creator: F.creator && F.creator !== "_all" ? F.creator : null, pinned: false, media: [], price: null };
-  if (isNew || x) { cards(); editor(); if (innerWidth <= 980) $("ed").scrollIntoView({ behavior: "smooth", block: "start" }); setTimeout(() => (isNew ? $("eT") : $("eB")) && (isNew ? $("eT") : $("eB")).focus(), 60); }
+  DRAFT = x ? { id: x.id, title: x.title, cat: x.cat, creator: x.creator, pinned: x.pinned, steps: (x.steps && x.steps.length ? x.steps : [blankStep()]).map(s => ({ text: s.text || "", media: (s.media || []).slice(), price: s.price == null ? null : s.price, relance: s.relance || "" })) }
+    : { id: null, title: "", cat: F.cat || "", creator: F.creator && F.creator !== "_all" ? F.creator : null, pinned: false, steps: [blankStep()] };
+  if (isNew || x) { cards(); editor(); if (innerWidth <= 980) $("ed").scrollIntoView({ behavior: "smooth", block: "start" }); setTimeout(() => { const f = isNew ? $("eT") : document.querySelector('[data-tx="0"]'); if (f) f.focus(); }, 60); }
 }
 function editor() {
   const E = $("ed");
-  if (!DRAFT) { E.innerHTML = `<div class="ednone"><div><b>Choisis un script</b>ou crée-en un nouveau avec <span class="kbd">N</span>.<br>Les chatters les retrouvent dans la messagerie en tapant <span class="kbd">/</span>.</div></div>`; return; }
+  if (!DRAFT) { E.innerHTML = `<div class="ednone"><div><b>Choisis un script</b>ou crée-en un nouveau avec <span class="kbd">N</span>.<br>Un script est un déroulé d'étapes : les chatters les envoient une par une depuis la messagerie.</div></div>`; return; }
   const x = DRAFT.id ? D.items.find(s => s.id === DRAFT.id) : null, cats = [...new Set(CATS.concat(D.items.map(s => s.cat).filter(Boolean)))];
   E.innerHTML = `<div class="in"><div style="display:flex;align-items:center;gap:10px"><h2>${DRAFT.id ? "Modifier" : "Nouveau script"}</h2>${x ? `<span class="chip" style="--c:#9a9a9a">${x.source === "twizz" ? "Importé de Twizz" : "Créé sur le site"}</span>` : ""}<span id="svd" style="margin-left:auto"></span></div>
-    <div class="r2"><div class="fld"><label for="eT">Titre</label><input id="eT" maxlength="80" placeholder="ex. Relance du soir" value="${esc(DRAFT.title)}"></div>
-      <div class="fld"><label for="eC">Catégorie</label><input id="eC" maxlength="30" list="eCl" placeholder="ex. Relance" value="${esc(DRAFT.cat)}"><datalist id="eCl">${cats.map(c => `<option value="${esc(c)}">`).join("")}</datalist></div></div>
+    <div class="r2"><div class="fld"><label for="eT">Titre</label><input id="eT" maxlength="80" placeholder="ex. Vente du soir" value="${esc(DRAFT.title)}"></div>
+      <div class="fld"><label for="eC">Catégorie</label><input id="eC" maxlength="30" list="eCl" placeholder="ex. Vente" value="${esc(DRAFT.cat)}"><datalist id="eCl">${cats.map(c => `<option value="${esc(c)}">`).join("")}</datalist></div></div>
     <div class="fld"><label>Pour quelle créatrice</label><div class="scope" id="eS"><button class="all ${!DRAFT.creator ? "on" : ""}" data-c="">Toutes</button>${D.creators.map(c => `<button class="${DRAFT.creator === c.id ? "on" : ""}" data-c="${esc(c.id)}">${rav(c.label[0], 26, pal(c.label))}${esc(c.label)}</button>`).join("")}</div></div>
-    <div class="fld"><label for="eB">Le message</label><textarea id="eB" maxlength="2000" placeholder="Le message tel qu'il partira au fan…">${esc(DRAFT.body)}</textarea>
-      <div class="vars"><button data-v="{prenom}">+ prénom du fan</button><button data-v="{creatrice}">+ nom de la créatrice</button><span class="cnt" id="eN"></span></div></div>
-    <div class="fld"><label>Média payant</label><div id="eM"></div></div>
-    <div class="pv"><span class="cap">Aperçu dans la messagerie</span><div class="fan"><span class="fav">B</span><span class="bf">Coucou toi</span></div><div class="me"><div id="ePp"></div><div class="bm" id="eP"></div><span class="lbl"><i></i>Chatter · ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span></div></div>
-    <div class="fld"><label>Variantes avec l'IA</label><div class="goal" id="eG">${["Plus court", "Plus joueur", "Plus doux", "Avec une question", "Pour vendre un PPV"].map(g => `<button class="${GOAL === g ? "on" : ""}" data-g="${esc(g)}">${esc(g)}</button>`).join("")}</div>
-      <button class="btn2 ai" id="eA" style="align-self:flex-start">${SV(IC.spark, 15, 2)}Proposer 3 variantes</button><div class="aiv" id="eV"></div></div>
-    ${x ? `<div class="meta">Utilisé <b>${x.uses} fois</b>${x.week ? `, dont <b>${x.week}</b> cette semaine` : ""}${x.who.length ? ` · par ${x.who.slice(0, 5).map(w => `<b>${esc(w.name)}</b> (${w.n})`).join(", ")}` : ""}<br>${x.updatedBy ? `Modifié par <b>${esc(x.updatedBy)}</b> ` : ""}${ago(x.updatedAt)}</div>` : ""}</div>
+    <div class="fld"><label>Le déroulé <span id="eNs" class="nst"></span></label><div class="steps" id="eSt"></div>
+      <button class="addst" id="eAdd">${SV('<path d="M12 5v14M5 12h14"/>', 15, 2.6)}Ajouter une étape</button></div>
+    <div class="pv"><span class="cap">Aperçu du déroulé</span><div class="pvs" id="ePv"></div></div>
+    <div class="fld"><label id="eAl">Variantes avec l'IA</label><div class="goal" id="eG">${["Plus court", "Plus joueur", "Plus doux", "Avec une question", "Pour vendre un PPV"].map(g => `<button class="${GOAL === g ? "on" : ""}" data-g="${esc(g)}">${esc(g)}</button>`).join("")}</div>
+      <button class="btn2 ai" id="eA" style="align-self:flex-start">${SV(IC.spark, 15, 2)}<span id="eAt">Proposer 3 variantes</span></button><div class="aiv" id="eV"></div></div>
+    ${x ? `<div class="meta">Lancé <b>${x.uses} fois</b>${x.week ? `, dont <b>${x.week}</b> cette semaine` : ""}${x.who.length ? ` · par ${x.who.slice(0, 5).map(w => `<b>${esc(w.name)}</b> (${w.n})`).join(", ")}` : ""}<br>${x.updatedBy ? `Modifié par <b>${esc(x.updatedBy)}</b> ` : ""}${ago(x.updatedAt)}</div>` : ""}</div>
     <div class="ft">${x ? `<button class="btn2" id="eP2" title="Épingler en haut">${SV(IC.pin, 14)}${DRAFT.pinned ? "Désépingler" : "Épingler"}</button><button class="btn2" id="eD" title="Dupliquer">${SV(IC.copy, 14)}</button><button class="btn2 dl" id="eX" title="Supprimer">${SV(IC.trash, 14)}</button>` : `<button class="btn2" id="eQ">Annuler</button>`}
       <button class="btn2 g sv" id="eSv">${SV(IC.check, 15, 2.6)}Enregistrer <span class="kbd" style="background:rgba(5,38,26,.15);border-color:rgba(5,38,26,.25);color:#05261a">⌘S</span></button></div>`;
-  const pv = () => { const ex = crOf(DRAFT.creator).label || "SARAH", t = $("eB").value.replace(/\{pr[ée]nom\}/gi, "Ben").replace(/\{cr[ée]atrice\}/gi, ex), M = DRAFT.media || [];
-    $("ePp").innerHTML = M.length ? `<div class="ppvc"><div class="g ${M.length === 1 ? "one" : ""}">${M.slice(0, 4).map(f => `<img src="${esc(f.thumb)}" alt="" loading="lazy">`).join("")}</div><div class="ov">${SV(IC.lock, 22, 2.4)}${DRAFT.price == null ? "Prix au choix" : DRAFT.price ? eur(DRAFT.price) : "Gratuit"}</div><div class="bt"><span>${pl(M.length, "média", "médias")}</span><span>${M.filter(isV).length ? pl(M.filter(isV).length, "vidéo", "vidéos") : "photos"}</span></div></div>` : "";
-    $("eP").hidden = !t && M.length > 0; $("eP").textContent = t || "…"; $("eP").classList.remove("pop"); void $("eP").offsetWidth; $("eP").classList.add("pop"); $("eN").textContent = `${$("eB").value.length} / 2000`; };
-  PV = pv; paintMedia(); pv(); let pT = null;
-  $("eB").oninput = () => { DRAFT.body = $("eB").value; clearTimeout(pT); pT = setTimeout(pv, 120); };
+  PV = pvAll; paintSteps(); pvAll();
   $("eT").oninput = () => DRAFT.title = $("eT").value; $("eC").oninput = () => DRAFT.cat = $("eC").value;
-  E.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { const nc = b.dataset.c || null; if (nc === DRAFT.creator) return;
-    if (DRAFT.media.length && !confirm(`Les médias viennent du coffre de ${crOf(DRAFT.creator).label}. Changer de créatrice les retire du script. Continuer ?`)) return;
-    if (DRAFT.media.length) { DRAFT.media = []; DRAFT.price = null; }
-    DRAFT.creator = nc; E.querySelectorAll("[data-c]").forEach(y => y.classList.toggle("on", y === b)); paintMedia(); pv(); });
-  E.querySelectorAll("[data-v]").forEach(b => b.onclick = () => { const ta = $("eB"), a = ta.selectionStart, z = ta.selectionEnd; ta.setRangeText(b.dataset.v, a, z, "end"); ta.focus(); ta.dispatchEvent(new Event("input")); });
+  E.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { const nc = b.dataset.c || null; if (nc === DRAFT.creator) return; const hasM = DRAFT.steps.some(s => s.media.length);
+    if (hasM && !confirm(`Les médias viennent du coffre de ${crOf(DRAFT.creator).label}. Changer de créatrice les retire de toutes les étapes. Continuer ?`)) return;
+    if (hasM) DRAFT.steps.forEach(s => { s.media = []; s.price = null; s.relance = ""; });
+    DRAFT.creator = nc; E.querySelectorAll("[data-c]").forEach(y => y.classList.toggle("on", y === b)); paintSteps(); pvAll(); });
+  $("eAdd").onclick = () => { DRAFT.steps.push(blankStep()); ACT = DRAFT.steps.length - 1; AIV = null; paintSteps(); pvAll(); paintAI(); setTimeout(() => { const t = document.querySelector(`[data-tx="${ACT}"]`); if (t) { t.focus(); t.scrollIntoView({ block: "nearest", behavior: "smooth" }); } }, 30); };
   E.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { GOAL = GOAL === b.dataset.g ? "" : b.dataset.g; E.querySelectorAll("[data-g]").forEach(y => y.classList.toggle("on", y.dataset.g === GOAL)); });
   $("eA").onclick = variants; paintAI();
   $("eSv").onclick = save;
   if ($("eQ")) $("eQ").onclick = () => { DRAFT = null; SEL = null; editor(); cards(); };
   if ($("eP2")) $("eP2").onclick = async () => { DRAFT.pinned = !DRAFT.pinned; await save(true); };
   if ($("eD")) $("eD").onclick = async () => { try { const r = await api("/api/twizz/scripts", { body: { ...DRAFT, id: null, title: (DRAFT.title || "Script") + " (copie)" } }); await load(); open(r.id); notify("Script dupliqué", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
-  if ($("eX")) $("eX").onclick = async () => { if (!confirm(`Supprimer le script « ${DRAFT.title || DRAFT.body.slice(0, 30)} » ? Les chatters ne le verront plus.`)) return;
+  if ($("eX")) $("eX").onclick = async () => { if (!confirm(`Supprimer le script « ${DRAFT.title || (DRAFT.steps[0].text || "").slice(0, 30)} » ? Les chatters ne le verront plus.`)) return;
     try { await api(`/api/twizz/scripts/${DRAFT.id}`, { method: "DELETE" }); DRAFT = null; SEL = null; await load(); notify("Script supprimé", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
 }
-function paintMedia() {
-  const B = $("eM"); if (!B) return; const M = DRAFT.media || [], cr = DRAFT.creator ? crOf(DRAFT.creator) : null;
-  B.className = "mb" + (M.length ? " has" : "");
-  if (!cr || !cr.id) { B.innerHTML = `<div class="mh">${SV(IC.lock, 14)}<span>Pour joindre des photos ou vidéos payantes, choisis d'abord <b style="color:#ddd">une créatrice</b> au-dessus : les médias viennent de son coffre.</span></div>`; return; }
-  if (!M.length) { B.innerHTML = `<div class="mh">${SV(IC.lock, 14)}<span>Facultatif : des médias du coffre de ${esc(cr.label)}, envoyés avec le message, payants ou gratuits.</span></div><button class="mpick" id="mP">${SV(IC.img, 16)}Joindre des médias du coffre</button>`; $("mP").onclick = pickMedia; return; }
-  const nv = M.filter(isV).length, np = M.length - nv, P = [null, 0, 5, 10, 15, 20, 30, 50], custom = DRAFT.price != null && !P.includes(DRAFT.price);
-  B.innerHTML = `<div class="mh">${SV(IC.lock, 14)}<span>Médias du coffre de <b style="color:#ddd">${esc(cr.label)}</b></span>${eyeBtn("mB")}</div>
-    <div class="mtray"><span class="mst">${M.slice(0, 4).map(f => `<span><img src="${esc(f.thumb)}" alt="" loading="lazy"></span>`).join("")}${M.length > 4 ? `<span class="more">+${M.length - 4}</span>` : ""}</span>
-      <span class="mtx"><b>${pl(M.length, "média", "médias")}</b><small>${[nv ? pl(nv, "vidéo", "vidéos") : "", np ? pl(np, "photo", "photos") : ""].filter(Boolean).join(" · ")}</small></span>
-      <span class="mlk"><button class="btn2" id="mE" style="height:34px">Changer</button><button class="btn2 dl" id="mX" style="height:34px" title="Retirer les médias">${SV(IC.trash, 13)}</button></span></div>
-    <div class="prs"><span class="lb">Prix</span>${P.map(p => `<button data-p="${p === null ? "" : p}" class="${!custom && DRAFT.price === p ? "on" : ""}">${p === null ? "Au choix" : p ? p + " €" : "Gratuit"}</button>`).join("")}<input id="mPr" class="${custom ? "on" : ""}" type="number" min="0" step="0.5" placeholder="Autre prix" value="${custom ? DRAFT.price : ""}"></div>
-    <div class="mh" style="font-size:11.5px">${DRAFT.price == null ? "Le chatter choisira le prix au moment d'envoyer." : "Le chatter pourra encore changer le prix avant d'envoyer."}</div>`;
-  B.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { DRAFT.price = b.dataset.p === "" ? null : +b.dataset.p; paintMedia(); PV(); });
-  $("mPr").oninput = () => { const v = $("mPr").value; DRAFT.price = v === "" ? null : Math.max(0, +v); B.querySelectorAll("[data-p]").forEach(x => x.classList.toggle("on", false)); $("mPr").classList.toggle("on", v !== ""); PV(); };
-  $("mPr").onchange = () => paintMedia();
-  $("mE").onclick = pickMedia; $("mX").onclick = () => { DRAFT.media = []; DRAFT.price = null; paintMedia(); PV(); }; $("mB").onclick = () => setBlur(!BLUR);
+// une étape : le message, les médias du coffre et leur prix, et la relance s'il n'achète pas
+function stepHtml(s, k, n, cr) {
+  const M = s.media || [], nv = M.filter(isV).length, P = [null, 0, 5, 10, 15, 20, 30, 50], custom = s.price != null && !P.includes(s.price), paid = M.length && s.price !== 0;
+  const media = !M.length ? `<button class="mpk" data-pick="${k}" ${cr ? "" : "disabled"} title="${cr ? "" : "Choisis d'abord une créatrice : les médias viennent de son coffre"}">${SV(IC.img, 14)}${cr ? "Joindre des médias du coffre" : "Médias : choisis une créatrice"}</button>`
+    : `<div class="smb"><div class="mtray"><span class="mst">${M.slice(0, 4).map(f => `<span><img src="${esc(f.thumb)}" alt="" loading="lazy"></span>`).join("")}${M.length > 4 ? `<span class="more">+${M.length - 4}</span>` : ""}</span>
+        <span class="mtx"><b>${pl(M.length, "média", "médias")}</b><small>${[nv ? pl(nv, "vidéo", "vidéos") : "", M.length - nv ? pl(M.length - nv, "photo", "photos") : ""].filter(Boolean).join(" · ")}</small></span>
+        <span class="mlk"><button class="btn2" data-pick="${k}" style="height:32px;padding:0 11px">Changer</button><button class="btn2 dl" data-unm="${k}" style="height:32px;padding:0 10px" title="Retirer les médias">${SV(IC.trash, 13)}</button></span></div>
+      <div class="prs">${P.map(p => `<button data-pp="${k}" data-p="${p === null ? "" : p}" class="${!custom && s.price === p ? "on" : ""}">${p === null ? "Au choix" : p ? p + " €" : "Gratuit"}</button>`).join("")}<input data-pc="${k}" class="${custom ? "on" : ""}" type="number" min="0" step="0.5" placeholder="Autre" value="${custom ? s.price : ""}"></div></div>`;
+  const rel = !paid ? "" : s.relance || s._rel ? `<div class="rel"><span class="rlb">${SV('<path d="M4 4v6a6 6 0 0 0 6 6h10"/><path d="M16 12l4 4-4 4"/>', 13, 2.4)}S'il n'achète pas, relance avec :</span><textarea data-rel="${k}" maxlength="2000" rows="2" placeholder="ex. Tu les as vues ? Je les ai faites rien que pour toi {prenom} 🙈">${esc(s.relance)}</textarea></div>`
+    : `<button class="addrel" data-arel="${k}">${SV('<path d="M4 4v6a6 6 0 0 0 6 6h10"/><path d="M16 12l4 4-4 4"/>', 13, 2.4)}Ajouter une relance s'il n'achète pas</button>`;
+  return `<div class="st ${k === ACT ? "on" : ""}" data-k="${k}"><div class="rail"><span class="num">${k + 1}</span>${k < n - 1 ? '<span class="ln"><i></i></span>' : ""}</div>
+    <div class="sb">${k === ACT ? '<span class="trace"></span>' : ""}<div class="sh"><b>Étape ${k + 1}</b><span class="kd ${M.length ? (s.price === 0 ? "f" : "p") : ""}">${M.length ? SV(IC.lock, 10, 2.8) : ""}${esc(stepKind(s))}</span>
+      <span class="sa"><button data-up="${k}" ${k === 0 ? "disabled" : ""} aria-label="Monter l'étape">${SV('<path d="M12 19V5M6 11l6-6 6 6"/>', 13, 2.4)}</button><button data-dn="${k}" ${k === n - 1 ? "disabled" : ""} aria-label="Descendre l'étape">${SV('<path d="M12 5v14M6 13l6 6 6-6"/>', 13, 2.4)}</button><button data-dup="${k}" aria-label="Dupliquer l'étape">${SV(IC.copy, 13)}</button><button class="dl" data-del="${k}" ${n === 1 ? "disabled" : ""} aria-label="Supprimer l'étape">${SV(IC.trash, 13)}</button></span></div>
+      <textarea data-tx="${k}" maxlength="2000" rows="3" placeholder="${k === 0 ? "Le premier message au fan…" : `Le message de l'étape ${k + 1}…`}">${esc(s.text)}</textarea>
+      <div class="vars"><button data-vk="${k}" data-v="{prenom}">+ prénom du fan</button><button data-vk="${k}" data-v="{creatrice}">+ nom de la créatrice</button><span class="cnt" data-cn="${k}">${s.text.length} / 2000</span></div>
+      ${media}${rel}</div></div>${k < n - 1 ? `<div class="gap"><span>quand il répond</span></div>` : ""}`;
 }
-async function pickMedia() {
-  const cr = crOf(DRAFT.creator); if (!cr.id) return;
-  const SEL = (DRAFT.media || []).map(f => ({ ...f })), at = id => SEL.findIndex(f => f.id === id), base = `/api/twizz/inbox/${encodeURIComponent(cr.id)}/vault`;
+function paintSteps() {
+  const B = $("eSt"); if (!B) return; const S = DRAFT.steps, cr = DRAFT.creator ? crOf(DRAFT.creator) : null;
+  B.innerHTML = S.map((s, k) => stepHtml(s, k, S.length, cr && cr.id ? cr : null)).join(""); $("eNs").textContent = pl(S.length, "étape", "étapes");
+  const at = el => +el.closest(".st").dataset.k, setAct = k => { if (k === ACT) return; ACT = k; AIV = null; B.querySelectorAll(".st").forEach(x => { const on = +x.dataset.k === k; x.classList.toggle("on", on); const tr = x.querySelector(".sb > .trace"); if (on && !tr) x.querySelector(".sb").insertAdjacentHTML("afterbegin", '<span class="trace"></span>'); if (!on && tr) tr.remove(); }); paintAI(); pvAll(); };
+  B.querySelectorAll(".st").forEach(x => x.addEventListener("focusin", () => setAct(+x.dataset.k)));
+  B.querySelectorAll(".st").forEach(x => x.addEventListener("mousedown", () => setAct(+x.dataset.k)));
+  let pT = null;
+  B.querySelectorAll("[data-tx]").forEach(t => t.oninput = () => { const k = +t.dataset.tx; S[k].text = t.value; B.querySelector(`[data-cn="${k}"]`).textContent = `${t.value.length} / 2000`; clearTimeout(pT); pT = setTimeout(pvAll, 120); });
+  B.querySelectorAll("[data-rel]").forEach(t => t.oninput = () => { S[+t.dataset.rel].relance = t.value; clearTimeout(pT); pT = setTimeout(pvAll, 120); });
+  B.querySelectorAll("[data-arel]").forEach(b => b.onclick = () => { const k = +b.dataset.arel; S[k]._rel = true; ACT = k; paintSteps(); const t = B.querySelector(`[data-rel="${k}"]`); if (t) t.focus(); });
+  B.querySelectorAll("[data-v]").forEach(b => b.onclick = () => { const ta = B.querySelector(`[data-tx="${b.dataset.vk}"]`), a = ta.selectionStart, z = ta.selectionEnd; ta.setRangeText(b.dataset.v, a, z, "end"); ta.focus(); ta.dispatchEvent(new Event("input")); });
+  const move = (k, d) => { const j = k + d; [S[k], S[j]] = [S[j], S[k]]; ACT = j; paintSteps(); pvAll(); };
+  B.querySelectorAll("[data-up]").forEach(b => b.onclick = () => move(+b.dataset.up, -1));
+  B.querySelectorAll("[data-dn]").forEach(b => b.onclick = () => move(+b.dataset.dn, 1));
+  B.querySelectorAll("[data-dup]").forEach(b => b.onclick = () => { const k = +b.dataset.dup, s = S[k]; S.splice(k + 1, 0, { text: s.text, media: s.media.map(f => ({ ...f })), price: s.price, relance: s.relance }); ACT = k + 1; paintSteps(); pvAll(); });
+  B.querySelectorAll("[data-del]").forEach(b => b.onclick = () => { const k = +b.dataset.del; if ((S[k].text || S[k].media.length) && !confirm(`Supprimer l'étape ${k + 1} ?`)) return; S.splice(k, 1); ACT = Math.min(ACT, S.length - 1); paintSteps(); pvAll(); });
+  B.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => { ACT = +b.dataset.pick; pickMedia(ACT); });
+  B.querySelectorAll("[data-unm]").forEach(b => b.onclick = () => { const s = S[+b.dataset.unm]; s.media = []; s.price = null; s.relance = ""; s._rel = false; paintSteps(); pvAll(); });
+  B.querySelectorAll("[data-pp]").forEach(b => b.onclick = () => { const s = S[+b.dataset.pp]; s.price = b.dataset.p === "" ? null : +b.dataset.p; ACT = +b.dataset.pp; paintSteps(); pvAll(); });
+  B.querySelectorAll("[data-pc]").forEach(inp => { inp.oninput = () => { const s = S[+inp.dataset.pc]; s.price = inp.value === "" ? null : Math.max(0, +inp.value); inp.parentElement.querySelectorAll("[data-pp]").forEach(x => x.classList.remove("on")); inp.classList.toggle("on", inp.value !== ""); pvAll(); }; inp.onchange = () => paintSteps(); });
+}
+// l'aperçu : tout le déroulé comme dans la messagerie, l'étape choisie en surbrillance
+function pvAll() {
+  const P = $("ePv"); if (!P || !DRAFT) return; const S = DRAFT.steps;
+  const ppv = s => { const M = s.media; return `<div class="ppvc"><div class="g ${M.length === 1 ? "one" : ""}">${M.slice(0, 4).map(f => `<img src="${esc(f.thumb)}" alt="" loading="lazy">`).join("")}</div><div class="ov">${SV(IC.lock, 20, 2.4)}${s.price == null ? "Prix au choix" : s.price ? eur(s.price) : "Gratuit"}</div><div class="bt"><span>${pl(M.length, "média", "médias")}</span><span>${M.filter(isV).length ? pl(M.filter(isV).length, "vidéo", "vidéos") : "photos"}</span></div></div>`; };
+  P.innerHTML = `<div class="fan"><span class="fav">B</span><span class="bf">Coucou toi 😊</span></div>` + S.map((s, k) => {
+    const M = s.media || [], me = `<div class="me ${k === ACT ? "act" : ""}" data-pk="${k}"><span class="stp">Étape ${k + 1}</span>${M.length ? ppv(s) : ""}${s.text || !M.length ? `<div class="bm ${s.text ? "" : "ph"}">${esc(fillEx(s.text) || "…")}</div>` : ""}</div>`;
+    const rel = M.length && s.price !== 0 && s.relance ? `<div class="me rl ${k === ACT ? "act" : ""}"><span class="stp">S'il n'achète pas</span><div class="bm">${esc(fillEx(s.relance))}</div></div>` : "";
+    const fan = k < S.length - 1 ? `<div class="fan"><span class="fav">B</span><span class="bf typ"><i></i><i></i><i></i></span></div>` : "";
+    return me + rel + fan; }).join("");
+  P.querySelectorAll("[data-pk]").forEach(b => b.onclick = () => { const t = document.querySelector(`[data-tx="${b.dataset.pk}"]`); if (t) { t.focus(); t.scrollIntoView({ block: "nearest", behavior: "smooth" }); } });
+  const a = P.querySelector(".me.act"); if (a) { const top = a.offsetTop - P.offsetTop; if (top < P.scrollTop || top + a.offsetHeight > P.scrollTop + P.clientHeight) P.scrollTo({ top: Math.max(0, top - 40), behavior: "smooth" }); }
+}
+async function pickMedia(k) {
+  const cr = crOf(DRAFT.creator); if (!cr.id) return; const step = DRAFT.steps[k]; if (!step) return;
+  const SEL = (step.media || []).map(f => ({ ...f })), at = id => SEL.findIndex(f => f.id === id), base = `/api/twizz/inbox/${encodeURIComponent(cr.id)}/vault`;
   const m = document.createElement("div"); m.className = "mod";
-  m.innerHTML = `<div class="box vbx"><div class="h"><b>Coffre de ${esc(cr.label)}</b><span class="hint">Clique les médias dans l'ordre où ils partiront</span><button class="btn2 x" id="vX">Fermer</button></div>
+  m.innerHTML = `<div class="box vbx"><div class="h"><b>Coffre de ${esc(cr.label)} · étape ${k + 1}</b><span class="hint">Clique les médias dans l'ordre où ils partiront</span><button class="btn2 x" id="vX">Fermer</button></div>
     <div class="vb"><nav class="vr" id="vR" aria-label="Albums">${[0, 1, 2].map(() => `<div class="vsk" style="aspect-ratio:auto;height:52px"></div>`).join("")}</nav><div class="vg" id="vG">${Array.from({ length: 12 }, () => `<div class="vsk"></div>`).join("")}</div></div>
     <div class="f"><span class="sel" id="vN"></span>${eyeBtn("vBl")}<button class="btn2 g" id="vOk" style="margin-left:auto">${SV(IC.check, 15, 2.6)}Valider</button></div></div>`;
   document.body.appendChild(m);
   let files = [], album = null, albums = [];
-  const close = () => { m.remove(); document.removeEventListener("keydown", k); }, k = e => { if (e.key === "Escape") close(); };
-  document.addEventListener("keydown", k); $("vX").onclick = close; m.onclick = e => { if (e.target === m) close(); }; $("vBl").onclick = () => setBlur(!BLUR);
+  const close = () => { m.remove(); document.removeEventListener("keydown", kk); }, kk = e => { if (e.key === "Escape") close(); };
+  document.addEventListener("keydown", kk); $("vX").onclick = close; m.onclick = e => { if (e.target === m) close(); }; $("vBl").onclick = () => setBlur(!BLUR);
   const upd = () => { $("vN").textContent = SEL.length ? pl(SEL.length, "média choisi", "médias choisis") : "Aucun média choisi";
     $("vG").querySelectorAll(".vt").forEach(t => { const i = at(t.dataset.id); t.classList.toggle("on", i >= 0); t.querySelector(".n").textContent = i >= 0 ? i + 1 : ""; });
     m.querySelectorAll(".al").forEach(b => { const n = SEL.filter(f => f.album === b.dataset.id).length, sn = b.querySelector(".sn"); sn.hidden = !n; sn.textContent = n; }); };
@@ -380,34 +468,37 @@ async function pickMedia() {
     if (!albums.length) { $("vG").innerHTML = `<div class="empty"><b>Le coffre est vide</b></div>`; upd(); }
     else openAlbum(albums.find(a => SEL[0] && a.id === SEL[0].album) || albums[0]); }
   catch (e) { $("vR").innerHTML = ""; $("vG").innerHTML = `<div class="empty"><b>Coffre inaccessible</b>${esc(e.message)}</div>`; }
-  $("vOk").onclick = () => { DRAFT.media = SEL; if (!SEL.length) DRAFT.price = null; close(); paintMedia(); PV(); };
+  $("vOk").onclick = () => { step.media = SEL; if (!SEL.length) { step.price = null; step.relance = ""; step._rel = false; } close(); paintSteps(); pvAll(); };
   upd();
 }
 function paintAI() { const V = $("eV"); if (!V) return;
+  if ($("eAl")) $("eAl").textContent = DRAFT && DRAFT.steps.length > 1 ? `Variantes avec l'IA · étape ${ACT + 1}` : "Variantes avec l'IA";
   if (!AIV) { V.innerHTML = ""; return; }
   if (AIV.loading) { V.innerHTML = [0, 1, 2].map(i => `<div class="sk" style="animation-delay:${i * .1}s"></div>`).join(""); return; }
   if (AIV.error) { V.innerHTML = `<div class="meta" style="color:#ff9a9a">${esc(AIV.error)}</div>`; return; }
   const C = ["#5fd3a2", "#e8c27a", "#7db4ff"];
   V.innerHTML = AIV.variantes.map((v, i) => `<button class="v" data-i="${i}" style="--c:${C[i % 3]};animation-delay:${i * .09}s"><span class="a">${esc(v.angle)}</span><span class="x">${hl(v.text)}</span></button>`).join("");
-  V.querySelectorAll("[data-i]").forEach(b => b.onclick = () => { const v = AIV.variantes[+b.dataset.i]; $("eB").value = v.text; $("eB").dispatchEvent(new Event("input")); notify("Variante reprise", "Enregistre pour la garder", "ok"); });
+  V.querySelectorAll("[data-i]").forEach(b => b.onclick = () => { const v = AIV.variantes[+b.dataset.i], t = document.querySelector(`[data-tx="${ACT}"]`); if (!t) return; t.value = v.text; t.dispatchEvent(new Event("input")); notify(`Variante reprise à l'étape ${ACT + 1}`, "Enregistre pour la garder", "ok"); });
 }
-async function variants() { AIV = { loading: true }; paintAI();
-  try { AIV = await api("/api/scripts/ai", { body: { body: $("eB").value, title: $("eT").value, cat: $("eC").value, creator: DRAFT.creator, goal: GOAL } }); } catch (e) { AIV = { error: e.message }; }
+async function variants() { AIV = { loading: true }; paintAI(); const s = DRAFT.steps[ACT] || {};
+  try { AIV = await api("/api/scripts/ai", { body: { body: s.text || "", title: $("eT").value, cat: $("eC").value, creator: DRAFT.creator, goal: GOAL } }); } catch (e) { AIV = { error: e.message }; }
   paintAI(); }
 async function save(quiet) {
-  const body = { id: DRAFT.id, title: $("eT").value, cat: $("eC").value, body: $("eB").value, creator: DRAFT.creator, pinned: DRAFT.pinned, media: DRAFT.media, price: DRAFT.media.length ? DRAFT.price : null };
-  if (!body.body.trim() && !DRAFT.media.length) return notify("Le script est vide", "Écris un message ou joins des médias", "err");
-  try { const r = await api("/api/twizz/scripts", { body }); await load(); open(r.id); if (quiet !== true) $("svd").innerHTML = `<span class="saved">${SV(IC.check, 12, 3)}Enregistré</span>`; }
+  const steps = DRAFT.steps.map(s => ({ text: s.text, media: s.media, price: s.media.length ? s.price : null, relance: s.media.length && s.price !== 0 ? s.relance : "" })).filter(s => s.text.trim() || s.media.length);
+  if (!steps.length) return notify("Le script est vide", "Écris au moins une étape", "err");
+  try { const r = await api("/api/twizz/scripts", { body: { id: DRAFT.id, title: $("eT").value, cat: $("eC").value, creator: DRAFT.creator, pinned: DRAFT.pinned, steps } }); const a = ACT; await load(); open(r.id); ACT = Math.min(a, DRAFT.steps.length - 1); paintSteps(); pvAll(); if (quiet !== true) $("svd").innerHTML = `<span class="saved">${SV(IC.check, 12, 3)}Enregistré</span>`; }
   catch (e) { notify("Script non enregistré", e.message, "err"); }
 }
 // ---------- import : depuis Twizz ou en collant du texte ----------
+// collage : une ligne --- entre deux scripts ; dans un script, une ligne vide entre deux étapes
 function parsePaste(t) {
-  return String(t || "").replace(/\r/g, "").split(/\n\s*\n+/).map(b => b.trim()).filter(Boolean).map(b => {
+  return String(t || "").replace(/\r/g, "").split(/\n[ \t]*(?:-{3,}|={3,}|\*{3,})[ \t]*(?:\n|$)/).map(b => b.trim()).filter(Boolean).map(b => {
     let lines = b.split("\n"), title = "", cat = "";
     const m = lines[0].match(/^\s*\[([^\]]{1,30})\]\s*(.*)$/); if (m) { cat = m[1].trim(); lines[0] = m[2]; if (!lines[0].trim()) lines.shift(); }
     if (lines.length > 1 && (/^#+\s*/.test(lines[0]) || /:\s*$/.test(lines[0]))) title = lines.shift().replace(/^#+\s*/, "").replace(/:\s*$/, "").trim();
-    return { title: title.slice(0, 80), cat, body: lines.join("\n").trim().slice(0, 2000) };
-  }).filter(x => x.body);
+    const steps = lines.join("\n").split(/\n\s*\n+/).map(x => x.trim()).filter(Boolean).slice(0, 15).map(text => ({ text: text.slice(0, 2000), media: [], price: null }));
+    return { title: title.slice(0, 80), cat, steps };
+  }).filter(x => x.steps.length);
 }
 function importer() {
   const m = document.createElement("div"); m.className = "mod";
@@ -419,16 +510,17 @@ function importer() {
   let tab = "tw", items = [];
   const close = () => { m.remove(); document.removeEventListener("keydown", k); }, k = e => { if (e.key === "Escape") close(); };
   document.addEventListener("keydown", k); $("iX").onclick = close; m.onclick = e => { if (e.target === m) close(); };
+  const hasM = x => (x.steps || []).some(s => s.media && s.media.length);
   const rows = () => { const C = $("iC").querySelector("#iL"); if (!C) return;
-    C.innerHTML = items.length ? items.map((x, i) => `<label class="irow ${x.already ? "dup" : ""}"><input type="checkbox" data-i="${i}" ${x.on ? "checked" : ""} ${x.already ? "disabled" : ""}><span><b>${esc(x.title || "Sans titre")}${x.cat ? ` · <span style="color:${catColor(x.cat)}">${esc(x.cat)}</span>` : ""}${x.creatorLabel ? ` · ${esc(x.creatorLabel)}` : ""}${x.media && x.media.length ? ` · <span style="color:#f3dcae">${pl(x.media.length, "média", "médias")} · ${priceTxt(x.price)}</span>` : ""}${x.already ? " · déjà importé" : ""}</b><small>${hl(x.body)}</small></span></label>`).join("") : "";
+    C.innerHTML = items.length ? items.map((x, i) => `<label class="irow ${x.already ? "dup" : ""}"><input type="checkbox" data-i="${i}" ${x.on ? "checked" : ""} ${x.already ? "disabled" : ""}><span><b>${esc(x.title || "Sans titre")} · <span style="color:#7db4ff">${pl(x.steps.length, "étape", "étapes")}</span>${x.cat ? ` · <span style="color:${catColor(x.cat)}">${esc(x.cat)}</span>` : ""}${x.creatorLabel ? ` · ${esc(x.creatorLabel)}` : ""}${hasM(x) ? ` · <span style="color:#f3dcae">avec médias</span>` : ""}${x.already ? " · déjà importé" : ""}</b><small>${x.steps.slice(0, 3).map((s, j) => `${j + 1}. ${hl(s.text || "(médias)")}`).join("<br>")}${x.steps.length > 3 ? "<br>…" : ""}</small></span></label>`).join("") : "";
     C.querySelectorAll("[data-i]").forEach(c => c.onchange = () => { items[+c.dataset.i].on = c.checked; upd(); }); upd(); };
   const upd = () => { const n = items.filter(x => x.on && !x.already).length; $("iGo").disabled = !n; $("iGo").textContent = n ? `Importer ${n} script${n > 1 ? "s" : ""}` : "Importer"; };
   function paintTab() {
     m.querySelectorAll("[data-t]").forEach(b => b.classList.toggle("on", b.dataset.t === tab)); items = [];
-    if (tab === "txt") { $("iC").innerHTML = `<div class="hint">Colle tes scripts : <b>une ligne vide entre deux scripts</b>. Facultatif : un titre sur la première ligne finie par <code>:</code>, et une catégorie entre crochets comme <code>[Relance]</code>. Les variables <code>{prenom}</code> et <code>{creatrice}</code> sont reconnues.</div>
-        <textarea id="iT" placeholder="[Relance] Relance du soir :&#10;Coucou {prenom}, tu m'as manqué aujourd'hui…&#10;&#10;[Vente] Teaser :&#10;J'ai fait des photos rien que pour toi 🙈"></textarea><div id="iL" style="display:grid;gap:8px"></div>`;
+    if (tab === "txt") { $("iC").innerHTML = `<div class="hint">Colle tes scripts. <b>Une ligne vide entre deux étapes</b>, et <b>une ligne <code>---</code> entre deux scripts</b>. Facultatif, en haut d'un script : une catégorie entre crochets comme <code>[Vente]</code> et un titre fini par <code>:</code>. Les variables <code>{prenom}</code> et <code>{creatrice}</code> sont reconnues. Les médias se joignent ensuite dans l'éditeur.</div>
+        <textarea id="iT" placeholder="[Vente] Vente du soir :&#10;Coucou {prenom}, tu fais quoi ce soir ? 😏&#10;&#10;J'ai fait des photos aujourd'hui… je crois qu'elles vont te plaire 🙈&#10;&#10;Tu veux que je te les montre ?&#10;---&#10;[Accroche] Nouvel abonné :&#10;Hey {prenom} ! Merci de t'être abonné 🥰&#10;&#10;Dis-moi ce que tu aimes, je veux tout savoir"></textarea><div id="iL" style="display:grid;gap:8px"></div>`;
       $("iT").oninput = () => { items = parsePaste($("iT").value).map(x => ({ ...x, on: true })); rows(); }; $("iT").focus(); upd(); return; }
-    $("iC").innerHTML = `<div class="hint">Je cherche les scripts enregistrés dans le CRM Twizz de chaque créatrice. Rien n'est modifié sur Twizz.</div><button class="btn2 w" id="iS" style="align-self:flex-start">Chercher sur Twizz</button><div id="iL" style="display:grid;gap:8px"></div>`;
+    $("iC").innerHTML = `<div class="hint">Je cherche les scripts enregistrés dans le CRM Twizz de chaque créatrice, avec leurs étapes. Rien n'est modifié sur Twizz.</div><button class="btn2 w" id="iS" style="align-self:flex-start">Chercher sur Twizz</button><div id="iL" style="display:grid;gap:8px"></div>`;
     $("iS").onclick = async () => { $("iS").disabled = true; $("iS").textContent = "Recherche…";
       try { const r = await api("/api/scripts/import-twizz", { body: {} });
         if (!r.found) { $("iC").innerHTML = `<div class="hint" style="color:#e9cf9a"><b style="color:#fff">Je n'ai pas trouvé où Twizz range les scripts.</b><br>Pour que je branche l'import : ouvre la page des scripts dans le CRM Twizz, fais clic droit → Inspecter → onglet Réseau, recharge la page, et envoie-moi une capture de la ligne qui contient les scripts (adresse et réponse).<br><br>En attendant, tu peux copier-coller tes scripts dans l'onglet « Coller du texte ».</div>`; return; }
@@ -439,7 +531,7 @@ function importer() {
   }
   m.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { tab = b.dataset.t; paintTab(); });
   $("iGo").onclick = async () => { const cat = $("iCat").value.trim(), cr = $("iCr").value || null;
-    const L = items.filter(x => x.on && !x.already).map(x => ({ title: x.title, body: x.body, cat: cat || x.cat || "", creator: x.media && x.media.length ? x.creator : tab === "tw" && !cr ? x.creator || null : cr, source: tab === "tw" ? "twizz" : "site", ext: x.ext || null, media: x.media || [], price: x.price == null ? null : x.price }));
+    const L = items.filter(x => x.on && !x.already).map(x => ({ title: x.title, cat: cat || x.cat || "", creator: hasM(x) ? x.creator : tab === "tw" && !cr ? x.creator || null : cr, source: tab === "tw" ? "twizz" : "site", ext: x.ext || null, steps: x.steps }));
     try { const r = await api("/api/scripts/bulk", { body: { items: L } }); close(); await load(); notify(`${r.added} script${r.added > 1 ? "s" : ""} importé${r.added > 1 ? "s" : ""}`, "", "ok"); } catch (e) { notify("Import impossible", e.message, "err"); } };
   paintTab();
 }
@@ -453,7 +545,10 @@ document.addEventListener("keydown", e => { const a = document.activeElement, ty
 (async () => {
   const me = await api("/api/me"); renderShell("scripts", me);
   if (me.role !== "admin" || me.rk === "assistant") { $("sc").innerHTML = `<div class="ednone"><div><b>Réservé aux managers</b></div></div>`; return; }
-  try { await load(); } catch (e) { $("lst").innerHTML = `<div class="empty"><b>Impossible de charger les scripts</b>${esc(e.message)}</div>`; }
+  try { await load(); } catch (e) { $("lst").innerHTML = `<div class="empty"><b>Impossible de charger les scripts</b>${esc(e.message)}</div>`; return; }
+  const u = new URLSearchParams(location.search);
+  if (u.get("id") && D.items.some(x => x.id === +u.get("id"))) open(+u.get("id"));
+  else if (u.get("new")) { if (u.get("cr") && D.creators.some(c => c.id === u.get("cr"))) F.creator = u.get("cr"); open(null, true); side(); cards(); }
 })();
 })();
 </script>
