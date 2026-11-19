@@ -999,7 +999,9 @@ addEventListener("keydown", e => {
 async function loadQueue() {
   const [p, all] = await Promise.all([api("/api/admin/sales?status=pending"), Q.loaded ? null : api("/api/admin/sales").catch(() => null)]);
   if (all) {   // décisions déjà prises aujourd'hui
-    const today = all.sales.filter(s => s.reviewed_at && sameDay(s.reviewed_at, Date.now()));
+    // « aujourd'hui » = journée de Paris, la même pour tous les managers (France ou Madagascar)
+    const pDay = ms => new Date(ms).toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" }), td = pDay(Date.now());
+    const today = all.sales.filter(s => s.reviewed_at && pDay(s.reviewed_at) === td);
     Q.val = today.filter(s => s.status === "validated").reduce((t, s) => t + s.amount, 0);
     Q.nv = today.filter(s => s.status === "validated").length; Q.nr = today.filter(s => s.status === "refused").length;
     countTo($("sVal"), Q.val, E, 900); countTo($("sNv"), Q.nv); countTo($("sNr"), Q.nr);
