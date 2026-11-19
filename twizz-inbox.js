@@ -609,8 +609,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     let stats = ""; try { const sj = await G(`/business/get-fan-purchase-stats/${enc(fan)}?creatorId=${enc(cid)}`, 600e3), d = (sj && (sj.data ?? sj)) || {};
       const tk = Object.keys(d).find(x => /totalSpent|spent/i.test(x)), nk = Object.keys(d).find(x => /totalPurchases|purchases$/i.test(x));
       stats = [tk ? `a dépensé ${d[tk]} € au total` : "", nk ? `${d[nk]} achats` : ""].filter(Boolean).join(", "); } catch (e) {}
+    // idée demandée dans un sens précis (boutons au-dessus de la barre d'envoi, « Relancer » sur un PPV)
+    const INTENTS = { relance: "une relance douce : le fan n'a pas acheté le dernier média payant (ou ne répond plus) ; relance-le gentiment avec une question, sans baisser le prix ni mettre la pression",
+      question: "une question personnelle pour mieux le connaître (sa journée, ce qu'il aime, ce qu'il fait) et créer du lien",
+      teaser: "un teaser qui donne envie d'un prochain contenu de la créatrice, suggestif sans rien décrire d'explicite" };
     const r = await ai.replies({ creator: cr.label || "la créatrice", rules: cr.note || "", note: note && note.text || "", fan: [str(req.body?.name), stats].filter(Boolean).join(", ") || "rien de particulier",
-      transcript: L.map(line).filter(Boolean).join("\n") }, { user: req.user.id });
+      transcript: L.map(line).filter(Boolean).join("\n"), intent: INTENTS[str(req.body?.intent)] || "" }, { user: req.user.id });
     return r;
   }));
 

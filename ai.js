@@ -362,7 +362,7 @@ ${c.transcript || "(aucun message)"}
 
 Étape 1 : étudie la façon d'écrire des messages [CRÉATRICE] ci-dessus (ce sont les chatters qui écrivent au nom de ${c.creator}) : longueur des messages, majuscules ou minuscules, ponctuation, emojis (lesquels, combien), abréviations et fautes volontaires (ex. « tkt », « mdr », « ptn »), expressions et tics qui reviennent, tutoiement, surnoms donnés au fan.
 Étape 2 : propose 3 réponses au dernier message du fan, écrites EXACTEMENT dans cette façon d'écrire, comme si c'était le même chatter : même longueur, même ponctuation, mêmes emojis et mêmes expressions. Ne corrige pas son style et n'écris pas plus proprement que lui. S'il y a trop peu de messages de l'équipe, écris comme un vrai texto : français familier, 1 à 2 phrases courtes, un emoji au plus.
-Varie l'intention : une complice qui crée du lien, une qui amène doucement vers un contenu payant si le moment s'y prête, une qui relance la conversation.
+${c.intent ? `Le chatter veut précisément ${c.intent}. Les 3 propositions vont toutes dans ce sens : varie seulement la formulation et le ton.` : "Varie l'intention : une complice qui crée du lien, une qui amène doucement vers un contenu payant si le moment s'y prête, une qui relance la conversation."}
 Reste suggestif sans jamais décrire d'acte sexuel ni de détail explicite. Pas de fausse promesse (rencontre, appel, exclusivité), pas de pression sur un fan qui semble fragile ou à court d'argent.`;
   const res = await ask(prompt, MODEL_HINT, 900, { ...(tag || {}), kind: "twizz_reply" }, { tools: [REPLY_TOOL], tool_choice: { type: "tool", name: "suggestions" } });
   const t = (res.content || []).find(x => x.type === "tool_use");
