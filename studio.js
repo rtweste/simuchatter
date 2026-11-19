@@ -190,7 +190,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
     try {
       db.prepare("UPDATE pauses SET end_at = (SELECT end_at FROM clocks WHERE clocks.id = pauses.clock_id) WHERE end_at IS NULL AND (SELECT end_at FROM clocks WHERE clocks.id = pauses.clock_id) IS NOT NULL").run();
       const { max } = cfg(), now = Date.now();
-      db.prepare("SELECT p.*, u.username FROM pauses p JOIN users u ON u.id = p.user_id WHERE p.end_at IS NULL AND p.over_logged = 0 AND p.start_at < ?").all(now - max * 60e3).forEach(p => {
+      db.prepare("SELECT p.*, u.username FROM pauses p JOIN users u ON u.id = p.user_id WHERE p.end_at IS NULL AND p.over_logged = 0 AND p.start_at < ?").all(now - max * 60e3).filter(p => p.start_at < now - (max + (p.bonus || 0)) * 60e3).forEach(p => {
         db.prepare("UPDATE pauses SET over_logged = 1 WHERE id = ?").run(p.id);
         log(p.user_id, "pl", `**${p.username}** dépasse sa pause`, `Pause commencée à ${new Date(p.start_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })} · limite ${max} min`);
       });
@@ -199,10 +199,11 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
   setInterval(sweepPauses, 30e3);
   const pauseState = uid => {
     sweepPauses(); const c = mainClock(uid), k = cfg();
-    const list = c ? db.prepare("SELECT id, start_at, end_at FROM pauses WHERE clock_id = ? ORDER BY start_at").all(c.id) : [];
+    const list = c ? db.prepare("SELECT id, start_at, end_at, bonus FROM pauses WHERE clock_id = ? ORDER BY start_at").all(c.id) : [];
     const open = list.find(p => !p.end_at) || null;
-    return { enabled: k.count > 0, max: k.max, count: k.count, used: list.length, left: Math.max(0, k.count - list.length), open, list, clock: c ? { id: c.id, start_at: c.start_at, model_name: c.model_name } : null,
-      total: list.reduce((t, p) => t + ((p.end_at || Date.now()) - p.start_at), 0) };
+    return { enabled: k.count > 0, max: k.max + (open && open.bonus ? open.bonus : 0), bonus: open && open.bonus ? open.bonus : 0, count: k.count, used: list.length, left: Math.max(0, k.count - list.length), open, list, clock: c ? { id: c.id, start_at: c.start_at, model_name: c.model_name } : null,
+      total: list.reduce((t, p) => t + ((p.end_at || Date.now()) - p.start_at), 0),
+      bonusLeft: (() => { try { const r = db.prepare("SELECT qty FROM stella_inv WHERE user_id = ? AND item_id = 'pause15'").get(uid); return r ? r.qty : 0; } catch (e) { return 0; } })() };
   };
   app.get("/api/pause/me", auth, (req, res) => res.json(pauseState(req.user.id)));
   app.post("/api/pause/start", auth, (req, res) => {

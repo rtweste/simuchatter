@@ -713,7 +713,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
         feed: feedOf(), live: liveNow(),
         series, trend, best, goal, projection: Math.round(commission / elapsed * 100) / 100, elapsed,
         rank: myIdx === -1 ? null : myIdx + 1, gap: myIdx > 0 ? Math.round((board[myIdx - 1].total - board[myIdx].total) * 100) / 100 : null, above: myIdx > 0 ? board[myIdx - 1].username : null,
-        leaderboard: board.slice(0, 3).map(b => ({ username: b.username, total: b.total, me: b.user_id === req.user.id })),
+        leaderboard: board.slice(0, 3).map(b => ({ id: b.user_id, username: b.username, total: b.total, me: b.user_id === req.user.id })),
         models: db.prepare("SELECT id, name FROM models ORDER BY name").all(),
         sales: { validated, pending, count: mine.length, refused: mine.filter(s => s.status === "refused").length,
           commission, pct: tp.rate },
@@ -756,7 +756,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       marginTrend: pctTrend(c.totals.margin, prevMargin), feed, activeChatters,
       missingRevenue: c.models.filter(m => m.missing && m.missing.length).map(m => m.name),
       pendingSales, live, todayShifts,
-      leaderboard: board.slice(0, 5).map(b => ({ username: b.username, total: b.total })),
+      leaderboard: board.slice(0, 5).map(b => ({ id: b.user_id, username: b.username, total: b.total })),
       simu: { week: sims.length, avg: sims.length ? Math.round(sims.reduce((t, x) => t + x.score, 0) / sims.length) : null } });
   });
 

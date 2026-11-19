@@ -17,9 +17,9 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     // 1. pauses qui dépassent la durée autorisée
     if (has("pauses")) {
       const max = +a.pauseMax || 15;
-      db.prepare(`SELECT p.id, p.start_at, u.username, u.id uid FROM pauses p JOIN users u ON u.id = p.user_id JOIN clocks c ON c.id = p.clock_id
+      db.prepare(`SELECT p.id, p.start_at, p.bonus, u.username, u.id uid FROM pauses p JOIN users u ON u.id = p.user_id JOIN clocks c ON c.id = p.clock_id
         WHERE p.end_at IS NULL AND c.end_at IS NULL`).all().forEach(p => {
-        const m = mins(now - p.start_at); if (m < max) return;
+        const m = mins(now - p.start_at); if (m < max + (p.bonus || 0)) return;
         push({ key: "pause:" + p.id, kind: "pause", lvl: m >= max * 1.5 ? 2 : 1, at: p.start_at + max * 60000, who: p.username,
           title: `${p.username} est en pause depuis ${dur(m)}`, sub: `Maximum autorisé : ${max} min`, actions: [{ label: "Lui écrire", href: "/chat" }] });
       });

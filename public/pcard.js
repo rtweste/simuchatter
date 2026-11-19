@@ -14,7 +14,7 @@ window.PCARD = (() => {
   function html(c, o = {}) {
     const av = c.avatar ? `<span style="background-image:url(${e(c.avatar)})"></span>` : `<span>${e((c.name || "?")[0].toUpperCase())}</span>`;
     const tags = (c.models || []).map(m => `<em>${e(m)}</em>`).join("");
-    return `<div class="pcd" style="--ac:${e(c.color || "#b8a4ff")}"><div class="pc-ban"><i></i><i></i><i></i></div>
+    return `<div class="pcd"${c.id ? ` data-uid="${c.id}"` : ""} style="--ac:${e(c.color || "#b8a4ff")}"><div class="pc-ban"><i></i><i></i><i></i></div>
       <div class="pc-av${c.avatar ? " ph" : ""}">${av}${c.shift && c.shift.state === "on" ? '<b class="dot" aria-label="En shift"></b>' : ""}</div>
       <div class="pc-b"><h3><span data-pcn>${e(c.name)}</span><small>${e((c.roleLabel || "").toUpperCase())}</small></h3><div class="pc-hd">@${e(c.username)}${c.team ? ` · Équipe de ${e(c.team)}` : ""}</div>
         <p class="pc-bio${c.bio ? "" : " ph"}" data-pcb>${c.bio ? e(c.bio) : "Ajoute une phrase d'accroche…"}</p>

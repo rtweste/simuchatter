@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="/gestion-ui.css">
 <link rel="stylesheet" href="/entretien.css">
 <link rel="stylesheet" href="/roles.css">
+<link rel="stylesheet" href="/stellas.css">
 </head>
 <body>
 <div class="shell">
@@ -30,6 +31,7 @@
     <button data-t="reg">Réglages</button>
     <button data-t="jour">Journal</button>
     <button data-t="sanc">Sanctions<b id="nTodo"></b></button>
+    <button data-t="stel" id="tStel">Stella's<b id="nStel"></b></button>
   </div>
 
   <!-- ============ ÉQUIPE ============ -->
@@ -40,6 +42,9 @@
       <button class="wbtn" id="addBtn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Ajouter un compte</button></div>
     <div class="grid" id="teamGrid"><div class="ld">Chargement…</div></div>
   </section>
+
+  <!-- ============ STELLA'S ============ -->
+  <section class="pane" data-p="stel"><div id="stelRoot"><div class="ld">Chargement…</div></div></section>
 
   <!-- ============ RÔLES ET ÉQUIPES ============ -->
   <section class="pane" data-p="roles"><div id="rolesRoot" class="rl"><div class="ld">Chargement…</div></div></section>
@@ -155,6 +160,7 @@
 <script src="/entretien-ui.js"></script>
 <script src="/roles-ui.js"></script>
 <script src="/launch-ui.js"></script>
+<script src="/stellas-admin.js"></script>
 <script src="/gestion-ui.js"></script>
 </body>
 </html>

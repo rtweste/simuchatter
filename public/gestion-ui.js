@@ -45,7 +45,7 @@ const LOADED = {};
 function tab(t) {
   qa(".tabs button").forEach(x => x.classList.toggle("on", x.dataset.t === t)); qa(".pane").forEach(p => p.classList.toggle("on", p.dataset.p === t));
   try { history.replaceState(null, "", "#" + t); } catch (e) {}
-  ({ team: loadTeam, crea: loadCrea, reg: loadReg, jour: loadJour, sanc: loadSanc, cand: loadCand, roles: () => ROLESUI.load() })[t]();
+  ({ team: loadTeam, crea: loadCrea, reg: loadReg, jour: loadJour, sanc: loadSanc, cand: loadCand, roles: () => ROLESUI.load(), stel: () => STELADMIN.load() })[t]();
   if (t === "team") LAUNCHUI.load();
 }
 qa(".tabs button").forEach(b => b.addEventListener("click", () => { S.tick(); tab(b.dataset.t); }));
@@ -642,7 +642,9 @@ return { tab, loadSanc };
   if (me.role !== "admin") { location.href = "/home"; return; }
   renderShell("admin", me);
   const h = (location.hash || "").slice(1);
-  GE.tab(["team", "crea", "reg", "jour", "sanc", "cand", "roles"].includes(h) && !(me.rk === "assistant" && ["cand", "reg", "sanc"].includes(h)) ? h : "team");
+  if (me.rk === "assistant") document.getElementById("tStel")?.remove();
+  GE.tab(["team", "crea", "reg", "jour", "sanc", "cand", "roles", "stel"].includes(h) && !(me.rk === "assistant" && ["cand", "reg", "sanc", "stel"].includes(h)) ? h : "team");
+  if (h !== "stel" && me.rk !== "assistant") api("/api/admin/stellas/overview").then(o => { $("nStel").textContent = o.requests.filter(q => me.rk === "founder" || q.kind === "title").length || ""; }).catch(() => {});
   if (h !== "cand" && me.rk !== "assistant") api("/api/admin/applications/count").then(c => { $("nCand").textContent = c.new || ""; }).catch(() => {});
   // compteur « à traiter » visible dès l'ouverture
   if (h !== "sanc" && me.rk !== "assistant") api("/api/admin/sanctions").then(s => { $("nTodo").textContent = s.kpis.todo || ""; }).catch(() => {});

@@ -443,7 +443,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const from = parisDate(Math.max(since, now - 14 * 864e5) - 864e5);
     planning.decorate(db.prepare(`${planning.SHIFT_SQL} WHERE s.date >= ? ORDER BY s.date`).all(from)).forEach(s => {
       if (s.start_ms < since) return;
-      if (s.state === "done" && s.late > 0) add.run(s.user_id, "late", `${dShort(s.start_ms)} · ${s.start}–${s.end} · ${s.model_name} · pointé à ${hm(s.clock_in)} (+${s.late} min)`, s.start_ms, "late:" + s.id + ":" + s.user_id, now);
+      if (s.state === "done" && s.late > 0 && !(() => { try { return db.prepare("SELECT 1 FROM stella_jokers WHERE source_key = ? AND cancelled_by IS NULL").get("late:" + s.id + ":" + s.user_id); } catch (e) { return false; } })()) add.run(s.user_id, "late", `${dShort(s.start_ms)} · ${s.start}–${s.end} · ${s.model_name} · pointé à ${hm(s.clock_in)} (+${s.late} min)`, s.start_ms, "late:" + s.id + ":" + s.user_id, now);
       if (s.state === "absent") add.run(s.user_id, "absent", `${dShort(s.start_ms)} · ${s.start}–${s.end} · ${s.model_name} · aucun pointage`, s.start_ms, "absent:" + s.id + ":" + s.user_id, now);
     });
     db.prepare(`SELECT w.*, s.date, s.start, s.end, m.name mn FROM shift_swaps w JOIN shifts s ON s.id = w.shift_id JOIN models m ON m.id = s.model_id WHERE w.created_at > ? AND w.status != 'cancelled'`).all(since).forEach(w => {

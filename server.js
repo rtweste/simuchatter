@@ -280,7 +280,7 @@ if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "simu_int
 // nom affiché, couleur et photo de profil (pour le menu)
 function profBits(uid) { try { const u = db.prepare("SELECT display_name, color FROM users WHERE id = ?").get(uid) || {}, a = db.prepare("SELECT updated_at FROM user_avatars WHERE user_id = ?").get(uid);
   return { name: u.display_name || null, color: u.color || null, avatar: a ? `/api/avatar/${uid}?v=${a.updated_at}` : null }; } catch (e) { return {}; } }
-let COMM = null;
+let COMM = null, STELLAS = null;
 // vue chatter du fondateur (aperçu en lecture seule)
 app.post("/api/view-as", auth, (req, res) => {
   const real = req.realUser || req.user; if (real.rk !== "founder") return res.status(403).json({ error: "Réservé au fondateur" });
@@ -531,6 +531,7 @@ require("./extras")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, gest
 STUDIO = require("./studio")(app, db, auth, admin, { dataDir: path.dirname(DB_PATH), gest: GEST, planning: PLAN });   // contenus perso, fiches créatrices, pauses
 const CHAT = require("./chat")(app, db, auth, admin, { dataDir: path.dirname(DB_PATH), gest: GEST, planning: PLAN });   // chat d'équipe
 COMM = require("./community")(app, db, auth, admin, { chat: CHAT, compta: COMPTA });   // vie d'équipe : victoires, anniversaires, coéquipier du mois, #off
+STELLAS = require("./stellas")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, gest: GEST, community: COMM });   // Stella's : monnaie et boutique
 require("./tests")(app, db, auth, admin, { gest: GEST });   // tests d'aptitude : débit et frappe
 require("./challenges")(app, db, auth, admin, { compta: COMPTA, gest: GEST });   // défis de la semaine
 CAND_CTX.referrals = require("./referrals")(app, db, auth, admin, { compta: COMPTA, gest: GEST });   // parrainage

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ma cagnotte — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StellADS">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/stellas.css">
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area">
+<div class="wrap stx" id="root"><div class="st-empty">Chargement…</div></div>
+</main>
+</div>
+<script src="/common.js"></script>
+<script>
+(() => {
+const R = document.getElementById("root");
+let S = null, W = [], H = [], F = "all", more = true;
+const SV = (d, s = 16, w = 2.2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+const N = n => Number(n).toLocaleString("fr-FR");
+const C = (s = 16) => `<i class="stc" style="width:${s}px;height:${s}px"></i>`;
+const IC = { sale: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6", ontime: "M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z", streak: "M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z",
+  buy: "M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2", refund: "M3 12a9 9 0 1 0 3-6.7M3 4v4h4", swap: "M7 7h11l-3-3M17 17H6l3 3", sos: "M12 3l2.6 6 6.4.6-4.9 4.3 1.5 6.3L12 17l-5.6 3.2 1.5-6.3L3 9.6 9.4 9z",
+  handover: "M4 6h16M4 12h10M4 18h7", tier: "M4 17l6-6 4 4 6-7M14 8h6v6", challenge: "M5 21V4h11l-1.6 4L16 12H5", motm: "M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM8.5 14L7 22l5-3 5 3-1.5-8",
+  grant: "M20 12v8H4v-8M2.5 7.5h19V12h-19zM12 21V7.5", sanction: "M12 3l10 18H2zM12 10v4M12 17h.01", sale_back: "M3 12a9 9 0 1 0 3-6.7M3 4v4h4", sanction_back: "M3 12a9 9 0 1 0 3-6.7M3 4v4h4" };
+const tone = t => t.amount > 0 ? ["rgba(95,211,162,.12)", "#5fd3a2"] : t.kind === "buy" ? ["rgba(243,217,164,.12)", "#f3d9a4"] : ["rgba(240,98,114,.12)", "#ff8a96"];
+const dayOf = ms => { const d = new Date(ms), t = new Date(); if (d.toDateString() === t.toDateString()) return "AUJOURD'HUI"; if (d.toDateString() === new Date(Date.now() - 864e5).toDateString()) return "HIER";
+  return d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }).toUpperCase(); };
+function hist() {
+  let last = "";
+  return H.length ? H.map(t => { const d = dayOf(t.at), [bg, fg] = tone(t), head = d !== last ? `<div class="st-day">${d}</div>` : ""; last = d;
+    return `${head}<div class="st-row"><span class="ic" style="background:${bg};color:${fg}">${SV(IC[t.kind] || IC.grant)}</span><div class="m"><b>${esc(t.label)}</b><small>${esc(t.sub || "")}${t.sub ? " · " : ""}${new Date(t.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</small></div>
+      <span class="a" style="color:${t.amount > 0 ? "#5fd3a2" : t.kind === "buy" ? "#e5e5e5" : "#ff8a96"}">${t.amount > 0 ? "+ " : "− "}${N(Math.abs(t.amount))}</span></div>`; }).join("")
+    + (more ? `<div style="text-align:center;padding-top:14px"><button class="st-btn sm" id="more">Voir plus</button></div>` : "")
+    : `<div class="st-empty">Rien pour l'instant. Ta première vente validée ou ton prochain shift à l'heure te rapporteront tes premières Stella's.</div>`;
+}
+function render() {
+  const r = S.rules, max = Math.max(1, ...W.map(w => w.sales + w.time + w.help)), k = 150 / max;
+  const earn = [["Vente validée", "1 par tranche de 10 € comptés pour toi", `${r.sale10} / 10 €`], ["Super vente", "Les grosses ventes, en bonus", `+ ${r.superSale}`], ["Shift commencé à l'heure", "Pointé dans la tolérance", `+ ${r.ontime}`],
+    ["Série de 7 shifts à l'heure", "Sans retard ni absence", `+ ${r.streak7}`], ["Série de 30 shifts à l'heure", "Un mois parfait", `+ ${r.streak30}`], ["Shift repris pour un collègue", "Échange validé par un manager", `+ ${r.swap}`],
+    ["Meilleure réponse en aide fan", "Celle qui a le plus d'étoiles", `+ ${r.sos}`], ["Passation remplie", "Une par créatrice et par jour", `+ ${r.handover}`], ["Palier de commission atteint", "Chaque nouveau palier de la quinzaine", `+ ${r.tier}`],
+    ["Défi gagné", "Perso ou d'équipe", `+ ${r.challenge}`], ["Coéquipier du mois", "Élu par l'équipe", `+ ${r.motm}`]].filter(e => !/^\+ 0$|^0 \//.test(e[2]));
+  R.innerHTML = `<header class="st-hd"><div><a href="/boutique" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#8f8f8f;text-decoration:none">${SV("M19 12H5M11 6l-6 6 6 6", 14, 2.4)}Boutique</a><h1 style="margin-top:10px">Ma <em>cagnotte</em></h1></div></header>
+  <section class="st-kpis"><div class="st-kpi gold"><div class="st-k" style="color:#b5b5b5">SOLDE</div><div style="display:flex;align-items:center;gap:10px;margin-top:10px">${C(26)}<b class="v" style="margin:0">${N(S.balance)}</b></div></div>
+    <div class="st-kpi"><div class="st-k">GAGNÉES CE MOIS-CI</div><b class="v" style="color:#5fd3a2">+${N(S.monthGain)}</b></div>
+    <div class="st-kpi"><div class="st-k">DÉPENSÉES CE MOIS-CI</div><b class="v">${N(S.monthSpent)}</b></div>
+    <div class="st-kpi"><div class="st-k">MEILLEURE SÉRIE</div><b class="v">${S.streak.best} <span style="font-size:15px;color:#8f8f8f;letter-spacing:0;font-weight:700">shift${S.streak.best > 1 ? "s" : ""} à l'heure</span></b></div></section>
+  <section class="st-box"><div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px"><h2>Gagnées par semaine</h2>
+    <div class="st-leg"><span><i style="background:#e8c27a"></i>Ventes</span><span><i style="background:#5fd3a2"></i>Ponctualité</span><span><i style="background:#7dd3fc"></i>Entraide et bonus</span></div></div>
+    <div class="st-chart">${W.map(w => `<div class="c"><span>${w.sales + w.time + w.help || ""}</span><div class="sk"><i style="height:${Math.round(w.help * k)}px;background:#7dd3fc"></i><i style="height:${Math.round(w.time * k)}px;background:#5fd3a2"></i><i style="height:${Math.round(w.sales * k)}px;background:#e8c27a"></i></div></div>`).join("")}</div>
+    <div class="st-lbl">${W.map(w => `<span>${new Date(w.from).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>`).join("")}</div></section>
+  <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(440px,100%),1fr));gap:16px;align-items:start">
+    <div class="st-box"><div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px"><h2>Historique</h2>
+      <div class="st-segs">${[["all", "Tout"], ["gain", "Gains"], ["buy", "Achats"], ["loss", "Pertes"]].map(([k, l]) => `<button type="button" class="${F === k ? "on" : ""}" data-f="${k}">${l}</button>`).join("")}</div></div>
+      <div style="margin-top:14px" id="hist">${hist()}</div></div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="st-box"><h2>Comment gagner des Stella's</h2><div style="margin-top:12px">${earn.map(([l, s, a]) => `<div class="st-earn"><div class="m"><b>${esc(l)}</b><small>${esc(s)}</small></div><span class="a">${C(13)}${esc(a)}</span></div>`).join("")}</div>
+        <p class="sub" style="margin-top:14px;font-size:12px">Hors ventes, défis et coéquipier du mois : jusqu'à ${N(S.cap)} Stella's par jour.</p></div>
+      <div class="st-box" style="border-color:rgba(240,98,114,.3);background:radial-gradient(120% 140% at 100% 0,rgba(240,98,114,.08),#0f0f0f 60%)"><h2>Ce qui fait perdre des Stella's</h2><div style="margin-top:12px">
+        ${[["Sanction légère", r.sancLight], ["Sanction moyenne", r.sancMid], ["Sanction grave", r.sancHeavy]].map(([l, v]) => `<div class="st-earn"><div class="m"><b>${l}</b></div><span class="a r">− ${v}</span></div>`).join("")}
+        <div class="st-earn"><div class="m"><b>Vente refusée après coup</b></div><span class="a r">reprises</span></div></div>
+        <p class="sub" style="margin-top:12px;font-size:12px">Ton solde ne descend jamais sous zéro. Une sanction annulée te rend tes Stella's.</p></div>
+    </div></section>`;
+  R.querySelectorAll("[data-f]").forEach(b => b.onclick = async () => { F = b.dataset.f; H = await api(`/api/stellas/history?kind=${F}`); more = H.length >= 40; render(); });
+  const m = document.getElementById("more"); if (m) m.onclick = async () => { const x = await api(`/api/stellas/history?kind=${F}&before=${H[H.length - 1].at}`); H = H.concat(x); more = x.length >= 40; R.querySelector("#hist").innerHTML = hist(); render(); };
+}
+(async () => {
+  const me = await api("/api/me");
+  if (me.role !== "chatter") { location.href = "/home"; return; }
+  renderShell("boutique", me);
+  try { [S, W, H] = await Promise.all([api("/api/stellas/me"), api("/api/stellas/weekly"), api("/api/stellas/history")]); more = H.length >= 40; } catch (e) { R.innerHTML = `<div class="st-closed">${esc(e.message)}</div>`; return; }
+  render();
+})();
+})();
+</script>
+</body>
+</html>

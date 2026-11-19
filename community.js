@@ -21,7 +21,8 @@ module.exports = function mount(app, db, auth, admin, { chat, compta }) {
   const mark = k => db.prepare("INSERT OR IGNORE INTO community_done (key, at) VALUES (?,?)").run(k, Date.now());
   const CH = slug => db.prepare("SELECT * FROM chat_channels WHERE slug = ?").get(slug);
   const say = (slug, body, kind, meta) => { const ch = CH(slug); if (ch) chat.post(ch, null, body, kind, meta); };
-  const win = (type, u, extra = {}) => say("general", "", "win", { type, user_id: u.id, username: u.username, ...extra });
+  const hooks = {};   // branchés par d'autres modules (ex. Stella's)
+  const win = (type, u, extra = {}) => { say("general", "", "win", { type, user_id: u.id, username: u.username, ...extra }); try { hooks.win && hooks.win(type, u, extra); } catch (e) {} };
   // membres de l'équipe : comptes actifs, activés, hors élèves
   const STAFF = "active = 1 AND deleted_at IS NULL AND role <> 'trainee' AND pass_hash <> '!'";
   const chatters = () => db.prepare(`SELECT id, username, bio, birthday, created_at FROM users WHERE ${STAFF} AND role = 'chatter'`).all();
@@ -102,6 +103,7 @@ module.exports = function mount(app, db, auth, admin, { chat, compta }) {
       if (!rows.length) return;
       const top = rows.filter(r => r.n === rows[0].n);
       top.forEach(r => db.prepare("INSERT OR IGNORE INTO motm_winners (month, user_id, votes) VALUES (?,?,?)").run(prev, r.user_id, r.n));
+      const mx = { users: top.map(r => ({ id: r.user_id, username: r.username })), month: prev, label: monthLabel(prev) }; try { hooks.win && hooks.win("motm", {}, mx); } catch (e) {}
       say("general", "", "win", { type: "motm", users: top.map(r => ({ id: r.user_id, username: r.username })), votes: rows[0].n, voters: db.prepare("SELECT COUNT(*) n FROM motm_votes WHERE month = ?").get(prev).n, month: prev, label: monthLabel(prev) });
     }
   }
@@ -149,7 +151,7 @@ module.exports = function mount(app, db, auth, admin, { chat, compta }) {
   }
   // badge sur la carte de profil
   const motmOf = uid => db.prepare("SELECT month FROM motm_winners WHERE user_id = ? ORDER BY month DESC").all(uid).map(r => ({ month: r.month, label: monthLabel(r.month) }));
-  return { celebrate, motmOf };
+  return { celebrate, motmOf, hooks };
 };
 
 const QUESTIONS = [

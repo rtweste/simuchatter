@@ -22,9 +22,10 @@ window.PAUSEUI = (() => {
             <circle class="bg" cx="150" cy="150" r="${R}"/><circle class="fl" id="pzFl" cx="150" cy="150" r="${R}" stroke-dasharray="${CIRC}" stroke-dashoffset="0"/><circle class="hd" id="pzHd" cx="${150 + R}" cy="150" r="6"/></svg>
             <div class="ct"><div class="pz-cupw">${CUP}</div><div class="pz-time" id="pzT"></div><div class="pz-sub" id="pzS"></div></div></div>
           <div class="pz-dots" id="pzD"></div><div class="pz-msg" id="pzM"></div>
-          <button class="pz-hold" id="pzH">Reprendre mon shift<small>maintiens appuyé</small></button><button class="pz-min" id="pzMin">Réduire, je reste en pause</button></div></div>`;
+          <button class="pz-hold" id="pzH">Reprendre mon shift<small>maintiens appuyé</small></button><button class="pz-min" id="pzBonus" hidden style="color:#f3d9a4">+15 min avec ma pause bonus</button><button class="pz-min" id="pzMin">Réduire, je reste en pause</button></div></div>`;
     document.body.appendChild(root); ov = root.querySelector("#pzOv"); pill = root.querySelector("#pzPill"); cvs = root.querySelector("#pzCv");
     pill.onclick = () => openOv(pill); root.querySelector("#pzX").onclick = closeOv; root.querySelector("#pzMin").onclick = closeOv;
+    root.querySelector("#pzBonus").onclick = async () => { try { await api("/api/stellas/pause-bonus", { body: {} }); notify("+15 min de pause ✓", "Pause bonus utilisée", "ok"); refresh(); } catch (e) { notify("Impossible", e.message, "err"); } };
     addEventListener("keydown", e => { if (e.key === "Escape" && ov.classList.contains("on")) closeOv(); });
     bindHold();
   }
@@ -39,6 +40,7 @@ window.PAUSEUI = (() => {
   function tick() {
     if (!root) return; const on = !!(S && S.open); pill.classList.toggle("on", on && !ov.classList.contains("on"));
     paintBtn(); if (!on) return;
+    const pb = root.querySelector("#pzBonus"); if (pb) { pb.hidden = !(S.bonusLeft > 0); if (S.bonusLeft > 0) pb.textContent = `+15 min avec ma pause bonus${S.bonusLeft > 1 ? ` (${S.bonusLeft})` : ""}`; }
     const e = elapsed(), max = S.max * 60, rem = max - e, over = rem < 0, frac = Math.max(0, Math.min(1, rem / max));
     root.classList.toggle("over", over); pill.classList.toggle("over", over);
     const t = Math.abs(Math.round(rem)), txt = `${over ? "+" : ""}${pad(Math.floor(t / 60))}:${pad(t % 60)}`;

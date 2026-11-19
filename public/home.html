@@ -660,8 +660,8 @@ function podB(rows, note) {
   const order = [rows[1], rows[0], rows[2]].map((r, i) => r && { ...r, rank: [2, 1, 3][i] }).filter(Boolean);
   const H = desk() ? { 1: 170, 2: 125, 3: 92 } : { 1: 120, 2: 88, 3: 66 }, DL = { 2: 1.85, 1: 2, 3: 2.15 };
   return `<div class="b a-pod" style="${wv("pod")};display:flex;flex-direction:column"><h3>Classement ${D.role === "admin" ? "<em>de la période</em>" : "de la période"}</h3>
-    <div class="pod" style="flex:1">${order.map(r => `<div class="pc p${r.rank} ${r.me ? "me" : ""}"><span class="pa" style="--pd:${DL[r.rank] + .5}s">${esc(r.username[0])}</span>
-      <span class="pn">${esc(r.username)}${r.me ? " · toi" : ""}</span><span class="pm">${eur(r.total)}</span>
+    <div class="pod" style="flex:1">${order.map(r => `<div class="pc p${r.rank} ${r.me ? "me" : ""}"><span class="pa" style="--pd:${DL[r.rank] + .5}s"${r.id ? ` data-lk-uid="${r.id}"` : ""}>${esc(r.username[0])}</span>
+      <span class="pn"><span${r.id ? ` data-lk-name="${r.id}"` : ""}>${esc(r.username)}</span>${r.me ? " · toi" : ""}</span><span class="pm">${eur(r.total)}</span>
       <div class="bar" style="height:${H[r.rank]}px;--bd:${DL[r.rank]}s">${r.rank}</div></div>`).join("")}</div>
     ${note ? `<div class="pod-note">${note}</div>` : ""}</div>`;
 }
@@ -673,7 +673,7 @@ function renderChatter() {
     : `<span><b>Palier maximum atteint</b> : 15 % + 40 € de prime. Bravo !</span>`;
   const h = new Date().getHours(), hello = h < 5 ? "Bonne nuit" : h < 18 ? "Bonjour" : "Bonsoir";
   const date = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
-  const chips = `<a class="act hot" href="/ventes">${icon("receipt")}<span>Déclarer<span class="lx"> une vente</span></span></a><a class="act" href="/planning">${icon("calendar")}Planning</a><a class="act" href="/app">${icon("chat")}Simulateur</a><a class="act" href="/parrainage">${icon("gift")}<span>Parrainer<span class="lx"> un ami</span></span></a><button class="act" type="button" style="font-family:inherit;cursor:pointer" onclick="INTRO.show(ME_SHELL,{replay:true})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg><span>Vidéo<span class="lx"> de présentation</span></span></button>${DZ.chip()}`;
+  const chips = `<a class="act hot" href="/ventes">${icon("receipt")}<span>Déclarer<span class="lx"> une vente</span></span></a><a class="act" href="/planning">${icon("calendar")}Planning</a><a class="act" href="/app">${icon("chat")}Simulateur</a><a class="act" href="/parrainage">${icon("gift")}<span>Parrainer<span class="lx"> un ami</span></span></a><a class="act" href="/boutique" style="border-color:rgba(232,194,122,.4);color:#f3d9a4"><i class="stc" style="width:15px;height:15px"></i><span>Stella's · <b data-stl-bal>${window.STL_BAL != null ? Number(window.STL_BAL).toLocaleString("fr-FR") : "…"}</b></span></a><button class="act" type="button" style="font-family:inherit;cursor:pointer" onclick="INTRO.show(ME_SHELL,{replay:true})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg><span>Vidéo<span class="lx"> de présentation</span></span></button>${DZ.chip()}`;
   const goal = nx ? nx.from : Math.max(T.net * 1.2, 1), ahead = T.projNet >= goal;
   const hero = `<div class="b hero a-hero" style="${wv("hero")}"><div class="stars">${stars()}</div><span class="glow"></span>
     <div class="hero2"><div class="hl"><div class="eyebrow" style="position:relative;margin:0">${esc(date)}<span class="hp"> · période du ${esc(D.period.label.replace(/ \d{4}$/, ""))}</span></div>

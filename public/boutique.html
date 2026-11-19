@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Boutique — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StellADS">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/stellas.css">
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area">
+<div class="st-glow"></div>
+<div class="wrap stx" id="root"><div class="st-empty">Chargement…</div></div>
+</main>
+</div>
+<script src="/common.js"></script>
+<script>
+(() => {
+const R = document.getElementById("root");
+let ME = null, P = {}, S = null, TAB = "all", CHIP = "all";
+const SV = (d, s = 16, w = 2, c = "currentColor") => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+const N = n => Number(n).toLocaleString("fr-FR");
+const C = (s = 16) => `<i class="stc" style="width:${s}px;height:${s}px"></i>`;
+const RAR = { C: "COMMUN", R: "RARE", E: "ÉPIQUE", L: "LÉGENDAIRE" };
+const SLOT = { frame: "Cadres", name: "Pseudos", banner: "Bannières", fx: "Effets", title: "Titres" };
+const STAR = "M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z";
+const CHECK = "M5 12.5l4.5 4.5L19 7.5";
+
+/* ---------- aperçus ---------- */
+const avStyle = () => P.avatar ? `background-image:url(${esc(P.avatar)});font-size:0` : "";
+const ini = () => esc((P.name || ME.username || "?")[0].toUpperCase());
+function pvAv(frame, size = 78) {
+  const cls = frame ? ` lk-fr lk-fr-${frame}` : "";
+  return `<span class="pv-av${cls}" style="width:${size}px;height:${size}px;font-size:${Math.round(size * .36)}px;--ac:${esc(P.color || "#6d5bd0")};${avStyle()}">${ini()}</span>`;
+}
+const pvMsg = (nameCls, txt, title) => `<div class="pv-msg"><span class="a" style="--ac:${esc(P.color || "#6d5bd0")};${avStyle()}">${ini()}</span><div style="min-width:0"><b class="${nameCls || ""}">${esc(P.name || ME.username)}</b>${title ? `<span class="lk-title">${esc(title)}</span>` : ""}<div>${esc(txt)}</div></div></div>`;
+const pvTw = () => [[34, 26, 14, "#ffe08a", 0], [null, 34, 10, "#fff", .4, 42], [62, null, 12, "#f3d9a4", .8, null, 22], [null, null, 16, "#ffd23f", .2, 30, 30]]
+  .map(([l, t, s, c, d, r, b]) => `<svg class="pv-tw" width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true" style="${l != null ? `left:${l}px;` : ""}${t != null ? `top:${t}px;` : ""}${r != null ? `right:${r}px;` : ""}${b != null ? `bottom:${b}px;` : ""}animation-delay:${d}s"><path d="${STAR}" fill="${c}"/></svg>`).join("");
+function preview(it, big) {
+  const bg = { frame_halo: "rgba(255,255,255,.08)", frame_aurora: "rgba(184,164,255,.16)", frame_crown: "rgba(255,210,63,.16)", name_gold: "rgba(243,217,164,.12)", name_ice: "rgba(125,211,252,.12)", banner_nebula: "rgba(184,164,255,.1)", fx_stars: "rgba(255,210,63,.14)", title_custom: "rgba(255,122,182,.12)" }[it.id];
+  let inner = "";
+  if (it.slot === "frame") inner = pvAv(it.id.split("_")[1], big ? 150 : 78);
+  if (it.slot === "name") inner = pvMsg("lk-n-" + it.id.split("_")[1], it.id === "name_gold" ? "merci pour le relais !" : "je prends le shift de 18 h");
+  if (it.slot === "banner") inner = `<div class="pv-card" style="${big ? "transform:scale(1.4)" : ""}"><div class="bn lk-bn-nebula"></div><div class="rw"><span style="--ac:${esc(P.color || "#6d5bd0")};${avStyle()}">${ini()}</span><b>${esc(P.name || ME.username)}</b></div></div>`;
+  if (it.slot === "fx") inner = `${pvTw()}<div class="pv-sale" style="${big ? "transform:scale(1.3)" : ""}"><span class="i">${SV(STAR, 16, 0, "none").replace('fill="none"', 'fill="#1b1306"')}</span><div><b>120,00 €</b><small>${esc(P.name || ME.username)} vient de vendre</small></div></div>`;
+  if (it.slot === "title") inner = `<div class="pv-title"><b>${esc(P.name || ME.username)}</b><span class="lk-title" style="margin:0;font-size:${big ? 12 : 10.5}px;padding:6px 10px">${esc((S.equipped.title || "Ton titre ici").slice(0, 24))}</span></div>`;
+  return `<div class="pv" data-open="${it.id}" style="${big ? "height:auto;cursor:default" : ""}background:radial-gradient(70% 90% at 50% 40%,${bg},#0d0d0d 70%)">${inner}</div>`;
+}
+
+/* ---------- cartes ---------- */
+function footBtn(it) {
+  const b = { buy: `<button class="st-btn w sm" data-open="${it.id}">Acheter</button>`, equipped: `<button class="st-btn eq sm" data-unequip="${it.slot}">${SV(CHECK, 14, 3)}Retirer</button>`,
+    owned: `<button class="st-btn sm" data-equip="${it.id}">Équiper</button>`, pending: `<span class="nt" style="color:#f3d9a4">En attente de validation</span>`,
+    short: `<span class="nt">${esc(it.note)}</span>`, soldout: `<span class="nt">Épuisé ce mois-ci</span>`, limit: `<span class="nt">${esc(it.note)}</span>`, off: `<span class="nt">Indisponible</span>` }[it.state];
+  return b || "";
+}
+function cosCard(it, i) {
+  const tag = it.state === "equipped" ? `<span class="st8" style="color:#5fd3a2">Équipé</span>` : it.state === "owned" ? `<span class="st8" style="color:#a3a3a3">Possédé</span>` : "";
+  const owned = it.state === "equipped" || it.state === "owned";
+  return `<article class="st-it ${it.state === "equipped" ? "equipped" : ""}" style="animation-delay:${i * .04}s">${preview(it)}
+    <div class="bd"><div class="tg"><span class="rar ${it.rar}">${RAR[it.rar]}</span>${tag}</div><h3>${esc(it.name)}</h3><p>${esc(it.id === "title_custom" && S.equipped.title ? `Ton titre : « ${S.equipped.title} ». ${it.desc}` : it.desc)}</p>
+    <div class="ft"><span class="st-price" style="${owned ? "color:#8f8f8f" : ""}">${C()}${N(it.price)}</span>${footBtn(it)}</div></div></article>`;
+}
+const ADV_IC = { joker: ["M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 9v4l2.5 1.5M9 2h6", "#7dd3fc", "125,211,252"], pause15: ["M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h1.5a2.5 2.5 0 0 1 0 5H17M8 3c0 1.5 1 1.5 1 3M12 3c0 1.5 1 1.5 1 3", "#e8c39a", "214,168,120"] };
+function advCard(it, i) {
+  const [d, c, rgb] = ADV_IC[it.id], have = S.inv[it.id] || 0;
+  const pills = [it.perMonth ? `<span class="pill">1 PAR MOIS</span>` : "", have ? `<span class="pill g">${have} EN RÉSERVE</span>` : ""].join("");
+  const use = have ? `<button class="st-btn sm" data-use="${it.id}">Utiliser</button>` : "";
+  const buy = it.state === "buy" ? `<button class="st-btn w sm" data-open="${it.id}">Acheter</button>` : `<span class="nt" style="font-size:12px;font-weight:700;color:#8f8f8f">${esc(it.state === "short" ? it.note : it.state === "limit" ? "Déjà pris ce mois-ci" : "")}</span>`;
+  return `<article class="st-adv" style="animation-delay:${i * .05}s"><div class="ic" style="background:rgba(${rgb},.1);border:1px solid rgba(${rgb},.35)">${SV(d, 34, 1.8, c)}</div>
+    <div class="b"><div class="t"><h3>${esc(it.name)}</h3>${pills}</div><p>${esc(it.desc)}</p><div class="r"><span class="st-price">${C()}${N(it.price)}</span><div class="bt">${use}${buy}</div></div></div></article>`;
+}
+function rewCard(it, i) {
+  const goal = S.goal === it.id, can = it.state === "buy";
+  const right = can ? `<button class="st-btn g sm" data-open="${it.id}">Échanger</button>` : `<span class="nt" style="font-size:12px;font-weight:700;color:${it.state === "pending" ? "#f3d9a4" : "#8f8f8f"}">${esc(it.state === "pending" ? "En attente du fondateur" : it.note || "")}</span>`;
+  return `<article class="st-adv st-rew ${can ? "" : "dim"}" style="animation-delay:${i * .05}s"><div class="amt"><b class="st-gold" style="font-style:normal">+${it.eur} €</b><span>SUR TA PAIE</span></div>
+    <div class="b"><div class="t"><h3>${esc(it.name)}</h3>${goal ? `<span class="pill o">MON OBJECTIF</span>` : ""}</div><p>${esc(it.desc)}</p><div class="r"><span class="st-price">${C()}${N(it.price)}</span>${right}</div></div></article>`;
+}
+
+/* ---------- page ---------- */
+function render() {
+  const its = S.items, cos = its.filter(i => i.shelf === "cos" && i.state !== "off"), adv = its.filter(i => i.shelf === "adv" && i.state !== "off"), rew = its.filter(i => i.shelf === "rew" && i.state !== "off");
+  const goalIt = its.find(i => i.id === S.goal), st = S.streak, dots = st.run % 7;
+  const feat = its.find(i => i.featured && i.state !== "equipped" && i.state !== "owned" && i.state !== "off") || its.find(i => i.shelf === "cos" && ["E", "L"].includes(i.rar) && !["equipped", "owned", "off"].includes(i.state));
+  const tabs = [["all", "Tout", cos.length + adv.length + rew.length], ["cos", "Cosmétiques", cos.length], ["adv", "Avantages", adv.length], ["rew", "Récompenses", rew.length]];
+  const cosF = CHIP === "all" ? cos : cos.filter(i => i.slot === CHIP);
+  R.innerHTML = `<header class="st-hd"><div><div class="st-eb">RÉCOMPENSES</div><h1>La <em>boutique</em></h1><p>Tes ventes, ta ponctualité et ton entraide te rapportent des Stella's. Dépense-les ici.</p></div>
+    <div class="acts"><a class="st-btn" href="/cagnotte">${SV("M4 6h16M4 12h16M4 18h10")}Ma cagnotte</a><a class="st-bal" href="/cagnotte">${C(20)}${N(S.balance)}</a></div></header>
+  ${S.open ? "" : `<div class="st-closed">La boutique est fermée pour le moment. Tu continues de gagner des Stella's, tu pourras les dépenser à la réouverture.</div>`}
+  <section class="st-hero">
+    <div class="st-card st-sold"><div class="top">${C(64)}<div><div class="st-k">TON SOLDE</div><div class="st-big"><b>${N(S.balance)}</b><span>Stella's</span></div></div>
+      <div class="st-wk"><b>+${N(S.week)}</b><small>cette semaine</small></div></div>
+      <div class="st-two"><div class="st-mini"><div class="h"><span>Série à l'heure</span><em>+${S.rules.streak7} au 7ᵉ</em></div><div class="st-dots">${Array.from({ length: 7 }, (_, i) => `<i class="${i < dots ? "on" : ""}"></i>`).join("")}</div>
+        <div class="s">${st.run ? `${st.run} shift${st.run > 1 ? "s" : ""} d'affilée à l'heure` : "Commence ton prochain shift à l'heure"}</div></div>
+        <div class="st-mini"><div class="h"><span>Mon objectif</span>${goalIt ? `<button type="button" data-goal="">Retirer</button>` : ""}</div>
+        ${goalIt ? `<div style="font-size:14px;font-weight:800;margin-top:7px">${esc(goalIt.name)}</div><div class="st-bar"><i style="width:${Math.min(100, Math.round(S.balance / goalIt.price * 100))}%"></i></div>
+          <div class="s">${S.balance >= goalIt.price ? `<b>Tu peux l'avoir !</b>` : `Encore <b>${N(goalIt.price - S.balance)}</b> Stella's`}</div>`
+        : `<div class="s" style="margin-top:7px">Ouvre un article et choisis « En faire mon objectif » pour suivre ta progression.</div>`}</div></div></div>
+    ${feat ? `<div class="st-card st-feat"><div class="art">${pvAv(feat.slot === "frame" ? feat.id.split("_")[1] : null, 132)}</div>
+      <div class="body"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="rar ${feat.rar}">${RAR[feat.rar]}</span><span class="st-k" style="font-size:10.5px">À LA UNE</span></div>
+      <h3>${esc(feat.name)}</h3><p>${esc(feat.desc)}</p><div class="row"><span class="st-price" style="font-size:18px">${C(18)}${N(feat.price)}</span><button class="st-btn w" data-open="${feat.id}">Voir l'article</button></div></div></div>` : ""}
+  </section>
+  <nav class="st-tabs" aria-label="Rayons">${tabs.map(([k, l, n]) => `<button type="button" class="${TAB === k ? "on" : ""}" data-tab="${k}">${l}<span>${n}</span></button>`).join("")}</nav>
+  ${TAB === "all" || TAB === "cos" ? `<section class="st-sec"><div class="sh"><div><h2>Cosmétiques</h2><p>Pour te démarquer dans le chat, sur ton profil et dans les ventes</p></div>
+    <div class="st-chips">${[["all", "Tout"], ...Object.entries(SLOT)].map(([k, l]) => `<button type="button" class="${CHIP === k ? "on" : ""}" data-chip="${k}">${l}</button>`).join("")}</div></div>
+    <div class="st-grid">${cosF.map(cosCard).join("") || `<div class="st-empty">Rien dans ce rayon pour l'instant</div>`}</div></section>` : ""}
+  ${(TAB === "all" || TAB === "adv") && adv.length ? `<section class="st-sec"><div class="sh"><div><h2>Avantages</h2><p>Des coups de pouce pour tes shifts, utilisables quand tu veux</p></div></div><div class="st-wide">${adv.map(advCard).join("")}</div></section>` : ""}
+  ${(TAB === "all" || TAB === "rew") && rew.length ? `<section class="st-sec"><div class="sh"><div><h2>Récompenses</h2><p>De l'argent en plus sur ta paie, validé par le fondateur</p></div>
+    <div class="st-budget"><div class="h"><span>Encore disponible ce mois-ci</span><span>${eur(S.budget.left)} sur ${eur(S.budget.total)}</span></div><div class="st-bar" style="margin-top:8px"><i style="width:${S.budget.total ? Math.round(S.budget.left / S.budget.total * 100) : 0}%"></i></div></div></div>
+    <div class="st-wide">${rew.map(rewCard).join("")}</div></section>` : ""}
+  <a class="st-more" href="/cagnotte">Comment gagner des Stella's${SV("M5 12h14M13 6l6 6-6 6", 15, 2.2)}</a>`;
+  bind();
+}
+function bind() {
+  R.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { TAB = b.dataset.tab; render(); });
+  R.querySelectorAll("[data-chip]").forEach(b => b.onclick = () => { CHIP = b.dataset.chip; render(); });
+  R.querySelectorAll("[data-open]").forEach(b => b.onclick = e => { e.stopPropagation(); sheet(b.dataset.open); });
+  R.querySelectorAll("[data-equip]").forEach(b => b.onclick = () => act("/api/stellas/equip", { item: b.dataset.equip }, "Équipé ✓"));
+  R.querySelectorAll("[data-unequip]").forEach(b => b.onclick = () => act("/api/stellas/equip", { off: b.dataset.unequip }, "Retiré"));
+  R.querySelectorAll("[data-goal]").forEach(b => b.onclick = () => act("/api/stellas/goal", { item: b.dataset.goal || null }, b.dataset.goal ? "Objectif enregistré" : "Objectif retiré"));
+  R.querySelectorAll("[data-use]").forEach(b => b.onclick = () => b.dataset.use === "joker" ? jokerSheet() : act("/api/stellas/pause-bonus", {}, "+15 min de pause ajoutées ✓"));
+}
+async function act(url, body, ok) {
+  try { const r = await api(url, { body }); if (r.state) S = r.state; render(); if (ok) notify(ok, "", "ok"); try { LOOKS.reload(); } catch (e) {} } catch (e) { notify("Impossible", e.message, "err"); }
+}
+
+/* ---------- fenêtre article ---------- */
+function openScrim(html) {
+  const s = document.createElement("div"); s.className = "st-scrim"; s.innerHTML = html; document.body.appendChild(s); document.body.style.overflow = "hidden";
+  requestAnimationFrame(() => s.classList.add("on"));
+  const close = () => { s.classList.remove("on"); document.body.style.overflow = ""; setTimeout(() => s.remove(), 300); };
+  s.addEventListener("click", e => { if (e.target === s) close(); }); s.querySelectorAll(".x").forEach(x => x.onclick = close);
+  const k = e => { if (e.key === "Escape") { close(); document.removeEventListener("keydown", k); } }; document.addEventListener("keydown", k);
+  return { s, close };
+}
+function sheet(id) {
+  const it = S.items.find(i => i.id === id); if (!it) return;
+  const cos = it.shelf === "cos", owned = it.state === "equipped" || it.state === "owned", after = S.balance - it.price;
+  const checks = cos ? (it.request ? ["Validé par un manager avant de s'afficher", "Remboursé si le titre est refusé", "Visible dans le chat et sur ta carte de profil"]
+      : ["Équipé tout de suite, tu le retires quand tu veux", "À toi pour toujours, même si tu en changes", it.slot === "fx" ? "Visible par toute l'équipe dans #ventes" : "Visible par toute l'équipe"])
+    : it.shelf === "adv" ? (it.id === "joker" ? ["Pour un retard de 15 min maximum, dans les 7 derniers jours", "Pas de sanction et ta série n'est pas cassée", "1 joker par mois"] : ["À utiliser pendant une pause", "+15 min sans alerte « pause trop longue »", "Tu peux en garder en réserve"])
+    : ["Ajouté à ta prochaine paie après validation du fondateur", "Remboursé si la demande est refusée", "Dans la limite du budget du mois"];
+  const stage = cos ? preview(it, true) : it.shelf === "rew" ? `<div class="pv" style="height:auto"><b class="st-gold" style="font:900 86px Inter;letter-spacing:-.05em;font-style:normal">+${it.eur} €</b></div>`
+    : `<div class="pv" style="height:auto"><div style="width:150px;height:150px;border-radius:44px;display:grid;place-items:center;background:rgba(${ADV_IC[it.id][2]},.1);border:1px solid rgba(${ADV_IC[it.id][2]},.35)">${SV(ADV_IC[it.id][0], 70, 1.5, ADV_IC[it.id][1])}</div></div>`;
+  const chatSeg = cos && it.slot !== "fx" ? `<div class="st-seg"><button type="button" class="on" data-pv="chat">Dans le chat</button><button type="button" data-pv="card">Sur mon profil</button></div>` : "";
+  let cta = "";
+  if (owned) cta = it.state === "equipped" ? `<button class="st-btn eq" style="height:54px" data-sx="unequip">${SV(CHECK, 16, 3)}Équipé · retirer</button>` : `<button class="st-btn w" style="height:54px" data-sx="equip">Équiper</button>`;
+  else if (it.state === "buy") cta = `${it.request === "title" ? `<label style="display:flex;flex-direction:column;gap:7px;font-size:11px;font-weight:800;letter-spacing:.14em;color:#8f8f8f">TON TITRE<input class="st-in" id="tTxt" maxlength="24" placeholder="Ex. : Reine du PPV" autocomplete="off"></label>` : ""}
+    <button class="st-btn g" style="height:54px;font-size:15.5px" data-sx="buy">${it.shelf === "rew" ? "Échanger" : it.request ? "Envoyer ma demande" : "Acheter"} pour ${C(18)}${N(it.price)}</button><p style="margin:-6px 0 0;text-align:center;font-size:12px;color:#8f8f8f">${it.request || it.shelf === "rew" ? "Les Stella's sont mises de côté jusqu'à la validation." : "Les Stella's dépensées ne sont pas remboursées."}</p>`;
+  else cta = `<div class="st-closed" style="padding:16px">${esc(it.state === "pending" ? "Ta demande est en attente de validation." : it.state === "soldout" ? "Le budget des récompenses du mois est épuisé. Retour le 1er !" : it.state === "limit" ? "Tu as déjà pris ton joker du mois." : `Il te manque ${N(it.missing)} Stella's.`)}</div>`;
+  const goalBtn = !owned && S.goal !== it.id && it.state !== "pending" ? `<button class="st-btn ghost" data-sx="goal">${SV(STAR, 15)}En faire mon objectif</button>` : S.goal === it.id ? `<div style="text-align:center;font-size:12.5px;color:#f3d9a4;font-weight:700">C'est ton objectif actuel</div>` : "";
+  const { s, close } = openScrim(`<div class="st-sheet" role="dialog" aria-modal="true" aria-label="${esc(it.name)}">
+    <div class="l">${chatSeg}<div class="stage" id="stg">${stage}</div></div>
+    <div class="r"><div style="display:flex;justify-content:space-between;align-items:center"><span class="rar ${it.rar || "A"}">${it.rar ? RAR[it.rar] : it.shelf === "adv" ? "AVANTAGE" : "RÉCOMPENSE"}${cos ? " · " + SLOT[it.slot].replace(/s$/, "").toUpperCase() : ""}</span><button class="x" type="button" aria-label="Fermer">${SV("M6 6l12 12M18 6L6 18", 16, 2.4)}</button></div>
+      <div><h2>${esc(it.name)}</h2><p class="desc" style="margin-top:12px">${esc(it.desc)}</p></div>
+      <div class="st-checks">${checks.map(c => `<div>${SV(CHECK, 16, 2.6, "#5fd3a2")}${esc(c)}</div>`).join("")}</div>
+      ${owned ? "" : `<div class="st-sum"><div><span>Ton solde</span><b>${C(13)}${N(S.balance)}</b></div><div><span>Prix</span><b>− ${N(it.price)}</b></div><hr><div class="t"><span>Après</span><b>${after >= 0 ? C(14) + N(after) : "—"}</b></div></div>`}
+      ${cta}${goalBtn}</div></div>`);
+  s.querySelectorAll("[data-pv]").forEach(b => b.onclick = () => { s.querySelectorAll("[data-pv]").forEach(x => x.classList.toggle("on", x === b));
+    s.querySelector("#stg").innerHTML = b.dataset.pv === "chat" ? `<div class="pv" style="height:auto;flex-direction:column;gap:12px;display:flex;align-items:center">${pvMsg(it.slot === "name" ? "lk-n-" + it.id.split("_")[1] : "", "Je prends le shift de 18 h si personne ne peut", it.slot === "title" ? (S.equipped.title || "Ton titre") : "").replace('<span class="a"', `<span class="a${it.slot === "frame" ? " lk-fr lk-fr-" + it.id.split("_")[1] : ""}"`)}</div>`
+      : `<div class="pv" style="height:auto"><div class="pv-card" style="transform:scale(1.35)"><div class="bn ${it.slot === "banner" ? "lk-bn-nebula" : ""}" style="${it.slot === "banner" ? "" : "background:linear-gradient(120deg,color-mix(in srgb," + esc(P.color || "#6d5bd0") + " 60%,#111),#111)"}"></div><div class="rw"><span class="${it.slot === "frame" ? "lk-fr lk-fr-" + it.id.split("_")[1] : ""}" style="--ac:${esc(P.color || "#6d5bd0")};${avStyle()}">${ini()}</span><b class="${it.slot === "name" ? "lk-n-" + it.id.split("_")[1] : ""}">${esc(P.name || ME.username)}</b></div></div></div>`; });
+  s.querySelectorAll("[data-sx]").forEach(b => b.onclick = async () => {
+    const a = b.dataset.sx; b.disabled = true;
+    try {
+      if (a === "goal") { const r = await api("/api/stellas/goal", { body: { item: it.id } }); S = r.state; render(); close(); notify("Objectif enregistré", it.name, "ok"); return; }
+      if (a === "equip" || a === "unequip") { const r = await api("/api/stellas/equip", { body: a === "equip" ? { item: it.id } : { off: it.slot } }); S = r.state; render(); close(); try { LOOKS.reload(); } catch (e) {} return; }
+      const r = await api("/api/stellas/buy", { body: { item: it.id, text: s.querySelector("#tTxt")?.value || "" } }); S = r.state; render(); try { LOOKS.reload(); STLUI.pill(S.balance); } catch (e) {}
+      s.querySelector(".r").innerHTML = `<div class="st-done"><div style="margin:6px 0 8px">${cos && it.slot === "frame" ? pvAv(it.id.split("_")[1], 110) : `<i class="stc" style="width:64px;height:64px"></i>`}</div>
+        <b class="t">${it.request || it.shelf === "rew" ? "Demande envoyée !" : "C'est à toi !"}</b>
+        <p class="desc" style="max-width:320px">${it.request === "title" ? "Un manager va valider ton titre. Tu seras prévenu." : it.shelf === "rew" ? "Le fondateur valide, puis le bonus arrive sur ta prochaine paie." : it.shelf === "adv" ? "Il t'attend dans tes avantages : utilise-le quand tu veux." : `${esc(it.name)} est équipé. Toute l'équipe le voit déjà.`}</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">${cos && !it.request ? `<a class="st-btn w" href="/chat">Voir dans le chat</a>` : ""}<button class="st-btn x2" type="button">Continuer</button></div></div>`;
+      s.querySelector(".x2").onclick = close;
+      if (window.confetti) confetti();
+    } catch (e) { b.disabled = false; notify("Impossible", e.message, "err"); }
+  });
+}
+async function jokerSheet() {
+  let d; try { d = await api("/api/stellas/joker"); } catch (e) { return notify("Erreur", e.message, "err"); }
+  const { s, close } = openScrim(`<div class="st-sheet" style="grid-template-columns:1fr;max-width:520px" role="dialog" aria-modal="true" aria-label="Utiliser un joker retard"><div class="r">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span class="rar A">JOKER RETARD · ${d.have} EN RÉSERVE</span><button class="x" type="button" aria-label="Fermer">${SV("M6 6l12 12M18 6L6 18", 16, 2.4)}</button></div>
+    <h2 style="font-size:28px">Quel retard effacer ?</h2><p class="desc">Les retards de 15 min maximum des 7 derniers jours, pas encore sanctionnés.</p>
+    <div>${d.shifts.length ? d.shifts.map(x => `<div class="st-row"><span class="ic" style="background:rgba(125,211,252,.1);color:#7dd3fc">${SV("M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 9v4l2.5 1.5")}</span><div class="m"><b>${new Date(x.date + "T12:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</b><small>${esc(x.start)} – ${esc(x.end)} · ${esc(x.model)} · ${x.late} min de retard</small></div><button class="st-btn w sm" data-j="${x.shift_id}">Effacer</button></div>`).join("")
+      : `<div class="st-empty">Aucun retard à effacer. Garde ton joker pour plus tard !</div>`}</div></div></div>`);
+  s.querySelectorAll("[data-j]").forEach(b => b.onclick = async () => { b.disabled = true;
+    try { const r = await api("/api/stellas/joker", { body: { shift_id: +b.dataset.j } }); S = r.state; render(); close(); notify("Retard effacé ✓", "Pas de sanction et ta série continue", "ok"); } catch (e) { b.disabled = false; notify("Impossible", e.message, "err"); } });
+}
+
+(async () => {
+  ME = await api("/api/me");
+  if (ME.role !== "chatter") { location.href = "/home"; return; }
+  renderShell("boutique", ME);
+  try { P = await api("/api/profile"); } catch (e) {}
+  try { S = await api("/api/stellas/me"); } catch (e) { R.innerHTML = `<div class="st-closed">${esc(e.message)}</div>`; return; }
+  const h = (location.hash || "").slice(1); if (["cos", "adv", "rew"].includes(h)) TAB = h;
+  render();
+  const want = new URLSearchParams(location.search).get("item"); if (want) sheet(want);
+})();
+})();
+</script>
+</body>
+</html>

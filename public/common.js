@@ -62,7 +62,8 @@ const ICONS = {
   flag: '<path d="M5 21V4h11l-1.6 4L16 12H5"/>',
   gift: '<path d="M20 12v8H4v-8M2.5 7.5h19V12h-19zM12 21V7.5"/><path d="M12 7.5H8a2.5 2.5 0 0 1 0-5c3 0 4 5 4 5zM12 7.5h4a2.5 2.5 0 0 0 0-5c-3 0-4 5-4 5z"/>',
   users: '<circle cx="9" cy="7.5" r="3.2"/><path d="M3 20c.6-3.6 3-5.5 6-5.5s5.4 1.9 6 5.5"/><circle cx="17" cy="9" r="2.4"/><path d="M16.5 14.4c2.4.3 4 2 4.5 5.1"/><circle cx="9" cy="7.5" r="7.2" stroke-dasharray="2 3.2" opacity=".55"/>',
-  crown: '<path d="M3 8l4.2 4L12 5l4.8 7L21 8l-2 11H5z"/><path d="M5.5 19h13"/>'
+  crown: '<path d="M3 8l4.2 4L12 5l4.8 7L21 8l-2 11H5z"/><path d="M5.5 19h13"/>',
+  bag: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>'
 };
 const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ""}</svg>`;
 const MODULES = [
@@ -83,6 +84,8 @@ const MODULES = [
     desc: "Ton lien d'invitation, tes filleuls et tes primes de parrainage." },
   { id: "paie", label: "Ma paie", href: "/paie", icon: "euro", section: "Organisation", roles: ["chatter"],
     desc: "Ta paie de la quinzaine : commission, paliers, primes et historique." },
+  { id: "boutique", label: "Boutique", href: "/boutique", icon: "bag", section: "Organisation", roles: ["chatter"], nodock: ["chatter", "tl"],
+    desc: "Dépense tes Stella's : cosmétiques, avantages et bonus de paie." },
   { id: "equipe", label: "Mon équipe", short: "Équipe", href: "/equipe", icon: "users", section: "Team Leader", roles: ["chatter"], only: ["tl"],
     desc: "Ton équipe en direct : ventes, shifts, pauses, formation, alertes et coaching." },
   { id: "compta", label: "Compta", href: "/compta", icon: "euro", section: "Manager", roles: ["admin"],
@@ -136,6 +139,10 @@ function loadPush(cb) {
 function openPush() { loadPush(() => PUSH.sheet()); }
 function renderShell(active, me) {
   if (me && me.role === "chatter") PLANREM.start();
+  // Stella's : styles et cosmétiques partout, solde et petites notifications pour les chatters
+  if (me && !document.querySelector('link[href="/stellas.css"]')) { const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/stellas.css"; document.head.appendChild(l);
+    const s = document.createElement("script"); s.src = "/looks.js"; document.body.appendChild(s);
+    if (me.role === "chatter" && !EMBED) { const u = document.createElement("script"); u.src = "/stellas-ui.js"; document.body.appendChild(u); } }
   if (me && !EMBED) setTimeout(() => loadPush(() => PUSH.sync()), 2500);
   // aperçu « vue chatter » du fondateur : bandeau permanent avec retour d'un clic
   if (me && me.viewAs && !document.querySelector(".va-bar")) {
