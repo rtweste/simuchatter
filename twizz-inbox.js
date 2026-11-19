@@ -27,6 +27,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   db.exec("CREATE TABLE IF NOT EXISTS twizz_conv_snap (creator_id TEXT, conv_id TEXT, fan_id TEXT, data TEXT, at INTEGER, PRIMARY KEY (creator_id, conv_id))");
   db.exec("CREATE INDEX IF NOT EXISTS twizz_conv_snap_fan ON twizz_conv_snap (creator_id, fan_id)");
   // fans épinglés par l'équipe (par créatrice) : en haut de la liste et de la file « À traiter »
+  // conversations ouvertes sur le site : le non lu s'efface pour toute l'équipe jusqu'au prochain message du fan (rien n'est marqué lu chez Twizz)
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_seen (creator_id TEXT, conv_id TEXT, last_at INTEGER, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, conv_id))");
   db.exec("CREATE TABLE IF NOT EXISTS twizz_pins (creator_id TEXT, fan_id TEXT, conv_id TEXT, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id))");
   const RULES = { gp: ["Spender", "#3dff8a", 300, 1], vid: ["Vidéos", "#7db4ff", 50, 1], nv: ["Nouveau", "#5fd3a2", 7, 1], in: ["Inactif", "#ff8a8a", 7, 0] };
   for (const [k, [name, color, thr, on]] of Object.entries(RULES))
@@ -269,15 +271,20 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     res.json({ others: hereOf(conv, me) }); });
   app.post("/api/twizz/inbox/state", auth, founder, (req, res) => { if (typeof req.body?.send === "boolean") S.set("twizz_inbox_send", req.body.send); res.json({ send: sendOn() }); });
   // non lus d'une créatrice : nombre de conversations non lues, lu dans sa liste (même requête et même cache que la liste)
+  const applySeen = (cid, items) => { const S2 = new Map(db.prepare("SELECT conv_id, last_at FROM twizz_seen WHERE creator_id = ?").all(cid).map(r => [r.conv_id, r.last_at]));
+    items.forEach(c => { const t = S2.get(c.id); if (c.unread > 0 && t && t >= (ts(c.last.at) || 0)) c.unread = 0; }); return items; };
+  app.post("/api/twizz/inbox/:cid/seen/:conv", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid), conv = str(req.params.conv).slice(0, 64), t = ts(req.body?.last_at) || Date.now();
+    db.prepare("INSERT INTO twizz_seen (creator_id, conv_id, last_at, user_id, at) VALUES (?,?,?,?,?) ON CONFLICT(creator_id, conv_id) DO UPDATE SET last_at = MAX(last_at, excluded.last_at), user_id = excluded.user_id, at = excluded.at").run(cid, conv, t, req.user.id, Date.now());
+    return { ok: true }; }));
   app.get("/api/twizz/inbox/:cid/unread", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid);
     const j = await G(`/conversations/user/${enc(cid)}?page=1&type=GENERAL&creatorId=${enc(cid)}`, 60e3);
-    return { count: arr(j).map(c => conv(c, cid)).filter(c => c.unread > 0).length }; }));
+    return { count: applySeen(cid, arr(j).map(c => conv(c, cid))).filter(c => c.unread > 0).length }; }));
   app.get("/api/twizz/inbox/:cid/conversations", auth, inbox, wrap(async req => {
     const cid = creatorOk(req.params.cid), type = ["GENERAL", "TO_DELIVER"].includes(req.query.type) ? req.query.type : "GENERAL", page = Math.max(1, +req.query.page || 1);
     const q = String(req.query.q || "").trim().slice(0, 60);
     const fresh = req.query.fresh === "1"; if (fresh) drop(`/conversations/user/${enc(cid)}?page=${page}&type=${type}`);
     const j = q ? await G(`/conversations/user/${enc(cid)}/search?search=${enc(q)}`, 10e3) : await G(`/conversations/user/${enc(cid)}?page=${page}&type=${type}&creatorId=${enc(cid)}`, 20e3);
-    const d = j && j.data, items = arr(j).map(c => conv(c, cid));
+    const d = j && j.data, items = applySeen(cid, arr(j).map(c => conv(c, cid)));
     const by = authors(items.filter(c => !c.last.fromFan).map(c => c.last.id));
     const near = db.prepare("SELECT u.username name, s.at FROM twizz_sent s JOIN users u ON u.id = s.user_id WHERE s.conv_id = ? ORDER BY s.at DESC LIMIT 1");
     items.forEach(c => { if (c.last.fromFan) return; c.last.by = by[c.last.id] || null;

@@ -939,7 +939,7 @@ async function loadList(fresh, more) {
   catch (e) { if (!LISTS[k]) $("cl").innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; else notify("Twizz", e.message, "err"); }
 }
 const skelRows = () => Array.from({ length: 8 }, (_, i) => `<div class="mx-c" style="animation-delay:${i * .03}s;cursor:default"><span class="mx-av sk"></span><span class="t"><span class="sk" style="display:block;height:12px;width:${50 + (i * 17) % 40}%"></span><span class="sk" style="display:block;height:10px;width:${60 + (i * 13) % 30}%;margin-top:8px"></span></span></div>`).join("");
-function syncCur(L) { if (CUR && L) { const c = L.items.find(x => x.id === CUR.id); if (c) Object.assign(CUR, { last: c.last, unread: c.unread }); } }
+function syncCur(L) { if (CUR && L) { const c = L.items.find(x => x.id === CUR.id); if (c) { Object.assign(CUR, { last: c.last, unread: c.unread }); if (c.unread && $("mx").classList.contains("open") || c.unread && innerWidth > 860) markSeen(c); } } }
 function prefix(c) { if (c.last.fromFan) return ""; if (c.last.by) return `<span class="pre" style="--c:${pal(c.last.by)[0]}">${esc(c.last.by)} :</span> `; return `<span class="pre tw">Twizz :</span> `; }
 const hereChip = c => c.here && c.here.length ? `<span class="hr-row" title="${esc(c.here.join(", "))} ${c.here.length > 1 ? "sont" : "est"} sur cette conversation">${SV(IC.eye || IC.chat, 11, 2.4)}${esc(c.here[0])}${c.here.length > 1 ? " +" + (c.here.length - 1) : ""}</span>` : "";
 const pinChip = c => { const p = pinOf(c.fan.id), o = ownerOf(c), other = o && SPLIT && o !== SPLIT.me;
@@ -1084,8 +1084,13 @@ function markDone(conv) {
 }
 
 /* ================= fil de discussion ================= */
+// conversation ouverte = lue sur le site pour toute l'équipe (jusqu'au prochain message du fan) ; rien n'est marqué lu chez Twizz
+function markSeen(c) { if (!c || !c.unread || document.hidden) return; c.unread = 0; if (CUR && CUR.id === c.id) CUR.unread = 0; const k = CID;
+  [lkey("GENERAL"), lkey("TO_DELIVER"), lkey()].forEach(x => { const L = LISTS[x]; const it = L && L.items.find(i => i.id === c.id); if (it) it.unread = 0; });
+  if (UNREAD[k]) { UNREAD[k] = Math.max(0, UNREAD[k] - 1); top(); }
+  api2(`/seen/${enc(c.id)}`, { body: { last_at: c.last && c.last.at } }).catch(() => {}); renderList(); }
 async function openConv(c) {
-  if (!c) return; if (!CUR || CUR.id !== c.id) { PANEL = null; hereLeave(); } CUR = c; HEREO = []; hereBeat(); $("mx").classList.add("open"); renderList(); thread(); loadMsgs(); loadHist(); loadRun(); setTimeout(fanCard, 150);
+  if (!c) return; markSeen(c); if (!CUR || CUR.id !== c.id) { PANEL = null; hereLeave(); } CUR = c; HEREO = []; hereBeat(); $("mx").classList.add("open"); renderList(); thread(); loadMsgs(); loadHist(); loadRun(); setTimeout(fanCard, 150);
 }
 const isPPV = m => !m.fromFan && m.type === "FILE" && m.price != null && m.medias.length;
 async function loadMsgs(fresh) {
