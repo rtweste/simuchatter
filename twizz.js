@@ -103,22 +103,24 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
   }
 
   /* ---------- créatrices ---------- */
+  // format Twizz : { creatorId, creatorDetails: { name, firstName, lastName, username, … }, chatters: [...] }
   const creatorOf = c => {
-    const o = c.creator && typeof c.creator === "object" ? { ...c.creator, ...c } : c;
-    const id = String(o.creatorId || (c.creator && c.creator._id) || o._id || o.id || "");
+    const d = c.creatorDetails || c.creator || {}, o = { ...c, ...d };
+    const id = String(c.creatorId || d._id || c._id || c.id || "");
     const full = [o.firstName || o.creatorFirstName, o.lastName || o.creatorLastName].filter(Boolean).join(" ").trim();
-    return { id, label: full || o.name || o.username || o.pseudo || id };
+    const label = String(d.name || c.name || full || o.username || id).trim();
+    return { id, label, alts: [d.name, d.firstName, d.username, full].filter(Boolean).map(String) };
   };
   async function loadCreators() {
     const j = await get("/business/creators");
     const list = (j.creators || (j.data && (j.data.creators || j.data)) || []).map(creatorOf).filter(c => c.id);
     const models = db.prepare("SELECT id, name FROM models").all(), norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]/g, "");
+    // association automatique si le nom (ou le prénom, ou le pseudo) correspond à une créatrice du site
+    const guess = c => { for (const a of c.alts) { const A = norm(a); if (!A) continue; const m = models.find(x => norm(x.name) && (A === norm(x.name) || A.startsWith(norm(x.name)) || norm(x.name).startsWith(A))); if (m) return m.id; } return null; };
     list.forEach(c => {
       const ex = db.prepare("SELECT * FROM twizz_creators WHERE twizz_id = ?").get(c.id);
-      if (ex) return db.prepare("UPDATE twizz_creators SET label = ?, seen_at = ? WHERE twizz_id = ?").run(c.label, now(), c.id);
-      // association automatique si le nom correspond à une créatrice du site
-      const m = models.find(x => norm(x.name) && (norm(c.label) === norm(x.name) || norm(c.label).startsWith(norm(x.name)) || norm(x.name).startsWith(norm(c.label))));
-      db.prepare("INSERT INTO twizz_creators (twizz_id, label, model_id, seen_at) VALUES (?,?,?,?)").run(c.id, c.label, m ? m.id : null, now());
+      if (ex) return db.prepare("UPDATE twizz_creators SET label = ?, model_id = COALESCE(model_id, ?), seen_at = ? WHERE twizz_id = ?").run(c.label, guess(c), now(), c.id);
+      db.prepare("INSERT INTO twizz_creators (twizz_id, label, model_id, seen_at) VALUES (?,?,?,?)").run(c.id, c.label, guess(c), now());
     });
     return list;
   }
