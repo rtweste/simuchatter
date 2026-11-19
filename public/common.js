@@ -101,6 +101,8 @@ const MODULES = [
     desc: "Écran en direct à afficher dans l'agence : ventes, classement du jour et chatters en shift." },
   { id: "admin", label: "Gestion", href: "/admin", icon: "team", section: "Manager", roles: ["admin"],
     desc: "Équipe, créatrices et résultats des simulations." },
+  { id: "messagerie", label: "Messagerie Twizz", short: "Twizz", href: "/messagerie", icon: "chat", section: "Fondateur", roles: ["admin"], only: ["founder"], nodock: ["admin"],
+    desc: "Version de test : les conversations Twizz de tes créatrices, directement sur le site." },
   { id: "fondateur", label: "Réglages fondateur", short: "Fondateur", href: "/fondateur", icon: "crown", section: "Fondateur", roles: ["admin"], only: ["founder"], nodock: ["admin"],
     desc: "Paliers de commission, part des créatrices, clôture des quinzaines et managers." },
   { id: "profil", label: "Mon profil", short: "Profil", href: "/profil", icon: "user", section: "Mon compte", roles: ["admin", "chatter"], nodock: ["admin", "chatter"],

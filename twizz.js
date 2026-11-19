@@ -20,7 +20,9 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
       refund INTEGER NOT NULL DEFAULT 0, validated INTEGER NOT NULL DEFAULT 0, fan_id TEXT, fan_name TEXT, conv_id TEXT,
       state TEXT, sale_id INTEGER, user_id INTEGER, seen_at INTEGER);
     CREATE INDEX IF NOT EXISTS twizz_tx_at ON twizz_tx(at);
-    CREATE INDEX IF NOT EXISTS twizz_tx_state ON twizz_tx(state, at);`);
+    CREATE INDEX IF NOT EXISTS twizz_tx_state ON twizz_tx(state, at);
+    CREATE TABLE IF NOT EXISTS twizz_sent (id INTEGER PRIMARY KEY, msg_id TEXT, conv_id TEXT, fan_id TEXT, creator_id TEXT, user_id INTEGER, price REAL, at INTEGER);
+    CREATE INDEX IF NOT EXISTS twizz_sent_conv ON twizz_sent(conv_id, at);`);
   for (const [c, t] of [["source", "TEXT"], ["twizz_id", "TEXT"]])
     if (!db.prepare("PRAGMA table_info(sales)").all().some(x => x.name === c)) db.exec(`ALTER TABLE sales ADD COLUMN ${c} ${t}`);
   const S = {
@@ -40,8 +42,9 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
 
   // une requête à la fois, espacées (on se comporte comme quelqu'un qui navigue)
   let chain = Promise.resolve(), lastAt = 0;
-  function queued(fn) {
-    const p = chain.then(async () => { const w = lastAt + 1500 + Math.random() * 1200 - now(); if (w > 0) await sleep(w); try { return await fn(); } finally { lastAt = now(); } });
+  // fast : action du fondateur dans la messagerie (on attend moins, comme quelqu'un qui clique)
+  function queued(fn, fast) {
+    const p = chain.then(async () => { const w = lastAt + (fast ? 350 + Math.random() * 450 : 1500 + Math.random() * 1200) - now(); if (w > 0) await sleep(w); try { return await fn(); } finally { lastAt = now(); } });
     chain = p.catch(() => {}); return p;
   }
   const cookieHeader = () => Object.entries(sess.cookies || {}).map(([k, v]) => `${k}=${v}`).join("; ");
@@ -56,8 +59,9 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     if (sess.deviceId) headers["X-Device-Id"] = sess.deviceId;
     const ck = cookieHeader(); if (ck) headers.Cookie = ck;
     if (sess.bearer && sess.cookies.token) headers.Authorization = "Bearer " + sess.cookies.token;
-    if (body) headers["Content-Type"] = "application/json";
-    let r; try { r = await fetch(BASE + path, { method, headers, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(25000) }); }
+    const form = typeof FormData !== "undefined" && body instanceof FormData;
+    if (body && !form) headers["Content-Type"] = "application/json";
+    let r; try { r = await fetch(BASE + path, { method, headers, body: body ? (form ? body : JSON.stringify(body)) : undefined, signal: AbortSignal.timeout(form ? 60000 : 25000) }); }
     catch (e) { throw fail("Twizz ne répond pas (" + (e.name === "TimeoutError" ? "délai dépassé" : e.message) + ")"); }
     absorb(r);
     const text = await r.text(); let json = null; try { json = JSON.parse(text); } catch (e) {}
@@ -82,24 +86,25 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     const tok = r.json && ((r.json.data && r.json.data.token) || r.json.token); if (!tok) return false;
     sess.cookies.token = tok; saveSess(); return true;
   }
-  // lecture seule : ce module ne fait que des GET (hors connexion / renouvellement du badge)
-  function get(path) {
+  // la synchro des ventes ne fait que des GET ; les envois passent par call() depuis la messagerie (fondateur)
+  const get = (path, fast) => call("GET", path, null, fast);
+  function call(method, path, body, fast) {
     return queued(async () => {
       const pause = () => sleep(600 + Math.random() * 900);   // comme un navigateur : pas deux appels collés
       if (!sess.cookies.token) { await login(); await pause(); }
-      let r = await raw("GET", path);
+      let r = await raw(method, path, body);
       if (isBlocked(r)) throw fail("Twizz bloque les requêtes du serveur (protection Cloudflare)");
       if (r.status === 401 || r.status === 403) {
         const ok = await refresh().catch(() => false); if (!ok) await login();
-        await pause(); r = await raw("GET", path);
+        await pause(); r = await raw(method, path, body);
         // dernier recours : certains serveurs attendent le badge dans l'en-tête plutôt qu'en cookie
-        if ((r.status === 401 || r.status === 403) && !sess.bearer) { sess.bearer = true; saveSess(); await pause(); r = await raw("GET", path); }
+        if ((r.status === 401 || r.status === 403) && !sess.bearer) { sess.bearer = true; saveSess(); await pause(); r = await raw(method, path, body); }
       }
       if (isBlocked(r)) throw fail("Twizz bloque les requêtes du serveur (protection Cloudflare)");
       if (r.status === 429) throw fail("Twizz demande de ralentir (trop de requêtes)");
       if (r.status >= 400 || !r.json) throw fail(`Twizz a répondu une erreur (code ${r.status})${r.json && r.json.message ? " : " + r.json.message : ""}`);
       return r.json;
-    });
+    }, fast);
   }
 
   /* ---------- créatrices ---------- */
@@ -163,7 +168,9 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     db.prepare(`INSERT INTO twizz_tx (id, tx_id, creator_id, model_id, type, net, at, refund, validated, fan_id, fan_name, conv_id, state, seen_at)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(t.id, t.tx_id, t.creator_id, t.model_id, t.type, t.net, t.at, t.refund, t.validated, t.fan_id, t.fan_name, t.conv_id, state, now());
     if (state === "pending") {
-      const uid = modelId ? whoSold(modelId, at) : null;
+      let uid = null;
+      if (t.conv_id) { const s = db.prepare("SELECT user_id FROM twizz_sent WHERE conv_id = ? AND at <= ? AND at > ? ORDER BY at DESC LIMIT 1").get(t.conv_id, at + 60e3, at - 7 * 864e5); if (s) uid = s.user_id; }
+      if (!uid && modelId) uid = whoSold(modelId, at);
       if (uid) makeSale(t, uid); else db.prepare("UPDATE twizz_tx SET state = 'no_chatter' WHERE id = ?").run(id);
     }
     return 1;
@@ -258,5 +265,5 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
   // pour la page Ventes : les déclarations sont remplacées par l'import automatique
   app.get("/api/twizz/mode", auth, (req, res) => res.json({ auto: cfg().on }));
 
-  return { auto: () => cfg().on, sync, status: () => status };
+  return { auto: () => cfg().on, sync, status: () => status, call, get, S, configured, fail };
 };

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Messagerie Twizz — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="stylesheet" href="/style.css">
+<style>
+.mx{height:100dvh;display:flex;flex-direction:column;min-width:0}
+.mx-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 20px 12px;border-bottom:1px solid #1a1a1a}
+.mx-top h1{margin:0;font:900 22px Inter;letter-spacing:-.03em}.mx-top h1 em{font-style:italic;color:#5fd3a2}
+.mx-badge{height:24px;padding:0 10px;border-radius:999px;background:rgba(240,181,74,.12);border:1px solid rgba(240,181,74,.4);color:#f0b54a;font:800 10.5px/22px Inter;letter-spacing:.1em}
+.mx-cr{display:flex;gap:6px;flex-wrap:wrap}.mx-cr button{height:34px;padding:0 13px;border-radius:999px;border:1px solid #262626;background:#121212;color:#aaa;font:700 12.5px Inter;cursor:pointer}
+.mx-cr button.on{background:#f5f5f5;color:#0a0a0a;border-color:#f5f5f5}
+.mx-tg{margin-left:auto;display:flex;align-items:center;gap:14px}
+.mx-sw{display:flex;align-items:center;gap:8px;font:700 12.5px Inter;color:#aaa;cursor:pointer;user-select:none}
+.mx-sw i{width:38px;height:22px;border-radius:999px;background:#2a2a2a;position:relative;transition:.2s;flex:none}.mx-sw i:after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#888;transition:.2s}
+.mx-sw.on i{background:#5fd3a2}.mx-sw.on i:after{left:19px;background:#fff}.mx-sw.on{color:#fff}.mx-sw.red.on i{background:#e0484a}
+.mx-body{flex:1;min-height:0;display:grid;grid-template-columns:320px minmax(0,1fr) 290px}
+.mx-ls{border-right:1px solid #1a1a1a;display:flex;flex-direction:column;min-height:0}
+.mx-tabs{display:flex;gap:6px;padding:12px 12px 8px}.mx-tabs button{flex:1;height:34px;border-radius:10px;border:1px solid #232323;background:#111;color:#999;font:700 12.5px Inter;cursor:pointer}
+.mx-tabs button.on{background:#1b1b1b;color:#fff;border-color:#333}
+.mx-se{box-sizing:border-box;width:calc(100% - 24px);margin:0 12px 8px;height:36px;border-radius:10px;border:1px solid #232323;background:#0f0f0f;color:#eee;font:500 13px Inter;padding:0 12px}
+.mx-cl{flex:1;overflow:auto;padding:0 6px 10px}
+.mx-c{display:flex;gap:10px;align-items:center;width:100%;padding:9px 8px;border:0;border-radius:12px;background:none;color:#ccc;text-align:left;cursor:pointer}
+.mx-c:hover{background:#141414}.mx-c.on{background:#1a1a1a}
+.mx-av{width:40px;height:40px;border-radius:50%;flex:none;display:grid;place-items:center;font:900 15px Inter;color:#fff;background:#2c2c2c center/cover}
+.mx-c .t{flex:1;min-width:0}.mx-c b{display:block;font:700 13.5px Inter;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mx-c small{display:block;font-size:12px;color:#777;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}.mx-c.un small{color:#ddd;font-weight:600}
+.mx-c .r{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:11px;color:#666}
+.mx-c .n{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#5fd3a2;color:#05261a;font:800 10.5px/18px Inter;text-align:center}
+.mx-more{margin:6px auto;display:block;height:32px;padding:0 14px;border-radius:9px;border:1px solid #2a2a2a;background:#141414;color:#bbb;font:700 12px Inter;cursor:pointer}
+.mx-th{display:flex;flex-direction:column;min-height:0;min-width:0}
+.mx-hd{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #1a1a1a}.mx-hd b{font:800 15px Inter}.mx-hd small{color:#777;font-size:12px}
+.mx-hd .sp{margin-left:auto;display:flex;gap:6px}.mx-hb{height:32px;padding:0 11px;border-radius:9px;border:1px solid #2a2a2a;background:#141414;color:#ccc;font:700 12px Inter;cursor:pointer}
+.mx-sc{flex:1;overflow:auto;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.mx-m{max-width:72%;display:flex;flex-direction:column;gap:5px}.mx-m.me{align-self:flex-end;align-items:flex-end}
+.mx-b{padding:9px 13px;border-radius:16px;background:#1b1b1b;color:#eee;font-size:14px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.mx-m.me .mx-b{background:#1f3a2f;color:#e6fff3}
+.mx-m time{font-size:10.5px;color:#666}
+.mx-md{display:flex;gap:6px;flex-wrap:wrap}.mx-md a{width:120px;height:120px;border-radius:12px;overflow:hidden;background:#222;display:block;position:relative}
+.mx-md img{width:100%;height:100%;object-fit:cover;transition:filter .2s}.blur .mx-md img,.blur .mx-vf img{filter:blur(18px)}.blur .mx-md a:hover img,.blur .mx-vf label:hover img{filter:none}
+.mx-pr{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;font:800 11.5px Inter;background:#222;color:#ddd}
+.mx-pr.accepted{background:rgba(95,211,162,.15);color:#5fd3a2}.mx-pr.refused{background:rgba(224,122,122,.15);color:#ff9a9a}.mx-pr.pending{background:rgba(240,181,74,.13);color:#f0b54a}
+.mx-rq{display:flex;gap:6px}.mx-rq button{height:30px;padding:0 12px;border-radius:9px;border:0;font:800 12px Inter;cursor:pointer}.mx-rq .y{background:#5fd3a2;color:#05261a}.mx-rq .n{background:#2a1616;color:#ff9a9a}
+.mx-cp{display:flex;gap:8px;align-items:flex-end;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid #1a1a1a}
+.mx-cp textarea{flex:1;min-height:44px;max-height:160px;resize:none;border-radius:14px;border:1px solid #262626;background:#111;color:#eee;font:500 14px/1.4 Inter;padding:11px 14px}
+.mx-cp button{height:44px;padding:0 16px;border-radius:12px;border:0;font:800 13px Inter;cursor:pointer;flex:none}.mx-cp .md{background:#1b1b1b;color:#ddd;border:1px solid #2a2a2a}.mx-cp .go{background:#5fd3a2;color:#05261a}
+.mx-cp button[disabled]{opacity:.4;cursor:not-allowed}
+.mx-off{padding:8px 16px;font-size:12px;color:#f0b54a;background:rgba(240,181,74,.06);border-top:1px solid #1a1a1a}
+.mx-fan{border-left:1px solid #1a1a1a;overflow:auto;padding:18px 16px}
+.mx-fan .big{width:72px;height:72px;font-size:26px;margin:0 auto 10px}.mx-fan h3{text-align:center;margin:0;font:900 17px Inter}.mx-fan .u{text-align:center;color:#777;font-size:12.5px;margin-top:2px}
+.mx-sec{font:800 10.5px Inter;letter-spacing:.14em;color:#666;text-transform:uppercase;margin:18px 0 8px}
+.mx-kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #191919;font-size:12.5px;color:#999}.mx-kv b{color:#fff}
+.mx-tags{display:flex;flex-wrap:wrap;gap:5px}.mx-tags span{height:24px;padding:0 9px;border-radius:999px;background:#1d1d1d;color:#ccc;font:700 11.5px/24px Inter}
+.mx-note{font-size:13px;color:#ccc;line-height:1.5;background:#141414;border-radius:12px;padding:10px 12px;white-space:pre-wrap}
+.mx-empty{flex:1;display:grid;place-items:center;color:#666;font-size:14px;text-align:center;padding:30px}
+.mx-mod{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.7);display:grid;place-items:center;padding:20px}
+.mx-box{width:min(760px,100%);max-height:88vh;display:flex;flex-direction:column;background:#111;border:1px solid #262626;border-radius:20px;overflow:hidden}
+.mx-box .h{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #1f1f1f}.mx-box .h b{font:900 16px Inter}.mx-box .h button{margin-left:auto}
+.mx-box .c{flex:1;overflow:auto;padding:14px 16px}
+.mx-al{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.mx-al button{border:1px solid #262626;background:#161616;border-radius:14px;padding:12px;color:#eee;text-align:left;cursor:pointer;font:700 13px Inter}
+.mx-al small{display:block;color:#777;font-weight:600;margin-top:3px}
+.mx-vf{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}.mx-vf label{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:#222;cursor:pointer;border:2px solid transparent}
+.mx-vf label.on{border-color:#5fd3a2}.mx-vf img{width:100%;height:100%;object-fit:cover}.mx-vf input{position:absolute;top:8px;left:8px;width:18px;height:18px;accent-color:#5fd3a2;z-index:2}
+.mx-vf .ty{position:absolute;bottom:6px;right:6px;font:800 9.5px Inter;background:rgba(0,0,0,.65);color:#fff;border-radius:6px;padding:2px 6px}
+.mx-box .f{display:flex;gap:8px;align-items:center;padding:12px 16px;border-top:1px solid #1f1f1f;flex-wrap:wrap}
+.mx-box .f input{height:42px;border-radius:11px;border:1px solid #2a2a2a;background:#151515;color:#eee;font:600 13.5px Inter;padding:0 12px}
+.mx-box .f .go{margin-left:auto;height:42px;padding:0 18px;border-radius:11px;border:0;background:#5fd3a2;color:#05261a;font:900 13.5px Inter;cursor:pointer}
+.mx-bk{display:none}
+@media(max-width:1150px){.mx-body{grid-template-columns:300px minmax(0,1fr)}.mx-fan{display:none}.mx-fan.show{display:block;position:fixed;right:0;top:0;bottom:0;width:300px;background:#0d0d0d;z-index:40}}
+@media(max-width:860px){.mx-body{grid-template-columns:1fr}.mx-th{display:none}.mx.open .mx-ls{display:none}.mx.open .mx-th{display:flex}.mx-bk{display:inline-block}.mx-top{padding:12px}.mx-tg{margin-left:0}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area" style="padding:0">
+  <div class="mx" id="mx">
+    <div class="mx-top"><h1>Messagerie <em>Twizz</em></h1><span class="mx-badge">TEST · FONDATEUR</span>
+      <div class="mx-cr" id="crs"></div>
+      <div class="mx-tg"><span class="mx-sw on" id="swBlur" title="Floute les photos et vidéos ; survole pour voir"><i></i>Flouter les médias</span><span class="mx-sw red" id="swSend" title="Tant que c'est coupé, rien ne peut être envoyé aux fans"><i></i>Envoi activé</span></div></div>
+    <div class="mx-body blur" id="body">
+      <section class="mx-ls"><div class="mx-tabs"><button class="on" data-ty="GENERAL">Général</button><button data-ty="TO_DELIVER">À livrer</button></div>
+        <input class="mx-se" id="q" placeholder="Rechercher un fan"><div class="mx-cl" id="cl"></div></section>
+      <section class="mx-th" id="th"><div class="mx-empty">Choisis une conversation</div></section>
+      <aside class="mx-fan" id="fan"></aside>
+    </div>
+  </div>
+</main>
+</div>
+<script src="/common.js"></script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+let ST = null, CID = null, TYPE = "GENERAL", CONVS = [], PAGE = 1, MORE = false, CUR = null, MSGS = [], Q = "";
+const E = n => (Math.round(n * 100) / 100).toLocaleString("fr-FR", { maximumFractionDigits: 2 }) + " €";
+const hm = d => { const t = new Date(d); if (isNaN(t)) return ""; const today = new Date().toDateString() === t.toDateString();
+  return today ? t.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : t.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) + " " + t.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }); };
+const av = (p, cls = "") => `<span class="mx-av ${cls}" style="${p.avatar ? `background-image:url(${esc(p.avatar)});font-size:0` : ""}">${esc((p.name || "?")[0].toUpperCase())}</span>`;
+const LBL = { totalSpent: "Total dépensé", total: "Total", totalAmount: "Total", count: "Achats", totalPurchases: "Achats", lastPurchase: "Dernier achat", mediaPush: "Médias push", privateMedia: "Médias privés", tips: "Pourboires", subscription: "Abonnement" };
+const pretty = k => LBL[k.split(".").pop()] || k.replace(/\./g, " › ").replace(/([a-z])([A-Z])/g, "$1 $2");
+
+/* ---------- haut de page ---------- */
+function top() {
+  $("crs").innerHTML = ST.creators.filter(c => c.id).map(c => `<button data-cid="${esc(c.id)}" class="${c.id === CID ? "on" : ""}">${esc(c.label)}</button>`).join("") || `<span style="color:#888;font-size:13px">Teste d'abord la connexion Twizz dans Réglages fondateur</span>`;
+  $("crs").querySelectorAll("[data-cid]").forEach(b => b.onclick = () => { CID = b.dataset.cid; try { localStorage.setItem("mx:cid", CID); } catch (e) {} CUR = null; top(); loadList(true); thread(); fanCard(); });
+  $("swSend").classList.toggle("on", ST.send);
+}
+$("swSend").onclick = async () => { const on = !ST.send;
+  if (on && !confirm("Activer l'envoi ?\n\nTout ce que tu envoies d'ici part VRAIMENT au fan sur Twizz, au nom de la créatrice.")) return;
+  try { ST.send = (await api("/api/twizz/inbox/state", { body: { send: on } })).send; top(); thread(true); notify(ST.send ? "Envoi activé" : "Envoi coupé", "", ST.send ? "ok" : "info"); } catch (e) { notify("Erreur", e.message, "err"); } };
+$("swBlur").onclick = () => { const on = !$("swBlur").classList.contains("on"); $("swBlur").classList.toggle("on", on); $("body").classList.toggle("blur", on); try { localStorage.setItem("mx:blur", on ? "1" : "0"); } catch (e) {} };
+document.querySelectorAll(".mx-tabs [data-ty]").forEach(b => b.onclick = () => { TYPE = b.dataset.ty; document.querySelectorAll(".mx-tabs [data-ty]").forEach(x => x.classList.toggle("on", x === b)); loadList(true); });
+let qT = null; $("q").oninput = () => { clearTimeout(qT); qT = setTimeout(() => { Q = $("q").value.trim(); loadList(true); }, 450); };
+
+/* ---------- conversations ---------- */
+async function loadList(reset) {
+  if (!CID) return; if (reset) { PAGE = 1; CONVS = []; $("cl").innerHTML = `<div class="mx-empty" style="padding:30px">Chargement…</div>`; }
+  try { const r = await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/conversations?type=${TYPE}&page=${PAGE}${Q ? "&q=" + encodeURIComponent(Q) : ""}`);
+    CONVS = PAGE === 1 ? r.items : CONVS.concat(r.items.filter(x => !CONVS.some(y => y.id === x.id))); MORE = r.more && !Q; list(); }
+  catch (e) { $("cl").innerHTML = `<div class="mx-empty" style="padding:24px;color:#e07a7a">${esc(e.message)}</div>`; }
+}
+function list() {
+  $("cl").innerHTML = (CONVS.map(c => `<button class="mx-c ${c.id === (CUR && CUR.id) ? "on" : ""} ${c.unread ? "un" : ""}" data-conv="${esc(c.id)}">${av(c.fan)}<span class="t"><b>${esc(c.fan.name)}</b><small>${c.last.fromFan ? "" : "Toi : "}${esc(c.last.text || (c.last.type === "FILE" ? "📷 Média" : ""))}</small></span>
+    <span class="r">${hm(c.last.at)}${c.unread ? `<span class="n">${c.unread}</span>` : ""}</span></button>`).join("") || `<div class="mx-empty" style="padding:30px">Aucune conversation</div>`)
+    + (MORE ? `<button class="mx-more" id="more">Charger plus</button>` : "");
+  $("cl").querySelectorAll("[data-conv]").forEach(b => b.onclick = () => openConv(CONVS.find(c => c.id === b.dataset.conv)));
+  if ($("more")) $("more").onclick = () => { PAGE++; loadList(); };
+}
+
+/* ---------- fil de discussion ---------- */
+async function openConv(c) { if (!c) return; CUR = c; MSGS = []; $("mx").classList.add("open"); list(); thread(); fanCard(); await loadMsgs(); }
+async function loadMsgs() {
+  if (!CUR) return; const id = CUR.id;
+  try { const r = await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/messages/${encodeURIComponent(id)}?fan=${encodeURIComponent(CUR.fan.id)}`); if (!CUR || CUR.id !== id) return;
+    const changed = JSON.stringify(r.items.map(m => m.id + m.status)) !== JSON.stringify(MSGS.map(m => m.id + m.status)); MSGS = r.items; CUR.note = r.note; if (changed) thread(); }
+  catch (e) { if ($("sc")) $("sc").innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; }
+}
+function bubble(m) {
+  const pr = m.price != null && m.type === "FILE" ? `<span class="mx-pr ${esc(m.status)}">${m.price > 0 ? E(m.price) : "Gratuit"} · ${m.status === "accepted" ? "débloqué" : m.status === "refused" ? "refusé" : "pas encore acheté"}</span>` : "";
+  const req = m.fromFan && m.status === "pending" ? `<div class="mx-rq"><button class="y" data-acc="${esc(m.id)}">Accepter (envoyer un média)</button><button class="n" data-ref="${esc(m.id)}">Refuser</button></div>` : "";
+  const md = m.medias.length ? `<div class="mx-md">${m.medias.map(x => x.audio ? `<audio controls src="${esc(x.url)}" style="width:220px"></audio>` : `<a href="${esc(x.url)}" target="_blank" rel="noopener"><img src="${esc(x.thumb || x.url)}" alt="" loading="lazy"></a>`).join("")}</div>` : "";
+  return `<div class="mx-m ${m.fromFan ? "" : "me"}">${md}${m.text ? `<div class="mx-b">${esc(m.text)}</div>` : ""}${pr}${req}<time>${hm(m.at)}</time></div>`;
+}
+function thread(keepScroll) {
+  if (!CUR) { $("th").innerHTML = `<div class="mx-empty">${CID ? "Choisis une conversation" : "Choisis une créatrice en haut"}</div>`; return; }
+  const sc = $("sc"), atBottom = !sc || sc.scrollHeight - sc.scrollTop - sc.clientHeight < 80;
+  const draft = $("tx") ? $("tx").value : "", hadFocus = document.activeElement && document.activeElement.id === "tx";   // on ne perd pas ce qui est en cours d'écriture
+  $("th").innerHTML = `<div class="mx-hd"><button class="mx-hb mx-bk" id="bk">‹</button>${av(CUR.fan)}<div><b>${esc(CUR.fan.name)}</b><br><small>${CUR.fan.username ? "@" + esc(CUR.fan.username) : ""}</small></div>
+      <span class="sp"><button class="mx-hb" id="rd" title="Marque la conversation comme lue sur Twizz">Marquer comme lu</button><button class="mx-hb" id="fanB">Fiche fan</button></span></div>
+    <div class="mx-sc" id="sc">${MSGS.length ? MSGS.map(bubble).join("") : `<div class="mx-empty">Chargement…</div>`}</div>
+    ${ST.send ? "" : `<div class="mx-off">Envoi coupé : active « Envoi activé » en haut pour répondre. Tu peux tout lire sans rien changer côté Twizz.</div>`}
+    <div class="mx-cp"><button class="md" id="mdB" ${ST.send ? "" : "disabled"}>📎 Média</button><textarea id="tx" placeholder="Écris ton message…" ${ST.send ? "" : "disabled"}></textarea><button class="go" id="goB" ${ST.send ? "" : "disabled"}>Envoyer</button></div>`;
+  const s2 = $("sc"); if (!keepScroll || atBottom) s2.scrollTop = s2.scrollHeight;
+  if (draft) $("tx").value = draft; if (hadFocus) $("tx").focus();
+  $("bk").onclick = () => { $("mx").classList.remove("open"); CUR = null; list(); };
+  $("fanB").onclick = () => $("fan").classList.toggle("show");
+  $("rd").onclick = async () => { try { await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/read`, { body: { conversationId: CUR.id } }); CUR.unread = 0; list(); notify("Marquée comme lue", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
+  $("goB").onclick = sendText; $("tx").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendText(); } };
+  $("mdB").onclick = () => vault();
+  s2.querySelectorAll("[data-acc]").forEach(b => b.onclick = () => ST.send ? vault(b.dataset.acc) : notify("Envoi coupé", "Active « Envoi activé » d'abord", "info"));
+  s2.querySelectorAll("[data-ref]").forEach(b => b.onclick = async () => { if (!ST.send) return notify("Envoi coupé", "Active « Envoi activé » d'abord", "info"); if (!confirm("Refuser la demande de ce fan ?")) return;
+    try { await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/request`, { body: { messageId: b.dataset.ref, action: "refused" } }); notify("Demande refusée", "", "ok"); loadMsgs(); } catch (e) { notify("Impossible", e.message, "err"); } });
+}
+async function sendText() {
+  const t = $("tx").value.trim(); if (!t || !CUR) return; $("goB").disabled = true;
+  try { await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/send`, { body: { conversationId: CUR.id, text: t, fan: CUR.fan.id } }); $("tx").value = ""; await loadMsgs(); thread(); }
+  catch (e) { notify("Message non envoyé", e.message, "err"); } finally { if ($("goB")) $("goB").disabled = !ST.send; }
+}
+
+/* ---------- coffre ---------- */
+async function vault(acceptId) {
+  const m = document.createElement("div"); m.className = "mx-mod" + ($("body").classList.contains("blur") ? " blur" : "");
+  m.innerHTML = `<div class="mx-box"><div class="h"><b>Coffre de la créatrice</b><button class="mx-hb" data-x>Fermer</button></div><div class="c" id="vc"><div class="mx-empty">Chargement des albums…</div></div>
+    <div class="f"><input id="vPrice" type="number" min="0" step="0.5" placeholder="Prix (€)" style="width:110px"><input id="vTxt" placeholder="Message avec le média (facultatif)" style="flex:1;min-width:160px"><button class="go" id="vGo" disabled>Envoyer</button></div></div>`;
+  document.body.appendChild(m); const close = () => m.remove(); m.querySelector("[data-x]").onclick = close; m.onclick = e => { if (e.target === m) close(); };
+  const SEL = new Set(), vc = m.querySelector("#vc"), go = m.querySelector("#vGo");
+  const upd = () => { go.disabled = !SEL.size; go.textContent = SEL.size ? `Envoyer ${SEL.size} média${SEL.size > 1 ? "s" : ""}` : "Envoyer"; };
+  async function albums() {
+    try { const r = await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/vault`);
+      vc.innerHTML = r.albums.length ? `<div class="mx-al">${r.albums.map(a => `<button data-al="${esc(a.id)}">${esc(a.name)}<small>${a.count ? a.count + " média" + (a.count > 1 ? "s" : "") : ""}</small></button>`).join("")}</div>` : `<div class="mx-empty">Le coffre est vide</div>`;
+      vc.querySelectorAll("[data-al]").forEach(b => b.onclick = () => files(b.dataset.al, b.firstChild.textContent)); }
+    catch (e) { vc.innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; }
+  }
+  async function files(id, name) {
+    vc.innerHTML = `<div class="mx-empty">Chargement…</div>`;
+    try { const r = await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/vault/${encodeURIComponent(id)}`);
+      vc.innerHTML = `<button class="mx-hb" id="vBack" style="margin-bottom:10px">‹ Albums</button> <b style="font:800 14px Inter">${esc(name)}</b><div class="mx-vf" style="margin-top:8px">${r.files.map(f => `<label class="${SEL.has(f.id) ? "on" : ""}"><input type="checkbox" value="${esc(f.id)}" ${SEL.has(f.id) ? "checked" : ""}><img src="${esc(f.thumb)}" alt="" loading="lazy">${/video/i.test(f.type) ? '<span class="ty">VIDÉO</span>' : ""}</label>`).join("") || '<div class="mx-empty">Album vide</div>'}</div>`;
+      vc.querySelector("#vBack").onclick = albums;
+      vc.querySelectorAll(".mx-vf input").forEach(i => i.onchange = () => { i.checked ? SEL.add(i.value) : SEL.delete(i.value); i.parentElement.classList.toggle("on", i.checked); upd(); }); }
+    catch (e) { vc.innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; }
+  }
+  go.onclick = async () => {
+    const price = +m.querySelector("#vPrice").value || 0;
+    if (!confirm(`Envoyer ${SEL.size} média${SEL.size > 1 ? "s" : ""} à ${CUR.fan.name} ${price ? "pour " + E(price) : "gratuitement"} ?`)) return;
+    go.disabled = true; go.textContent = "Envoi…";
+    try { await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/send-media`, { body: { conversationId: CUR.id, fan: CUR.fan.id, files: [...SEL], price, text: m.querySelector("#vTxt").value, acceptId: acceptId || null } });
+      close(); notify("Média envoyé ✓", price ? E(price) : "Gratuit", "ok"); await loadMsgs(); thread(); }
+    catch (e) { go.disabled = false; upd(); notify("Média non envoyé", e.message, "err"); }
+  };
+  albums();
+}
+
+/* ---------- fiche fan ---------- */
+async function fanCard() {
+  if (!CUR) { $("fan").innerHTML = `<div class="mx-empty" style="height:100%">La fiche du fan s'affiche ici</div>`; return; }
+  const c = CUR; $("fan").innerHTML = `${av(c.fan, "big")}<h3>${esc(c.fan.name)}</h3><div class="u">${c.fan.username ? "@" + esc(c.fan.username) : ""}</div><div class="mx-sec">Achats</div><div id="fs" style="color:#666;font-size:12.5px">Chargement…</div>
+    <div id="ft"></div><div id="fn"></div>`;
+  try { const r = await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/fan/${encodeURIComponent(c.fan.id)}`); if (CUR !== c) return;
+    const kv = Object.entries(r.stats).filter(([k, v]) => typeof v !== "boolean");
+    $("fs").innerHTML = kv.length ? kv.slice(0, 14).map(([k, v]) => `<div class="mx-kv"><span>${esc(pretty(k))}</span><b>${typeof v === "number" && /spent|amount|price|revenue|earn|net|sum|totalSpent/i.test(k) && !/count|purchases|number|nb/i.test(k) ? E(v) : esc(v)}</b></div>`).join("") : (r.error ? esc(r.error) : "Aucun achat");
+    $("ft").innerHTML = r.tags.length ? `<div class="mx-sec">Tags</div><div class="mx-tags">${r.tags.map(t => `<span>${esc(t)}</span>`).join("")}</div>` : "";
+    const note = c.note && (c.note.note || c.note.text || c.note.content || (typeof c.note === "string" ? c.note : ""));
+    $("fn").innerHTML = note ? `<div class="mx-sec">Note</div><div class="mx-note">${esc(note)}</div>` : ""; }
+  catch (e) { $("fs").textContent = e.message; }
+}
+
+/* ---------- démarrage + rafraîchissement ---------- */
+(async () => {
+  const me = await api("/api/me"); renderShell("messagerie", me);
+  if (me.rk !== "founder" || me.viewAs) { $("mx").innerHTML = `<div class="mx-empty">La messagerie Twizz est en test : réservée au fondateur.</div>`; return; }
+  try { if (localStorage.getItem("mx:blur") === "0") $("swBlur").click(); } catch (e) {}
+  try { ST = await api("/api/twizz/inbox/state"); } catch (e) { $("mx").innerHTML = `<div class="mx-empty">${esc(e.message)}</div>`; return; }
+  let saved = null; try { saved = localStorage.getItem("mx:cid"); } catch (e) {}
+  CID = ST.creators.some(c => c.id === saved) ? saved : (ST.creators[0] || {}).id || null;
+  top(); thread(); fanCard(); if (CID) loadList(true);
+  setInterval(() => { if (document.hidden || !CID) return; if (PAGE === 1 && !Q) api(`/api/twizz/inbox/${encodeURIComponent(CID)}/conversations?type=${TYPE}&page=1`).then(r => { const keep = CONVS.slice(r.items.length); CONVS = r.items.concat(keep.filter(x => !r.items.some(y => y.id === x.id))); list(); }).catch(() => {}); }, 30000);
+  setInterval(() => { if (!document.hidden && CUR) loadMsgs().then(() => {}); }, 10000);
+})();
+})();
+</script>
+</body>
+</html>
