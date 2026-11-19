@@ -76,15 +76,18 @@ window.PUSH = (() => {
   async function gate() {
     if (document.querySelector(".pg-wrap")) return;
     let d = null; try { d = await info(true); } catch (e) {} if (!d || !d.key) return;   // notifications pas disponibles sur le site : on ne bloque pas
+    // cet appareil est déjà abonné : on s'assure juste qu'il est relié au compte, sans rien afficher
+    if (await state() === "on") { try { await enable(); return; } catch (e) {} }
     const w = document.createElement("div"); w.className = "pg-wrap"; w.setAttribute("role", "dialog"); w.setAttribute("aria-modal", "true");
     w.innerHTML = `<div class="pg"><div class="pg-bell">${SV(BELL)}<i></i></div><h2>Active tes <em>notifications</em></h2>
-      <p>Elles sont obligatoires pour travailler chez StellADS : rappels de shift, ventes validées, messages de ton manager.</p><div class="pg-body"></div>
+      <p>Elles sont obligatoires sur chaque appareil où tu travailles${env().desk ? ", ordinateur compris" : ""} : rappels de shift, ventes validées, messages de ton manager.</p><div class="pg-body"></div>
       <button class="pg-out">Se déconnecter</button></div>`;
     document.body.appendChild(w); document.documentElement.classList.add("pg-lock"); requestAnimationFrame(() => w.classList.add("on"));
     w.querySelector(".pg-out").onclick = () => { try { logout(); } catch (e) { location.href = "/"; } };
     const body = w.querySelector(".pg-body");
     // le serveur confirme qu'un appareil est bien relié à ce compte avant de débloquer
-    const check = async () => { try { const me = await api("/api/me", { fresh: true }); if (!me.pushNeeded) { w.classList.remove("on"); document.documentElement.classList.remove("pg-lock"); setTimeout(() => w.remove(), 500); toastP("Notifications activées ✨ Bon shift !"); return true; } } catch (e) {} return false; };
+    // débloqué quand CET appareil est abonné et relié au compte
+    const check = async () => { if (await state() !== "on") return false; w.classList.remove("on"); document.documentElement.classList.remove("pg-lock"); setTimeout(() => w.remove(), 500); toastP("Notifications activées ✨ Bon shift !"); return true; };
     const draw = async () => {
       const st = await state(), e = env();
       if (inApp()) { body.innerHTML = `<div class="ps-note">Tu as ouvert StellADS depuis une autre appli : les notifications n'y fonctionnent pas. Ouvre le site dans <b>${e.ios ? "Safari" : "Chrome"}</b>.</div><button class="pg-go" data-copy>Copier le lien du site</button>`;
@@ -98,8 +101,6 @@ window.PUSH = (() => {
         try { await enable(); if (await check()) return; b.textContent = "Réessayer"; } catch (x) { toastP(x.message); b.textContent = "Réessayer"; }
         b.classList.remove("busy"); draw(); };
     };
-    // déjà autorisées sur ce téléphone mais pas reliées à ce compte : on relie sans rien demander
-    if (await state() === "on") { try { await enable(); if (await check()) return; } catch (e) {} }
     draw();
     document.addEventListener("visibilitychange", () => { if (!document.hidden && document.contains(w)) draw(); });
   }

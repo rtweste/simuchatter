@@ -264,10 +264,10 @@ if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "mgr_intr
 // manager qui chatte aussi : peut déclarer ses propres ventes (option dans Gestion)
 if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "sells")) db.exec("ALTER TABLE users ADD COLUMN sells INTEGER NOT NULL DEFAULT 0");
 if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "push_exempt")) db.exec("ALTER TABLE users ADD COLUMN push_exempt INTEGER NOT NULL DEFAULT 0");
-// notifications obligatoires pour les chatters : bloqué tant qu'aucun appareil n'est abonné (sauf en plein shift, ou dispensé par un manager)
+// notifications obligatoires pour les chatters, sur chaque appareil utilisé : le téléphone ou l'ordinateur vérifie
+// qu'il est lui-même abonné (sauf en plein shift, ou chatter dispensé par un manager)
 const pushNeeded = u => { if (u.role !== "chatter") return false;
   try { if ((db.prepare("SELECT push_exempt FROM users WHERE id = ?").get(u.id) || {}).push_exempt) return false;
-    if (db.prepare("SELECT 1 FROM push_subs WHERE user_id = ? LIMIT 1").get(u.id)) return false;
     if (db.prepare("SELECT 1 FROM clocks WHERE user_id = ? AND end_at IS NULL LIMIT 1").get(u.id)) return false;
     return true; } catch (e) { return false; } };
 if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "simu_intro_seen")) db.exec("ALTER TABLE users ADD COLUMN simu_intro_seen INTEGER NOT NULL DEFAULT 0");
