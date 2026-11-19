@@ -87,9 +87,14 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     return { id: str(p.userId || p._id || p.id), name: str(p.name || full || p.username || "Fan"), username: str(p.username || ""), avatar: str(p.avatar || p.avatarPath || p.avatarUrl || "") }; };
   // non lus : Twizz ne documente pas le nom du champ ; on essaie les noms connus, puis « dernier message du fan pas encore lu »
   const UNREAD_KEYS = ["unreadCount", "unread", "unreadMessages", "unreadMessagesCount", "unread_count", "unreadMessageCount", "countUnread", "nbUnread", "creatorUnreadCount", "unreadCountCreator", "unreadByCreator", "newMessages", "newMessagesCount"];
+  // qui a envoyé un message : Twizz donne « senderId » dans les messages, mais « sentBy » dans le dernier message de la liste
+  const senderOf = m => { m = m || {}; const s = m.senderId || m.sentBy || m.sender; return str(s && typeof s === "object" ? s._id || s.id || s.userId : s); };
+  const byFan = (m, fanId) => { const s = senderOf(m); return !!s && (s === fanId || /^(fan|user|subscriber|client|follower)$/i.test(s)); };
   function unreadOf(c, cid, fanId, last) {
     for (const k of UNREAD_KEYS) { const v = c[k]; if (typeof v === "number") return v; if (v && typeof v === "object" && typeof v[cid] === "number") return v[cid]; }
-    const fromFan = !!fanId && str(last.senderId || (last.sender && (last.sender._id || last.sender.id))) === fanId;
+    // le vrai Twizz : « hasNewMessages » sur la conversation (vrai tant que la créatrice n'a pas lu)
+    for (const k of ["hasNewMessages", "hasUnread", "hasUnreadMessages", "isUnread", "unreadByCreator"]) if (typeof c[k] === "boolean") return c[k] ? 1 : 0;
+    const fromFan = byFan(last, fanId);
     for (const k of ["isRead", "read", "seen", "isSeen", "readByCreator"]) if (typeof last[k] === "boolean") return fromFan && !last[k] ? 1 : 0;
     for (const k of ["isRead", "read", "seen", "isSeen"]) if (typeof c[k] === "boolean") return fromFan && !c[k] ? 1 : 0;
     for (const [k, v] of Object.entries(c)) if (/unread|nonlu|notread|unseen/i.test(k) && typeof v === "number") return v;
@@ -98,7 +103,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   function conv(c, cid) {
     const fanRaw = c.interlocutor || c.fan || c.user || (Array.isArray(c.participants) ? c.participants.find(x => str(x._id || x.userId) !== cid) : null) || {};
     const fan = person(fanRaw), last = c.lastMessage || c.last_message || {};
-    return { id: str(c._id || c.id), fan, last: { id: str(last._id || ""), text: str(last.text || ""), type: str(last.type || ""), at: last.createdAt || c.updatedAt || c.createdAt || null, fromFan: !!fan.id && str(last.senderId) === fan.id },
+    return { id: str(c._id || c.id), fan, last: { id: str(last._id || ""), text: str(last.text || ""), type: str(last.type || (last.isAudio ? "AUDIO" : "")), at: last.createdAt || c.updatedAt || c.createdAt || null, fromFan: !!fan.id && byFan(last, fan.id) },
       unread: unreadOf(c, cid, fan.id, last), type: str(c.type || ""), since: c.createdAt || null, tags: (c.tags || []).map(t => str(t.name || t.label || t)).filter(Boolean) };
   }
   function msg(m, fanId) {
@@ -152,7 +157,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const c0 = mapped()[0]; if (!c0) throw bad("Aucune créatrice");
     const j = await G(`/conversations/user/${enc(c0.id)}?page=1&type=GENERAL&creatorId=${enc(c0.id)}`, 60e3), x = arr(j)[0] || {};
     const shape = (o, d = 0) => !o || typeof o !== "object" || d > 2 ? (typeof o === "string" ? "texte" : o) : Array.isArray(o) ? [shape(o[0], d + 1)] : Object.fromEntries(Object.entries(o).map(([k, v]) => [k, shape(v, d + 1)]));
-    return { conversation: shape(x), unreadDetected: conv(x, c0.id).unread };
+    const L = arr(j).slice(0, 20), fanOf = c => person(c.interlocutor || c.fan || c.user || {}).id;
+    const who = c => { const s = senderOf(c.lastMessage || {}); return !s ? "vide" : s === fanOf(c) ? "le fan" : s === c0.id ? "la créatrice" : /^[0-9a-f]{20,}$/i.test(s) ? "un autre compte" : s.length <= 16 ? "« " + s + " »" : "autre"; };
+    return { conversation: shape(x), unreadDetected: conv(x, c0.id).unread, page1: { conversations: L.length, nonLues: L.filter(c => conv(c, c0.id).unread > 0).length, dernierMessagePar: L.map(who), attendent: L.filter(c => conv(c, c0.id).last.fromFan).length } };
   }));
   app.get("/api/twizz/inbox/state", auth, founder, (req, res) => res.json({ send: sendOn(), creators: mapped(), configured: twizz.configured() }));
   app.post("/api/twizz/inbox/state", auth, founder, (req, res) => { if (typeof req.body?.send === "boolean") S.set("twizz_inbox_send", req.body.send); res.json({ send: sendOn() }); });
