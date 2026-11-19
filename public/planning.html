@@ -358,6 +358,7 @@
           <div class="p-card" style="--d:.1s"><div class="p-ch" style="margin-bottom:4px"><h3>Échanges <em>à valider</em></h3></div><div id="swapList"></div></div>
           <div class="p-card" style="--d:.14s"><div class="p-ch" style="margin-bottom:4px"><h3>Renforts <em>en cours</em></h3></div><div id="rfList"></div></div>
           <div class="p-card" style="--d:.18s"><div class="p-ch" style="margin-bottom:2px"><h3>Ponctualité <em>équipe</em></h3><span class="p-mut" id="tpLab"></span></div><div id="teamPq"></div></div>
+          <div class="p-card" style="--d:.22s"><div class="p-ch" style="margin-bottom:2px"><h3>Présence au <em>vocal</em></h3><span class="p-mut" id="vpLab"></span></div><div id="teamVoc"></div></div>
         </div>
       </div>
     </section>
@@ -698,7 +699,18 @@ async function loadAdmin() {
   if (Array.isArray(A.slots) && A.slots.length) SLOTS = A.slots;
   MW = A.from; if (MDAY == null) { const k = Math.round((dOf(A.today) - dOf(A.from)) / 864e5); MDAY = k >= 0 && k < 7 ? k : 0; }
   $("mLab").textContent = weekLab(A.from);
-  renderAlerts(); renderGrid(); renderDay(); renderSwaps(); renderRf(); renderTeamPq();
+  renderAlerts(); renderGrid(); renderDay(); renderSwaps(); renderRf(); renderTeamPq(); renderVoc();
+}
+// part du temps de shift passée dans le salon vocal (quinzaine en cours)
+async function renderVoc() {
+  let d; try { d = await api("/api/admin/voice/stats"); } catch (e) { return; }
+  $("vpLab").textContent = $("tpLab").textContent;
+  const h = ms => { const m = Math.round(ms / 60e3); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}`; };
+  const L = d.items.sort((a, b) => a.pct - b.pct);
+  $("teamVoc").innerHTML = !L.length ? `<div class="p-empty">Pas encore de shift sur la période.</div>` :
+    L.map(p => `<div class="p-pr" title="${h(p.inVoice)} dans le vocal sur ${h(p.shift)} de shift"><span>${esc(p.username)}</span><span class="t"><i data-w="${p.pct}" style="background:${p.pct >= 90 ? "#5fd3a2" : p.pct >= 70 ? "#e6e6e6" : "#e07a7a"}"></i></span><span>${p.pct} %</span></div>`).join("") +
+    `<div class="p-mut" style="font-size:11.5px;margin-top:8px">Part du temps de shift passé dans le salon vocal. Survole un nom pour voir les heures.</div>`;
+  requestAnimationFrame(() => requestAnimationFrame(() => document.querySelectorAll("#teamVoc [data-w]").forEach(i => i.style.width = i.dataset.w + "%")));
 }
 const isSlot = (s, sl) => s.start === sl[1] && s.end === sl[2];
 const otherShifts = () => A.shifts.filter(s => !SLOTS.some(sl => isSlot(s, sl)));

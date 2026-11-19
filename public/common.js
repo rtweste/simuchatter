@@ -161,7 +161,17 @@ const VOICE_UI = (() => {
         bar.querySelector("button").onclick = openVoice; document.body.appendChild(bar); } }
     else if (bar) { bar.remove(); bar = null; }
   };
-  try { const bc = new BroadcastChannel("stellads-voice"); bc.onmessage = e => { on = !!e.data.on; n = e.data.count || 0; seen = Date.now(); paint(); }; } catch (e) {}
+  let bc = null; try { bc = new BroadcastChannel("stellads-voice"); bc.onmessage = e => { const d = e.data || {}; if (!("on" in d)) return; on = !!d.on; n = d.count || 0; seen = Date.now(); paint(); }; } catch (e) {}
+  try { bc && location.pathname !== "/vocal" && bc.postMessage({ cmd: "ping" }); } catch (e) {}   // la fenêtre vocale répond avec son état
+  // push-to-talk : la touche choisie marche aussi quand une page du site est au premier plan
+  if (bc && location.pathname !== "/vocal") {
+    let held = false; const cfg = () => { try { return JSON.parse(localStorage.getItem("vc:ptt") || "null"); } catch (e) { return null; } };
+    const typing = e => { const t = e.target; return t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) && e.key && e.key.length === 1; };
+    const rel = () => { if (held) { held = false; bc.postMessage({ ptt: false }); } };
+    document.addEventListener("keydown", e => { const c = cfg(); if (!c || !c.on || e.code !== c.code || !on || typing(e)) return; e.preventDefault(); if (!e.repeat && !held) { held = true; bc.postMessage({ ptt: true }); } });
+    document.addEventListener("keyup", e => { const c = cfg(); if (c && e.code === c.code) rel(); });
+    window.addEventListener("blur", rel); document.addEventListener("visibilitychange", () => document.hidden && rel());
+  }
   setInterval(() => { if (on && Date.now() - seen > 12e3) { on = false; paint(); } }, 4e3);
   async function check() { try { const r = await api("/api/voice/presence"); if (r.me) { on = true; seen = Date.now(); } n = r.count; } catch (e) {} paint(); }
   return { start(me) { need = !!me.voiceNeeded; if (me.role === "trainee" || me.viewAs) return; check(); setInterval(async () => { if (document.hidden) return;

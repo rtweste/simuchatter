@@ -16,7 +16,7 @@
 <main class="main-area chatm">
   <div class="ct" id="ct">
     <section class="ct-rail"><div class="ct-rh"><h1>Le <em>chat.</em></h1><label class="ct-se"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" placeholder="Rechercher un salon, une personne"></label></div>
-      <div class="ct-ls" id="rail"></div><div class="ct-me" id="meBar"></div></section>
+      <div class="ct-ls" id="rail"></div><div class="ct-vcb" id="vcBar" hidden></div><div class="ct-me" id="meBar"></div></section>
     <section class="ct-main" id="main"><div class="ct-empty"><b>#</b>Choisis un salon</div></section>
     <section class="ct-thp" id="thp"></section>
   </div>
@@ -63,13 +63,53 @@ function renderRail() {
       ${c.mentions ? `<span class="b m">@${c.mentions}</span>` : c.unread ? `<span class="b">${c.unread > 99 ? "99+" : c.unread}</span>` : ""}</button>`; };
   const pr = C.filter(c => c.slug === "informations"), pub = C.filter(c => c.kind === "public" && c.slug !== "informations"), mo = C.filter(c => c.kind === "model"), tr = C.filter(c => c.kind === "training"), TR = B.me.role === "trainee", dm = C.filter(c => c.kind === "dm").sort((a, b) => (b.last?.at || 0) - (a.last?.at || 0));
   $("rail").innerHTML = TR ? `<div class="ct-sec">Formation</div>${tr.map(row).join("")}<div style="font-size:12.5px;color:#666;padding:8px 10px;line-height:1.45">Le salon des élèves et des managers. Le reste du chat s'ouvre quand tu deviens chatter.</div>`
-    : `${pr.length ? `<div class="ct-sec">Prioritaire</div>${pr.map(row).join("")}` : ""}<div class="ct-sec">Salons</div>${pub.map(row).join("")}
+    : `${pr.length ? `<div class="ct-sec">Prioritaire</div>${pr.map(row).join("")}` : ""}<div class="ct-sec">Salons</div>${pub.map(row).join("")}<div id="vcRail"></div>
     ${tr.length ? `<div class="ct-sec">Formation · élèves et managers</div>${tr.map(row).join("")}` : ""}
     ${mo.length ? `<div class="ct-sec">Créatrices</div>${mo.map(row).join("")}` : ""}<div class="ct-sec">Messages privés <button id="newDm" aria-label="Nouveau message privé">+</button></div>${dm.map(row).join("") || `<div style="font-size:12.5px;color:#555;padding:4px 10px">Aucune conversation privée</div>`}`;
   $("rail").querySelectorAll("[data-c]").forEach(b => b.onclick = () => openCh(+b.dataset.c));
   if ($("newDm")) $("newDm").onclick = dmSheet;
   updateBadge(B.channels.reduce((t, c) => t + c.unread, 0), "chat");
+  VC.paint();
 }
+/* =============== salon vocal (l'appel vit dans sa petite fenêtre, ici on l'affiche et on le pilote) =============== */
+const VC = (() => {
+  let people = [], live = { on: false }, seen = 0, bc = null;
+  const MIC = '<path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/>',
+    MICX = '<path d="M3 3l18 18M9 9v3a3 3 0 0 0 5.1 2.1M15 9.3V6a3 3 0 0 0-5.7-1.3M19 11a7 7 0 0 1-1.2 3.9M5 11a7 7 0 0 0 11.2 5.6M12 18v3"/>',
+    HEAD = '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><path d="M4 15h3v5H5a1 1 0 0 1-1-1zM20 15h-3v5h2a1 1 0 0 0 1-1z"/>',
+    HEADX = '<path d="M3 3l18 18M4 15v-3a8 8 0 0 1 12.6-6.5M20 12v3"/><path d="M4 15h3v5H5a1 1 0 0 1-1-1zM17 17v3h2a1 1 0 0 0 1-1v-2"/>',
+    OUT = '<path d="M10 14l2-2-2-2M12 12H3M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/>', WIN = '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/>',
+    SCR = '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>';
+  const ic = (p, s = 16) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+  const amIn = () => live.on && Date.now() - seen < 15e3;
+  function paint() {
+    const r = document.getElementById("vcRail"); if (!r || !B || B.me.role === "trainee") return;
+    const talk = amIn() ? (live.talk || []) : [], n = people.length;
+    r.innerHTML = `<button class="ct-ch vc-ch ${amIn() ? "in" : ""}" id="vcJoin" title="${amIn() ? "Ouvrir la fenêtre du vocal" : "Rejoindre le salon vocal"}"><span class="e">🔊</span>
+        <span class="n">Salon vocal<small>${n ? `${n} connecté${n > 1 ? "s" : ""}` : "Personne pour l'instant"}</small></span>${amIn() ? `<span class="b vc-live">EN DIRECT</span>` : ""}</button>
+      ${n ? `<div class="vc-ppl">${people.map(p => `<div class="vc-p ${talk.includes(p.id) ? "talk" : ""}"><span class="a" style="--c:${esc(p.color || "#3a3a3a")};${p.avatar ? `background-image:url(${esc(p.avatar)});font-size:0` : ""}">${esc((p.name || "?")[0].toUpperCase())}</span>
+        <span class="t">${esc(p.name)}</span>${p.sharing ? `<span class="s" title="Partage son écran">${ic(SCR, 13)}</span>` : ""}${p.deaf ? `<span class="m" title="Son coupé">${ic(HEADX, 13)}</span>` : p.muted ? `<span class="m" title="Micro coupé">${ic(MICX, 13)}</span>` : ""}</div>`).join("")}</div>` : ""}`;
+    document.getElementById("vcJoin").onclick = () => window.openVoice && openVoice();
+    const bar = document.getElementById("vcBar"); bar.hidden = !amIn();
+    if (amIn()) {
+      bar.innerHTML = `<div class="i"><b><i></i>Connecté au vocal</b><small>${live.count || 1} en ligne · ${live.ptt ? "push-to-talk" : "micro ouvert"}</small></div>
+        <button data-v="mute" class="${live.muted ? "off" : ""}" title="${live.muted ? "Activer le micro" : "Couper le micro"}">${ic(live.muted ? MICX : MIC)}</button>
+        <button data-v="deaf" class="${live.deaf ? "off" : ""}" title="${live.deaf ? "Remettre le son" : "Couper le son"}">${ic(live.deaf ? HEADX : HEAD)}</button>
+        <button data-v="open" title="Ouvrir la fenêtre du vocal">${ic(WIN)}</button>
+        <button data-v="leave" class="red" title="Quitter le vocal">${ic(OUT)}</button>`;
+      bar.querySelectorAll("[data-v]").forEach(b => b.onclick = () => { const v = b.dataset.v;
+        if (v === "open") return window.openVoice && openVoice();
+        if (v === "leave") { const st = USERS[B.me.id]?.status; if ((st === "shift" || st === "pause") && !confirm("Le vocal est obligatoire pendant ton shift. Quitter quand même ?")) return; }
+        try { bc && bc.postMessage({ cmd: v }); } catch (e) {} });
+    }
+  }
+  async function poll() { if (document.hidden || !B || B.me.role === "trainee") return; try { const r = await api("/api/voice/presence"); people = r.people || []; } catch (e) {} paint(); }
+  try { bc = new BroadcastChannel("stellads-voice"); bc.onmessage = e => { const d = e.data || {}; if (!("on" in d)) return;
+    const was = live; live = d; seen = Date.now(); if (!d.on || was.count !== d.count || was.muted !== d.muted || was.deaf !== d.deaf) poll(); else paint(); }; } catch (e) {}
+  setInterval(poll, 5000); setInterval(() => { if (live.on && Date.now() - seen > 15e3) { live = { on: false }; paint(); } }, 5000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
+  return { paint, start() { poll(); try { bc && bc.postMessage({ cmd: "ping" }); } catch (e) {} } };
+})();
 const chan = id => B.channels.find(c => c.id === id);
 
 /* =============== salon =============== */
@@ -526,7 +566,7 @@ function dmSheet() {
   const me = await api("/api/me"); renderShell("chat", me);
   await refreshBoot();
   $("meBar").innerHTML = `${av(B.me.username, USERS[B.me.id]?.status)}<div><b>${esc(nameOf(B.me.id, B.me.username))}</b><div style="font-size:11.5px;color:#777">${ST_LBL[USERS[B.me.id]?.status === "offline" ? "online" : USERS[B.me.id]?.status] || "en ligne"}</div></div>`;
-  $("q").oninput = renderRail; stream(); bindDrop();
+  $("q").oninput = renderRail; stream(); bindDrop(); VC.start();
   const q = +new URLSearchParams(location.search).get("c"); const first = q && chan(q) ? q : (B.channels.find(c => c.slug === "informations" && c.unread) || B.channels.find(c => c.slug === (me.role === "trainee" ? "formation" : "general")) || B.channels[0]).id;
   if (!MOB() || q) openCh(first);
 })();

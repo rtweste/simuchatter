@@ -54,6 +54,23 @@ body{margin:0;background:#0a0a0a;color:#f5f5f5;font-family:Inter,system-ui,sans-
 .vc-toast b{color:#fff}.vc-toast button{margin-left:auto;height:34px;padding:0 12px;border-radius:10px;border:0;background:#7dd3fc;color:#04202d;font:800 12px Inter;cursor:pointer;flex:none}
 .vc-toast .x{background:transparent;color:#999;border:1px solid #333;margin-left:6px}
 .vc-net{font-size:11.5px;color:#8f8f8f;padding:0 18px 6px}
+[hidden]{display:none!important}
+.vt .vol{display:flex;align-items:center;gap:6px;width:100%;color:#777}.vt .vol svg{width:13px;height:13px;flex:none}
+.vt .vol input{flex:1;min-width:0;accent-color:#5fd3a2;height:16px}
+.vt .vol em{font:700 10.5px Inter;font-style:normal;color:#888;width:30px;text-align:right}
+.vc-ptt{margin:0 14px 10px;height:46px;border-radius:14px;border:1px dashed #2f2f2f;background:#121212;color:#9a9a9a;font:800 13px Inter;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none}
+.vc-ptt kbd{font:800 12px Inter;background:#222;border:1px solid #333;border-radius:6px;padding:2px 7px;color:#eee}
+.vc-ptt.on{border-style:solid;border-color:#5fd3a2;background:rgba(95,211,162,.12);color:#5fd3a2}
+.vc-set{position:absolute;inset:0;z-index:18;background:#0a0a0a;overflow:auto;padding:18px}
+.vc-set h2{margin:0 0 4px;font:900 19px Inter;letter-spacing:-.02em;display:flex;align-items:center}.vc-set h2 button{margin-left:auto;height:34px;padding:0 12px;border-radius:10px;border:1px solid #333;background:#161616;color:#eee;font:700 12px Inter;cursor:pointer}
+.vc-set label.f{display:block;font:800 10.5px Inter;letter-spacing:.12em;color:#777;text-transform:uppercase;margin:18px 0 7px}
+.vc-set select{width:100%;height:42px;border-radius:12px;border:1px solid #2a2a2a;background:#141414;color:#eee;font:600 13.5px Inter;padding:0 10px}
+.vc-set .lv{height:6px;border-radius:3px;background:#1f1f1f;margin-top:8px;overflow:hidden}.vc-set .lv i{display:block;height:100%;width:0;background:#5fd3a2;transition:width .08s}
+.vc-seg{display:flex;gap:6px;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:4px}
+.vc-seg button{flex:1;height:36px;border-radius:9px;border:0;background:transparent;color:#999;font:800 12.5px Inter;cursor:pointer}.vc-seg button.on{background:#f5f5f5;color:#0a0a0a}
+.vc-key{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13px;color:#aaa}
+.vc-key button{height:38px;min-width:64px;padding:0 12px;border-radius:10px;border:1px solid #3a3a3a;background:#1a1a1a;color:#fff;font:800 13px Inter;cursor:pointer}.vc-key button.wait{border-color:#5fd3a2;color:#5fd3a2}
+.vc-set p.n{font-size:12px;color:#777;line-height:1.5;margin:10px 0 0}
 </style>
 </head>
 <body>
@@ -62,10 +79,12 @@ body{margin:0;background:#0a0a0a;color:#f5f5f5;font-family:Inter,system-ui,sans-
     <div><b>Salon vocal</b><small id="cnt">Connexion…</small></div><span class="live off" id="live"><i></i><span>HORS LIGNE</span></span></div>
   <div class="vc-net" id="net" hidden></div>
   <div class="vc-grid" id="grid"></div>
+  <div class="vc-ptt" id="ptt" hidden></div>
   <div class="vc-bar">
     <button class="vb" id="bMic" aria-label="Couper le micro"><small>Micro</small></button>
     <button class="vb" id="bDeaf" aria-label="Couper le son"><small>Son</small></button>
     <button class="vb" id="bScr" aria-label="Partager mon écran"><small>Écran</small></button>
+    <button class="vb" id="bSet" aria-label="Réglages"><small>Réglages</small></button>
     <button class="vb red" id="bLeave" aria-label="Quitter le vocal"><small>Quitter</small></button>
   </div>
 </div>
@@ -78,8 +97,13 @@ const I = {
   head: '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><path d="M4 15h3v5H5a1 1 0 0 1-1-1zM20 15h-3v5h2a1 1 0 0 0 1-1z"/>',
   headOff: '<path d="M3 3l18 18M4 15v-3a8 8 0 0 1 12.6-6.5M20 12v3"/><path d="M4 15h3v5H5a1 1 0 0 1-1-1zM17 17v3h2a1 1 0 0 0 1-1v-2"/>',
   scr: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
-  leave: '<path d="M10 14l2-2-2-2M12 12H3M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/>'
+  leave: '<path d="M10 14l2-2-2-2M12 12H3M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  vol: '<path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7"/>'
 };
+// réglages mémorisés sur cet ordinateur
+const LS = { get(k, d) { try { const v = localStorage.getItem("vc:" + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem("vc:" + k, JSON.stringify(v)); } catch (e) {} } };
+let VOL = LS.get("vol", {}), MIC = LS.get("mic", ""), SINK = LS.get("sink", ""), PTT = LS.get("ptt", { on: false, code: "Backquote", label: "²" }), HELD = false;
 const SV = (p, s = 22) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 const $ = id => document.getElementById(id);
 let ME = null, MGR = false, ICE = [], LOCAL = null, SCREEN = null, ES = null, MUTED = false, DEAF = false, INSHIFT = false;
@@ -96,26 +120,37 @@ function paintBar() {
   $("bScr").innerHTML = SV(I.scr) + `<small>${SCREEN ? "Arrêter" : "Écran"}</small>`; $("bScr").classList.toggle("on", !!SCREEN);
   $("bScr").hidden = !(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
   $("bLeave").innerHTML = SV(I.leave) + "<small>Quitter</small>";
+  $("bSet").innerHTML = SV(I.gear) + "<small>Réglages</small>";
+  const pt = $("ptt"); pt.hidden = !PTT.on; pt.classList.toggle("on", HELD && !MUTED);
+  pt.innerHTML = MUTED ? "Micro coupé" : HELD ? "🎙 Tu parles…" : `Maintiens <kbd>${esc(PTT.label || PTT.code)}</kbd> ou ce bouton pour parler`;
 }
+// le micro n'émet que si : pas coupé, et (mode voix) ou (push-to-talk et touche enfoncée)
+function applyTx() { const on = !MUTED && (!PTT.on || HELD); if (LOCAL) LOCAL.getAudioTracks().forEach(t => t.enabled = on); return on; }
+function setHeld(v) { if (HELD === v) return; HELD = v; applyTx(); paintBar(); }
 function tile(p, me) {
   const st = [p.muted ? `<span title="Micro coupé">${SV(I.micOff, 12)}</span>` : "", p.deaf ? `<span title="Son coupé">${SV(I.headOff, 12)}</span>` : ""].join("");
   const watching = SPC.has("in:" + p.id);
   const act = p.sharing ? `<span class="sc">${SV(I.scr, 12)}Écran partagé</span>${MGR && !me ? `<button class="w" data-watch="${p.id}">${watching ? "Ouvrir" : "Regarder"}</button>` : ""}`
     : MGR && !me && !p.mgr ? `<button class="g" data-ask="${p.id}">Demander l'écran</button>` : "";
+  const v = VOL[p.id] ?? 100;
+  const vol = me ? "" : `<label class="vol" title="Volume de ${esc(p.name)} (pour toi seulement)">${SV(I.vol, 13)}<input type="range" min="0" max="100" step="5" value="${v}" data-vol="${p.id}" aria-label="Volume de ${esc(p.name)}"><em>${v}%</em></label>`;
   return `<div class="vt${me ? " me" : ""}" data-id="${p.id}"><span class="av" style="--ac:${esc(p.color || "#3a3a3a")};${p.avatar ? `background-image:url(${esc(p.avatar)});font-size:0` : ""}">${esc((p.name || "?")[0].toUpperCase())}</span>
-    <div class="st">${st}</div><div class="nm">${esc(p.name)}${me ? " (toi)" : ""}</div>${p.mgr ? `<div class="rl">MANAGER</div>` : ""}${act}</div>`;
+    <div class="st">${st}</div><div class="nm">${esc(p.name)}${me ? " (toi)" : ""}</div>${p.mgr ? `<div class="rl">MANAGER</div>` : ""}${act}${vol}</div>`;
 }
 function render() {
   const meP = { id: ME, name: SELF.name, color: SELF.color, avatar: SELF.avatar, mgr: MGR, muted: MUTED, deaf: DEAF, sharing: !!SCREEN };
   const list = [meP, ...[...PEERS.values()].map(x => x.info).sort((a, b) => a.joined - b.joined)];
   $("grid").innerHTML = list.map(p => tile(p, p.id === ME)).join("");
   $("cnt").textContent = `${list.length} personne${list.length > 1 ? "s" : ""} connectée${list.length > 1 ? "s" : ""}`;
+  $("grid").querySelectorAll("[data-vol]").forEach(r => r.oninput = () => { const id = +r.dataset.vol, v = +r.value; VOL[id] = v; LS.set("vol", VOL); r.nextElementSibling.textContent = v + "%";
+    const P = PEERS.get(id); if (P && P.audio) P.audio.volume = v / 100; });
   $("grid").querySelectorAll("[data-watch]").forEach(b => b.onclick = () => watch(+b.dataset.watch));
   $("grid").querySelectorAll("[data-ask]").forEach(b => b.onclick = async () => { try { await api("/api/voice/ask-share", { body: { id: +b.dataset.ask } }); notify("Demande envoyée", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } });
   bcast();
 }
 function setLive(on) { $("live").classList.toggle("off", !on); $("live").querySelector("span").textContent = on ? "EN DIRECT" : "HORS LIGNE"; }
-function bcast() { try { BC && BC.postMessage({ on: !!ES, muted: MUTED, count: PEERS.size + 1 }); } catch (e) {} }
+let TALK = [];
+function bcast() { try { BC && BC.postMessage({ on: !!ES, me: ME, muted: MUTED, deaf: DEAF, ptt: PTT.on, count: PEERS.size + 1, talk: TALK }); } catch (e) {} }
 function toast(html, btn, fn) { document.querySelector(".vc-toast")?.remove(); const t = document.createElement("div"); t.className = "vc-toast"; t.innerHTML = `<span>${html}</span>${btn ? `<button>${btn}</button>` : ""}<button class="x">✕</button>`;
   document.body.appendChild(t); if (btn) t.querySelector("button").onclick = () => { t.remove(); fn(); }; t.querySelector(".x").onclick = () => t.remove(); setTimeout(() => t.remove(), 20000); }
 
@@ -127,8 +162,10 @@ function meter(stream, id) {
 let selfLvl = () => 0;
 setInterval(() => {
   const set = (id, on) => { const el = document.querySelector(`.vt[data-id="${id}"]`); if (el) el.classList.toggle("talk", on); };
-  set(ME, !MUTED && selfLvl() > .04);
-  PEERS.forEach((p, id) => set(id, !p.info.muted && p.level && p.level() > .035));
+  const t = [];
+  const meT = applyTx() && selfLvl() > .04; set(ME, meT); if (meT) t.push(ME);
+  PEERS.forEach((p, id) => { const on = !p.info.muted && !!p.level && p.level() > .035; set(id, on); if (on) t.push(id); });
+  if (t.join() !== TALK.join()) { TALK = t; bcast(); }
 }, 120);
 
 /* ---------- audio entre participants ---------- */
@@ -138,6 +175,7 @@ function newPc(id, kind) {
   pc.onicecandidate = e => { if (e.candidate) sig(id, "ice", e.candidate.toJSON(), kind); };
   return pc;
 }
+const sink = a => { if (SINK && a.setSinkId) a.setSinkId(SINK).catch(() => {}); };
 function audioPeer(id) {
   const P = PEERS.get(id); if (!P) return null;
   if (P.pc) { try { P.pc.close(); } catch (e) {} }
@@ -145,7 +183,7 @@ function audioPeer(id) {
   if (LOCAL) LOCAL.getAudioTracks().forEach(t => pc.addTrack(t, LOCAL));
   pc.ontrack = e => { const s = e.streams[0] || new MediaStream([e.track]);
     if (!P.audio) { P.audio = new Audio(); P.audio.autoplay = true; document.body.appendChild(P.audio); }
-    P.audio.srcObject = s; P.audio.muted = DEAF; P.audio.play().catch(() => needClick()); P.level = meter(s, id); };
+    P.audio.srcObject = s; P.audio.muted = DEAF; P.audio.volume = (VOL[id] ?? 100) / 100; sink(P.audio); P.audio.play().catch(() => needClick()); P.level = meter(s, id); };
   pc.onconnectionstatechange = () => { if (pc.connectionState === "failed" && P.pc === pc && ME < id) callPeer(id); netCheck(); };
   return pc;
 }
@@ -216,9 +254,43 @@ function closeView() { const id = VIEW; VIEW = null; document.querySelector(".vc
 
 /* ---------- connexion au salon ---------- */
 let SELF = {};
+const getMic = id => navigator.mediaDevices.getUserMedia({ audio: { ...(id ? { deviceId: { exact: id } } : {}), echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+// changer de micro en plein appel : on remplace la piste chez tout le monde, sans recouper
+async function switchMic(id) {
+  let s; try { s = await getMic(id); } catch (e) { notify("Micro indisponible", "Impossible d'utiliser ce micro", "err"); return false; }
+  const old = LOCAL; LOCAL = s; applyTx(); const tr = s.getAudioTracks()[0];
+  PEERS.forEach(P => { const snd = P.pc && P.pc.getSenders().find(x => x.track && x.track.kind === "audio"); if (snd) snd.replaceTrack(tr).catch(() => {}); });
+  if (old) old.getTracks().forEach(t => t.stop()); selfLvl = meter(LOCAL, ME); MIC = id; LS.set("mic", id); return true;
+}
+/* ---------- réglages : micro, sortie, push-to-talk ---------- */
+let SETLOOP = null, CAPTURE = false;
+async function settings() {
+  document.querySelector(".vc-set")?.remove();
+  let devs = []; try { devs = await navigator.mediaDevices.enumerateDevices(); } catch (e) {}
+  const ins = devs.filter(d => d.kind === "audioinput"), outs = devs.filter(d => d.kind === "audiooutput"), canOut = "setSinkId" in HTMLMediaElement.prototype && outs.length;
+  const curMic = LOCAL?.getAudioTracks()[0]?.getSettings?.().deviceId || MIC;
+  const opt = (L, cur, def) => L.map((d, i) => `<option value="${esc(d.deviceId)}" ${d.deviceId === cur ? "selected" : ""}>${esc(d.label || `${def} ${i + 1}`)}</option>`).join("");
+  const w = document.createElement("div"); w.className = "vc-set";
+  w.innerHTML = `<h2>Réglages<button data-x>Fermer</button></h2>
+    <label class="f">Micro</label><select id="sMic">${opt(ins, curMic, "Micro")}</select><div class="lv"><i id="sLv"></i></div>
+    ${canOut ? `<label class="f">Sortie du son</label><select id="sOut"><option value="">Par défaut</option>${opt(outs, SINK, "Sortie")}</select>` : ""}
+    <label class="f">Mode du micro</label><div class="vc-seg"><button data-m="0" class="${PTT.on ? "" : "on"}">Voix activée</button><button data-m="1" class="${PTT.on ? "on" : ""}">Push-to-talk</button></div>
+    <div class="vc-key" id="sKey" ${PTT.on ? "" : "hidden"}>Touche pour parler <button id="sK">${esc(PTT.label || PTT.code)}</button></div>
+    <p class="n" id="sNote">${PTT.on ? "Le push-to-talk marche quand la fenêtre du vocal ou une page StellADS est au premier plan. Sur une autre application (Twizz par exemple), la touche n'est pas captée : reste en voix activée si tu travailles ailleurs." : "Ton micro est ouvert en permanence, la réduction de bruit filtre les sons de fond."}</p>
+    <p class="n">Le volume de chaque personne se règle sous son avatar. Ces réglages restent sur cet ordinateur.</p>`;
+  document.getElementById("vc").appendChild(w);
+  const close = () => { clearInterval(SETLOOP); CAPTURE = false; w.remove(); };
+  w.querySelector("[data-x]").onclick = close;
+  SETLOOP = setInterval(() => { const i = document.getElementById("sLv"); if (i) i.style.width = Math.min(100, selfLvl() * 600) + "%"; }, 80);
+  w.querySelector("#sMic").onchange = async e => { if (!(await switchMic(e.target.value))) e.target.value = curMic; };
+  if (canOut) w.querySelector("#sOut").onchange = e => { SINK = e.target.value; LS.set("sink", SINK); PEERS.forEach(P => P.audio && (SINK ? sink(P.audio) : P.audio.setSinkId && P.audio.setSinkId("").catch(() => {}))); };
+  w.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { PTT.on = b.dataset.m === "1"; LS.set("ptt", PTT); HELD = false; applyTx(); paintBar(); bcast(); settings(); });
+  const kb = w.querySelector("#sK"); if (kb) kb.onclick = () => { CAPTURE = true; kb.classList.add("wait"); kb.textContent = "Appuie sur une touche…"; };
+}
+function keyLabel(e) { if (e.key === " ") return "Espace"; if (e.key && e.key.length === 1) return e.key.toUpperCase(); return { ControlLeft: "Ctrl gauche", ControlRight: "Ctrl droit", ShiftLeft: "Maj gauche", ShiftRight: "Maj droite", AltLeft: "Alt", AltRight: "Alt Gr", CapsLock: "Verr. Maj" }[e.code] || e.key || e.code; }
 async function join() {
-  try { LOCAL = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
-  catch (e) { return gate("mic"); }
+  try { LOCAL = await getMic(MIC); } catch (e) { try { LOCAL = await getMic(""); } catch (er) { return gate("mic"); } }
+  applyTx();
   document.querySelector(".vc-gate")?.remove();
   selfLvl = meter(LOCAL, ME);
   try { ICE = (await api("/api/voice/ice")).iceServers; } catch (e) { ICE = [{ urls: "stun:stun.l.google.com:19302" }]; }
@@ -262,12 +334,24 @@ function gate(why) {
 }
 
 /* ---------- boutons ---------- */
-$("bMic").onclick = () => { MUTED = !MUTED; if (LOCAL) LOCAL.getAudioTracks().forEach(t => t.enabled = !MUTED); api("/api/voice/state", { body: { muted: MUTED } }).catch(() => {}); paintBar(); render(); };
+$("bMic").onclick = () => { MUTED = !MUTED; applyTx(); api("/api/voice/state", { body: { muted: MUTED } }).catch(() => {}); paintBar(); render(); };
 // couper le son coupe aussi le micro (comme sur Discord)
 $("bDeaf").onclick = () => { DEAF = !DEAF; PEERS.forEach(p => { if (p.audio) p.audio.muted = DEAF; });
-  if (DEAF && !MUTED) { MUTED = true; if (LOCAL) LOCAL.getAudioTracks().forEach(t => t.enabled = false); }
+  if (DEAF && !MUTED) { MUTED = true; applyTx(); }
   api("/api/voice/state", { body: { deaf: DEAF, muted: MUTED } }).catch(() => {}); paintBar(); render(); };
 $("bScr").onclick = () => SCREEN ? shareStop() : shareStart();
+$("bSet").onclick = settings;
+// bouton à maintenir (souris ou doigt)
+$("ptt").addEventListener("pointerdown", e => { e.preventDefault(); $("ptt").setPointerCapture?.(e.pointerId); setHeld(true); });
+["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => $("ptt").addEventListener(ev, () => setHeld(false)));
+document.addEventListener("keydown", e => {
+  if (CAPTURE) { e.preventDefault(); if (e.code === "Escape") { CAPTURE = false; return settings(); } PTT.code = e.code; PTT.label = keyLabel(e); LS.set("ptt", PTT); CAPTURE = false; paintBar(); bcast(); return settings(); }
+  if (PTT.on && e.code === PTT.code && !e.repeat) { e.preventDefault(); setHeld(true); } });
+document.addEventListener("keyup", e => { if (PTT.on && e.code === PTT.code) setHeld(false); });
+window.addEventListener("blur", () => setHeld(false));
+// le site (chat, autres pages) pilote la fenêtre : micro, son, quitter, touche push-to-talk
+if (BC) BC.onmessage = e => { const d = e.data || {}; if ("ptt" in d && typeof d.ptt === "boolean" && !("on" in d)) { if (PTT.on) setHeld(d.ptt); return; }
+  if (d.cmd === "mute") $("bMic").click(); else if (d.cmd === "deaf") $("bDeaf").click(); else if (d.cmd === "leave") leave(true); else if (d.cmd === "ping") bcast(); };
 $("bLeave").onclick = () => { if (INSHIFT && !confirm("Le vocal est obligatoire pendant ton shift. Quitter quand même ?")) return; leave(true); };
 window.addEventListener("pagehide", () => { try { BC && BC.postMessage({ on: false }); } catch (e) {} });
 // raccourci : Ctrl/Cmd + M pour couper le micro
