@@ -411,7 +411,16 @@
 <div class="vt-scrim" id="scrim"></div>
 <form class="vt-sheet vt" id="sheet" role="dialog" aria-modal="true" aria-labelledby="shTitle" novalidate>
   <div class="vt-shd"><b id="shTitle">Déclarer une <em>vente</em></b><button type="button" class="vt-x" id="shClose" aria-label="Fermer">✕</button></div>
-  <div class="vt-fl vt-for" id="forRow" style="margin-top:0;margin-bottom:12px"><span class="vt-lab">Vente de</span><div class="vt-chips l" id="forChips"></div><div class="hn" id="forHint"></div></div>
+  <div class="vt-fl vt-for" id="forRow" style="margin-top:0;margin-bottom:12px"><span class="vt-lab">Vente de</span><div class="vt-chips l" id="forChips"></div><div class="hn" id="forHint"></div>
+    <div class="vt-com" id="dCom" style="margin-top:14px;display:none">
+      <div class="vt-lab">Commission du chatter</div>
+      <div class="sg" role="radiogroup"><button type="button" data-c="all" class="on">Toute la vente</button><button type="button" data-c="part">Une partie</button><button type="button" data-c="none">Rien</button></div>
+      <div class="mo">
+        <div class="pr" id="dComRow"><input id="dComAmt" inputmode="decimal" autocomplete="off" aria-label="Montant qui compte pour le chatter"><span>€ pour le chatter</span><button type="button" id="dComHalf">La moitié</button></div>
+        <input class="vt-fi" id="dComWhy" maxlength="200" placeholder="Raison, le chatter la verra (ex. : vente refusée, ajoutée au CA)">
+        <div class="eq" id="dComEq"></div>
+      </div>
+    </div></div>
   <div class="vt-drop" id="drop">
     <div id="dropIn"><span class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M5 20h14"/></svg></span><div style="margin-top:6px">Ajoute la capture de la vente</div><small>Touche pour choisir ou glisse l'image ici</small></div>
     <input type="file" id="fFile" accept="image/*" aria-label="Capture d'écran">
@@ -694,7 +703,7 @@ $("drop").addEventListener("drop", e => { e.preventDefault(); setFile(e.dataTran
 const syncAmtChips = () => { if (typeof fitAmt === "function") fitAmt(); const v = parseNum($("fAmount").value); document.querySelectorAll("#amtChips button").forEach(b => b.classList.toggle("on", +b.dataset.a === v)); };
 document.querySelectorAll("#amtChips button").forEach(b => b.onclick = () => { $("fAmount").value = b.dataset.a; syncAmtChips(); catMin(); VS.tick(); if (LAST_READ) showRead(LAST_READ); });
 const fitAmt = () => { const v = $("fAmount").value || "0"; $("fAmount").style.width = (v.length * .62 + .1) + "em"; };
-$("fAmount").oninput = () => { syncAmtChips(); fitAmt(); catMin(); if (LAST_READ) showRead(LAST_READ); };
+$("fAmount").oninput = () => { syncAmtChips(); fitAmt(); catMin(); dComEq(); if (LAST_READ) showRead(LAST_READ); };
 document.querySelectorAll("#whenChips button").forEach(b => b.onclick = () => { setWhen(b.dataset.w); VS.tick(); $("fErr").textContent = ""; whenCheck(); });
 $("fDate").addEventListener("input", whenCheck);
 function renderCrea(sel) {
@@ -712,7 +721,7 @@ function openSheet(again) {
   LAST_WHEN = null; whenCheck();
   if (again) { $("fDate").value = toLocalInput(again.sold_at); setWhen("pick"); }
   $("shTitle").innerHTML = again ? "Renvoyer la <em>vente</em>" : "Déclarer une <em>vente</em>";
-  renderFor(again ? null : FOR_DEFAULT()); renderCats(again?.items); renderCrea(again?.model_id); syncAmtChips(); CUSTOM.reset();
+  dCom("all"); renderFor(again ? null : FOR_DEFAULT()); renderCats(again?.items); renderCrea(again?.model_id); syncAmtChips(); CUSTOM.reset();
   $("scrim").classList.add("on"); $("sheet").classList.add("on"); document.body.style.overflow = "hidden"; document.body.classList.add("modal-open"); VS.open();
 }
 // fondateur et managers qui vendent : choisir pour qui on déclare la vente
@@ -726,8 +735,24 @@ function renderFor(sel) {
   document.querySelectorAll("#forChips button").forEach(b => b.onclick = () => { FOR = +b.dataset.u; document.querySelectorAll("#forChips button").forEach(x => x.classList.toggle("on", x === b)); VS.tick(); $("fErr").textContent = ""; forHint(); });
   forHint();
 }
+// commission du chatter quand le manager déclare pour lui (toute, une partie, rien) : la vente entre quand même au CA
+let DCOM = "all";
+function dCom(c) {
+  DCOM = c; document.querySelectorAll("#dCom .sg button").forEach(b => b.classList.toggle("on", b.dataset.c === c));
+  $("dCom").classList.toggle("on", c !== "all"); $("dComRow").style.display = c === "part" ? "" : "none";
+  if (c === "all") { $("dComAmt").value = ""; $("dComWhy").value = ""; }
+  if (c === "part" && !$("dComAmt").value) { const a = parseNum($("fAmount").value) || 0; $("dComAmt").value = a ? String(Math.round(a / 2 * 100) / 100).replace(".", ",") : ""; }
+  dComEq();
+}
+const dComVal = () => DCOM === "none" ? 0 : DCOM === "part" ? parseNum($("dComAmt").value) : null;
+function dComEq() { const a = parseNum($("fAmount").value) || 0, c = dComVal();
+  $("dComEq").innerHTML = DCOM === "all" || !a ? "" : `<b>${E(a)}</b> au CA de la créatrice · <b>${E(c > 0 ? c : 0)}</b> dans la paie du chatter`; }
+document.querySelectorAll("#dCom .sg button").forEach(b => b.onclick = () => { dCom(b.dataset.c); VS.tick(); if (b.dataset.c === "part") $("dComAmt").select(); else if (b.dataset.c === "none") $("dComWhy").focus(); });
+$("dComAmt").oninput = dComEq;
+$("dComHalf").onclick = () => { const a = parseNum($("fAmount").value) || 0; $("dComAmt").value = String(Math.round(a / 2 * 100) / 100).replace(".", ","); dComEq(); };
 function forHint() {
   const u = TG && TG.users.find(x => x.id === FOR);
+  $("dCom").style.display = u ? "" : "none"; if (!u && DCOM !== "all") dCom("all");
   $("forHint").innerHTML = !u ? "" : `La vente ira dans la paie de <b>${esc(u.username)}</b>${ME0.rk === "founder" ? "" : " · un autre manager ou le fondateur la validera"}`;
   $("fBtn").textContent = u ? `Déclarer pour ${u.username}` : "Envoyer pour validation";
 }
@@ -788,6 +813,11 @@ $("sheet").onsubmit = async e => {
   if (!WHEN) { $("fErr").textContent = "Indique quand la vente a eu lieu."; $("whenChips").classList.add("need"); $("whenChips").scrollIntoView({ block: "center", behavior: "smooth" }); return; }
   if (TG && !FOR) { $("fErr").textContent = "Choisis le chatter qui a fait la vente."; return; }
   const forU = TG && FOR !== ME0.id ? TG.users.find(x => x.id === FOR) : null;
+  const dc = forU ? dComVal() : null, dcWhy = $("dComWhy").value.trim();
+  if (dc !== null) {
+    if (!(dc >= 0) || dc >= amount) { $("fErr").textContent = `La part du chatter doit être entre 0 et ${E(amount)}.`; $("dComAmt").focus(); return; }
+    if (!dcWhy) { $("fErr").textContent = "Indique pourquoi la commission est réduite : le chatter le verra."; $("dComWhy").focus(); return; }
+  }
   const sold = soldMs();
   if (!sold || isNaN(sold)) { $("fErr").textContent = "Choisis la date et l'heure de la vente."; return; }
   if (sold > Date.now() + 5 * 60e3) { $("fErr").textContent = "La date de vente est dans le futur."; return; }
@@ -795,7 +825,7 @@ $("sheet").onsubmit = async e => {
   $("fBtn").disabled = true; $("fBtn").textContent = "Envoi…";
   try {
     const blob = await compress(FILE);
-    const q = new URLSearchParams({ model_id: model, amount, sold_at: sold, note: $("fNote").value, items: JSON.stringify([...SEL].map(([k, q]) => OPT.get(k) ? { k, q, o: OPT.get(k) } : { k, q })) }); if (forU) q.set("for_user", forU.id);
+    const q = new URLSearchParams({ model_id: model, amount, sold_at: sold, note: $("fNote").value, items: JSON.stringify([...SEL].map(([k, q]) => OPT.get(k) ? { k, q, o: OPT.get(k) } : { k, q })) }); if (forU) q.set("for_user", forU.id); if (dc !== null) { q.set("com_amount", dc); q.set("com_reason", dcWhy); }
     const r = await fetch("/api/sales?" + q, { method: "POST", headers: { "Content-Type": blob.type || "image/jpeg" }, body: blob, credentials: "same-origin" });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || "Erreur " + r.status);
@@ -844,7 +874,9 @@ function qShow() {
   $("qNote").style.display = s.note ? "" : "none"; $("qNote").textContent = s.note ? `« ${s.note} »` : "";
   $("qAmt").value = String(s.amount).replace(".", ",");
   qHint();
-  qReasons(false); qCom("all"); qFlags(s);
+  qReasons(false); qCom("all");
+  if (s.status === "pending" && s.com_amount != null) { qCom(s.com_amount > 0 ? "part" : "none"); if (s.com_amount > 0) $("qComAmt").value = String(s.com_amount).replace(".", ","); $("qComWhy").value = s.com_reason || ""; qComEq(); }
+  qFlags(s);
 }
 // contenu vendu, prix minimum, retard de déclaration, heure lue sur la capture
 const minTxt = items => (items || []).map(it => { const c = CATS.find(x => x.k === it.k); return c && c.min ? `${E(c.min)} ${c.u ? (c.u === "min" ? "la minute" : "la " + UNIT[c.u][0]) : "minimum"}` : null; }).filter(Boolean).join(", ");
@@ -855,6 +887,7 @@ function qFlags(s) {
   if (it.length) h += `<div class="vt-its">${it.map(x => `<span>${esc(itemLab(x))}${x.u ? `<i>× ${x.q}${x.u === "min" ? " min" : ""}</i>` : ""}</span>`).join("")}${one ? `<span style="background:none;border-color:transparent;color:#8a8a8a">${E(amt / one.q)} ${one.u === "min" ? "la minute" : "la " + UNIT[one.u][0]}</span>` : ""}</div>`;
   else h += `<div class="vt-flag"><span>Pas de catégorie (vente déclarée avant les catégories)</span></div>`;
   if (s.min_total && amt < s.min_total - .001) h += `<div class="vt-flag w"><span>Sous le prix minimum : <b>${E(s.min_total)}</b> attendus (${esc(minTxt(it))})</span><button type="button" data-cr>Commission réduite</button></div>`;
+  if (s.com_amount != null && s.status === "pending") h += `<div class="vt-flag o"><span>${s.declarer ? esc(s.declarer) + " propose" : "Proposé"} : <b>${s.com_amount > 0 ? E(s.com_amount) + " pour le chatter" : "hors commission"}</b>${s.com_reason ? " · " + esc(s.com_reason) : ""}</span></div>`;
   if (s.late_h) h += `<div class="vt-flag o"><span>Déclarée en retard : <b>${lateTxt(s.late_h)}</b> après la vente</span></div>`;
   if (s.when_off) h += `<div class="vt-flag o"><span>La capture indique <b>${whenTxt(s.when_off)}</b>, vente déclarée pour <b>${whenTxt(s.sold_at)}</b></span><button type="button" data-fixd>Corriger la date</button></div>`;
   $("qFlags").innerHTML = h;

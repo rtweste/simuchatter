@@ -121,7 +121,8 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
   const whenOff = s => s.ai_when && Math.abs(s.ai_when - s.sold_at) > 3 * 3.6e6 ? s.ai_when : null;
   const pub = s => ({ id: s.id, user_id: s.user_id, username: s.username, model_id: s.model_id, model_name: s.model_name,
     amount: s.amount, declared_amount: s.declared_amount, sold_at: s.sold_at, note: s.note, status: s.status, reason: s.reason,
-    com_amount: s.status === "validated" ? s.com_amount ?? null : null, com_reason: s.status === "validated" ? s.com_reason || null : null,
+    // part du chatter : décidée à la validation, ou proposée par le manager qui a déclaré la vente (vente en attente)
+    com_amount: s.status !== "refused" ? s.com_amount ?? null : null, com_reason: s.status !== "refused" ? s.com_reason || null : null,
     declared_by: s.declared_by || null, reviewer: s.reviewer, declarer: s.declared_by && s.declared_by !== s.user_id ? s.declarer || null : null, reviewed_at: s.reviewed_at, created_at: s.created_at, period: periodOfDate(parisDate(s.sold_at)), dup: dupInfo(s), ai: aiInfo(s),
     items: itemsOf(s), min_total: minOf(itemsOf(s)), late_h: lateOf(s), ai_when: s.ai_when || null, when_off: whenOff(s) });
   const SELECT = `SELECT s.*, u.username, m.name model_name, r.username reviewer, dd.username declarer FROM sales s
@@ -162,6 +163,14 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     const target = other ? targetsOf(req.user.id).find(u => u.id === forId) : null;
     if (other && !target) return res.status(400).json({ error: "Chatter introuvable ou inactif" });
     const uid = other ? target.id : req.user.id;
+    // vente déclarée pour un chatter : le manager peut retirer tout ou partie de sa commission (ex. vente refusée qu'on fait entrer au CA)
+    let com = null, comWhy = null;
+    if (other && req.query.com_amount !== undefined && req.query.com_amount !== "") {
+      com = num(String(req.query.com_amount).replace(",", "."), 0, 1e6);
+      if (com === null) return res.status(400).json({ error: "Part du chatter invalide" });
+      comWhy = String(req.query.com_reason || "").trim().slice(0, 200);
+      if (!comWhy) return res.status(400).json({ error: "Indique pourquoi la commission est réduite : le chatter le verra" });
+    }
     if (!other && req.user.role === "admin" && !(db.prepare("SELECT sells FROM users WHERE id = ?").get(req.user.id) || {}).sells) return res.status(403).json({ error: "Active « Déclare ses propres ventes » sur ton compte dans Gestion" });
     if (!db.prepare("SELECT 1 FROM models WHERE id = ?").get(model_id)) return res.status(400).json({ error: "Choisissez une créatrice" });
     if (amount === null) return res.status(400).json({ error: "Montant invalide" });
@@ -186,9 +195,10 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     if (fp) { const mine = db.prepare("SELECT amount, sold_at FROM sales WHERE sha = ? AND user_id = ? AND status <> 'refused' ORDER BY id DESC LIMIT 1").get(fp.sha, uid);
       if (mine && other) return res.status(409).json({ error: `Cette capture est déjà déclarée pour ${target.username} (vente de ${String(mine.amount).replace(".", ",")} €).` });
       if (mine) return res.status(409).json({ error: `Tu as déjà déclaré cette capture (vente de ${String(mine.amount).replace(".", ",")} € du ${new Date(mine.sold_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", timeZone: "Europe/Paris" })}). Si c'est une autre vente, prends une nouvelle capture.` }); }
-    const info = db.prepare(`INSERT INTO sales (user_id, model_id, amount, declared_amount, sold_at, note, mime, created_at, declared_by, items)
-      VALUES (?,?,?,?,?,?,?,?,?,?)`).run(uid, model_id, amount, amount, sold_at, note, mime, Date.now(), other ? req.user.id : null, JSON.stringify(items));
-    logEv(info.lastInsertRowid, req.user.id, "declared", `${euro(amount)}${other ? " pour " + target.username : ""}`, null, other ? uid : null);
+    if (com !== null) { com = Math.round(com * 100) / 100; if (com >= amount) { com = null; comWhy = null; } }
+    const info = db.prepare(`INSERT INTO sales (user_id, model_id, amount, declared_amount, sold_at, note, mime, created_at, declared_by, items, com_amount, com_reason)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(uid, model_id, amount, amount, sold_at, note, mime, Date.now(), other ? req.user.id : null, JSON.stringify(items), com, comWhy);
+    logEv(info.lastInsertRowid, req.user.id, "declared", `${euro(amount)}${other ? " pour " + target.username : ""}${com !== null ? ` · ${com > 0 ? euro(com) + " pour le chatter" : "hors commission"} · ${comWhy}` : ""}`, null, other ? uid : null);
     const file = `sale-${info.lastInsertRowid}-${Date.now().toString(36)}.${MIME[mime]}`;
     fs.writeFileSync(path.join(UP, file), req.body);
     db.prepare("UPDATE sales SET image = ? WHERE id = ?").run(file, info.lastInsertRowid);
