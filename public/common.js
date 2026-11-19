@@ -137,6 +137,8 @@ function openPush() { loadPush(() => PUSH.sheet()); }
 function renderShell(active, me) {
   if (me && me.role === "chatter") PLANREM.start();
   if (me && !EMBED) setTimeout(() => loadPush(() => PUSH.sync()), 2500);
+  // chatters : notifications obligatoires (écran bloquant tant qu'aucun appareil n'est abonné)
+  if (me && me.pushNeeded && !EMBED) loadPush(() => PUSH.gate());
   // accueil : configurer son compte (premier lancement), puis activer les notifications
   if (me && active === "home" && !EMBED && me.role !== "trainee") setTimeout(() => { const h = document.getElementById("hm"); if (!h) return;
     if (!me.onboarded && me.role === "chatter") { if (document.querySelector(".ob-nudge")) return; const c = document.createElement("a"); c.className = "ps-nudge ob-nudge"; c.href = "/bienvenue"; c.style.textDecoration = "none";

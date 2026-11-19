@@ -71,5 +71,37 @@ window.PUSH = (() => {
     c.querySelector(".ps-go").onclick = () => sheet();
     c.querySelector(".ps-no").onclick = () => { try { localStorage.setItem("stPushNo", Date.now() + 3 * 864e5); } catch (e) {} c.remove(); };
   }
-  return { env, state, enable, disable, sync, sheet, nudge, iosSteps, blocked };
+  /* ---------- écran bloquant : notifications obligatoires pour les chatters ---------- */
+  const inApp = () => /Instagram|FBAN|FBAV|FB_IAB|Telegram|WhatsApp|Snapchat|Line\/|MicroMessenger|; wv\)/i.test(navigator.userAgent || "");
+  async function gate() {
+    if (document.querySelector(".pg-wrap")) return;
+    let d = null; try { d = await info(true); } catch (e) {} if (!d || !d.key) return;   // notifications pas disponibles sur le site : on ne bloque pas
+    const w = document.createElement("div"); w.className = "pg-wrap"; w.setAttribute("role", "dialog"); w.setAttribute("aria-modal", "true");
+    w.innerHTML = `<div class="pg"><div class="pg-bell">${SV(BELL)}<i></i></div><h2>Active tes <em>notifications</em></h2>
+      <p>Elles sont obligatoires pour travailler chez StellADS : rappels de shift, ventes validées, messages de ton manager.</p><div class="pg-body"></div>
+      <button class="pg-out">Se déconnecter</button></div>`;
+    document.body.appendChild(w); document.documentElement.classList.add("pg-lock"); requestAnimationFrame(() => w.classList.add("on"));
+    w.querySelector(".pg-out").onclick = () => { try { logout(); } catch (e) { location.href = "/"; } };
+    const body = w.querySelector(".pg-body");
+    // le serveur confirme qu'un appareil est bien relié à ce compte avant de débloquer
+    const check = async () => { try { const me = await api("/api/me", { fresh: true }); if (!me.pushNeeded) { w.classList.remove("on"); document.documentElement.classList.remove("pg-lock"); setTimeout(() => w.remove(), 500); toastP("Notifications activées ✨ Bon shift !"); return true; } } catch (e) {} return false; };
+    const draw = async () => {
+      const st = await state(), e = env();
+      if (inApp()) { body.innerHTML = `<div class="ps-note">Tu as ouvert StellADS depuis une autre appli : les notifications n'y fonctionnent pas. Ouvre le site dans <b>${e.ios ? "Safari" : "Chrome"}</b>.</div><button class="pg-go" data-copy>Copier le lien du site</button>`;
+        body.querySelector("[data-copy]").onclick = async ev => { try { await navigator.clipboard.writeText(location.origin); ev.target.textContent = "Lien copié : colle-le dans " + (e.ios ? "Safari" : "Chrome"); } catch (x) { ev.target.textContent = location.origin; } }; return; }
+      if (st === "ios-install") { body.innerHTML = iosSteps() + `<div class="pg-hint">Ensuite, ouvre StellADS depuis l'icône sur ton écran d'accueil : cet écran te proposera d'activer les notifications.</div>`; return; }
+      if (st === "unsupported") { body.innerHTML = `<div class="ps-note">Ce navigateur ne gère pas les notifications. Ouvre StellADS dans <b>${e.ios ? "Safari (iOS 16.4 ou plus)" : "Chrome"}</b> à jour.</div>`; return; }
+      if (st === "denied") { body.innerHTML = `<div class="ps-note r">${blocked()}</div><button class="pg-go" data-re>J'ai réactivé, vérifier</button>`;
+        body.querySelector("[data-re]").onclick = async ev => { ev.target.classList.add("busy"); if (await state() === "denied") { ev.target.classList.remove("busy"); ev.target.textContent = "Toujours bloquées : vérifie les réglages"; return; } draw(); }; return; }
+      body.innerHTML = `<button class="pg-go" data-on>Activer les notifications</button><div class="pg-hint">Ton téléphone va te demander l'autorisation : touche <b>Autoriser</b>.</div>`;
+      body.querySelector("[data-on]").onclick = async ev => { const b = ev.currentTarget; b.classList.add("busy"); b.textContent = "Activation…";
+        try { await enable(); if (await check()) return; b.textContent = "Réessayer"; } catch (x) { toastP(x.message); b.textContent = "Réessayer"; }
+        b.classList.remove("busy"); draw(); };
+    };
+    // déjà autorisées sur ce téléphone mais pas reliées à ce compte : on relie sans rien demander
+    if (await state() === "on") { try { await enable(); if (await check()) return; } catch (e) {} }
+    draw();
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && document.contains(w)) draw(); });
+  }
+  return { env, state, enable, disable, sync, sheet, nudge, iosSteps, blocked, gate };
 })();
