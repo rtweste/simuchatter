@@ -389,4 +389,25 @@ Reste suggestif sans jamais décrire d'acte sexuel ni de détail explicite. Pas 
   return { variantes: t.input.variantes.slice(0, 3).map(x => ({ angle: String(x.angle || ""), text: String(x.text || "") })).filter(x => x.text) };
 }
 
-module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead, assistant, gradeApplicant, replies, scriptVariants };
+/* ---------- Messagerie : l'IA propose des tags pour un fan d'après la conversation ---------- */
+const TAG_TOOL = { name: "tags", description: "Enregistre les tags proposés pour ce fan.",
+  input_schema: { type: "object", required: ["tags"], properties: { tags: { type: "array", maxItems: 2, items: { type: "object", required: ["name", "why"], properties: {
+    name: { type: "string", description: "1 à 3 mots, majuscule au début (ex. Anniversaire, Week-end, Aime l'humour). Reprends exactement un tag existant s'il convient." },
+    why: { type: "string", description: "Une phrase courte qui dit ce qui, dans la conversation, justifie ce tag (sans citer de contenu explicite)" } } } } } } };
+async function tagSuggest(c, tag) {
+  if (MOCK) return { tags: [{ name: "Anniversaire", why: "Il a dit que son anniversaire, c'est samedi [test]" }, { name: "Week-end", why: "Il écrit surtout le samedi et le dimanche [test]" }] };
+  const prompt = `Tu aides l'équipe d'une agence qui répond aux fans de la créatrice ${c.creator} sur Twizz (plateforme de contenus payants pour adultes consentants).
+L'équipe range les fans avec des tags pour mieux s'en occuper. Tags qui existent déjà : ${c.existing.length ? c.existing.join(", ") : "(aucun)"}.
+Tags déjà posés sur ce fan (ne les repropose pas) : ${c.current.length ? c.current.join(", ") : "(aucun)"}.
+Derniers messages (du plus ancien au plus récent) :
+${c.transcript || "(aucun message)"}
+
+Propose au plus 2 tags utiles pour l'équipe sur ce fan : un goût, une habitude (moments où il écrit), un événement à venir (anniversaire, vacances), un trait de caractère (timide, drôle), une façon d'acheter.
+Reprends un tag existant quand il convient, sinon invente-en un court et neutre. Jamais de tag explicite, vulgaire ou blessant, ni sur la santé, la religion, l'origine ou l'argent qu'il gagne.
+Si la conversation ne permet rien de solide, renvoie une liste vide.`;
+  const res = await ask(prompt, MODEL_HINT, 400, { ...(tag || {}), kind: "twizz_tags" }, { tools: [TAG_TOOL], tool_choice: { type: "tool", name: "tags" } });
+  const t = (res.content || []).find(x => x.type === "tool_use");
+  return { tags: (t && t.input && Array.isArray(t.input.tags) ? t.input.tags : []).slice(0, 2).map(x => ({ name: String(x.name || "").trim().slice(0, 30), why: String(x.why || "").slice(0, 160) })).filter(x => x.name) };
+}
+
+module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead, assistant, gradeApplicant, replies, scriptVariants, tagSuggest };

@@ -252,6 +252,65 @@
 .srow .si b{display:flex;align-items:center;gap:8px;font:800 13px Inter;color:#fff}
 .srow .si b .ct{font:800 9.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:#7a7a7a;padding:2px 7px;border-radius:6px;background:#1d1d1d}
 .srow .si b .smd{display:inline-flex;align-items:center;gap:4px;font:800 10px Inter;color:#f3dcae;padding:2px 7px;border-radius:6px;background:rgba(232,194,122,.12);border:1px solid rgba(232,194,122,.3)}
+/* ---- tags des fans ---- */
+.tgp{--c:#9a9a9a;position:relative;display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px 0 6px;border-radius:999px;font:800 10.5px Inter;white-space:nowrap;flex:none;color:color-mix(in srgb,var(--c) 78%,#fff);background:color-mix(in srgb,var(--c) 13%,transparent);border:1px solid color-mix(in srgb,var(--c) 34%,transparent)}
+.tgp .d{width:5px;height:5px;border-radius:50%;background:var(--c);box-shadow:0 0 7px var(--c);flex:none}
+.tgp>svg{color:var(--c);flex:none;margin:0 -2px 0 -1px}
+.tgp.gd{color:#2a1d05;background:linear-gradient(105deg,#fff3d6,#e8c27a 55%,#c99a4e);border-color:#e8c27a;overflow:hidden}
+.tgp.gd .d{background:#2a1d05;box-shadow:none}.tgp.gd>svg{color:#2a1d05}
+.tgp.gd:after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 35%,rgba(255,255,255,.7) 50%,transparent 65%);background-size:300% 100%;animation:tgShim 3.4s ease-in-out infinite;pointer-events:none}
+@keyframes tgShim{0%{background-position:150% 0}60%,100%{background-position:-60% 0}}
+.tgp.tw{--c:#8a8a8a;border-style:dashed}
+.tgp.lg{height:30px;padding:0 5px 0 11px;font-size:12.5px;gap:7px}.tgp.lg.nx{padding-right:12px}.tgp.lg .d{width:6px;height:6px}
+.tgp .rm{width:21px;height:21px;border-radius:50%;border:0;padding:0;background:transparent;color:inherit;display:grid;place-items:center;opacity:.55;cursor:pointer;transition:all .2s}
+.tgp .rm:hover{opacity:1;background:color-mix(in srgb,var(--c) 24%,transparent)}
+.tgp.nw{animation:tgPop .75s cubic-bezier(.3,1.6,.5,1) both;overflow:visible}
+.tgp.out{animation:tgOut .3s ease-in forwards}
+@keyframes tgPop{0%{transform:scale(.3);opacity:0;filter:blur(5px)}55%{transform:scale(1.14);filter:none}100%{transform:none}}
+@keyframes tgOut{to{transform:scale(.5);opacity:0;filter:blur(4px)}}
+.tgp .rp{position:absolute;inset:-2px;border-radius:inherit;border:1.5px solid var(--c);animation:tgRp 1.1s cubic-bezier(.16,1,.3,1) both;pointer-events:none}.tgp .rp.b{animation-delay:.16s}
+@keyframes tgRp{from{opacity:.95;transform:scale(1)}to{opacity:0;transform:scale(1.5,2.3)}}
+.tgp .spk{--sc:var(--c);animation:tgSk 1.1s ease-out both}
+@keyframes tgSk{0%{opacity:0;transform:translate(0,0) scale(.2)}30%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1) rotate(120deg)}}
+.mx-c .tgs2{display:flex;gap:4px;margin-top:5px;overflow:hidden}.mx-c .tgs2 .mo{font:800 10px Inter;color:#7a7a7a;align-self:center}
+.mx-tgf{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 0 0 14px;padding:2px 24px 8px 0;-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent)}
+.mx-tgf::-webkit-scrollbar{display:none}
+.tgc{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;border:1px solid #242424;background:#131313;color:#bdbdbd;font:800 11.5px Inter;white-space:nowrap;flex:none;cursor:pointer;transition:all .35s cubic-bezier(.3,1.3,.5,1)}
+.tgc .d{width:6px;height:6px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}.tgc>svg{color:var(--c);margin:0 -2px}
+.tgc .n{font:800 10px Inter;color:#6a6a6a}
+.tgc:hover{border-color:color-mix(in srgb,var(--c,#555) 45%,#242424);color:#fff}
+.tgc.on{background:#f5f5f5;color:#0a0a0a;border-color:#f5f5f5;box-shadow:0 8px 22px -8px rgba(255,255,255,.35)}.tgc.on .n{color:#555}.tgc.on>svg{color:#0a0a0a}
+.mx-hd .htg{display:flex;gap:4px;margin-left:8px;min-width:0;overflow:hidden;flex:0 1 auto}
+.ftg{position:relative;margin:0 0 14px;z-index:20}
+.ftg .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tadd{height:30px;padding:0 11px;border-radius:999px;border:1px dashed #3a3a3a;background:transparent;color:#bdbdbd;font:800 12px Inter;display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:all .3s}
+.tadd:hover,.tadd.on{border-style:solid;border-color:#5fd3a2;color:#5fd3a2;background:rgba(95,211,162,.06)}
+.ftg .lg2{margin-top:8px;display:flex;flex-direction:column;gap:3px}
+.ftg .lg2 span{display:flex;align-items:center;gap:7px;font:500 11px Inter;color:#6a6a6a}.ftg .lg2 i{width:6px;height:6px;border-radius:50%;background:var(--c);flex:none}
+.tpop{position:absolute;left:0;right:0;top:calc(100% + 8px);z-index:40;border-radius:18px;background:#161616;border:1px solid #2c2c2c;box-shadow:0 30px 80px -16px #000,inset 0 1px 0 rgba(255,255,255,.04);padding:8px;animation:tpIn .42s cubic-bezier(.16,1,.3,1) both;transform-origin:20% 0}
+@keyframes tpIn{from{opacity:0;transform:translateY(-8px) scale(.96);filter:blur(6px)}}
+.tpin{display:flex;align-items:center;gap:8px;height:40px;padding:0 8px 0 11px;border-radius:12px;background:#0d0d0d;border:1px solid #262626;color:#6a6a6a}
+.tpin input{flex:1;min-width:0;border:0;background:none;color:#eee;font:500 13.5px Inter;outline:none;padding:0}
+.tpg{padding:9px 2px 2px}.tpg>.cap{display:flex;align-items:center;gap:6px;margin:0 8px 6px;font-size:9px}.tpg>.cap svg{color:#5fd3a2}
+.tsg{position:relative;display:grid;grid-template-columns:1fr auto;align-items:center;gap:3px 10px;width:100%;padding:9px 10px;margin-bottom:4px;border-radius:12px;border:1px solid color-mix(in srgb,var(--c) 20%,transparent);background:linear-gradient(135deg,color-mix(in srgb,var(--c) 11%,transparent),transparent 70%);color:#eee;text-align:left;cursor:pointer;transition:all .3s cubic-bezier(.3,1.3,.5,1);animation:vchIn .5s both}
+.tsg:hover{border-color:color-mix(in srgb,var(--c) 50%,transparent);transform:translateX(2px)}
+.tsg .st{display:flex;align-items:center;gap:7px;font:800 13px Inter}.tsg .st .d{width:7px;height:7px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
+.tsg small{grid-column:1;font:500 11.5px Inter;color:#8f8f8f}
+.tsg .pl{grid-row:1/3;grid-column:2;width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 18%,#151515);color:var(--c);font:900 17px Inter}
+.tsg .nwt{font:800 8.5px Inter;letter-spacing:.12em;text-transform:uppercase;color:#5fd3a2;border:1px solid rgba(95,211,162,.35);border-radius:5px;padding:2px 5px}
+.tsk{height:52px;border-radius:12px;margin-bottom:4px;background:linear-gradient(90deg,#161616 25%,#1d1d1d 50%,#161616 75%);background-size:200% 100%;animation:skm 1.2s infinite linear}
+@keyframes skm{to{background-position:-200% 0}}
+.tit{display:flex;align-items:center;gap:9px;width:100%;height:35px;padding:0 10px;border-radius:10px;border:0;background:none;color:#ddd;font:700 13px Inter;text-align:left;cursor:pointer;transition:background .2s}
+.tit:hover,.tit.sel{background:#1f1f1f}.tit .d{width:7px;height:7px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}.tit .n{margin-left:auto;font:700 11px Inter;color:#6a6a6a}
+.tmk{margin:6px 2px 2px;padding:12px;border-radius:14px;background:#0e0e0e;border:1px solid #242424;display:flex;flex-direction:column;gap:11px;animation:tpIn .35s both}
+.tmk .cap{font-size:9px}
+.tmn{display:inline-flex;align-self:flex-start;align-items:center;gap:7px;height:30px;padding:0 13px 0 11px;border-radius:999px;font:800 13px Inter;color:color-mix(in srgb,var(--c) 78%,#fff);background:color-mix(in srgb,var(--c) 13%,transparent);border:1px solid color-mix(in srgb,var(--c) 38%,transparent);transition:all .35s}
+.tmn .d{width:7px;height:7px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
+.tsw{display:flex;gap:9px}
+.tsw button{width:22px;height:22px;border-radius:50%;padding:0;border:2px solid transparent;background:var(--c);box-shadow:inset 0 0 0 2px #0e0e0e,0 0 12px -2px var(--c);cursor:pointer;transition:transform .35s cubic-bezier(.3,1.6,.5,1)}
+.tsw button:hover{transform:scale(1.1)}.tsw button.on{border-color:#fff;transform:scale(1.18)}
+.tgo{height:36px;border-radius:11px;border:0;background:#5fd3a2;color:#05261a;font:800 12.5px Inter;cursor:pointer;box-shadow:0 10px 26px -10px rgba(95,211,162,.8)}
+.tph{display:flex;align-items:flex-start;gap:6px;font:500 11px/1.45 Inter;color:#5f5f5f;padding:6px 10px 4px}.tph svg{color:#e8c27a;flex:none;margin-top:1px}
 .vsc{display:flex;align-items:center;gap:10px;margin:0 0 10px;padding:10px 12px;border-radius:14px;border:1px solid rgba(232,194,122,.3);background:linear-gradient(135deg,rgba(232,194,122,.1),transparent 70%);font:600 12.5px/1.45 Inter;color:#d8d8d8;animation:vchIn .5s cubic-bezier(.16,1,.3,1) both}
 .vsc>svg{color:#e8c27a;flex:none}.vsc b{color:#fff}
 .vsc.wr{border-color:rgba(224,122,122,.4);background:linear-gradient(135deg,rgba(224,122,122,.12),transparent 70%)}.vsc.wr>svg{color:#e07a7a}
@@ -497,6 +556,7 @@
         <div class="qhd" id="qh" hidden><h2><span id="qN"></span><span id="qW">fans <em class="met">à traiter.</em></span></h2><div class="dsh" id="qD"></div>
           <div class="kh2"><span class="kh"><span class="kbd">↵</span>envoyer</span><span class="kh"><span class="kbd">↓</span>fan suivant</span></div></div>
         <label class="mx-se" id="seBox"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" placeholder="Rechercher un fan"></label>
+        <div class="mx-tgf" id="tgf" hidden></div>
         <div class="mx-cl" id="cl"></div></section>
       <section class="mx-th" id="th"></section>
       <aside class="mx-fan" id="fan"></aside>
@@ -508,7 +568,7 @@
 <script>
 (() => {
 const $ = id => document.getElementById(id);
-const IC = { img: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>', send: '<path d="M5 12h14M13 6l6 6-6 6"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+const IC = { x: '<path d="M7 7l10 10M17 7L7 17"/>', search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>', tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/>', bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', img: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>', send: '<path d="M5 12h14M13 6l6 6-6 6"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/>',
   play: '<path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/>', back: '<path d="M15 18l-6-6 6-6"/>',
   lock: '<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', unlock: '<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 7.6-1.7"/>',
@@ -607,7 +667,8 @@ async function loadList(fresh, more) {
   if (!CID) return; if (TYPE === "QUEUE") return loadQueue(fresh);
   const k = lkey(), L = LISTS[k];
   if (!more) { if (L) renderList(); else $("cl").innerHTML = skelRows(); }
-  try { await fetchList(TYPE, fresh, more); if (lkey() !== k) return; renderList(); syncCur(LISTS[k]); }
+  tagFilterBar();
+  try { await fetchList(TYPE, fresh, more); if (lkey() !== k) return; renderList(); syncCur(LISTS[k]); loadTags(); }
   catch (e) { if (!LISTS[k]) $("cl").innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; else notify("Twizz", e.message, "err"); }
 }
 const skelRows = () => Array.from({ length: 8 }, (_, i) => `<div class="mx-c" style="animation-delay:${i * .03}s;cursor:default"><span class="mx-av sk"></span><span class="t"><span class="sk" style="display:block;height:12px;width:${50 + (i * 17) % 40}%"></span><span class="sk" style="display:block;height:10px;width:${60 + (i * 13) % 30}%;margin-top:8px"></span></span></div>`).join("");
@@ -616,7 +677,7 @@ function prefix(c) { if (c.last.fromFan) return ""; if (c.last.by) return `<span
 function rowHtml(c) { const waitMin = c.last.fromFan && c.last.at ? (Date.now() - Date.parse(c.last.at)) / 60e3 : 0, wait = waitMin > 5;
     const prev = c.last.text || (c.last.type === "FILE" ? "📷 Média" : "");
     return `<button class="mx-c ${c.id === (CUR && CUR.id) ? "on" : ""} ${c.unread ? "un" : ""} ${wait ? "wait" : ""}" data-conv="${esc(c.id)}">${av(c.fan)}
-      <span class="t"><b>${esc(c.fan.name)}</b><small>${wait ? `<span class="wt">Attend depuis ${since(c.last.at)} · </span>` : prefix(c)}${esc(prev)}</small></span>
+      <span class="t"><b>${esc(c.fan.name)}</b><small>${wait ? `<span class="wt">Attend depuis ${since(c.last.at)} · </span>` : prefix(c)}${esc(prev)}</small>${rowTags(c)}</span>
       <span class="r">${ago(c.last.at)}${c.unread ? `<span class="n">${c.unread > 99 ? "99+" : c.unread}</span>` : ""}</span></button>`; }
 // met à jour la liste sans tout redessiner (pas de clignotement) ; les lignes qui partent glissent hors de la liste
 function paintRows(rows, find, outAnim) {
@@ -642,14 +703,17 @@ function renderList() {
   if (TYPE === "QUEUE") return renderQueue();
   const L = LISTS[lkey()]; if (!L) return; const cl = $("cl");
   if (!L.items.length) { cl.innerHTML = `<div class="mx-empty"><div><div class="big">${SV(IC.chat, 28)}</div>${Q ? "Aucun fan trouvé" : "Aucune conversation"}</div></div>`; return; }
-  paintRows(L.items.map(c => [c.id, rowHtml(c)]), id => LISTS[lkey()].items.find(x => x.id === id));
+  const items = TAGF ? L.items.filter(c => fanTagIds(c.fan.id).includes(TAGF)) : L.items;
+  if (!items.length) { cl.innerHTML = `<div class="mx-empty"><div><div class="big">${SV(IC.tag, 26)}</div>Aucun fan avec ce tag dans les conversations chargées</div></div>`; }
+  else { if (cl.querySelector(".mx-empty")) cl.innerHTML = ""; paintRows(items.map(c => [c.id, rowHtml(c)]), id => LISTS[lkey()].items.find(x => x.id === id)); }
   if (L.more) { const b = document.createElement("button"); b.className = "mx-more"; b.textContent = "Charger plus"; b.onclick = () => { b.textContent = "…"; loadList(false, true); }; cl.appendChild(b); }
 }
 
 /* ================= file « À traiter » ================= */
 async function loadQueue(fresh) {
   if (!LISTS[lkey("GENERAL")]) $("cl").innerHTML = skelRows();
-  try { await fetchList("GENERAL", fresh); renderQueue(); syncCur(LISTS[lkey("GENERAL")]); spends(); }
+  tagFilterBar();
+  try { await fetchList("GENERAL", fresh); renderQueue(); syncCur(LISTS[lkey("GENERAL")]); spends(); loadTags(); }
   catch (e) { if (!LISTS[lkey("GENERAL")]) $("cl").innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; }
 }
 function queueItems() {
@@ -679,7 +743,7 @@ function qRowHtml(q, i) {
     <span class="t"><b><span class="nm">${esc(c.fan.name)}</span>${q.big && !q.done ? ' <span class="badge gd">Gros dépensier</span>' : ""}${q.total != null ? `<em class="${q.big ? "big" : ""}">${E(q.total)}</em>` : ""}</b><span class="rs">${chip}<span class="pv">${esc(prev)}</span></span></span></button>`;
 }
 function renderQueue() {
-  const Qs = queueItems(); if (!Qs) return;
+  const Q0 = queueItems(); if (!Q0) return; const Qs = TAGF ? Q0.filter(q => fanTagIds(q.c.fan.id).includes(TAGF)) : Q0;
   const todo = Qs.filter(q => !q.done), n = todo.length;
   $("qCount").textContent = n ? (n > 99 ? "99+" : n) : "";
   if (TYPE !== "QUEUE") return;
@@ -779,7 +843,7 @@ function thread(keep, noScroll) {
     flush(); if (!T.items.length) body = `<div class="mx-empty">Pas encore de message</div>`;
     T.items.forEach(m => SHOWN.add(m.id)); if (!SHOWN.size) SHOWN.add("_");
   }
-  $("th").innerHTML = `${STARS}<div class="mx-hd"><button class="mx-ib mx-bk" id="bk">${SV(IC.back, 16)}</button>${av(CUR.fan, "av")}<div style="min-width:0"><b>${esc(CUR.fan.name)}</b><small>${CUR.fan.username ? "@" + esc(CUR.fan.username) : ""}</small></div>
+  $("th").innerHTML = `${STARS}<div class="mx-hd"><button class="mx-ib mx-bk" id="bk">${SV(IC.back, 16)}</button>${av(CUR.fan, "av")}<div style="min-width:0"><b>${esc(CUR.fan.name)}</b><small>${CUR.fan.username ? "@" + esc(CUR.fan.username) : ""}</small></div><span class="htg" id="htg">${headTagsHtml()}</span>
       <span class="sp"><span class="crew" id="crew">${crewHtml()}</span>${TYPE === "QUEUE" ? `<button class="mx-ib" id="nxB" title="Fan suivant de la file">${SV(IC.down, 14, 2.4)}<span class="lb">Fan suivant</span><span class="kbd">↓</span></button>` : ""}<button class="mx-ib" id="rd" title="Marque la conversation comme lue sur Twizz">${SV(IC.eye, 15)}<span class="lb">Marquer lu</span></button><button class="mx-ib mx-fb" id="fanB">${SV(IC.user, 15)}<span class="lb">Fiche</span></button></span></div>
     <div class="mx-sc" id="sc">${body}</div>
     <div class="mx-cpw">${ST.send ? "" : `<div class="mx-off">🔒 Envoi coupé : tu peux tout lire sans rien changer côté Twizz. Active « Envoi activé » pour répondre.</div>`}
@@ -917,6 +981,80 @@ function paintAI() {
   pn.querySelectorAll("[data-a]").forEach(b => b.onclick = () => { const x = R.suggestions[+b.dataset.a]; openPanel(null); putText(x.text); });
 }
 
+/* ================= tags des fans (sur le site seulement, rien n'est écrit chez Twizz) ================= */
+let TAGS = null, TAGF = "", tagT = 0, TNEW = 0, TPOP = false, TPOPX = null; const FTAGS = {}, TAGAI = {};
+const SWT = ["#5fd3a2", "#7db4ff", "#b49cff", "#ff8fb1", "#f0b54a", "#6fe0e0", "#ff8a8a"];
+const lowc = x => String(x || "").toLocaleLowerCase("fr");
+const tagById = id => TAGS && TAGS.cid === CID ? TAGS.tags.find(t => t.id === id) : null;
+const fanTagIds = id => (TAGS && TAGS.cid === CID && TAGS.map[id]) || [];
+const ruleTxt = t => t.rule === "gp" ? `a dépensé plus de ${E(t.thr)}` : t.rule === "vid" ? `plus de ${t.thr} % de vidéos dans ses achats` : t.rule === "nv" ? `arrivé depuis moins de ${t.thr} jours` : t.rule === "in" ? `ne répond plus depuis ${t.thr} jours ou plus` : "";
+const tagPill = (t, cls = "") => `<span class="tgp ${cls} ${t.rule === "gp" ? "gd" : ""}" style="--c:${esc(t.color || "#9a9a9a")}" title="${esc(t.rule ? "Posé tout seul : " + ruleTxt(t) : t.name)}"><i class="d"></i>${t.rule ? SV(IC.bolt, 10, 2.4) : ""}${esc(t.name)}</span>`;
+function rowTags(c) { const L = fanTagIds(c.fan.id).map(tagById).filter(Boolean); if (!L.length) return "";
+  return `<span class="tgs2">${L.slice(0, 2).map(t => tagPill(t)).join("")}${L.length > 2 ? `<span class="mo">+${L.length - 2}</span>` : ""}</span>`; }
+function headTagsHtml() { if (!CUR) return ""; const L = fanTagIds(CUR.fan.id).map(tagById).filter(Boolean); return L.slice(0, 3).map(t => tagPill(t)).join("") + (L.length > 3 ? tagPill({ name: "+" + (L.length - 3), color: "#8a8a8a" }) : ""); }
+async function loadTags(force) {
+  if (!CID) return; const cid = CID; if (!force && TAGS && TAGS.cid === cid && Date.now() - tagT < 15e3) return; tagT = Date.now();
+  try { const r = await api2("/tags"); if (cid !== CID) return; TAGS = { cid, tags: r.tags, map: r.map }; tagFilterBar(); renderList(); if ($("htg")) $("htg").innerHTML = headTagsHtml(); } catch (e) {}
+}
+function tagFilterBar() {
+  const B = $("tgf"); if (!B) return; const T = TAGS && TAGS.cid === CID ? TAGS.tags.filter(t => t.n) : [];
+  if (TAGF && !T.some(t => t.id === TAGF)) TAGF = ""; B.hidden = !T.length; if (!T.length) { B.innerHTML = ""; return; }
+  B.innerHTML = `<button class="tgc all ${!TAGF ? "on" : ""}" data-tg="">Tous</button>` + T.map(t => `<button class="tgc ${TAGF === t.id ? "on" : ""}" data-tg="${t.id}" style="--c:${esc(t.color)}" title="${esc(t.rule ? "Posé tout seul : " + ruleTxt(t) : "Tag de l'équipe")}"><i class="d"></i>${t.rule ? SV(IC.bolt, 10, 2.4) : ""}${esc(t.name)}<span class="n">${t.n}</span></button>`).join("");
+  B.querySelectorAll("[data-tg]").forEach(b => b.onclick = () => { TAGF = b.dataset.tg ? +b.dataset.tg : ""; tagFilterBar(); renderList(); });
+}
+async function fanTagsLoad(force) { const c = CUR; if (!c) return; const k = CID + "|" + c.fan.id; if (FTAGS[k] && !force) return paintTags();
+  try { FTAGS[k] = await api2(`/tags/${enc(c.fan.id)}`); } catch (e) { FTAGS[k] = { tags: [], log: [] }; } if (CUR === c) paintTags(); }
+const logTxt = l => `${l.name} ${l.action === "+" ? "ajouté" + (l.by ? " par " + l.by : "") : l.action === "-" ? "retiré" + (l.by ? " par " + l.by : "") : l.action === "auto+" ? "posé tout seul" : "enlevé tout seul"} · ${day(l.at)}`;
+const TSPK = [[10, -10, -16, -14], [85, -15, 16, -16], [50, 100, 4, 16], [95, 60, 18, 6]].map(([l, t, dx, dy]) => `<span class="spk" style="left:${l}%;top:${t}%;width:10px;height:10px;--dx:${dx}px;--dy:${dy}px">${SPARK}</span>`).join("");
+function paintTags() {
+  const B = $("fTg"); if (!B || !CUR || TPOP) return; const c = CUR, k = CID + "|" + c.fan.id, R = FTAGS[k], tw = (FANS[k] && FANS[k].tags) || [];
+  if (!R) { B.innerHTML = `<div class="sk" style="height:30px;width:55%;border-radius:999px"></div>`; return; }
+  B.innerHTML = `<div class="row">${R.tags.map(t => `<span class="tgp lg ${t.rule ? "nx" : ""} ${t.rule === "gp" ? "gd" : ""} ${TNEW === t.id ? "nw" : ""}" style="--c:${esc(t.color)}" title="${esc(t.auto ? "Posé tout seul : " + ruleTxt(t) : `Ajouté${t.by ? " par " + t.by : ""}${t.at ? " le " + day(t.at) : ""}`)}"><i class="d"></i>${t.rule ? SV(IC.bolt, 11, 2.4) : ""}${esc(t.name)}${t.rule ? "" : `<button class="rm" data-rm="${t.id}" aria-label="Retirer le tag ${esc(t.name)}">${SV(IC.x, 11, 2.6)}</button>`}${TNEW === t.id ? '<span class="rp"></span><span class="rp b"></span>' + TSPK : ""}</span>`).join("")}
+    ${tw.map(t => `<span class="tgp lg tw nx" title="Tag posé sur Twizz (lecture seule)"><i class="d"></i>${esc(t.name)}</span>`).join("")}
+    <button class="tadd" id="tAdd">${SV(IC.tag, 13)}${R.tags.length || tw.length ? "Tag" : "Ajouter un tag"}</button></div>
+    ${R.log.length ? `<div class="lg2">${R.log.slice(0, 2).map(l => `<span><i style="--c:${esc(l.color)}"></i>${esc(logTxt(l))}</span>`).join("")}</div>` : ""}`;
+  $("tAdd").onclick = () => tagPop();
+  B.querySelectorAll("[data-rm]").forEach(b => b.onclick = async e => { e.stopPropagation(); const pill = b.closest(".tgp"); pill.classList.add("out");
+    try { const r = await api2(`/tags/${enc(c.fan.id)}`, { body: { remove: +b.dataset.rm } }); FTAGS[k] = r; setTimeout(() => { if (CUR === c) paintTags(); }, 260); loadTags(true); }
+    catch (er) { pill.classList.remove("out"); notify("Tag non retiré", er.message, "err"); } });
+}
+function tagPop() {
+  if (!CUR || TPOP) return; const c = CUR, k = CID + "|" + c.fan.id, B = $("fTg"), first1 = (c.fan.name || "").split(" ")[0]; let q = "", col = 0;
+  TPOP = true; $("tAdd").classList.add("on");
+  const P = document.createElement("div"); P.className = "tpop"; B.appendChild(P);
+  P.innerHTML = `<div class="tpin">${SV(IC.search, 15)}<input id="tpQ" maxlength="30" placeholder="Chercher ou créer un tag…" autocomplete="off"><span class="kbd">Esc</span></div><div id="tpAI"></div><div class="tpg"><span class="cap">Tags de l'équipe</span><div id="tpL"></div></div><div id="tpMk"></div><div class="tph">${SV(IC.bolt, 11, 2.4)}<span>Les tags avec l'éclair se posent tout seuls, selon les règles du manager.</span></div>`;
+  const out = e => { if (!P.contains(e.target) && !(e.target.closest && e.target.closest("#tAdd"))) close(); };
+  const close = silent => { if (!TPOP) return; TPOP = false; TPOPX = null; P.remove(); document.removeEventListener("mousedown", out, true); if (silent !== true) paintTags(); };
+  TPOPX = close; setTimeout(() => document.addEventListener("mousedown", out, true));
+  $("tAdd").onclick = () => close();
+  const has = () => FTAGS[k] ? FTAGS[k].tags.map(t => t.id) : [], manual = () => (TAGS && TAGS.cid === CID ? TAGS.tags : []).filter(t => !t.rule && !has().includes(t.id));
+  const matchL = () => manual().filter(t => !q.trim() || lowc(t.name).includes(lowc(q.trim())));
+  async function add(body) { try { const r = await api2(`/tags/${enc(c.fan.id)}`, { body }); FTAGS[k] = r; TNEW = r.added || 0; close(); loadTags(true); setTimeout(() => { TNEW = 0; }, 1500); }
+    catch (e) { notify("Tag non ajouté", e.message, "err"); } }
+  function list() {
+    const L = matchL(), exact = (TAGS && TAGS.cid === CID ? TAGS.tags : []).some(t => lowc(t.name) === lowc(q.trim()));
+    $("tpL").innerHTML = L.length ? L.map((t, i) => `<button class="tit ${i === 0 && q.trim() ? "sel" : ""}" data-id="${t.id}" style="--c:${esc(t.color)}"><i class="d"></i>${esc(t.name)}<span class="n">${t.n ? t.n + " fan" + (t.n > 1 ? "s" : "") : ""}</span></button>`).join("")
+      : `<div class="tph">${q.trim() ? (exact ? "Ce tag est déjà posé sur " + esc(first1) : "Aucun tag de ce nom") : "Pas encore de tag d'équipe : tape un nom pour le créer"}</div>`;
+    $("tpL").querySelectorAll("[data-id]").forEach(b => b.onclick = () => add({ add: +b.dataset.id }));
+    $("tpMk").innerHTML = q.trim() && !exact ? `<div class="tmk"><span class="cap">Nouveau tag</span><span class="tmn" style="--c:${SWT[col]}"><i class="d"></i>${esc(q.trim())}</span><div class="tsw">${SWT.map((x, i) => `<button class="${i === col ? "on" : ""}" data-c="${i}" style="--c:${x}" aria-label="Couleur ${i + 1}"></button>`).join("")}</div><button class="tgo" id="tpGo">Créer et ajouter à ${esc(first1)}</button></div>` : "";
+    $("tpMk").querySelectorAll("[data-c]").forEach(b => b.onclick = () => { col = +b.dataset.c; list(); $("tpQ").focus(); });
+    if ($("tpGo")) $("tpGo").onclick = () => add({ name: q.trim(), color: SWT[col] });
+  }
+  function ai() {
+    const box = $("tpAI"); if (!box) return; const A = TAGAI[c.id];
+    if (A === undefined) { TAGAI[c.id] = null; api2(`/tag-ai/${enc(c.id)}`, { body: { fan: c.fan.id } }).then(r => { TAGAI[c.id] = r; }).catch(e => { TAGAI[c.id] = { tags: [], error: e.message }; }).finally(() => { if (TPOP && CUR === c) ai(); }); }
+    if (!TAGAI[c.id]) { box.innerHTML = `<div class="tpg"><span class="cap">${SV(IC.spark, 11, 2.4)}L'IA lit la conversation…</span><div class="tsk"></div><div class="tsk" style="animation-delay:.1s"></div></div>`; return; }
+    const R = TAGAI[c.id], cur = FTAGS[k] ? FTAGS[k].tags : [], L = R.tags.filter(x => !cur.some(t => lowc(t.name) === lowc(x.name)));
+    box.innerHTML = L.length ? `<div class="tpg"><span class="cap">${SV(IC.spark, 11, 2.4)}Suggéré par l'IA d'après la conversation</span>${L.map((x, i) => `<button class="tsg" data-i="${i}" style="--c:${esc(x.color || SWT[(i + 3) % SWT.length])};animation-delay:${i * .07}s"><span class="st"><i class="d"></i>${esc(x.name)}${x.id ? "" : '<span class="nwt">nouveau tag</span>'}</span><small>${esc(x.why)}</small><span class="pl">+</span></button>`).join("")}</div>`
+      : R.error ? `<div class="tph">L'IA n'a pas pu lire la conversation : ${esc(R.error)}</div>` : "";
+    box.querySelectorAll("[data-i]").forEach(b => b.onclick = () => { const x = L[+b.dataset.i]; add(x.id ? { add: x.id } : { name: x.name, color: SWT[(+b.dataset.i + 3) % SWT.length] }); });
+  }
+  $("tpQ").oninput = () => { q = $("tpQ").value; list(); };
+  $("tpQ").onkeydown = e => { if (e.key === "Escape") { e.preventDefault(); close(); }
+    else if (e.key === "Enter") { e.preventDefault(); const t = q.trim(); if (!t) return; const f = matchL()[0], exact = (TAGS ? TAGS.tags : []).some(x => lowc(x.name) === lowc(t)); if (f) add({ add: f.id }); else if (!exact) add({ name: t, color: SWT[col] }); } };
+  list(); ai(); $("tpQ").focus();
+}
+
 /* ================= historique d'un fan ================= */
 async function loadHist(fresh) { const c = CUR; if (!c) return;
   try { const r = await api2(`/history/${enc(c.id)}?fan=${enc(c.fan.id)}${fresh ? "&fresh=1" : ""}`); r.items.forEach(i => i.thumbs = i.thumbs.map((t, k) => stable(i.id + ":" + k + ":t", t)));
@@ -931,18 +1069,19 @@ let HTAB = 2, NOTE_ED = false, NOTE_SAVED = 0;
 async function fanCard() {
   if (!CUR) { delete $("fan").dataset.conv; $("fan").innerHTML = `<div class="mx-empty" style="height:100%"><div><div class="big">${SV(IC.user, 28)}</div>La fiche du fan s'affiche ici</div></div>`; return; }
   const c = CUR, key = CID + "|" + c.fan.id;
-  paintFan(c);
+  paintFan(c); fanTagsLoad();
   if (FANS[key]) return;
   try { FANS[key] = await api2(`/fan/${enc(c.fan.id)}`); } catch (e) { FANS[key] = { stats: {}, tags: [], recent: [] }; }
   if (CUR === c) paintFan(c);
 }
 function paintFan(c) {
   const F = $("fan"), r = FANS[CID + "|" + c.fan.id], H = HIST[c.id], first = F.dataset.conv !== c.id;
-  if (first) { F.dataset.conv = c.id; NOTE_ED = false; F.innerHTML = `<div class="fhd up" id="fHd"></div><div id="fCr"></div><div id="fNt"></div><div class="kp up" style="animation-delay:.12s" id="fKp"></div><div id="fTm"></div><div id="fHs"></div>`; }
+  if (first) { F.dataset.conv = c.id; NOTE_ED = false; if (TPOPX) TPOPX(true); F.innerHTML = `<div class="fhd up" id="fHd"></div><div class="ftg up" id="fTg" style="animation-delay:.03s"></div><div id="fCr"></div><div id="fNt"></div><div class="kp up" style="animation-delay:.12s" id="fKp"></div><div id="fTm"></div><div id="fHs"></div>`; }
   const S = r ? r.stats : {}, pick = re => { const k = Object.keys(S).find(k => re.test(k)); return k != null ? S[k] : null; };
   const total = pick(/totalSpent|spent/i), n = pick(/totalPurchases|purchases$|count/i), avg = pick(/average/i), high = pick(/highest|max/i);
   const tags = r ? r.tags : [];
-  $("fHd").innerHTML = `${fanRav(c.fan, 58)}<div style="min-width:0"><h3>${esc(c.fan.name)}</h3><div class="u">${c.fan.username ? "@" + esc(c.fan.username) : ""}</div>${tags.length ? `<div class="mx-tags">${tags.map(t => `<span style="--c:${/^#|^rgb|^hsl/.test(t.color) ? esc(t.color) : hue(t.name)}">${esc(t.name)}</span>`).join("")}</div>` : ""}</div>`;
+  $("fHd").innerHTML = `${fanRav(c.fan, 58)}<div style="min-width:0"><h3>${esc(c.fan.name)}</h3><div class="u">${c.fan.username ? "@" + esc(c.fan.username) : ""}</div></div>`;
+  paintTags();
   const cr = ST.creators.find(x => x.id === CID) || {};
   $("fCr").innerHTML = cr.note ? `<div class="nt cr hot up" style="animation-delay:.05s"><div class="nh"><span class="pin">${SV(IC.pin, 14)}</span><h4 class="ttl">Consignes <em>de ${esc(cr.label)}</em></h4></div><p>${esc(cr.note)}</p></div>` : "";
   if (!NOTE_ED) paintNote(c, H);

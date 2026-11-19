@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tags — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="stylesheet" href="/style.css">
+<style>
+@property --fxa{syntax:"<angle>";inherits:false;initial-value:0deg}
+.main-area.tgm{padding:0!important}
+.tg-w{position:relative;min-height:100dvh;padding:26px 28px 60px;background:radial-gradient(900px 300px at 30% -120px,rgba(95,211,162,.07),transparent 70%),#0a0a0a;overflow:hidden}
+.tg-w>.stars{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}.tg-w>.stars i{position:absolute;border-radius:50%;background:#fff;animation:tw ease-in-out infinite}
+@keyframes tw{50%{opacity:.12}}
+.tg-w>*{position:relative;z-index:1}
+@keyframes spin{to{--fxa:360deg}}
+.trace{position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;background:conic-gradient(from var(--fxa),transparent 0 58%,var(--c,#5fd3a2) 78%,#fff 86%,transparent 93%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;z-index:6;animation:spin 1.6s linear infinite}
+.up{animation:up .7s cubic-bezier(.16,1,.3,1) both}
+@keyframes up{from{opacity:0;transform:translateY(12px);filter:blur(4px)}}
+.cap{font:800 10px Inter;letter-spacing:.2em;text-transform:uppercase;color:#6a6a6a}
+.met{font-style:italic;background:linear-gradient(100deg,#fff,#8a8a8a 55%,#e6e6e6);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.08em}
+.hd{display:flex;align-items:flex-end;gap:18px;margin-bottom:8px;flex-wrap:wrap}
+.hd h1{margin:6px 0 0;font:900 38px Inter;letter-spacing:-.045em;line-height:1.02}
+.hd .act{margin-left:auto}
+.lead{font:500 13px/1.55 Inter;color:#7a7a7a;max-width:760px;margin:6px 0 20px}.lead b{color:#cfcfcf}
+.btn2{height:44px;padding:0 16px;border-radius:13px;border:1px solid #262626;background:#121212;color:#e8e8e8;font:800 13px Inter;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .2s,transform .3s cubic-bezier(.3,1.6,.5,1)}
+.btn2:hover{background:#1a1a1a}.btn2:active{transform:scale(.95)}
+.btn2.w{background:#f5f5f5;color:#0a0a0a;border-color:#f5f5f5;box-shadow:0 10px 30px -10px rgba(255,255,255,.4)}
+.grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start}
+.pn{position:relative;border-radius:22px;background:linear-gradient(180deg,#101010,#0c0c0c);border:1px solid #1c1c1c;padding:18px;display:flex;flex-direction:column;gap:12px}
+.ttl2{display:block;font:900 20px Inter;letter-spacing:-.035em;margin-top:4px}.ttl2 em{font-style:italic;background:linear-gradient(100deg,#fff,#8a8a8a 55%,#e6e6e6);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.08em}
+.tgp{--c:#9a9a9a;position:relative;display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px 0 8px;border-radius:999px;font:800 12px Inter;white-space:nowrap;flex:none;color:color-mix(in srgb,var(--c) 78%,#fff);background:color-mix(in srgb,var(--c) 13%,transparent);border:1px solid color-mix(in srgb,var(--c) 34%,transparent)}
+.tgp .d{width:6px;height:6px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c);flex:none}.tgp>svg{color:var(--c);margin:0 -2px 0 -1px}
+.tgp.gd{color:#2a1d05;background:linear-gradient(105deg,#fff3d6,#e8c27a 55%,#c99a4e);border-color:#e8c27a;overflow:hidden;box-shadow:0 6px 20px -8px rgba(232,194,122,.7)}
+.tgp.gd .d{background:#2a1d05;box-shadow:none}.tgp.gd>svg{color:#2a1d05}
+.tgp.gd:after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 35%,rgba(255,255,255,.7) 50%,transparent 65%);background-size:300% 100%;animation:shim 3.2s ease-in-out infinite;pointer-events:none}
+@keyframes shim{0%{background-position:150% 0}60%,100%{background-position:-60% 0}}
+/* règles */
+.rule{position:relative;padding:14px 16px;border-radius:17px;border:1px solid #1f1f1f;background:#111;display:flex;flex-direction:column;gap:10px;transition:all .45s cubic-bezier(.3,1.3,.5,1);animation:up .6s cubic-bezier(.16,1,.3,1) both}
+.rule.on{border-color:color-mix(in srgb,var(--c) 30%,#1f1f1f);background:linear-gradient(135deg,color-mix(in srgb,var(--c) 8%,transparent),transparent 60%),#111}
+.rule.off .tgp,.rule.off .ru2{filter:grayscale(.8);opacity:.55}
+.ru1{display:flex;align-items:center;gap:10px}
+.tgl{margin-left:auto;width:44px;height:26px;border-radius:999px;border:0;padding:0;background:#2a2a2a;position:relative;cursor:pointer;transition:background .3s}
+.tgl span{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#777;transition:all .45s cubic-bezier(.3,1.6,.5,1)}
+.tgl.on{background:#5fd3a2;box-shadow:0 0 18px -4px rgba(95,211,162,.8)}.tgl.on span{left:21px;background:#fff}
+.ru2{font:600 13px Inter;color:#a5a5a5;display:flex;align-items:center;gap:7px;flex-wrap:wrap;transition:all .4s}
+.thr{display:inline-flex;align-items:center;height:30px;border-radius:9px;border:1px solid #343434;border-bottom-width:2px;background:#191919;overflow:hidden}
+.thr input{width:64px;height:100%;border:0;background:none;color:#fff;font:800 13px Inter;text-align:right;padding:0 4px 0 8px;outline:none;-moz-appearance:textfield}
+.thr input::-webkit-outer-spin-button,.thr input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.thr span{padding:0 9px 0 2px;font:800 12px Inter;color:#8a8a8a}
+.thr:focus-within{border-color:var(--c)}
+.ru3{display:flex;align-items:center;gap:8px;font:600 12px Inter;color:#6a6a6a}.ru3 b{color:#e8e8e8;font:900 13px Inter}
+.ru3 .sv{margin-left:auto;color:#5fd3a2;font-weight:800;opacity:0;transition:opacity .3s}.ru3 .sv.on{opacity:1}
+.note{font:500 12px/1.55 Inter;color:#6a6a6a;padding:2px 4px}.note b{color:#bdbdbd}
+/* tags de l'équipe */
+.tl{display:flex;flex-direction:column;gap:6px}
+.trw{position:relative;display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:14px;border:1px solid #1c1c1c;background:#111;animation:up .5s cubic-bezier(.16,1,.3,1) both}
+.trw .nm{flex:1;min-width:0;height:32px;border-radius:9px;border:1px solid transparent;background:transparent;color:#eee;font:800 13.5px Inter;padding:0 8px}
+.trw .nm:hover{border-color:#262626}.trw .nm:focus{border-color:#3a3a3a;background:#0d0d0d;outline:none}
+.trw .dot{width:26px;height:26px;border-radius:50%;border:0;padding:0;background:var(--c);box-shadow:inset 0 0 0 3px #111,0 0 12px -2px var(--c);cursor:pointer;flex:none}
+.trw .n{font:700 11.5px Inter;color:#7a7a7a;white-space:nowrap}
+.trw .x{width:30px;height:30px;border-radius:9px;border:1px solid #262626;background:#141414;color:#8a8a8a;display:grid;place-items:center;cursor:pointer}
+.trw .x:hover{color:#ff8a8a;border-color:#4a2626}
+.sws{position:absolute;left:44px;top:calc(100% + 6px);z-index:20;display:flex;gap:8px;padding:9px;border-radius:14px;background:#161616;border:1px solid #2a2a2a;box-shadow:0 20px 50px -14px #000;animation:up .35s both}
+.sws button{width:24px;height:24px;border-radius:50%;padding:0;border:2px solid transparent;background:var(--c);cursor:pointer;transition:transform .3s cubic-bezier(.3,1.6,.5,1)}
+.sws button:hover{transform:scale(1.12)}.sws button.on{border-color:#fff}
+.nadd{display:flex;gap:8px}
+.nadd input{flex:1;height:40px;border-radius:12px;border:1px solid #242424;background:#0f0f0f;color:#eee;font:600 13.5px Inter;padding:0 12px}
+.nadd input:focus{border-color:#3a3a3a;outline:none}
+.emp{padding:16px 8px;text-align:center;font:600 12.5px/1.55 Inter;color:#6a6a6a}
+.rv{display:grid;grid-template-columns:140px 1fr auto;align-items:center;gap:3px 12px}
+.rv>.tgp{justify-self:start}
+.rv .bar{height:9px;border-radius:5px;background:#171717;overflow:hidden}
+.rv .bar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,color-mix(in srgb,var(--c) 45%,#000),var(--c));box-shadow:0 0 10px color-mix(in srgb,var(--c) 60%,transparent);transform-origin:left;animation:grow 1.2s cubic-bezier(.16,1,.3,1) both}
+@keyframes grow{from{transform:scaleX(0)}}
+.rv b{font:900 13.5px Inter;text-align:right;white-space:nowrap}.rv small{grid-column:2/4;font:600 11px Inter;color:#6a6a6a;margin-top:-1px}
+.rvs{display:flex;flex-direction:column;gap:12px}
+@media(max-width:1100px){.grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:900px){.tg-w{padding:22px 16px 110px}.hd h1{font-size:30px}.rv{grid-template-columns:110px 1fr auto}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area tgm">
+<div class="tg-w" id="w">
+  <div class="stars" id="stars"></div>
+  <div class="hd up"><div><div class="cap">Manager</div><h1>Tags <em class="met">des fans.</em></h1></div></div>
+  <p class="lead up" style="animation-delay:.04s" id="lead">…</p>
+  <div class="grid" id="g"></div>
+</div>
+</main>
+</div>
+<script src="/common.js"></script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const SV = (p, s = 16, w = 2.2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const BOLT = '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', TRASH = '<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>';
+const SW = ["#5fd3a2", "#7db4ff", "#b49cff", "#ff8fb1", "#f0b54a", "#6fe0e0", "#ff8a8a", "#e8c27a"];
+const eur = n => Math.round(+n || 0).toLocaleString("fr-FR") + " €", pl = (k, w) => k + " " + w + (k > 1 ? "s" : "");
+// ce que dit chaque règle, et l'unité de son seuil
+const RU = { gp: { pre: "A dépensé plus de", unit: "€", post: "au total", max: 100000, step: 10 }, vid: { pre: "Plus de", unit: "%", post: "de ses achats sont des vidéos (2 achats au moins)", max: 99, step: 5 },
+  nv: { pre: "Arrivé depuis moins de", unit: "jours", post: "(début de la conversation)", max: 365, step: 1 }, in: { pre: "Ne répond plus depuis", unit: "jours", post: "ou plus, après le dernier message de l'équipe", max: 365, step: 1 } };
+let D = null, FL = 0, OPEN = 0;
+$("stars").innerHTML = Array.from({ length: 40 }, (_, i) => { const r = k => ((Math.sin(i * 9301 + k * 49297) + 1) / 2); const z = [1, 1, 1.5, 2][Math.floor(r(1) * 4)];
+  return `<i style="left:${(r(2) * 100).toFixed(1)}%;top:${(r(3) * 100).toFixed(1)}%;width:${z}px;height:${z}px;opacity:${(.12 + r(4) * .35).toFixed(2)};animation-duration:${(2.5 + r(5) * 3.5).toFixed(1)}s;animation-delay:-${(r(6) * 6).toFixed(1)}s"></i>`; }).join("");
+const pill = t => `<span class="tgp ${t.rule === "gp" ? "gd" : ""}" style="--c:${esc(t.color)}"><i class="d"></i>${t.rule ? SV(BOLT, 11, 2.4) : ""}${esc(t.name)}</span>`;
+async function load() { D = await api("/api/tags/admin"); paint(); }
+async function upd(id, body, flash) { try { D = await api(`/api/tags/admin/${id}`, { body }); FL = flash ? id : 0; paint(); if (flash) setTimeout(() => { FL = 0; document.querySelectorAll(".rule .trace").forEach(x => x.remove()); }, 2000); } catch (e) { notify("Non enregistré", e.message, "err"); paint(); } }
+function paint() {
+  const F = D.facts, R = D.tags.filter(t => t.rule), M = D.tags.filter(t => !t.rule);
+  $("lead").innerHTML = `Les tags aident l'équipe à repérer les fans dans la messagerie. Ceux avec l'éclair sont posés et enlevés tout seuls par les règles ci-dessous. Le site apprend au fil des conversations ouvertes, sans requête en plus vers Twizz : il connaît aujourd'hui <b>${pl(F.fans, "fan")}</b>, dont <b>${F.spend}</b> avec leur dépense et <b>${F.buys}</b> avec leurs achats. Rien n'est écrit chez Twizz.`;
+  const rv = D.tags.filter(t => t.n && (t.rule ? t.active : true)).sort((a, b) => b.spend - a.spend), mx = Math.max(1, ...rv.map(t => t.spend));
+  $("g").innerHTML = `<section class="pn up" style="animation-delay:.08s"><div><span class="cap">Posés tout seuls</span><b class="ttl2">Règles <em>automatiques</em></b></div>
+      ${R.map((t, i) => { const u = RU[t.rule] || {}; return `<div class="rule ${t.active ? "on" : "off"}" style="--c:${esc(t.color)};animation-delay:${.1 + i * .05}s">${FL === t.id ? '<span class="trace"></span>' : ""}
+        <div class="ru1">${pill(t)}<button class="tgl ${t.active ? "on" : ""}" data-tog="${t.id}" aria-label="${t.active ? "Couper" : "Allumer"} la règle ${esc(t.name)}"><span></span></button></div>
+        <div class="ru2">${esc(u.pre)} <label class="thr"><input type="number" min="1" max="${u.max}" step="${u.step}" value="${t.thr}" data-thr="${t.id}" aria-label="Seuil"><span>${esc(u.unit)}</span></label> ${esc(u.post)}</div>
+        <div class="ru3">${t.active ? `<span><b>${pl(t.n, "fan")}</b> avec ce tag en ce moment</span>` : `<span>Coupée · toucherait <b>${pl(t.would, "fan")}</b></span>`}</div></div>`; }).join("")}
+      <div class="note">« Gros payeur » se met à jour quand la dépense d'un fan est lue (file « À traiter », fiche du fan) ; « Vidéos » quand son historique est ouvert ; « Nouveau » et « Inactif » à chaque chargement de la liste.</div></section>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <section class="pn up" style="animation-delay:.12s"><div><span class="cap">Posés par les chatters</span><b class="ttl2">Tags <em>de l'équipe</em></b></div>
+        <div class="tl">${M.length ? M.map((t, i) => `<div class="trw" style="animation-delay:${i * .03}s"><button class="dot" data-col="${t.id}" style="--c:${esc(t.color)}" aria-label="Changer la couleur"></button><input class="nm" data-nm="${t.id}" value="${esc(t.name)}" maxlength="30" aria-label="Nom du tag"><span class="n">${pl(t.n, "fan")}</span><button class="x" data-del="${t.id}" aria-label="Supprimer le tag">${SV(TRASH, 14)}</button>${OPEN === t.id ? `<div class="sws">${SW.map(c => `<button data-pick="${t.id}" data-c="${c}" class="${c === t.color ? "on" : ""}" style="--c:${c}" aria-label="Couleur"></button>`).join("")}</div>` : ""}</div>`).join("")
+          : `<div class="emp">Pas encore de tag d'équipe. Les chatters en créent depuis la fiche du fan, ou crée-les ici.</div>`}</div>
+        <div class="nadd"><input id="nN" maxlength="30" placeholder="Nouveau tag (ex. Fidèle, Timide, Week-end)"><button class="btn2 w" id="nB">Créer</button></div></section>
+      <section class="pn up" style="animation-delay:.16s"><div><span class="cap">Dépense totale connue de leurs fans</span><b class="ttl2">Ce que <em>vaut chaque tag</em></b></div>
+        <div class="rvs">${rv.length ? rv.map(t => `<div class="rv">${pill(t)}<span class="bar"><i style="width:${(t.spend / mx * 100).toFixed(1)}%;--c:${esc(t.color)}"></i></span><b>${eur(t.spend)}</b><small>${t.spendKnown ? eur(t.spend / t.spendKnown) + " par fan" : "dépense pas encore connue"} · ${pl(t.n, "fan")}${t.spendKnown < t.n ? ` (dépense connue pour ${t.spendKnown})` : ""}</small></div>`).join("") : `<div class="emp">Aucun fan tagué pour l'instant.</div>`}</div></section>
+    </div>`;
+  document.querySelectorAll("[data-tog]").forEach(b => b.onclick = () => { const t = D.tags.find(x => x.id === +b.dataset.tog); upd(t.id, { active: !t.active }, true); });
+  document.querySelectorAll("[data-thr]").forEach(inp => { let tm = null; inp.oninput = () => { clearTimeout(tm); tm = setTimeout(() => { const v = +inp.value; if (!v) return; upd(+inp.dataset.thr, { thr: v }, true); }, 700); };
+    inp.onkeydown = e => { if (e.key === "Enter") { clearTimeout(tm); upd(+inp.dataset.thr, { thr: +inp.value }, true); } }; });
+  document.querySelectorAll("[data-nm]").forEach(inp => { const save = () => { const t = D.tags.find(x => x.id === +inp.dataset.nm); if (inp.value.trim() && inp.value.trim() !== t.name) upd(t.id, { name: inp.value }); else inp.value = t.name; };
+    inp.onblur = save; inp.onkeydown = e => { if (e.key === "Enter") inp.blur(); if (e.key === "Escape") { inp.value = D.tags.find(x => x.id === +inp.dataset.nm).name; inp.blur(); } }; });
+  document.querySelectorAll("[data-col]").forEach(b => b.onclick = e => { e.stopPropagation(); OPEN = OPEN === +b.dataset.col ? 0 : +b.dataset.col; paint(); });
+  document.querySelectorAll("[data-pick]").forEach(b => b.onclick = e => { e.stopPropagation(); OPEN = 0; upd(+b.dataset.pick, { color: b.dataset.c }); });
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { const t = D.tags.find(x => x.id === +b.dataset.del);
+    if (!confirm(`Supprimer le tag « ${t.name} » ? Il sera retiré de ${pl(t.n, "fan")}.`)) return;
+    try { D = await api(`/api/tags/admin/${t.id}`, { method: "DELETE" }); paint(); notify("Tag supprimé", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } });
+  const create = async () => { const v = $("nN").value.trim(); if (!v) return; try { D = await api("/api/tags/admin", { body: { name: v } }); paint(); notify("Tag créé", v, "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
+  $("nB").onclick = create; $("nN").onkeydown = e => { if (e.key === "Enter") create(); };
+}
+document.addEventListener("click", e => { if (OPEN && !e.target.closest(".sws")) { OPEN = 0; paint(); } });
+(async () => {
+  const me = await api("/api/me"); renderShell("tags", me);
+  if (me.role !== "admin" || me.rk === "assistant") { $("g").innerHTML = `<div class="emp">Réservé aux managers</div>`; $("lead").textContent = ""; return; }
+  try { await load(); } catch (e) { $("g").innerHTML = `<div class="emp">${esc(e.message)}</div>`; }
+})();
+})();
+</script>
+</body>
+</html>

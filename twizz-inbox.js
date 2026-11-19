@@ -10,6 +10,45 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   for (const [c, t] of [["updated_at", "INTEGER"], ["updated_by", "INTEGER"], ["source", "TEXT"], ["ext_id", "TEXT"], ["pinned", "INTEGER DEFAULT 0"], ["media", "TEXT"], ["price", "REAL"]])
     if (!db.prepare("PRAGMA table_info(twizz_scripts)").all().some(x => x.name === c)) db.exec(`ALTER TABLE twizz_scripts ADD COLUMN ${c} ${t}`);
   db.exec("CREATE TABLE IF NOT EXISTS twizz_script_uses (script_id INTEGER, user_id INTEGER, at INTEGER)");
+  // tags des fans : communs à l'agence, posés par l'équipe ou tout seuls par les règles du manager (rien n'est écrit chez Twizz)
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_tags (id INTEGER PRIMARY KEY, name TEXT, color TEXT, rule TEXT, thr REAL, active INTEGER DEFAULT 1, user_id INTEGER, at INTEGER)");
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_fan_tags (creator_id TEXT, fan_id TEXT, tag_id INTEGER, auto INTEGER DEFAULT 0, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id, tag_id))");
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_tag_log (creator_id TEXT, fan_id TEXT, tag_id INTEGER, action TEXT, user_id INTEGER, at INTEGER)");
+  // ce que l'on sait d'un fan, appris au fil des pages ouvertes (aucune requête Twizz en plus) : sert aux règles
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_fan_facts (creator_id TEXT, fan_id TEXT, name TEXT, spend REAL, buys INTEGER, vids INTEGER, first_at INTEGER, team_at INTEGER, fan_at INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id))");
+  const RULES = { gp: ["Gros payeur", "#e8c27a", 300, 1], vid: ["Vidéos", "#7db4ff", 50, 1], nv: ["Nouveau", "#5fd3a2", 7, 1], in: ["Inactif", "#ff8a8a", 7, 0] };
+  for (const [k, [name, color, thr, on]] of Object.entries(RULES))
+    if (!db.prepare("SELECT 1 FROM twizz_tags WHERE rule = ?").get(k)) db.prepare("INSERT INTO twizz_tags (name, color, rule, thr, active, at) VALUES (?,?,?,?,?,?)").run(name, color, k, thr, on, Date.now());
+  const ruleTags = () => db.prepare("SELECT * FROM twizz_tags WHERE rule IS NOT NULL").all();
+  const known = (r, f) => r.rule === "gp" ? f.spend != null : r.rule === "vid" ? f.buys != null : r.rule === "nv" ? f.first_at != null : r.rule === "in" ? f.team_at != null || f.fan_at != null : false;
+  const matches = (r, f, now) => r.rule === "gp" ? f.spend > r.thr
+    : r.rule === "vid" ? f.buys >= 2 && f.vids * 100 / f.buys > r.thr
+    : r.rule === "nv" ? now - f.first_at < r.thr * 864e5
+    : r.rule === "in" ? !!f.team_at && (!f.fan_at || f.team_at > f.fan_at) && now - f.team_at >= r.thr * 864e5 : false;
+  function applyRules(cid, fan, R) {
+    const f = db.prepare("SELECT * FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, fan); if (!f) return;
+    const now = Date.now();
+    for (const r of R || ruleTags()) {
+      const has = db.prepare("SELECT auto FROM twizz_fan_tags WHERE creator_id = ? AND fan_id = ? AND tag_id = ?").get(cid, fan, r.id);
+      if (!r.active) { if (has && has.auto) db.prepare("DELETE FROM twizz_fan_tags WHERE creator_id = ? AND fan_id = ? AND tag_id = ?").run(cid, fan, r.id); continue; }
+      if (!known(r, f)) continue;
+      const want = matches(r, f, now);
+      if (want && !has) { db.prepare("INSERT INTO twizz_fan_tags (creator_id, fan_id, tag_id, auto, at) VALUES (?,?,?,1,?)").run(cid, fan, r.id, now); db.prepare("INSERT INTO twizz_tag_log (creator_id, fan_id, tag_id, action, at) VALUES (?,?,?,'auto+',?)").run(cid, fan, r.id, now); }
+      else if (!want && has && has.auto) { db.prepare("DELETE FROM twizz_fan_tags WHERE creator_id = ? AND fan_id = ? AND tag_id = ?").run(cid, fan, r.id); db.prepare("INSERT INTO twizz_tag_log (creator_id, fan_id, tag_id, action, at) VALUES (?,?,?,'auto-',?)").run(cid, fan, r.id, now); }
+    }
+  }
+  const applyAll = () => { const R = ruleTags(); db.exec("BEGIN"); try { db.prepare("SELECT creator_id, fan_id FROM twizz_fan_facts").all().forEach(x => applyRules(x.creator_id, x.fan_id, R)); db.exec("COMMIT"); } catch (e) { db.exec("ROLLBACK"); throw e; } };
+  // n'écrit que ce qui change, puis repasse les règles sur ce fan
+  function fact(cid, fan, p) {
+    if (!cid || !fan) return; const cur = db.prepare("SELECT * FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, fan) || {};
+    const keys = ["name", "spend", "buys", "vids", "first_at", "team_at", "fan_at"], nx = {}; let ch = !cur.fan_id;
+    keys.forEach(k => { nx[k] = p[k] !== undefined && p[k] !== null ? p[k] : cur[k] ?? null; if (nx[k] !== (cur[k] ?? null)) ch = true; });
+    if (!ch) return;
+    db.prepare("INSERT INTO twizz_fan_facts (creator_id, fan_id, name, spend, buys, vids, first_at, team_at, fan_at, at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(creator_id, fan_id) DO UPDATE SET name = excluded.name, spend = excluded.spend, buys = excluded.buys, vids = excluded.vids, first_at = excluded.first_at, team_at = excluded.team_at, fan_at = excluded.fan_at, at = excluded.at")
+      .run(cid, fan, nx.name, nx.spend, nx.buys, nx.vids, nx.first_at, nx.team_at, nx.fan_at, Date.now());
+    applyRules(cid, fan);
+  }
+  const ts = v => { const t = v ? Date.parse(v) : NaN; return isFinite(t) ? t : null; };
   const founder = (req, res, next) => req.user.rk === "founder" && !req.viewAs ? next() : res.status(403).json({ error: "Messagerie en test : réservée au fondateur" });
   // managers (fondateur compris) : bibliothèque de scripts, et lecture du coffre pour y joindre des médias
   const mgr = (req, res, next) => req.user.role === "admin" && req.user.rk !== "assistant" && !req.viewAs ? next() : res.status(403).json({ error: "Réservé aux managers" });
@@ -57,7 +96,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const fanRaw = c.interlocutor || c.fan || c.user || (Array.isArray(c.participants) ? c.participants.find(x => str(x._id || x.userId) !== cid) : null) || {};
     const fan = person(fanRaw), last = c.lastMessage || c.last_message || {};
     return { id: str(c._id || c.id), fan, last: { id: str(last._id || ""), text: str(last.text || ""), type: str(last.type || ""), at: last.createdAt || c.updatedAt || c.createdAt || null, fromFan: !!fan.id && str(last.senderId) === fan.id },
-      unread: unreadOf(c, cid, fan.id, last), type: str(c.type || ""), tags: (c.tags || []).map(t => str(t.name || t.label || t)).filter(Boolean) };
+      unread: unreadOf(c, cid, fan.id, last), type: str(c.type || ""), since: c.createdAt || null, tags: (c.tags || []).map(t => str(t.name || t.label || t)).filter(Boolean) };
   }
   function msg(m, fanId) {
     const p = m.mediaPushPrice || {};
@@ -128,6 +167,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const near = db.prepare("SELECT u.username name, s.at FROM twizz_sent s JOIN users u ON u.id = s.user_id WHERE s.conv_id = ? ORDER BY s.at DESC LIMIT 1");
     items.forEach(c => { if (c.last.fromFan) return; c.last.by = by[c.last.id] || null;
       if (!c.last.by && c.last.at) { const r = near.get(c.id); if (r && Math.abs(r.at - Date.parse(c.last.at)) < 120e3) c.last.by = r.name; } });
+    try { items.forEach(c => c.fan.id && fact(cid, c.fan.id, { name: c.fan.name, first_at: ts(c.since), [c.last.fromFan ? "fan_at" : "team_at"]: ts(c.last.at) })); } catch (e) {}
     return { items, page, more: !!(d && (d.totalPages ? page < d.totalPages : arr(j).length >= 10)), sample: req.query.debug ? arr(j)[0] : undefined };
   }));
   app.get("/api/twizz/inbox/:cid/messages/:conv", auth, founder, wrap(async req => {
@@ -147,6 +187,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const flat = {}; const walk = (o, pre) => { if (!o || typeof o !== "object") return; for (const [k, v] of Object.entries(o)) { if (["_id", "__v", "fanId", "creatorId"].includes(k)) continue;
       if (typeof v === "number" || typeof v === "boolean" || (typeof v === "string" && v.length < 40)) flat[pre + k] = v; else if (v && typeof v === "object" && !Array.isArray(v) && pre.split(".").length < 3) walk(v, pre + k + "."); } };
     walk(stats && (stats.data ?? stats), "");
+    const sk = Object.keys(flat).find(k => /totalSpent|spent/i.test(k)); if (sk && isFinite(+flat[sk])) try { fact(cid, str(req.params.fan), { spend: +flat[sk] }); } catch (e) {}
     // derniers achats : on garde montant, type et date, quel que soit le nom exact des champs
     const rec = arr(recent).slice(0, 8).map(x => ({ amount: +(x.netPrice ?? x.amount ?? x.price ?? x.total ?? 0) || 0, type: str(x.type || x.category || x.kind || ""), at: x.createdAt || x.date || x.purchasedAt || null })).filter(x => x.amount > 0);
     return { stats: flat, error: stats && stats.error, tags: arr(tags).map(t => ({ name: str(t.name || t.label || t.tag || t), color: str(t.color || "") })).filter(t => t.name), recent: rec };
@@ -183,6 +224,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const team = {}; db.prepare("SELECT u.username name, COUNT(*) n FROM twizz_sent s JOIN users u ON u.id = s.user_id WHERE s.conv_id = ? GROUP BY s.user_id").all(conv).forEach(r => team[r.name] = { name: r.name, msgs: r.n, sold: 0, amount: 0 });
     items.forEach(i => { if (i.by && i.bought) { const t = team[i.by] || (team[i.by] = { name: i.by, msgs: 0, sold: 0, amount: 0 }); t.sold++; t.amount += +i.price || 0; } });
     const note = db.prepare("SELECT n.text, n.at, u.username by FROM twizz_fan_notes n LEFT JOIN users u ON u.id = n.user_id WHERE n.creator_id = ? AND n.fan_id = ?").get(cid, fan) || null;
+    const paid = items.filter(i => i.bought); try { fact(cid, fan, { buys: paid.length, vids: paid.filter(i => i.videos).length }); } catch (e) {}
     const tw = twNote && (twNote.note || twNote.text || twNote.content || (typeof twNote === "string" ? twNote : "")) || "";
     return { items, siteFiles: site, team: Object.values(team).sort((a, b) => b.amount - a.amount || b.msgs - a.msgs), note, twizzNote: str(tw), partial: pages > 3 };
   }));
@@ -196,7 +238,96 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   // total dépensé d'un fan (pour classer la file « À traiter »), gardé 10 min
   app.get("/api/twizz/inbox/:cid/spend/:fan", auth, founder, wrap(async req => {
     const cid = creatorOk(req.params.cid), j = await G(`/business/get-fan-purchase-stats/${enc(req.params.fan)}?creatorId=${enc(cid)}`, 600e3), d = (j && (j.data ?? j)) || {};
-    const k = Object.keys(d).find(k => /totalSpent|spent/i.test(k)); return { total: k ? +d[k] || 0 : null };
+    const k = Object.keys(d).find(k => /totalSpent|spent/i.test(k)), total = k ? +d[k] || 0 : null;
+    if (total != null) try { fact(cid, str(req.params.fan), { spend: total }); } catch (e) {}
+    return { total };
+  }));
+
+  /* ---------- tags des fans ---------- */
+  const TAG_PAL = ["#5fd3a2", "#7db4ff", "#b49cff", "#ff8fb1", "#f0b54a", "#6fe0e0", "#ff8a8a", "#e8c27a"];
+  const low = x => String(x || "").toLocaleLowerCase("fr");
+  const tagOut = t => ({ id: t.id, name: t.name, color: t.color, rule: t.rule || null, thr: t.thr, active: !!t.active });
+  const fanTags = (cid, fan) => ({
+    tags: db.prepare("SELECT t.id, t.name, t.color, t.rule, t.thr, ft.auto, ft.at, u.username by FROM twizz_fan_tags ft JOIN twizz_tags t ON t.id = ft.tag_id LEFT JOIN users u ON u.id = ft.user_id WHERE ft.creator_id = ? AND ft.fan_id = ? AND (t.rule IS NULL OR t.active = 1) ORDER BY t.rule IS NULL, ft.at")
+      .all(cid, fan).map(r => ({ id: r.id, name: r.name, color: r.color, rule: r.rule || null, thr: r.thr, auto: !!r.auto, at: r.at, by: r.by || null })),
+    log: db.prepare("SELECT l.action, l.at, t.name, t.color, t.rule, t.thr, u.username by FROM twizz_tag_log l JOIN twizz_tags t ON t.id = l.tag_id LEFT JOIN users u ON u.id = l.user_id WHERE l.creator_id = ? AND l.fan_id = ? ORDER BY l.at DESC LIMIT 4")
+      .all(cid, fan).map(r => ({ action: r.action, at: r.at, name: r.name, color: r.color, rule: r.rule || null, thr: r.thr, by: r.by || null }))
+  });
+  // pour la liste d'une créatrice : les tags, combien de fans chacun, et les tags de chaque fan (filtre de la liste)
+  app.get("/api/twizz/inbox/:cid/tags", auth, founder, wrap(async req => {
+    const cid = creatorOk(req.params.cid), T = db.prepare("SELECT * FROM twizz_tags WHERE rule IS NULL OR active = 1 ORDER BY rule IS NULL, id").all(), ok = new Set(T.map(t => t.id)), map = {}, n = {};
+    db.prepare("SELECT fan_id, tag_id FROM twizz_fan_tags WHERE creator_id = ?").all(cid).forEach(r => { if (!ok.has(r.tag_id)) return; (map[r.fan_id] || (map[r.fan_id] = [])).push(r.tag_id); n[r.tag_id] = (n[r.tag_id] || 0) + 1; });
+    return { tags: T.map(t => ({ ...tagOut(t), n: n[t.id] || 0 })), map };
+  }));
+  app.get("/api/twizz/inbox/:cid/tags/:fan", auth, founder, wrap(async req => fanTags(creatorOk(req.params.cid), str(req.params.fan))));
+  // poser ou enlever un tag à la main (les tags des règles se posent et s'enlèvent tout seuls)
+  app.post("/api/twizz/inbox/:cid/tags/:fan", auth, founder, wrap(async req => {
+    const cid = creatorOk(req.params.cid), fan = str(req.params.fan), b = req.body || {}, now = Date.now(); if (!fan) throw bad("Fan inconnu");
+    if (b.remove) {
+      const t = db.prepare("SELECT * FROM twizz_tags WHERE id = ?").get(+b.remove); if (!t) throw bad("Tag introuvable");
+      if (t.rule) throw bad("Ce tag est posé par une règle du manager : il s'enlève tout seul quand la règle ne s'applique plus");
+      if (db.prepare("DELETE FROM twizz_fan_tags WHERE creator_id = ? AND fan_id = ? AND tag_id = ?").run(cid, fan, t.id).changes)
+        db.prepare("INSERT INTO twizz_tag_log (creator_id, fan_id, tag_id, action, user_id, at) VALUES (?,?,?,'-',?,?)").run(cid, fan, t.id, req.user.id, now);
+      return fanTags(cid, fan);
+    }
+    let id = +b.add || 0;
+    if (!id) { const name = String(b.name || "").trim().replace(/\s+/g, " ").slice(0, 30); if (!name) throw bad("Donne un nom au tag");
+      const all = db.prepare("SELECT * FROM twizz_tags").all(), ex = all.find(t => low(t.name) === low(name));
+      if (ex) id = ex.id;
+      else { const color = /^#[0-9a-f]{6}$/i.test(str(b.color)) ? str(b.color) : TAG_PAL[all.length % TAG_PAL.length];
+        id = Number(db.prepare("INSERT INTO twizz_tags (name, color, active, user_id, at) VALUES (?,?,1,?,?)").run(name, color, req.user.id, now).lastInsertRowid); } }
+    const t = db.prepare("SELECT * FROM twizz_tags WHERE id = ?").get(id); if (!t) throw bad("Tag introuvable");
+    if (t.rule) throw bad("Ce tag est posé tout seul par une règle du manager");
+    if (db.prepare("INSERT OR IGNORE INTO twizz_fan_tags (creator_id, fan_id, tag_id, auto, user_id, at) VALUES (?,?,?,0,?,?)").run(cid, fan, id, req.user.id, now).changes)
+      db.prepare("INSERT INTO twizz_tag_log (creator_id, fan_id, tag_id, action, user_id, at) VALUES (?,?,?,'+',?,?)").run(cid, fan, id, req.user.id, now);
+    return { ...fanTags(cid, fan), added: id };
+  }));
+  // l'IA propose 2 tags d'après la conversation (une seule lecture de la page 1, gardée 15 min)
+  const tagAi = new Map();
+  app.post("/api/twizz/inbox/:cid/tag-ai/:conv", auth, founder, wrap(async req => {
+    if (!ai || !ai.tagSuggest) throw bad("Assistant IA indisponible");
+    const cid = creatorOk(req.params.cid), conv = str(req.params.conv), fan = str(req.body?.fan), key = cid + ":" + conv, hit = tagAi.get(key);
+    const cur = fanTags(cid, fan).tags.map(t => t.name), clean = r => ({ tags: r.tags.filter(x => !cur.some(c => low(c) === low(x.name))) });
+    if (hit && Date.now() - hit.at < 15 * 60e3) return clean(hit.r);
+    const k = req.user.id + ":tag:" + conv; if (Date.now() - (aiLast.get(k) || 0) < 4000) throw bad("Doucement : attends quelques secondes"); aiLast.set(k, Date.now());
+    const j = await G(`/messages/find-all-messages?conversationId=${enc(conv)}&creatorId=${enc(cid)}&page=1`, 15e3);
+    const L = ((j && j.data && j.data.data) || []).map(m => msg(m, fan)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(-40);
+    const manual = db.prepare("SELECT * FROM twizz_tags WHERE rule IS NULL").all(), cr = db.prepare("SELECT label FROM twizz_creators WHERE twizz_id = ?").get(cid) || {};
+    const out = await ai.tagSuggest({ creator: cr.label || "la créatrice", existing: manual.map(t => t.name), current: cur,
+      transcript: L.map(m => `[${m.fromFan ? "FAN" : "CRÉATRICE"}] ${m.text || (m.medias.length ? "(média)" : "")}`).join("\n") }, { user: req.user.id });
+    const r = { tags: out.tags.map(x => { const ex = manual.find(t => low(t.name) === low(x.name)); return { name: ex ? ex.name : x.name, why: x.why, id: ex ? ex.id : null, color: ex ? ex.color : null }; }) };
+    tagAi.set(key, { at: Date.now(), r }); return clean(r);
+  }));
+  // page Tags du manager : règles automatiques, tags de l'équipe, ce que valent les fans de chaque tag
+  const THR_MAX = { gp: 100000, vid: 99, nv: 365, in: 365 };
+  const adminTags = () => {
+    const T = db.prepare("SELECT * FROM twizz_tags ORDER BY rule IS NULL, id").all(), F = db.prepare("SELECT * FROM twizz_fan_facts").all(), now = Date.now(), cnt = {};
+    db.prepare("SELECT ft.tag_id, COUNT(*) n, SUM(f.spend) s, SUM(CASE WHEN f.spend IS NOT NULL THEN 1 ELSE 0 END) k FROM twizz_fan_tags ft LEFT JOIN twizz_fan_facts f ON f.creator_id = ft.creator_id AND f.fan_id = ft.fan_id GROUP BY ft.tag_id").all().forEach(r => cnt[r.tag_id] = r);
+    return { tags: T.map(t => { const c = cnt[t.id] || {}; return { ...tagOut(t), n: c.n || 0, spend: c.s || 0, spendKnown: c.k || 0, would: t.rule ? F.filter(f => known(t, f) && matches(t, f, now)).length : null }; }),
+      facts: { fans: F.length, spend: F.filter(f => f.spend != null).length, buys: F.filter(f => f.buys != null).length, first: F.filter(f => f.first_at != null).length } };
+  };
+  app.get("/api/tags/admin", auth, mgr, (req, res) => res.json(adminTags()));
+  app.post("/api/tags/admin", auth, mgr, wrap(async req => {
+    const b = req.body || {}, name = String(b.name || "").trim().replace(/\s+/g, " ").slice(0, 30); if (!name) throw bad("Donne un nom au tag");
+    const all = db.prepare("SELECT * FROM twizz_tags").all(); if (all.some(t => low(t.name) === low(name))) throw bad("Ce tag existe déjà");
+    db.prepare("INSERT INTO twizz_tags (name, color, active, user_id, at) VALUES (?,?,1,?,?)").run(name, /^#[0-9a-f]{6}$/i.test(str(b.color)) ? str(b.color) : TAG_PAL[all.length % TAG_PAL.length], req.user.id, Date.now());
+    return adminTags();
+  }));
+  app.post("/api/tags/admin/:id", auth, mgr, wrap(async req => {
+    const t = db.prepare("SELECT * FROM twizz_tags WHERE id = ?").get(+req.params.id); if (!t) throw bad("Tag introuvable");
+    const b = req.body || {}, name = b.name != null ? String(b.name).trim().replace(/\s+/g, " ").slice(0, 30) : t.name, color = /^#[0-9a-f]{6}$/i.test(str(b.color)) ? str(b.color) : t.color;
+    if (!name) throw bad("Donne un nom au tag");
+    if (low(name) !== low(t.name) && db.prepare("SELECT * FROM twizz_tags").all().some(x => x.id !== t.id && low(x.name) === low(name))) throw bad("Ce nom est déjà pris");
+    let active = t.active, thr = t.thr;
+    if (t.rule) { if (b.active != null) active = b.active ? 1 : 0; if (b.thr != null) { if (!isFinite(+b.thr) || +b.thr < 1 || +b.thr > THR_MAX[t.rule]) throw bad("Seuil invalide"); thr = Math.round(+b.thr * 100) / 100; } }
+    db.prepare("UPDATE twizz_tags SET name = ?, color = ?, active = ?, thr = ? WHERE id = ?").run(name, color, active, thr, t.id);
+    if (t.rule && (active !== t.active || thr !== t.thr)) applyAll();
+    return adminTags();
+  }));
+  app.delete("/api/tags/admin/:id", auth, mgr, wrap(async req => {
+    const t = db.prepare("SELECT * FROM twizz_tags WHERE id = ?").get(+req.params.id); if (!t) throw bad("Tag introuvable"); if (t.rule) throw bad("Un tag de règle se coupe, il ne se supprime pas");
+    db.prepare("DELETE FROM twizz_fan_tags WHERE tag_id = ?").run(t.id); db.prepare("DELETE FROM twizz_tag_log WHERE tag_id = ?").run(t.id); db.prepare("DELETE FROM twizz_tags WHERE id = ?").run(t.id);
+    return adminTags();
   }));
 
   /* ---------- scripts ---------- */

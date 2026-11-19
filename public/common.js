@@ -65,6 +65,7 @@ const ICONS = {
   crown: '<path d="M3 8l4.2 4L12 5l4.8 7L21 8l-2 11H5z"/><path d="M5.5 19h13"/>',
   bag: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
   doc: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h4"/>',
+  tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/>',
   mic: '<path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/>'
 };
 const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ""}</svg>`;
@@ -100,6 +101,8 @@ const MODULES = [
     desc: "Les défis de la semaine : objectifs d'équipe ou perso, progression et récompenses." },
   { id: "scripts", label: "Scripts", href: "/scripts", icon: "doc", section: "Manager", roles: ["admin"], nodock: ["admin"], hide: ["assistant"],
     desc: "La bibliothèque de messages tout prêts des chatters : créer, modifier, importer depuis Twizz, voir ceux qui marchent." },
+  { id: "tags", label: "Tags", href: "/tags", icon: "tag", section: "Manager", roles: ["admin"], nodock: ["admin"], hide: ["assistant"],
+    desc: "Les tags des fans : règles qui les posent tout seuls (gros payeur, nouveau, inactif…), tags de l'équipe et ce que valent leurs fans." },
   { id: "salle", label: "Salle de contrôle", short: "Live", href: "/salle", icon: "pulse", section: "Manager", roles: ["admin"], nodock: ["admin"], hide: ["assistant"],
     desc: "Écran en direct à afficher dans l'agence : ventes, classement du jour et chatters en shift." },
   { id: "admin", label: "Gestion", href: "/admin", icon: "team", section: "Manager", roles: ["admin"],
