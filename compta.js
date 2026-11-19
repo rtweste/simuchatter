@@ -309,7 +309,8 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
   // se calculent depuis les transactions importées (plus de saisie à la main pour ces mois-là)
   const twSet = k => { try { const r = db.prepare("SELECT value FROM settings WHERE key = ?").get(k); return r ? JSON.parse(r.value) : null; } catch (e) { return null; } };
   const twSince = () => twSet("twizz_on") === true ? twSet("twizz_since") : null;
-  const autoMonth = mkey => { const t = twSince(); return !!t && parisDate(t).slice(0, 7) <= String(mkey).slice(0, 7); };
+  const comptaSince = () => twSet("twizz_compta_on") === true ? twSet("twizz_compta_since") : null;
+  const autoMonth = mkey => { const t = comptaSince(); return !!t && parisDate(t).slice(0, 7) <= String(mkey).slice(0, 7); };
   const TWMAP = t => /subscri|abonn/i.test(t) ? "abo" : /live/i.test(t) ? "live" : /collection/i.test(t) ? "coll" : /push/i.test(t) ? "push" : /privatemedia|private_media/i.test(t) ? "ppv" : "autres";
   const rr2 = x => Math.round(x * 100) / 100;
   function twizzSrc(from, to) {   // dates « AAAA-MM-JJ » (heure de Paris), incluses
@@ -320,6 +321,8 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       if (r.state === "imported") return;   // devenue une vente d'un chatter : déjà comptée dans le chatting
       // un PPV relié à un chatter est déjà compté dans le chatting (vente validée) ; avant l'activation, ils étaient déclarés à la main
       if (k === "ppv" && !(since && r.at >= since && (r.state === "ca_only" || r.state === "no_chatter"))) return;
+      // pourboires et autres ventes : en mode manuel, un chatter a pu les déclarer (Snap payé en pourboire…) ; comptés seulement avec les ventes automatiques
+      if (k === "autres" && !(since && r.at >= since)) return;
       const o = out[r.model_id] || (out[r.model_id] = { abo: 0, live: 0, coll: 0, push: 0, ppv: 0, autres: 0 }); o[k] = rr2(o[k] + r.net); });
     return out;
   }
@@ -457,7 +460,7 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     totals.platform = r2(totals.brut - totals.net);
     totals.sources = { chat: sum(models, m => m.legacy ? 0 : m.chatNet), legacy: sum(models, m => m.legacy ? m.net : m.legacyNet), ppv: sum(models, m => m.ppvAgence), autres: sum(models, m => m.autres) };
     SRC.forEach(k => totals.sources[k] = sum(models, m => m.legacy ? 0 : m.sources[k]));
-    return { period: mi, base, mode, fee, models, totals, auto: !!AM };
+    return { period: mi, base, mode, fee, models, totals, auto: !!AM, autoSales: !!twSince() };
   }
   // le mois tel qu'affiché : CA figé à la clôture du mois, paie des chatters toujours lue sur les quinzaines
   function comptaMonthOf(mkey) {

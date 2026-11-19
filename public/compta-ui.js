@@ -91,7 +91,7 @@ function renderProj() {
 }
 function renderAlerts() {
   const out = [];
-  if (M.auto) out.push(`<div class="c-al" style="border-color:rgba(95,211,162,.35);background:rgba(95,211,162,.07)"><span class="i" style="color:#5fd3a2">⚡</span><div><b>CA rempli automatiquement depuis Twizz</b><small>Chatting, abonnements, live, collections et média push arrivent tout seuls. Les PPV qu'on ne peut relier à aucun chatter restent au CA de l'agence, sans commission.</small></div></div>`);
+  if (M.auto) out.push(`<div class="c-al" style="border-color:rgba(95,211,162,.35);background:rgba(95,211,162,.07)"><span class="i" style="color:#5fd3a2">⚡</span><div><b>CA rempli automatiquement depuis Twizz</b><small>${M.autoSales ? "Chatting, abonnements, live, collections et média push arrivent tout seuls. Les PPV qu'on ne peut relier à aucun chatter restent au CA de l'agence, sans commission." : "Abonnements, live, collections et média push arrivent tout seuls. Le chatting reste celui des ventes déclarées et validées."}</small></div></div>`);
   M.models.filter(m => m.missing && m.missing.length).forEach(m => {
     const names = m.missing.map(k => SRCS.find(s => s[0] === k)[1]);
     out.push(`<div class="c-al r"><span class="i">!</span><div><b>${esc(m.name)} : ${names.length > 2 ? names.length + " entrées" : names.join(" et ")} pas encore saisi${names.length > 1 ? "es" : ""}</b><small>Son CA du mois ne compte que le chatting et les entrées déjà remplies.</small>${lockedM() ? "" : `<button class="c-sb" data-goto="${m.id}:${m.missing[0]}">Saisir</button>`}</div></div>`);

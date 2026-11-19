@@ -31,7 +31,9 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     set(k, v) { db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(k, JSON.stringify(v)); }
   };
   const TYPES = { privatemedia: "Média privé", mediapush: "Média push", collection: "Collection", monthly_subscription: "Abonnement" };
-  const cfg = () => ({ on: !!S.get("twizz_on", false), since: S.get("twizz_since", null), types: S.get("twizz_types", ["privatemedia"]) });
+  // deux interrupteurs indépendants : ventes automatiques (commissions) et compta automatique (CA des créatrices)
+  const cfg = () => ({ on: !!S.get("twizz_on", false), since: S.get("twizz_since", null), types: S.get("twizz_types", ["privatemedia"]),
+    compta: !!S.get("twizz_compta_on", false), comptaSince: S.get("twizz_compta_since", null) });
   const configured = () => !!(EMAIL() && PASS());
 
   /* ---------- session (badge + renouvellement) ---------- */
@@ -251,7 +253,7 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
   }
   const monthStart = () => { const p = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" }).slice(0, 7); return Date.parse(p + "-01T00:00:00+01:00"); };
   setInterval(() => {
-    if (!cfg().on || !configured()) return;
+    if ((!cfg().on && !cfg().compta) || !configured()) return;
     if (status.pausedUntil && now() < status.pausedUntil) return;
     sync("auto").catch(() => {});
   }, SYNC_MIN * 60e3).unref?.();
@@ -292,9 +294,15 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
       const was = cfg().on; S.set("twizz_on", b.on);
       // les ventes automatiques commencent maintenant (pas de doublon avec les ventes déjà déclarées)
       if (b.on && !was) { S.set("twizz_since", now()); log(req.user.id, "a", `**${req.user.username}** a activé les ventes automatiques Twizz`, "");
-        // le CA du mois se calcule depuis Twizz : on reprend le mois en cours depuis le 1er, puis la synchro normale continue
-        running = running.then(() => backfill(monthStart(), "activation")).catch(e => console.error("Twizz reprise :", e.message)).then(() => doSync("activation")).catch(() => {}); }
+        running = running.then(() => doSync("activation")).catch(() => {}); }
       if (!b.on && was) log(req.user.id, "a", `**${req.user.username}** a coupé les ventes automatiques Twizz`, "");
+    }
+    if (typeof b.compta === "boolean") {
+      const was = cfg().compta; S.set("twizz_compta_on", b.compta);
+      // compta automatique : le CA du mois se calcule depuis Twizz ; on reprend le mois en cours depuis le 1er (une fois), puis la synchro normale continue
+      if (b.compta && !was) { S.set("twizz_compta_since", now()); log(req.user.id, "a", `**${req.user.username}** a activé la compta automatique Twizz`, "");
+        running = running.then(() => backfill(monthStart(), "compta")).catch(e => console.error("Twizz reprise :", e.message)).then(() => doSync("compta")).catch(() => {}); }
+      if (!b.compta && was) log(req.user.id, "a", `**${req.user.username}** a coupé la compta automatique Twizz`, "");
     }
     res.json(overview());
   });
