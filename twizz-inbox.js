@@ -93,8 +93,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   /* ---------- lecture ---------- */
   app.get("/api/twizz/inbox/state", auth, founder, (req, res) => res.json({ send: sendOn(), creators: mapped(), configured: twizz.configured() }));
   app.post("/api/twizz/inbox/state", auth, founder, (req, res) => { if (typeof req.body?.send === "boolean") S.set("twizz_inbox_send", req.body.send); res.json({ send: sendOn() }); });
+  // non lus d'une créatrice : nombre de conversations non lues, lu dans sa liste (même requête et même cache que la liste)
   app.get("/api/twizz/inbox/:cid/unread", auth, founder, wrap(async req => { const cid = creatorOk(req.params.cid);
-    const j = await G(`/conversations/stats/get-unread-by-types?creatorId=${enc(cid)}`, 30e3); return { raw: j && (j.data ?? j) }; }));
+    const j = await G(`/conversations/user/${enc(cid)}?page=1&type=GENERAL&creatorId=${enc(cid)}`, 60e3);
+    return { count: arr(j).map(c => conv(c, cid)).filter(c => c.unread > 0).length }; }));
   app.get("/api/twizz/inbox/:cid/conversations", auth, founder, wrap(async req => {
     const cid = creatorOk(req.params.cid), type = ["GENERAL", "TO_DELIVER"].includes(req.query.type) ? req.query.type : "GENERAL", page = Math.max(1, +req.query.page || 1);
     const q = String(req.query.q || "").trim().slice(0, 60);
@@ -201,7 +203,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const k = req.user.id + ":" + conv; if (Date.now() - (aiLast.get(k) || 0) < 4000) throw bad("Doucement : attends quelques secondes avant de redemander");
     aiLast.set(k, Date.now());
     const j = await G(`/messages/find-all-messages?conversationId=${enc(conv)}&creatorId=${enc(cid)}&page=1`, 15e3);
-    const L = ((j && j.data && j.data.data) || []).map(m => msg(m, fan)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(-24);
+    let L = ((j && j.data && j.data.data) || []).map(m => msg(m, fan));
+    // pas assez de messages de l'équipe pour connaître sa façon d'écrire : on lit la page d'avant
+    if (L.filter(m => !m.fromFan && m.text).length < 8 && ((j && j.data && j.data.totalPages) || 1) > 1) {
+      const j2 = await G(`/messages/find-all-messages?conversationId=${enc(conv)}&creatorId=${enc(cid)}&page=2`, 120e3).catch(() => null);
+      L = L.concat(((j2 && j2.data && j2.data.data) || []).map(m => msg(m, fan))); }
+    L = L.sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(-40);
     const line = m => m.type === "FILE" && !m.fromFan ? `[CRÉATRICE ENVOIE ${m.medias.length > 1 ? m.medias.length + " MÉDIAS" : "UN MÉDIA"}${m.price > 0 ? ` À ${m.price} € — ${m.status === "accepted" ? "acheté" : "pas encore acheté"}` : " GRATUIT"}]${m.text ? " " + m.text : ""}`
       : `[${m.fromFan ? "FAN" : "CRÉATRICE"}] ${m.text || (m.medias.length ? "(média)" : "")}`;
     const cr = db.prepare("SELECT label, note FROM twizz_creators WHERE twizz_id = ?").get(cid) || {};

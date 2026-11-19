@@ -345,12 +345,13 @@ ${conv}`;
 /* ---------- Messagerie Twizz : réponses suggérées au chatter ---------- */
 const REPLY_TOOL = { name: "suggestions", description: "Enregistre trois propositions de réponse pour le chatter.",
   input_schema: { type: "object", required: ["suggestions"], properties: {
+    style: { type: "string", description: "La façon d'écrire de l'équipe dans cette conversation, en quelques mots (ex. minuscules, phrases courtes, « mdr », 😏)" },
     humeur: { type: "string", description: "Humeur du fan en 2 à 4 mots (ex. joueur, impatient, câlin)" },
     suggestions: { type: "array", minItems: 3, maxItems: 3, items: { type: "object", required: ["angle", "text"], properties: {
       angle: { type: "string", description: "2 à 3 mots : l'intention (ex. Complice, Vente douce, Relance)" },
       text: { type: "string", description: "Le message prêt à envoyer, au nom de la créatrice" } } } } } } };
 async function replies(c, tag) {
-  if (MOCK) return { humeur: "joueur [test]", suggestions: [
+  if (MOCK) return { style: "minuscules, phrases courtes, 😏 [test]", humeur: "joueur [test]", suggestions: [
     { angle: "Complice", text: "Haha tu me fais rire toi 😏 raconte-moi ta journée" },
     { angle: "Vente douce", text: "J'ai fait des photos aujourd'hui… je crois qu'elles vont te plaire 🙈" },
     { angle: "Relance", text: "Tu m'as manqué tu sais, t'étais où ?" }] };
@@ -359,13 +360,14 @@ ${c.rules ? `Consignes de la créatrice, à respecter absolument : ${c.rules}\n`
 Derniers messages (du plus ancien au plus récent) :
 ${c.transcript || "(aucun message)"}
 
-Propose 3 réponses différentes au dernier message du fan, écrites comme ${c.creator} : français familier, comme un vrai texto, 1 à 2 phrases courtes, chaleureux et naturel, un emoji au plus.
+Étape 1 : étudie la façon d'écrire des messages [CRÉATRICE] ci-dessus (ce sont les chatters qui écrivent au nom de ${c.creator}) : longueur des messages, majuscules ou minuscules, ponctuation, emojis (lesquels, combien), abréviations et fautes volontaires (ex. « tkt », « mdr », « ptn »), expressions et tics qui reviennent, tutoiement, surnoms donnés au fan.
+Étape 2 : propose 3 réponses au dernier message du fan, écrites EXACTEMENT dans cette façon d'écrire, comme si c'était le même chatter : même longueur, même ponctuation, mêmes emojis et mêmes expressions. Ne corrige pas son style et n'écris pas plus proprement que lui. S'il y a trop peu de messages de l'équipe, écris comme un vrai texto : français familier, 1 à 2 phrases courtes, un emoji au plus.
 Varie l'intention : une complice qui crée du lien, une qui amène doucement vers un contenu payant si le moment s'y prête, une qui relance la conversation.
 Reste suggestif sans jamais décrire d'acte sexuel ni de détail explicite. Pas de fausse promesse (rencontre, appel, exclusivité), pas de pression sur un fan qui semble fragile ou à court d'argent.`;
-  const res = await ask(prompt, MODEL_HINT, 700, { ...(tag || {}), kind: "twizz_reply" }, { tools: [REPLY_TOOL], tool_choice: { type: "tool", name: "suggestions" } });
+  const res = await ask(prompt, MODEL_HINT, 900, { ...(tag || {}), kind: "twizz_reply" }, { tools: [REPLY_TOOL], tool_choice: { type: "tool", name: "suggestions" } });
   const t = (res.content || []).find(x => x.type === "tool_use");
   if (!t || !t.input || !Array.isArray(t.input.suggestions)) throw new Error("L'IA n'a pas proposé de réponse, réessaie");
-  return { humeur: String(t.input.humeur || ""), suggestions: t.input.suggestions.slice(0, 3).map(x => ({ angle: String(x.angle || ""), text: String(x.text || "") })).filter(x => x.text) };
+  return { style: String(t.input.style || ""), humeur: String(t.input.humeur || ""), suggestions: t.input.suggestions.slice(0, 3).map(x => ({ angle: String(x.angle || ""), text: String(x.text || "") })).filter(x => x.text) };
 }
 
 module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead, assistant, gradeApplicant, replies };

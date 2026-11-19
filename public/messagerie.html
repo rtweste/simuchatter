@@ -271,6 +271,7 @@
 /* assistant IA */
 .pnl.ai{border-color:rgba(95,211,162,.28);box-shadow:0 -24px 60px -20px #000,0 0 50px -24px rgba(95,211,162,.5)}
 .pnl.ai .trace{border-radius:18px;--tc:#5fd3a2;animation:spin 3s linear infinite}
+.mood.sty{background:rgba(95,211,162,.1);border-color:rgba(95,211,162,.3);color:#9fe9c8;max-width:280px;overflow:hidden;text-overflow:ellipsis}
 .mood{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:999px;background:rgba(125,180,255,.1);border:1px solid rgba(125,180,255,.3);color:#a9ccff;font:700 11px Inter;white-space:nowrap;animation:okIn .6s cubic-bezier(.3,1.7,.5,1) both}
 .aig{display:grid;gap:8px;padding:12px}
 .aic{position:relative;display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:14px;border:1px solid #262626;background:#141414;color:#eee;text-align:left;cursor:pointer;overflow:hidden;transition:transform .35s cubic-bezier(.3,1.4,.5,1),border-color .25s,background .25s;animation:aiIn .7s cubic-bezier(.16,1,.3,1) both}
@@ -575,10 +576,9 @@ function top() {
   $("swSend").classList.toggle("on", ST.send); $("sendTx").textContent = ST.send ? "Envoi ON" : "Envoi OFF"; $("sendWarn").classList.toggle("on", ST.send);
 }
 // non lus de chaque créatrice (pastille rouge sur les autres créatrices)
-const sumUnread = raw => { if (typeof raw === "number") return raw; let n = 0; const walk = o => { if (Array.isArray(o)) return o.forEach(walk); if (o && typeof o === "object") { if (typeof o.total === "number") { n += o.total; return; } Object.values(o).forEach(walk); } else if (typeof o === "number") n += o; }; walk(raw); return n; };
 let unT = null;
 async function unreads(only) { if (!ST) return; for (const c of ST.creators.filter(c => c.id && (!only || c.id === only))) {
-  try { const r = await api(`/api/twizz/inbox/${enc(c.id)}/unread`); UNREAD[c.id] = sumUnread(r.raw); } catch (e) {} } top(); }
+  try { const r = await api(`/api/twizz/inbox/${enc(c.id)}/unread`); UNREAD[c.id] = +r.count || 0; } catch (e) {} } top(); }
 function liveUi() { $("live").classList.toggle("on", LIVE); $("live").lastElementChild.textContent = LIVE ? "EN DIRECT" : "ACTUALISATION AUTO"; }
 $("swSend").onclick = async () => { const on = !ST.send;
   if (on && !confirm("Activer l'envoi ?\n\nTout ce que tu envoies d'ici part VRAIMENT au fan sur Twizz, au nom de la créatrice.")) return;
@@ -727,7 +727,7 @@ async function loadOlder() {
   const T = CUR && THREADS[CUR.id]; if (!T || T.loading || T.page >= T.totalPages) return; T.loading = true;
   const sc = $("sc"), h0 = sc.scrollHeight; if ($("old")) $("old").textContent = "Chargement…";
   try { const r = await api2(`/messages/${enc(CUR.id)}?fan=${enc(CUR.fan.id)}&page=${T.page + 1}`);
-    fixUrls(r.items); T.items = r.items.filter(x => !T.items.some(y => y.id === x.id)).concat(T.items); T.page++; T.totalPages = r.totalPages; thread(true, true); const s2 = $("sc"); s2.scrollTop = s2.scrollHeight - h0; }
+    fixUrls(r.items); const top0 = sc.scrollTop; T.items = r.items.filter(x => !T.items.some(y => y.id === x.id)).concat(T.items); T.page++; T.totalPages = r.totalPages; thread(true, true); const s2 = $("sc"); s2._prog = Date.now(); s2.scrollTop = s2.scrollHeight - h0 + top0; s2.dataset.stick = ""; }
   catch (e) {} finally { T.loading = false; }
 }
 const SHOWN = new Set();   // messages déjà affichés : eux ne s'animent plus
@@ -760,7 +760,7 @@ function crewHtml() { const H = CUR && HIST[CUR.id]; const t = H ? H.team.filter
   return t.length ? `<span class="cap">Sur ce fan</span><span class="stk">${t.map(x => `<span title="${esc(x.name)}">${chatterAv(x.name, 28)}</span>`).join("")}</span>` : ""; }
 function thread(keep, noScroll) {
   if (!CUR) { $("th").innerHTML = `${STARS}<div class="mx-empty"><div><div class="big">${SV(IC.chat, 28)}</div>${CID ? "Choisis une conversation" : "Choisis une créatrice en haut"}</div></div>`; return; }
-  const T = THREADS[CUR.id], sc0 = $("sc"), atBottom = !sc0 || sc0.scrollHeight - sc0.scrollTop - sc0.clientHeight < 90;
+  const T = THREADS[CUR.id], sc0 = $("sc"), prevTop = sc0 ? sc0.scrollTop : 0, atBottom = !sc0 || sc0.dataset.stick === "1" || sc0.scrollHeight - sc0.scrollTop - sc0.clientHeight < 90;
   const draft = $("tx") ? $("tx").value : "", focus = document.activeElement && document.activeElement.id === "tx";
   let body = "";
   if (!T) body = Array.from({ length: 6 }, (_, i) => `<div class="mx-g ${i % 2 ? "me" : ""}"><div class="sk" style="height:${34 + (i * 11) % 30}px;width:${140 + (i * 47) % 160}px;border-radius:18px"></div></div>`).join("");
@@ -779,8 +779,12 @@ function thread(keep, noScroll) {
     <div class="mx-cpw">${ST.send ? "" : `<div class="mx-off">🔒 Envoi coupé : tu peux tout lire sans rien changer côté Twizz. Active « Envoi activé » pour répondre.</div>`}
       <div class="mx-cp"><span class="tools"><button class="md" id="mdB" title="Envoyer un média du coffre" ${ST.send ? "" : "disabled"}>${SV(IC.img, 19)}</button><button class="md tl2 ${PANEL === "scripts" ? "act" : ""}" id="scB" title="Scripts (touche /)">${SV(IC.doc, 19)}</button><button class="md tl2 ai ${PANEL === "ai" ? "act" : ""}" id="aiB" title="Assistant IA (⌘J)">${SV(IC.spark, 19, 2)}</button></span><textarea id="tx" rows="1" placeholder="${ST.send ? (innerWidth > 860 ? "Écris ton message… ( / pour les scripts )" : "Écris ton message…") : "Envoi coupé"}" ${ST.send ? "" : "disabled"}></textarea><button class="go" id="goB" title="Envoyer" ${ST.send ? "" : "disabled"}>${SV(IC.send, 19, 2.6)}</button></div>
       <div class="hintbar"><span class="kh"><span class="kbd">↵</span>envoyer</span><span class="kh"><span class="kbd">/</span>scripts</span><span class="kh"><span class="kbd">⌘</span><span class="kbd">J</span>assistant IA</span><span class="kh"><span class="kbd">↓</span>fan suivant</span></div></div>`;
-  const sc = $("sc"); if (!noScroll && (!keep || atBottom)) sc.scrollTop = sc.scrollHeight;
-  sc.onscroll = () => { if (sc.scrollTop < 60) loadOlder(); };
+  // en bas : on y reste, même quand les images finissent de charger ; sinon on garde l'endroit où on lisait
+  const sc = $("sc"), toBottom = () => { sc._prog = Date.now(); sc.scrollTop = sc.scrollHeight; };
+  if (!noScroll && (!keep || atBottom)) { toBottom(); sc.dataset.stick = "1"; } else if (!noScroll) { sc._prog = Date.now(); sc.scrollTop = prevTop; }
+  // les anciens messages ne se chargent que quand c'est toi qui remontes (pas quand la page se replace toute seule)
+  sc.onscroll = () => { const prog = Date.now() - (sc._prog || 0) < 400; if (!prog) sc.dataset.stick = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 90 ? "1" : ""; if (!prog && sc.scrollTop < 60) loadOlder(); };
+  sc.querySelectorAll("img").forEach(im => { if (!im.complete) im.addEventListener("load", () => { if (sc.dataset.stick === "1") toBottom(); }, { once: true }); });
   const tx = $("tx"); if (draft) tx.value = draft; if (focus) tx.focus();
   const fit = () => { tx.style.height = "auto"; tx.style.height = Math.min(170, tx.scrollHeight) + "px"; }; tx.oninput = fit; fit();
   tx.onkeydown = e => {
@@ -895,10 +899,10 @@ async function askAI() { const c = CUR; if (!c) return; AIRES[c.id] = { loading:
   if (CUR === c && PANEL === "ai") paintAI(); }
 function paintAI() {
   const pn = $("pnl"); if (!pn || !CUR) return; pn.className = "pnl ai"; const R = AIRES[CUR.id] || { loading: true };
-  pn.innerHTML = `<span class="trace"></span><div class="ph"><span class="pt"><span class="aiorb">${SV(IC.spark, 14, 2.4)}</span>Assistant <em class="met">IA</em></span>${R.humeur ? `<span class="mood">Humeur : ${esc(R.humeur)}</span>` : ""}<span style="flex:1"></span><button class="mx-ib" id="aiR" ${R.loading ? "disabled" : ""}>${SV(IC.refresh, 14)}Autres idées</button><button class="px" id="pX">✕</button></div>
+  pn.innerHTML = `<span class="trace"></span><div class="ph"><span class="pt"><span class="aiorb">${SV(IC.spark, 14, 2.4)}</span>Assistant <em class="met">IA</em></span>${R.style ? `<span class="mood sty" title="Façon d'écrire de l'équipe repérée dans la conversation">Style : ${esc(R.style)}</span>` : ""}${R.humeur ? `<span class="mood">Humeur : ${esc(R.humeur)}</span>` : ""}<span style="flex:1"></span><button class="mx-ib" id="aiR" ${R.loading ? "disabled" : ""}>${SV(IC.refresh, 14)}Autres idées</button><button class="px" id="pX">✕</button></div>
     <div class="aig">${R.loading ? [0, 1, 2].map(i => `<div class="aic sk2" style="animation-delay:${i * .1}s"></div>`).join("") : R.error ? `<div class="pempty"><b>L'assistant n'a pas répondu</b>${esc(R.error)}</div>`
       : R.suggestions.map((x, i) => `<button class="aic" data-a="${i}" style="--c:${AIC[i % 3]};animation-delay:${i * .09}s"><span class="aa"><i></i>${esc(x.angle || "Idée " + (i + 1))}</span><span class="at">${esc(x.text)}</span><span class="use">Utiliser ↵</span></button>`).join("")}</div>
-    <div class="aif">Clique une idée pour la mettre dans ta réponse : relis et ajuste avant d'envoyer.</div>`;
+    <div class="aif">Écrit à la manière de l'équipe dans cette conversation. Clique une idée pour la mettre dans ta réponse, relis avant d'envoyer.</div>`;
   $("pX").onclick = () => openPanel(null); $("aiR").onclick = () => askAI();
   pn.querySelectorAll("[data-a]").forEach(b => b.onclick = () => { const x = R.suggestions[+b.dataset.a]; openPanel(null); putText(x.text); });
 }
