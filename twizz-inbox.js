@@ -94,7 +94,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   app.get("/api/twizz/inbox/state", auth, founder, (req, res) => res.json({ send: sendOn(), creators: mapped(), configured: twizz.configured() }));
   app.post("/api/twizz/inbox/state", auth, founder, (req, res) => { if (typeof req.body?.send === "boolean") S.set("twizz_inbox_send", req.body.send); res.json({ send: sendOn() }); });
   app.get("/api/twizz/inbox/:cid/unread", auth, founder, wrap(async req => { const cid = creatorOk(req.params.cid);
-    const j = await G(`/conversations/stats/get-unread-by-types?creatorId=${enc(cid)}`); return { raw: j && (j.data ?? j) }; }));
+    const j = await G(`/conversations/stats/get-unread-by-types?creatorId=${enc(cid)}`, 30e3); return { raw: j && (j.data ?? j) }; }));
   app.get("/api/twizz/inbox/:cid/conversations", auth, founder, wrap(async req => {
     const cid = creatorOk(req.params.cid), type = ["GENERAL", "TO_DELIVER"].includes(req.query.type) ? req.query.type : "GENERAL", page = Math.max(1, +req.query.page || 1);
     const q = String(req.query.q || "").trim().slice(0, 60);

@@ -13,21 +13,33 @@
 .main-area.mxm{padding:0!important;height:100dvh;overflow:hidden}
 .mx{height:100dvh;display:flex;flex-direction:column;min-width:0;background:#0a0a0a}
 /* ---- barre du haut ---- */
-.mx-top{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--bd);flex-wrap:wrap}
-.mx-top h1{margin:0;font:900 21px Inter;letter-spacing:-.035em;white-space:nowrap}.mx-top h1 em{font-style:italic;background:linear-gradient(90deg,#7ee8bd,#5fd3a2);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:2px}
-.mx-badge{height:22px;padding:0 9px;border-radius:999px;background:rgba(240,181,74,.1);border:1px solid rgba(240,181,74,.35);color:var(--am);font:800 10px/20px Inter;letter-spacing:.12em}
-.mx-cr{display:flex;gap:4px;padding:4px;border-radius:14px;background:#111;border:1px solid var(--bd)}
-.mx-cr button{display:flex;align-items:center;gap:7px;height:32px;padding:0 12px 0 5px;border-radius:10px;border:0;background:none;color:#8f8f8f;font:700 12.5px Inter;cursor:pointer;transition:background .2s,color .2s}
-.mx-cr button i{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:900 10px Inter;font-style:normal;color:#fff;background:#2a2a2a}
-.mx-cr button.on{background:#f5f5f5;color:#0a0a0a}.mx-cr button.on i{background:#0a0a0a}
-.mx-cr button:not(.on):hover{color:#ddd;background:#181818}
-.mx-tg{margin-left:auto;display:flex;align-items:center;gap:16px}
-.mx-live{display:inline-flex;align-items:center;gap:7px;font:800 10.5px Inter;letter-spacing:.1em;color:#6f6f6f}
+.mx-topw{padding:12px 16px 4px;background:radial-gradient(700px 120px at 50% 0%,rgba(95,211,162,.07),transparent 70%)}
+.mx-top{display:flex;align-items:center;gap:14px;padding:7px 8px 7px 18px;border-radius:22px;background:rgba(20,20,20,.72);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08);box-shadow:0 20px 50px -20px #000,inset 0 1px 0 rgba(255,255,255,.05)}
+.mx-top h1{margin:0;font:900 18px Inter;letter-spacing:-.035em;white-space:nowrap}.mx-top h1 em{font-style:italic;background:linear-gradient(90deg,#7ee8bd,#5fd3a2);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:2px}
+.mx-badge{height:18px;padding:0 7px;border-radius:999px;background:rgba(240,181,74,.1);border:1px solid rgba(240,181,74,.3);color:var(--am);font:800 9px/16px Inter;letter-spacing:.12em}
+.mx-cr{display:flex;gap:6px;margin:0 auto;min-width:0;overflow-x:auto;scrollbar-width:none;padding:2px}
+.mx-cr button{position:relative;display:flex;align-items:center;height:44px;padding:4px;border-radius:999px;border:1px solid transparent;background:#141414;color:#9a9a9a;font:800 12.5px Inter;cursor:pointer;flex:none;transition:background .45s cubic-bezier(.3,1.3,.5,1),color .3s,padding .5s cubic-bezier(.3,1.3,.5,1),box-shadow .4s}
+.mx-cr button:hover{background:#1c1c1c;color:#ddd}
+.mx-cr button .nm{max-width:0;overflow:hidden;white-space:nowrap;opacity:0;margin:0;transition:max-width .5s cubic-bezier(.3,1.3,.5,1),opacity .3s,margin .5s}
+.mx-cr button.on{background:#f5f5f5;color:#0a0a0a;box-shadow:0 8px 26px -8px rgba(255,255,255,.4);padding-right:16px}
+.mx-cr button.on .nm,.mx-cr button:hover .nm{max-width:110px;opacity:1;margin-left:10px}
+.mx-cr button:hover:not(.on){padding-right:14px}
+.mx-cr .dot{position:absolute;top:1px;left:26px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:#e0484a;color:#fff;font:900 9px/13px Inter;text-align:center;border:2px solid #141414;animation:dtIn .5s cubic-bezier(.3,1.7,.5,1) both}
+@keyframes dtIn{from{transform:scale(0)}}
+.mx-cr button.on .dot{display:none}
+.mx-tg{display:flex;align-items:center;gap:6px;flex:none}
+.mx-live{display:inline-flex;align-items:center;gap:7px;margin-right:6px;font:800 10.5px Inter;letter-spacing:.1em;color:#6f6f6f;white-space:nowrap}
 .mx-live i{width:7px;height:7px;border-radius:50%;background:#555}.mx-live.on{color:var(--ac)}.mx-live.on i{background:var(--ac);box-shadow:0 0 0 0 rgba(95,211,162,.6);animation:mxP 1.8s infinite}
 @keyframes mxP{70%{box-shadow:0 0 0 7px rgba(95,211,162,0)}100%{box-shadow:0 0 0 0 rgba(95,211,162,0)}}
-.mx-sw{display:flex;align-items:center;gap:8px;font:700 12.5px Inter;color:#8a8a8a;cursor:pointer;user-select:none;white-space:nowrap}
-.mx-sw i{width:36px;height:21px;border-radius:999px;background:#262626;position:relative;transition:.25s;flex:none}.mx-sw i:after{content:"";position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;background:#7a7a7a;transition:.25s cubic-bezier(.34,1.56,.64,1)}
-.mx-sw.on i{background:var(--ac)}.mx-sw.on i:after{left:18px;background:#fff}.mx-sw.on{color:#eee}.mx-sw.red.on i{background:#e0484a}
+.tgi{width:44px;height:44px;border-radius:14px;border:1px solid #262626;background:#141414;color:#8a8a8a;display:grid;place-items:center;cursor:pointer;transition:all .3s}
+.tgi:hover{color:#ddd}.tgi.on{color:#fff;background:#1f1f1f;border-color:#3a3a3a}
+.tgs{display:flex;align-items:center;gap:8px;height:44px;padding:0 14px 0 12px;border-radius:14px;border:1px solid #262626;background:#141414;color:#8a8a8a;font:800 12px Inter;cursor:pointer;white-space:nowrap;transition:all .35s}
+.tgs:hover{color:#ddd}
+.tgs.on{background:linear-gradient(135deg,#e0484a,#b8323a);border-color:#e0484a;color:#fff;box-shadow:0 10px 30px -10px rgba(224,72,74,.8)}
+.mx-warn{display:flex;align-items:center;justify-content:center;gap:8px;height:0;overflow:hidden;font:700 11.5px Inter;color:#ff9aa4;opacity:0;transition:height .35s,opacity .35s,margin .35s}
+.mx-warn.on{height:18px;margin-top:6px;opacity:1}
+.mx-warn i{width:6px;height:6px;border-radius:50%;background:#e0484a;animation:wrP 1.6s infinite}
+@keyframes wrP{0%{box-shadow:0 0 0 0 rgba(224,72,74,.6)}70%{box-shadow:0 0 0 6px rgba(224,72,74,0)}100%{box-shadow:0 0 0 0 rgba(224,72,74,0)}}
 /* ---- 3 colonnes ---- */
 .mx-body{flex:1;min-height:0;display:grid;grid-template-columns:340px minmax(0,1fr) 340px;position:relative;overflow:hidden}
 .mx-ls{border-right:1px solid var(--bd);display:flex;flex-direction:column;min-height:0;background:#0a0a0a;position:relative}
@@ -148,8 +160,16 @@
 .mx-g{position:relative;display:flex;flex-direction:column;gap:3px;max-width:68%;margin-bottom:12px;align-items:flex-start}.mx-g.nw{animation:mxBub .45s cubic-bezier(.3,1.4,.5,1) both}.mx-g.me{align-self:flex-end;align-items:flex-end}
 @keyframes mxBub{from{opacity:0;transform:translateY(14px) scale(.94)}}
 .mx-g.me.nw{transform-origin:bottom right}
-.mx-b{padding:9px 14px;border-radius:18px;background:#191919;color:#ededed;font-size:14.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word;border-bottom-left-radius:6px}
-.mx-g.me .mx-b{background:linear-gradient(135deg,#1f4a39,#1a3b2e);color:#e9fff5;border-bottom-left-radius:18px;border-bottom-right-radius:6px}
+.mx-b{position:relative;padding:9px 14px;border-radius:18px;background:#141414;border:1px solid #1f1f1f;color:#ededed;font-size:14.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.mx-g.me .mx-b{background:#0d1512;color:#d9ffee;border:0;box-shadow:0 0 22px -8px rgba(95,211,162,.55)}
+.mx-g.me .mx-b:before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(135deg,#5fd3a2,#2aa6a0 50%,rgba(95,211,162,.15));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.fgr{display:flex;align-items:flex-end;gap:8px;max-width:74%;margin-bottom:12px;flex:none}
+.fgr.nw{animation:mxBub .45s cubic-bezier(.3,1.4,.5,1) both;transform-origin:bottom left}
+.fgr .mx-g{max-width:100%;margin-bottom:0;min-width:0}
+.mx-av.fav{width:26px;height:26px;font-size:11px;margin-bottom:18px}
+.lbl{display:inline-flex;align-items:center;gap:6px;font:800 9.5px Inter;letter-spacing:.14em;text-transform:uppercase;color:#6a6a6a;margin-top:3px;padding:0 3px;white-space:nowrap}
+.lbl i{width:6px;height:6px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c);flex:none}
+.lbl .vu{color:var(--ac);letter-spacing:.06em}
 .mx-g time{font-size:10.5px;color:#565656;margin-top:3px;padding:0 4px}
 .mx-g .st{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:#888;margin-top:3px}.mx-g .st.ko{color:#ff8a8a;cursor:pointer;text-decoration:underline}
 .mx-g .st i{width:10px;height:10px;border-radius:50%;border:1.5px solid #3a3a3a;border-top-color:var(--ac);animation:rot .7s linear infinite}
@@ -169,7 +189,7 @@
 .mx-pr.accepted{background:rgba(95,211,162,.14);color:var(--ac)}.mx-pr.refused{background:rgba(224,122,122,.14);color:#ff9a9a}.mx-pr.pending{background:rgba(240,181,74,.12);color:var(--am)}
 /* carte PPV */
 .pw{position:relative}
-.ppv{position:relative;width:300px;display:flex;flex-direction:column;border-radius:16px;background:#121212;border:1px solid #222;transition:border-color .4s}
+.ppv{position:relative;width:300px;display:flex;flex-direction:column;border-radius:16px;background:#0d1512;border:1px solid rgba(95,211,162,.18);transition:border-color .4s,box-shadow .4s}
 .ppv .mdw{position:relative;border-radius:15px 15px 0 0;overflow:hidden}
 .ppv .mx-md{border-radius:0;grid-template-columns:repeat(var(--n,1),minmax(0,1fr))!important}.ppv .mx-md.n1 button{aspect-ratio:4/3}
 .gl{position:absolute;z-index:3;display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;background:rgba(10,10,10,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14);font:800 11px Inter;color:#fff;pointer-events:none}
@@ -180,7 +200,7 @@
 .ppv .ok{color:var(--ac)}.ppv .ko{color:#ff9a9a}.ppv .ko i{width:7px;height:7px;border-radius:50%;background:#ff9a9a}
 .ppv .wt{color:var(--am)}.ppv .wt i{width:7px;height:7px;border-radius:50%;background:var(--am);animation:wtP 1.6s infinite}
 @keyframes wtP{0%{box-shadow:0 0 0 0 rgba(240,181,74,.55)}70%{box-shadow:0 0 0 6px rgba(240,181,74,0)}100%{box-shadow:0 0 0 0 rgba(240,181,74,0)}}
-.ppv.ok{border-color:rgba(95,211,162,.3)}.ppv.ok .bar{background:rgba(95,211,162,.07)}
+.ppv.ok{border-color:rgba(95,211,162,.45);box-shadow:0 0 30px -10px rgba(95,211,162,.6)}.ppv.ok .bar{background:rgba(95,211,162,.07)}
 .ck{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--ac);color:#05261a;flex:none}
 /* moment d'achat */
 .ppv.won{animation:won 1.6s ease both}
@@ -450,7 +470,7 @@
 @media(max-width:1600px){.mx-hd .mx-ib .lb,.mx-hd .mx-ib .kbd,.crew .cap{display:none}.mx-hd .mx-ib{padding:0 10px}}
 @media(max-width:1180px){.mx-body{grid-template-columns:320px minmax(0,1fr)}.mx-fan{position:absolute;right:0;top:0;bottom:0;width:340px;z-index:30;transform:translateX(105%);transition:transform .3s cubic-bezier(.2,.8,.2,1);box-shadow:-30px 0 60px -20px #000}.mx-fan.show{transform:none}.mx-fb{display:inline-flex}}
 @media(max-width:900px){.main-area.mxm,.mx{height:calc(100dvh - 55px)}.vb2{grid-template-columns:1fr}.rail{flex-direction:row;border-right:0;border-bottom:1px solid #1c1c1c;max-height:84px}.rail .al{min-width:190px}.go2{min-width:0;flex:1}.intel,.pz .hint,.cbl,.vdock .dt small{display:none}.vgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.vwt button{font-size:10.5px}}
-@media(max-width:860px){.mx-body{grid-template-columns:1fr}.mx-th{position:absolute;inset:0;transform:translateX(100%);z-index:20}.mx.open .mx-th{transform:none}.mx-bk{display:inline-flex}.mx-top{padding:12px 14px;gap:10px}.mx-tg{margin-left:0;width:100%;justify-content:space-between}.mx-g{max-width:84%}.mx-md.n1{grid-template-columns:200px}.ppv{width:260px}
+@media(max-width:860px){.mx-topw{padding:8px 8px 2px}.mx-top{flex-wrap:wrap;gap:8px;padding:8px 8px 8px 14px}.mx-cr{order:3;width:100%;margin:0}.mx-live span,.mx-badge{display:none}.mx-tg{margin-left:auto}.mx-top h1{font-size:16px}.tgi,.tgs{height:38px}.tgi{width:38px}.tgs{padding:0 11px}.mx-body{grid-template-columns:1fr}.mx-th{position:absolute;inset:0;transform:translateX(100%);z-index:20}.mx.open .mx-th{transform:none}.mx-bk{display:inline-flex}.mx-g{max-width:84%}.mx-md.n1{grid-template-columns:200px}.ppv{width:260px}
   .mx-cpw{padding-bottom:calc(92px + env(safe-area-inset-bottom))}.mx-cl{padding-bottom:96px}.mx-ib .lb{display:none}.mx-hd{padding:10px 12px;gap:10px}.crew,.hintbar{display:none}}
 </style>
 </head>
@@ -459,11 +479,12 @@
 <aside class="sidebar" id="sidebar"></aside>
 <main class="main-area mxm">
   <div class="mx" id="mx">
-    <div class="mx-top"><h1>Messagerie <em>Twizz</em></h1><span class="mx-badge">TEST · FONDATEUR</span>
+    <div class="mx-topw"><div class="mx-top"><h1>Messagerie <em>Twizz</em></h1><span class="mx-badge">TEST</span>
       <div class="mx-cr" id="crs"></div>
       <div class="mx-tg"><span class="mx-live" id="live" title="Les nouveaux messages arrivent tout seuls"><i></i><span>CONNEXION…</span></span>
-        <span class="mx-sw on" id="swBlur" title="Floute les photos et vidéos ; survole pour voir"><i></i>Flouter</span>
-        <span class="mx-sw red" id="swSend" title="Tant que c'est coupé, rien ne peut partir vers les fans"><i></i>Envoi activé</span></div></div>
+        <button class="tgi on" id="swBlur" title="Flouter les photos et vidéos (survole une image pour la voir)" aria-label="Flouter les médias"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/></svg></button>
+        <button class="tgs" id="swSend" title="Tant que c'est coupé, rien ne peut partir vers les fans"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span id="sendTx">Envoi OFF</span></button></div></div>
+      <div class="mx-warn" id="sendWarn"><i></i>Envoi activé : ce que tu envoies part vraiment aux fans</div></div>
     <div class="mx-body blur" id="body">
       <section class="mx-ls"><div class="mx-seg"><button data-ty="QUEUE">À traiter<span class="qn" id="qCount"></span></button><button data-ty="GENERAL">Général</button></div>
         <div class="qhd" id="qh" hidden><h2><span id="qN"></span><span id="qW">fans <em class="met">à traiter.</em></span></h2><div class="dsh" id="qD"></div>
@@ -540,11 +561,24 @@ function chime() { try { AC = AC || new (window.AudioContext || window.webkitAud
 const crLabel = () => ((ST && ST.creators.find(c => c.id === CID)) || {}).label || "";
 
 /* ================= haut de page ================= */
+const UNREAD = {};
 function top() {
-  $("crs").innerHTML = ST.creators.filter(c => c.id).map(c => `<button data-cid="${esc(c.id)}" class="${c.id === CID ? "on" : ""}"><i>${esc(c.label[0] || "?")}</i>${esc(c.label)}</button>`).join("") || `<span style="color:#777;font-size:13px;padding:0 10px">Teste la connexion Twizz dans Réglages fondateur</span>`;
-  $("crs").querySelectorAll("[data-cid]").forEach(b => b.onclick = () => { if (b.dataset.cid === CID) return; CID = b.dataset.cid; try { localStorage.setItem("mx:cid", CID); } catch (e) {} CUR = null; QDONE.clear(); QTREATED = 0; $("mx").classList.remove("open"); top(); loadList(); thread(); fanCard(); });
-  $("swSend").classList.toggle("on", ST.send);
+  const L = ST.creators.filter(c => c.id), box = $("crs"), ids = [...box.querySelectorAll("[data-cid]")].map(b => b.dataset.cid).join("|");
+  if (!L.length) box.innerHTML = `<span style="color:#777;font-size:13px;padding:0 10px">Teste la connexion Twizz dans Réglages fondateur</span>`;
+  else if (ids !== L.map(c => c.id).join("|")) {
+    box.innerHTML = L.map(c => `<button data-cid="${esc(c.id)}" title="${esc(c.label)}">${rav((c.label[0] || "?").toUpperCase(), 34, pal(c.label))}<span class="nm">${esc(c.label)}</span></button>`).join("");
+    box.querySelectorAll("[data-cid]").forEach(b => b.onclick = () => { if (b.dataset.cid === CID) return; CID = b.dataset.cid; try { localStorage.setItem("mx:cid", CID); } catch (e) {} CUR = null; QDONE.clear(); QTREATED = 0; $("mx").classList.remove("open"); top(); loadList(); thread(); fanCard(); });
+  }
+  box.querySelectorAll("[data-cid]").forEach(b => { const id = b.dataset.cid, n = UNREAD[id] || 0, d = b.querySelector(".dot");
+    b.classList.toggle("on", id === CID);
+    if (n && !d) b.insertAdjacentHTML("beforeend", `<span class="dot">${n > 99 ? "99+" : n}</span>`); else if (n && d) d.textContent = n > 99 ? "99+" : n; else if (!n && d) d.remove(); });
+  $("swSend").classList.toggle("on", ST.send); $("sendTx").textContent = ST.send ? "Envoi ON" : "Envoi OFF"; $("sendWarn").classList.toggle("on", ST.send);
 }
+// non lus de chaque créatrice (pastille rouge sur les autres créatrices)
+const sumUnread = raw => { if (typeof raw === "number") return raw; let n = 0; const walk = o => { if (Array.isArray(o)) return o.forEach(walk); if (o && typeof o === "object") { if (typeof o.total === "number") { n += o.total; return; } Object.values(o).forEach(walk); } else if (typeof o === "number") n += o; }; walk(raw); return n; };
+let unT = null;
+async function unreads(only) { if (!ST) return; for (const c of ST.creators.filter(c => c.id && (!only || c.id === only))) {
+  try { const r = await api(`/api/twizz/inbox/${enc(c.id)}/unread`); UNREAD[c.id] = sumUnread(r.raw); } catch (e) {} } top(); }
 function liveUi() { $("live").classList.toggle("on", LIVE); $("live").lastElementChild.textContent = LIVE ? "EN DIRECT" : "ACTUALISATION AUTO"; }
 $("swSend").onclick = async () => { const on = !ST.send;
   if (on && !confirm("Activer l'envoi ?\n\nTout ce que tu envoies d'ici part VRAIMENT au fan sur Twizz, au nom de la créatrice.")) return;
@@ -697,8 +731,7 @@ async function loadOlder() {
   catch (e) {} finally { T.loading = false; }
 }
 const SHOWN = new Set();   // messages déjà affichés : eux ne s'animent plus
-const sigHtml = m => m.by ? `<span class="sig"><i class="ch" style="--c:${pal(m.by)[0]}">${esc(m.by[0].toUpperCase())}</i><b>${esc(m.by)}</b><span class="dt">·</span><time>${tm(m.at)}</time></span>`
-  : `<span class="sig"><i class="ch tw">T</i><b>Twizz</b><span class="dt">·</span><time>${tm(m.at)}</time></span>`;
+const sigHtml = m => `<span class="lbl"><i style="--c:${m.by ? pal(m.by)[0] : "#8a8a8a"}"></i>${esc(m.by || "Twizz")} · ${tm(m.at)}${m.read ? ` · <span class="vu">vu</span>` : ""}</span>`;
 const fullDate = d => new Date(d).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 function mediaGrid(m) {
   return `<div class="mx-md n${Math.min(3, m.medias.length)}" style="--n:${Math.min(3, m.medias.length)}">${m.medias.map((x, i) => x.audio ? `<audio controls src="${esc(x.url)}" style="width:240px"></audio>`
@@ -718,9 +751,10 @@ function groupHtml(G) {
     const md = m.medias.length ? mediaGrid(m) : "";
     const pr = m.type === "FILE" && m.price != null ? (m.price > 0 ? `<span class="mx-pr ${esc(m.status)}">${E(m.price)} · ${m.status === "accepted" ? "acheté" : m.status === "refused" ? "refusé" : "pas encore acheté"}</span>` : `<span class="mx-pr">Gratuit</span>`) : "";
     return `${md}${m.text ? `<div class="mx-b">${esc(m.text)}</div>` : ""}${pr}`; }).join("");
-  const st = last.tmp ? (last.failed ? `<span class="st ko" data-retry="${esc(last.id)}">Échec · réessayer</span>` : `<span class="st"><i></i>envoi…</span>`) : me ? sigHtml(last) : `<time>${tm(last.at)}</time>`;
+  const st = last.tmp ? (last.failed ? `<span class="st ko" data-retry="${esc(last.id)}">Échec · réessayer</span>` : `<span class="st"><i></i>envoi…</span>`) : me ? sigHtml(last) : `<span class="lbl">${tm(last.at)}</span>`;
   const tip = me && !last.tmp ? `<span class="tip">${last.by ? `Écrit par <b>${esc(last.by)}</b> sur StellADS` : `Envoyé directement depuis l'appli <b>Twizz</b>`} · ${esc(fullDate(last.at))}</span>` : "";
-  return `<div class="mx-g ${me ? "me" : ""} ${fresh && SHOWN.size ? "nw" : ""}">${parts}${st}${tip}</div>`;
+  if (!me) return `<div class="fgr ${fresh && SHOWN.size ? "nw" : ""}">${av(CUR.fan, "fav")}<div class="mx-g">${parts}${st}</div></div>`;
+  return `<div class="mx-g me ${fresh && SHOWN.size ? "nw" : ""}">${parts}${st}${tip}</div>`;
 }
 function crewHtml() { const H = CUR && HIST[CUR.id]; const t = H ? H.team.filter(x => x.msgs || x.sold).slice(0, 4) : [];
   return t.length ? `<span class="cap">Sur ce fan</span><span class="stk">${t.map(x => `<span title="${esc(x.name)}">${chatterAv(x.name, 28)}</span>`).join("")}</span>` : ""; }
@@ -743,7 +777,7 @@ function thread(keep, noScroll) {
       <span class="sp"><span class="crew" id="crew">${crewHtml()}</span>${TYPE === "QUEUE" ? `<button class="mx-ib" id="nxB" title="Fan suivant de la file">${SV(IC.down, 14, 2.4)}<span class="lb">Fan suivant</span><span class="kbd">↓</span></button>` : ""}<button class="mx-ib" id="rd" title="Marque la conversation comme lue sur Twizz">${SV(IC.eye, 15)}<span class="lb">Marquer lu</span></button><button class="mx-ib mx-fb" id="fanB">${SV(IC.user, 15)}<span class="lb">Fiche</span></button></span></div>
     <div class="mx-sc" id="sc">${body}</div>
     <div class="mx-cpw">${ST.send ? "" : `<div class="mx-off">🔒 Envoi coupé : tu peux tout lire sans rien changer côté Twizz. Active « Envoi activé » pour répondre.</div>`}
-      <div class="mx-cp"><span class="tools"><button class="md" id="mdB" title="Envoyer un média du coffre" ${ST.send ? "" : "disabled"}>${SV(IC.img, 19)}</button><button class="md tl2 ${PANEL === "scripts" ? "act" : ""}" id="scB" title="Scripts (touche /)">${SV(IC.doc, 19)}</button><button class="md tl2 ai ${PANEL === "ai" ? "act" : ""}" id="aiB" title="Assistant IA (⌘J)">${SV(IC.spark, 19, 2)}</button></span><textarea id="tx" rows="1" placeholder="${ST.send ? "Écris ton message… ( / pour les scripts )" : "Envoi coupé"}" ${ST.send ? "" : "disabled"}></textarea><button class="go" id="goB" title="Envoyer" ${ST.send ? "" : "disabled"}>${SV(IC.send, 19, 2.6)}</button></div>
+      <div class="mx-cp"><span class="tools"><button class="md" id="mdB" title="Envoyer un média du coffre" ${ST.send ? "" : "disabled"}>${SV(IC.img, 19)}</button><button class="md tl2 ${PANEL === "scripts" ? "act" : ""}" id="scB" title="Scripts (touche /)">${SV(IC.doc, 19)}</button><button class="md tl2 ai ${PANEL === "ai" ? "act" : ""}" id="aiB" title="Assistant IA (⌘J)">${SV(IC.spark, 19, 2)}</button></span><textarea id="tx" rows="1" placeholder="${ST.send ? (innerWidth > 860 ? "Écris ton message… ( / pour les scripts )" : "Écris ton message…") : "Envoi coupé"}" ${ST.send ? "" : "disabled"}></textarea><button class="go" id="goB" title="Envoyer" ${ST.send ? "" : "disabled"}>${SV(IC.send, 19, 2.6)}</button></div>
       <div class="hintbar"><span class="kh"><span class="kbd">↵</span>envoyer</span><span class="kh"><span class="kbd">/</span>scripts</span><span class="kh"><span class="kbd">⌘</span><span class="kbd">J</span>assistant IA</span><span class="kh"><span class="kbd">↓</span>fan suivant</span></div></div>`;
   const sc = $("sc"); if (!noScroll && (!keep || atBottom)) sc.scrollTop = sc.scrollHeight;
   sc.onscroll = () => { if (sc.scrollTop < 60) loadOlder(); };
@@ -1035,6 +1069,7 @@ function stream() {
   const ES = new EventSource("/api/twizz/inbox/stream");
   ES.addEventListener("live", e => { LIVE = !!JSON.parse(e.data).on; liveUi(); });
   ES.addEventListener("tw", e => { const d = JSON.parse(e.data);
+    clearTimeout(unT); unT = setTimeout(() => unreads(d.creator || null), 3000);
     if (CUR && (!d.conv || d.conv === CUR.id)) loadMsgs(true);
     if (d.creator && d.creator !== CID) return;
     clearTimeout(lT); lT = setTimeout(() => loadList(true), 1500); });
@@ -1053,7 +1088,7 @@ document.addEventListener("keydown", e => { if (e.key !== "ArrowDown" || e.metaK
   try { ST = await api("/api/twizz/inbox/state"); } catch (e) { $("mx").innerHTML = `<div class="mx-empty">${esc(e.message)}</div>`; return; }
   let saved = null, ty = null; try { saved = localStorage.getItem("mx:cid"); ty = localStorage.getItem("mx:ty"); } catch (e) {}
   CID = ST.creators.some(c => c.id === saved) ? saved : (ST.creators[0] || {}).id || null;
-  top(); liveUi(); thread(); fanCard(); setType(["QUEUE", "GENERAL"].includes(ty) ? ty : "QUEUE"); if (CID) stream();
+  top(); unreads(); setInterval(() => { if (!document.hidden) unreads(); }, 120e3); liveUi(); thread(); fanCard(); setType(["QUEUE", "GENERAL"].includes(ty) ? ty : "QUEUE"); if (CID) stream();
 })();
 })();
 </script>
