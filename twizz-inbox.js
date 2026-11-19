@@ -12,6 +12,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   db.exec("CREATE TABLE IF NOT EXISTS twizz_script_uses (script_id INTEGER, user_id INTEGER, at INTEGER)");
   // où en est chaque fan dans le script qu'on lui déroule (une étape à la fois, envoyée par le chatter)
   db.exec("CREATE TABLE IF NOT EXISTS twizz_script_runs (creator_id TEXT, fan_id TEXT, script_id INTEGER, step INTEGER, ppv_msg TEXT, ppv_step INTEGER, relanced INTEGER DEFAULT 0, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id))");
+  // fiche du fan : infos perso (posées par l'équipe ou repérées par l'IA), résumé de l'IA, étape corrigée à la main
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_fan_profile (creator_id TEXT, fan_id TEXT, field TEXT, value TEXT, source TEXT, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id, field))");
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_fan_brief (creator_id TEXT, fan_id TEXT, conv_id TEXT, data TEXT, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id))");
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_fan_stage (creator_id TEXT, fan_id TEXT, stage INTEGER, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id))");
   // tags des fans : communs à l'agence, posés par l'équipe ou tout seuls par les règles du manager (rien n'est écrit chez Twizz)
   db.exec("CREATE TABLE IF NOT EXISTS twizz_tags (id INTEGER PRIMARY KEY, name TEXT, color TEXT, rule TEXT, thr REAL, active INTEGER DEFAULT 1, user_id INTEGER, at INTEGER)");
   db.exec("CREATE TABLE IF NOT EXISTS twizz_fan_tags (creator_id TEXT, fan_id TEXT, tag_id INTEGER, auto INTEGER DEFAULT 0, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id, tag_id))");
@@ -104,7 +108,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const fanRaw = c.interlocutor || c.fan || c.user || (Array.isArray(c.participants) ? c.participants.find(x => str(x._id || x.userId) !== cid) : null) || {};
     const fan = person(fanRaw), last = c.lastMessage || c.last_message || {};
     return { id: str(c._id || c.id), fan, last: { id: str(last._id || ""), text: str(last.text || ""), type: str(last.type || (last.isAudio ? "AUDIO" : "")), at: last.createdAt || c.updatedAt || c.createdAt || null, fromFan: !!fan.id && byFan(last, fan.id) },
-      unread: unreadOf(c, cid, fan.id, last), type: str(c.type || ""), since: c.createdAt || null, tags: (c.tags || []).map(t => str(t.name || t.label || t)).filter(Boolean) };
+      unread: unreadOf(c, cid, fan.id, last), type: str(c.type || ""), since: c.createdAt || null, online: c.isOnline === true, subscribed: typeof c.isFanSubscribed === "boolean" ? c.isFanSubscribed : null, tags: (c.tags || []).map(t => str(t.name || t.label || t)).filter(Boolean) };
   }
   function msg(m, fanId) {
     const p = m.mediaPushPrice || {};
@@ -159,7 +163,13 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const shape = (o, d = 0) => !o || typeof o !== "object" || d > 2 ? (typeof o === "string" ? "texte" : o) : Array.isArray(o) ? [shape(o[0], d + 1)] : Object.fromEntries(Object.entries(o).map(([k, v]) => [k, shape(v, d + 1)]));
     const L = arr(j).slice(0, 20), fanOf = c => person(c.interlocutor || c.fan || c.user || {}).id;
     const who = c => { const s = senderOf(c.lastMessage || {}); return !s ? "vide" : s === fanOf(c) ? "le fan" : s === c0.id ? "la créatrice" : /^[0-9a-f]{20,}$/i.test(s) ? "un autre compte" : s.length <= 16 ? "« " + s + " »" : "autre"; };
-    return { conversation: shape(x), unreadDetected: conv(x, c0.id).unread, page1: { conversations: L.length, nonLues: L.filter(c => conv(c, c0.id).unread > 0).length, dernierMessagePar: L.map(who), attendent: L.filter(c => conv(c, c0.id).last.fromFan).length } };
+    const kind = v => v === null ? "vide" : Array.isArray(v) ? "liste" : typeof v === "number" ? "nombre" : typeof v === "boolean" ? "vrai/faux" : typeof v === "object" ? "objet" : "texte";
+    const keysOf2 = o => { const d = o && (o.data ?? o); return d && typeof d === "object" && !Array.isArray(d) ? Object.fromEntries(Object.entries(d).map(([k, v]) => [k, kind(v)])) : kind(d); };
+    const fid = L.map(fanOf).find(Boolean); let fanStats = null, recentShape = null;
+    if (fid) { fanStats = keysOf2(await G(`/business/get-fan-purchase-stats/${enc(fid)}?creatorId=${enc(c0.id)}`, 120e3).catch(e => ({ erreur: e.message })));
+      const rr = arr(await G(`/creator-fan-tags/recent-purchase?fanId=${enc(fid)}&creatorId=${enc(c0.id)}`, 120e3).catch(() => null)); recentShape = rr.length ? keysOf2(rr[0]) : "aucun achat"; }
+    const subs = L.map(c => c.isFanSubscribed), cnt = v => subs.filter(x => x === v).length;
+    return { conversation: shape(x), unreadDetected: conv(x, c0.id).unread, fanStats, recentShape, abonnement: { vrai: cnt(true), faux: cnt(false), vide: subs.length - cnt(true) - cnt(false) }, page1: { conversations: L.length, nonLues: L.filter(c => conv(c, c0.id).unread > 0).length, dernierMessagePar: L.map(who), attendent: L.filter(c => conv(c, c0.id).last.fromFan).length } };
   }));
   app.get("/api/twizz/inbox/state", auth, founder, (req, res) => res.json({ send: sendOn(), creators: mapped(), configured: twizz.configured() }));
   app.post("/api/twizz/inbox/state", auth, founder, (req, res) => { if (typeof req.body?.send === "boolean") S.set("twizz_inbox_send", req.body.send); res.json({ send: sendOn() }); });
@@ -251,6 +261,54 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const k = Object.keys(d).find(k => /totalSpent|spent/i.test(k)), total = k ? +d[k] || 0 : null;
     if (total != null) try { fact(cid, str(req.params.fan), { spend: total }); } catch (e) {}
     return { total };
+  }));
+
+  /* ---------- fiche du fan : infos perso, résumé de l'IA, étape ---------- */
+  const PFIELDS = ["anniv", "ville", "metier", "gouts"];
+  const cardOf = (cid, fan) => {
+    const profile = {}; db.prepare("SELECT p.field, p.value, p.source, p.at, u.username by FROM twizz_fan_profile p LEFT JOIN users u ON u.id = p.user_id WHERE p.creator_id = ? AND p.fan_id = ?").all(cid, fan)
+      .forEach(r => profile[r.field] = { value: r.value, source: r.source, at: r.at, by: r.by || null });
+    const b = db.prepare("SELECT data, at FROM twizz_fan_brief WHERE creator_id = ? AND fan_id = ?").get(cid, fan);
+    let brief = null; if (b) try { brief = { ...JSON.parse(b.data), at: b.at }; } catch (e) {}
+    const st = db.prepare("SELECT s.stage, s.at, u.username by FROM twizz_fan_stage s LEFT JOIN users u ON u.id = s.user_id WHERE s.creator_id = ? AND s.fan_id = ?").get(cid, fan);
+    return { profile, brief, stage: st ? { stage: st.stage, at: st.at, by: st.by || null } : null };
+  };
+  app.get("/api/twizz/inbox/:cid/card/:fan", auth, founder, wrap(async req => cardOf(creatorOk(req.params.cid), str(req.params.fan))));
+  app.post("/api/twizz/inbox/:cid/profile/:fan", auth, founder, wrap(async req => {
+    const cid = creatorOk(req.params.cid), fan = str(req.params.fan), f = str(req.body?.field), v = String(req.body?.value || "").trim().slice(0, 120);
+    if (!fan || !PFIELDS.includes(f)) throw bad("Champ inconnu");
+    if (!v) db.prepare("DELETE FROM twizz_fan_profile WHERE creator_id = ? AND fan_id = ? AND field = ?").run(cid, fan, f);
+    else db.prepare("INSERT INTO twizz_fan_profile (creator_id, fan_id, field, value, source, user_id, at) VALUES (?,?,?,?,'equipe',?,?) ON CONFLICT(creator_id, fan_id, field) DO UPDATE SET value = excluded.value, source = 'equipe', user_id = excluded.user_id, at = excluded.at").run(cid, fan, f, v, req.user.id, Date.now());
+    return cardOf(cid, fan);
+  }));
+  app.post("/api/twizz/inbox/:cid/stage/:fan", auth, founder, wrap(async req => {
+    const cid = creatorOk(req.params.cid), fan = str(req.params.fan), v = req.body?.stage; if (!fan) throw bad("Fan inconnu");
+    if (v === null || v === undefined || v === "") db.prepare("DELETE FROM twizz_fan_stage WHERE creator_id = ? AND fan_id = ?").run(cid, fan);
+    else { const n = Math.round(+v); if (!(n >= 0 && n <= 3)) throw bad("Étape inconnue");
+      db.prepare("INSERT INTO twizz_fan_stage (creator_id, fan_id, stage, user_id, at) VALUES (?,?,?,?,?) ON CONFLICT(creator_id, fan_id) DO UPDATE SET stage = excluded.stage, user_id = excluded.user_id, at = excluded.at").run(cid, fan, n, req.user.id, Date.now()); }
+    return cardOf(cid, fan);
+  }));
+  // « En bref » : l'IA lit la conversation (page 1, déjà en cache) et résume le fan ; gardé 12 h, « Relire » le refait
+  app.post("/api/twizz/inbox/:cid/brief/:conv", auth, founder, wrap(async req => {
+    if (!ai || !ai.fanBrief) throw bad("Assistant IA indisponible");
+    const cid = creatorOk(req.params.cid), conv = str(req.params.conv), fan = str(req.body?.fan); if (!fan) throw bad("Fan inconnu");
+    const old = cardOf(cid, fan); if (old.brief && !req.body?.again && Date.now() - old.brief.at < 12 * 3600e3) return old;
+    const k = req.user.id + ":brief:" + conv; if (Date.now() - (aiLast.get(k) || 0) < 4000) throw bad("Doucement : attends quelques secondes"); aiLast.set(k, Date.now());
+    const j = await G(`/messages/find-all-messages?conversationId=${enc(conv)}&creatorId=${enc(cid)}&page=1`, 15e3);
+    const L = ((j && j.data && j.data.data) || []).map(m => msg(m, fan)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(-40);
+    const line = m => m.type === "FILE" && !m.fromFan ? `[CRÉATRICE ENVOIE ${m.medias.length > 1 ? m.medias.length + " MÉDIAS" : "UN MÉDIA"}${m.price > 0 ? ` À ${m.price} € — ${m.status === "accepted" ? "acheté" : "pas encore acheté"}` : " GRATUIT"}]${m.text ? " " + m.text : ""}`
+      : `[${m.fromFan ? "FAN" : "CRÉATRICE"} · ${new Date(m.at).toLocaleString("fr-FR", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })}] ${m.text || (m.medias.length ? "(média)" : "")}`;
+    const cr = db.prepare("SELECT label FROM twizz_creators WHERE twizz_id = ?").get(cid) || {}, note = db.prepare("SELECT text FROM twizz_fan_notes WHERE creator_id = ? AND fan_id = ?").get(cid, fan);
+    const f = db.prepare("SELECT spend FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, fan);
+    const r = await ai.fanBrief({ creator: cr.label || "la créatrice", fan: str(req.body?.name) || "le fan", spend: f && f.spend != null ? f.spend : null, note: note ? note.text : "",
+      known: Object.fromEntries(Object.entries(old.profile).map(([k, v]) => [k, v.value])), transcript: L.map(line).join("\n") }, { user: req.user.id });
+    const now = Date.now();
+    db.prepare("INSERT INTO twizz_fan_brief (creator_id, fan_id, conv_id, data, user_id, at) VALUES (?,?,?,?,?,?) ON CONFLICT(creator_id, fan_id) DO UPDATE SET conv_id = excluded.conv_id, data = excluded.data, user_id = excluded.user_id, at = excluded.at")
+      .run(cid, fan, conv, JSON.stringify({ prenom: r.prenom, brief: r.brief, etat: r.etat, action: r.action, difficulte: r.difficulte, n: L.length }), req.user.id, now);
+    // ce que l'IA a repéré remplit seulement les cases vides (l'équipe garde la main)
+    for (const fld of PFIELDS) { const v = String((r.profil || {})[fld] || "").trim().slice(0, 120); if (v && !old.profile[fld])
+      db.prepare("INSERT OR IGNORE INTO twizz_fan_profile (creator_id, fan_id, field, value, source, user_id, at) VALUES (?,?,?,?,'ia',?,?)").run(cid, fan, fld, v, req.user.id, now); }
+    return cardOf(cid, fan);
   }));
 
   /* ---------- tags des fans ---------- */

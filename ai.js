@@ -410,4 +410,33 @@ Si la conversation ne permet rien de solide, renvoie une liste vide.`;
   return { tags: (t && t.input && Array.isArray(t.input.tags) ? t.input.tags : []).slice(0, 2).map(x => ({ name: String(x.name || "").trim().slice(0, 30), why: String(x.why || "").slice(0, 160) })).filter(x => x.name) };
 }
 
-module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead, assistant, gradeApplicant, replies, scriptVariants, tagSuggest };
+/* ---------- Fiche du fan : « En bref » de l'IA ---------- */
+const BRIEF_TOOL = { name: "fiche", description: "Enregistre le résumé du fan pour l'équipe.",
+  input_schema: { type: "object", required: ["prenom", "brief", "etat", "action", "difficulte", "profil"], properties: {
+    difficulte: { type: "string", enum: ["facile", "moyenne", "difficile"], description: "À quel point il est facile de lui vendre en ce moment" },
+    prenom: { type: "string", description: "Son vrai prénom s'il l'a dit dans la conversation, sinon chaîne vide" },
+    brief: { type: "string", description: "Une ou deux phrases courtes : qui il est, ce qu'il aime, comment il achète. Sans détail explicite." },
+    etat: { type: "string", description: "Une phrase : où en est la conversation maintenant (ex. dernier PPV pas encore acheté, il attend une réponse)" },
+    action: { type: "string", description: "Une phrase : la prochaine chose à faire pour le chatter, concrète" },
+    profil: { type: "object", description: "Seulement ce qu'il a dit clairement, sinon chaîne vide", properties: {
+      anniv: { type: "string", description: "Date d'anniversaire (ex. 23 novembre)" }, ville: { type: "string" }, metier: { type: "string" }, gouts: { type: "string", description: "Ce qu'il aime, en quelques mots, sans détail explicite" } } } } } };
+async function fanBrief(c, tag) {
+  if (MOCK) return { difficulte: "moyenne", prenom: "Benjamin", brief: "Infirmier à Lyon, aime la lingerie et les vidéos courtes, achète surtout à 15 € [test].", etat: "Le dernier PPV (15 €) n'est pas encore acheté.", action: "Relance douce avec une question, sans baisser le prix.",
+    profil: { anniv: "23 novembre", ville: "Lyon", metier: "", gouts: "Lingerie, vidéos courtes" } };
+  const known = Object.entries(c.known || {}).filter(([, v]) => v).map(([k, v]) => `${k} : ${v}`).join(", ");
+  const prompt = `Tu aides l'équipe d'une agence qui répond aux fans de la créatrice ${c.creator} sur Twizz (plateforme de contenus payants pour adultes consentants).
+Fan : ${c.fan}.${c.spend != null ? ` Il a dépensé ${c.spend} € au total.` : ""}${c.note ? ` Note de l'équipe : ${c.note}.` : ""}${known ? ` Déjà connu : ${known}.` : ""}
+Derniers messages (du plus ancien au plus récent, heure de Paris) :
+${c.transcript || "(aucun message)"}
+
+Fais une fiche très courte pour le chatter qui reprend ce fan : son prénom s'il l'a donné, qui il est et ce qu'il aime, où en est la conversation, et la prochaine chose à faire.
+N'invente rien : ce qui n'est pas dit clairement reste vide. Jamais de détail explicite, rien sur sa santé, sa religion ou son origine.
+La prochaine action doit être concrète et respectueuse : pas de fausse promesse, pas de pression sur un fan qui semble fragile ou à court d'argent.`;
+  const res = await ask(prompt, MODEL_HINT, 600, { ...(tag || {}), kind: "twizz_brief" }, { tools: [BRIEF_TOOL], tool_choice: { type: "tool", name: "fiche" } });
+  const t = (res.content || []).find(x => x.type === "tool_use"), x = (t && t.input) || {};
+  if (!x.brief && !x.action) throw new Error("L'IA n'a pas pu résumer ce fan, réessaie");
+  const p = x.profil || {}, S = v => String(v || "").trim();
+  return { difficulte: ["facile", "moyenne", "difficile"].includes(x.difficulte) ? x.difficulte : "", prenom: S(x.prenom).slice(0, 40), brief: S(x.brief).slice(0, 400), etat: S(x.etat).slice(0, 240), action: S(x.action).slice(0, 240), profil: { anniv: S(p.anniv), ville: S(p.ville), metier: S(p.metier), gouts: S(p.gouts) } };
+}
+
+module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead, assistant, gradeApplicant, replies, scriptVariants, tagSuggest, fanBrief };
