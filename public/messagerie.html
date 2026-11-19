@@ -99,7 +99,7 @@ const E = n => (Math.round(n * 100) / 100).toLocaleString("fr-FR", { maximumFrac
 const hm = d => { const t = new Date(d); if (isNaN(t)) return ""; const today = new Date().toDateString() === t.toDateString();
   return today ? t.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : t.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) + " " + t.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }); };
 const av = (p, cls = "") => `<span class="mx-av ${cls}" style="${p.avatar ? `background-image:url(${esc(p.avatar)});font-size:0` : ""}">${esc((p.name || "?")[0].toUpperCase())}</span>`;
-const LBL = { totalSpent: "Total dépensé", total: "Total", totalAmount: "Total", count: "Achats", totalPurchases: "Achats", lastPurchase: "Dernier achat", mediaPush: "Médias push", privateMedia: "Médias privés", tips: "Pourboires", subscription: "Abonnement" };
+const LBL = { averagePurchase: "Achat moyen", highestPurchase: "Plus gros achat", lowestPurchase: "Plus petit achat", totalSpent: "Total dépensé", total: "Total", totalAmount: "Total", count: "Achats", totalPurchases: "Achats", lastPurchase: "Dernier achat", mediaPush: "Médias push", privateMedia: "Médias privés", tips: "Pourboires", subscription: "Abonnement" };
 const pretty = k => LBL[k.split(".").pop()] || k.replace(/\./g, " › ").replace(/([a-z])([A-Z])/g, "$1 $2");
 
 /* ---------- haut de page ---------- */
@@ -139,7 +139,7 @@ async function loadMsgs() {
   catch (e) { if ($("sc")) $("sc").innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; }
 }
 function bubble(m) {
-  const pr = m.price != null && m.type === "FILE" ? `<span class="mx-pr ${esc(m.status)}">${m.price > 0 ? E(m.price) : "Gratuit"} · ${m.status === "accepted" ? "débloqué" : m.status === "refused" ? "refusé" : "pas encore acheté"}</span>` : "";
+  const pr = m.price != null && m.type === "FILE" ? (m.price > 0 ? `<span class="mx-pr ${esc(m.status)}">${E(m.price)} · ${m.status === "accepted" ? "acheté" : m.status === "refused" ? "refusé" : "pas encore acheté"}</span>` : `<span class="mx-pr">Gratuit</span>`) : "";
   const req = m.fromFan && m.status === "pending" ? `<div class="mx-rq"><button class="y" data-acc="${esc(m.id)}">Accepter (envoyer un média)</button><button class="n" data-ref="${esc(m.id)}">Refuser</button></div>` : "";
   const md = m.medias.length ? `<div class="mx-md">${m.medias.map(x => x.audio ? `<audio controls src="${esc(x.url)}" style="width:220px"></audio>` : `<a href="${esc(x.url)}" target="_blank" rel="noopener"><img src="${esc(x.thumb || x.url)}" alt="" loading="lazy"></a>`).join("")}</div>` : "";
   return `<div class="mx-m ${m.fromFan ? "" : "me"}">${md}${m.text ? `<div class="mx-b">${esc(m.text)}</div>` : ""}${pr}${req}<time>${hm(m.at)}</time></div>`;
@@ -210,7 +210,7 @@ async function fanCard() {
     <div id="ft"></div><div id="fn"></div>`;
   try { const r = await api(`/api/twizz/inbox/${encodeURIComponent(CID)}/fan/${encodeURIComponent(c.fan.id)}`); if (CUR !== c) return;
     const kv = Object.entries(r.stats).filter(([k, v]) => typeof v !== "boolean");
-    $("fs").innerHTML = kv.length ? kv.slice(0, 14).map(([k, v]) => `<div class="mx-kv"><span>${esc(pretty(k))}</span><b>${typeof v === "number" && /spent|amount|price|revenue|earn|net|sum|totalSpent/i.test(k) && !/count|purchases|number|nb/i.test(k) ? E(v) : esc(v)}</b></div>`).join("") : (r.error ? esc(r.error) : "Aucun achat");
+    $("fs").innerHTML = kv.length ? kv.slice(0, 14).map(([k, v]) => `<div class="mx-kv"><span>${esc(pretty(k))}</span><b>${typeof v === "number" && /spent|amount|price|revenue|earn|net|sum|average|highest|lowest/i.test(k) && !/count|purchases$|number|nb/i.test(k) ? E(v) : esc(v)}</b></div>`).join("") : (r.error ? esc(r.error) : "Aucun achat");
     $("ft").innerHTML = r.tags.length ? `<div class="mx-sec">Tags</div><div class="mx-tags">${r.tags.map(t => `<span>${esc(t)}</span>`).join("")}</div>` : "";
     const note = c.note && (c.note.note || c.note.text || c.note.content || (typeof c.note === "string" ? c.note : ""));
     $("fn").innerHTML = note ? `<div class="mx-sec">Note</div><div class="mx-note">${esc(note)}</div>` : ""; }

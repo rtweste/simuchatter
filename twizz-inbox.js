@@ -9,6 +9,11 @@ module.exports = function mount(app, db, auth, admin, { twizz }) {
   const arr = j => { const d = j && (j.data !== undefined ? j.data : j); if (Array.isArray(d)) return d; if (d && Array.isArray(d.data)) return d.data;
     for (const k of ["conversations", "items", "results", "albums", "files", "list"]) if (d && Array.isArray(d[k])) return d[k]; return []; };
   const str = v => (v == null ? "" : String(v));
+  // miniatures Twizz : liste [{ type: "BLURRED" | "CLEAR", absolutePath }] (adresses signées), ou anciens formats
+  const thumbOf = x => { const t = x && x.thumbnails;
+    if (Array.isArray(t) && t.length) { const c = t.find(y => y && y.type === "CLEAR") || t[0]; return str((c && (c.absolutePath || c.url || c.path)) || ""); }
+    if (t && typeof t === "object") return str(t.small || t.medium || t.large || "");
+    return str((x && (x.thumbnail || x.thumbUrl)) || ""); };
   const wrap = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.twizz ? 502 : e.status || 500).json({ error: e.message }); } };
   const bad = msg => { const e = new Error(msg); e.status = 400; return e; };
   const mapped = () => db.prepare("SELECT t.twizz_id id, t.label, t.model_id, m.name model FROM twizz_creators t LEFT JOIN models m ON m.id = t.model_id ORDER BY t.label").all();
@@ -29,9 +34,9 @@ module.exports = function mount(app, db, auth, admin, { twizz }) {
     const p = m.mediaPushPrice || {};
     return { id: str(m._id), fromFan: !!fanId && str(m.senderId) === fanId, sender: str(m.senderId), type: str(m.type), text: str(m.text), status: str(m.status), at: m.createdAt,
       read: !!m.isRead, price: p.resultPrice ?? p.price ?? null, mediaPushId: str(m.mediaPushId || ""),
-      medias: (m.medias || []).map(x => ({ url: str(x.url), thumb: str((x.thumbnails && (x.thumbnails.small || x.thumbnails.medium || x.thumbnails[0])) || x.thumbnail || ""), audio: !!x.isAudio, private: !!x.isPrivate })) };
+      medias: (m.medias || []).map(x => ({ url: str(x.url), thumb: thumbOf(x), audio: !!x.isAudio, private: !!x.isPrivate })) };
   }
-  const file = f => ({ id: str(f._id || f.id || f.fileId), url: str(f.url || f.Location || f.path || ""), thumb: str((f.thumbnails && (f.thumbnails.small || f.thumbnails.medium || f.thumbnails[0])) || f.thumbnail || f.thumbUrl || f.url || ""),
+  const file = f => ({ id: str(f._id || f.id || f.fileId), url: str(f.url || f.Location || f.path || ""), thumb: thumbOf(f) || str(f.absolutePath || f.url || ""),
     type: str(f.type || f.mimeType || f.fileType || ""), name: str(f.originalFileName || f.name || f.filename || "") });
 
   /* ---------- lecture ---------- */
