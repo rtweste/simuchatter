@@ -7,10 +7,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   if (!db.prepare("PRAGMA table_info(twizz_sent)").all().some(x => x.name === "files")) db.exec("ALTER TABLE twizz_sent ADD COLUMN files TEXT");
   // scripts : messages tout prêts, pour toutes les créatrices (creator_id vide) ou une seule
   db.exec("CREATE TABLE IF NOT EXISTS twizz_scripts (id INTEGER PRIMARY KEY, creator_id TEXT, cat TEXT, title TEXT, body TEXT, uses INTEGER DEFAULT 0, user_id INTEGER, at INTEGER)");
-  for (const [c, t] of [["updated_at", "INTEGER"], ["updated_by", "INTEGER"], ["source", "TEXT"], ["ext_id", "TEXT"], ["pinned", "INTEGER DEFAULT 0"]])
+  for (const [c, t] of [["updated_at", "INTEGER"], ["updated_by", "INTEGER"], ["source", "TEXT"], ["ext_id", "TEXT"], ["pinned", "INTEGER DEFAULT 0"], ["media", "TEXT"], ["price", "REAL"]])
     if (!db.prepare("PRAGMA table_info(twizz_scripts)").all().some(x => x.name === c)) db.exec(`ALTER TABLE twizz_scripts ADD COLUMN ${c} ${t}`);
   db.exec("CREATE TABLE IF NOT EXISTS twizz_script_uses (script_id INTEGER, user_id INTEGER, at INTEGER)");
   const founder = (req, res, next) => req.user.rk === "founder" && !req.viewAs ? next() : res.status(403).json({ error: "Messagerie en test : réservée au fondateur" });
+  // managers (fondateur compris) : bibliothèque de scripts, et lecture du coffre pour y joindre des médias
+  const mgr = (req, res, next) => req.user.role === "admin" && req.user.rk !== "assistant" && !req.viewAs ? next() : res.status(403).json({ error: "Réservé aux managers" });
   // petit cache mémoire : une conversation déjà ouverte se réaffiche tout de suite (vidé par le temps réel et les envois)
   const CACHE = new Map();
   const G = (path, ttl = 0) => { const c = ttl && CACHE.get(path); if (c && Date.now() - c.at < ttl) return Promise.resolve(c.data);
@@ -150,12 +152,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     return { stats: flat, error: stats && stats.error, tags: arr(tags).map(t => ({ name: str(t.name || t.label || t.tag || t), color: str(t.color || "") })).filter(t => t.name), recent: rec };
   }));
   // coffre de la créatrice (albums « quick-files » de Twizz)
-  app.get("/api/twizz/inbox/:cid/vault", auth, founder, wrap(async req => {
+  app.get("/api/twizz/inbox/:cid/vault", auth, mgr, wrap(async req => {
     const cid = creatorOk(req.params.cid), j = await G(`/quick-files/albums?creatorId=${enc(cid)}`, 300e3);
     return { albums: arr(j).map(a => ({ id: str(a._id || a.id), name: str(a.name || a.title || "Album"), count: +(a.filesCount ?? a.count ?? (a.files || []).length ?? 0) || 0,
       cover: file((a.files || [])[0] || a.cover || {}).thumb })), sample: req.query.debug ? arr(j)[0] : undefined };
   }));
-  app.get("/api/twizz/inbox/:cid/vault/:album", auth, founder, wrap(async req => {
+  app.get("/api/twizz/inbox/:cid/vault/:album", auth, mgr, wrap(async req => {
     const cid = creatorOk(req.params.cid), j = await G(`/quick-files/album/${enc(req.params.album)}?creatorId=${enc(cid)}`, 300e3);
     const d = j && (j.data ?? j), L = Array.isArray(d) ? d : (d && (d.files || d.quickFiles || d.items)) || [];
     return { files: L.map(file).filter(f => f.id), sample: req.query.debug ? L[0] : undefined };
@@ -199,9 +201,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
 
   /* ---------- scripts ---------- */
   // les managers et le fondateur gèrent la bibliothèque ; la messagerie (fondateur pour l'instant) s'en sert
-  const mgr = (req, res, next) => req.user.role === "admin" && req.user.rk !== "assistant" && !req.viewAs ? next() : res.status(403).json({ error: "Réservé aux managers" });
   const scriptOut = r => ({ id: r.id, creator: r.creator_id || null, cat: r.cat || "", title: r.title || "", body: r.body || "", uses: r.uses || 0, by: r.by || null, pinned: !!r.pinned,
-    source: r.source || "site", at: r.at || null, updatedAt: r.updated_at || r.at || null, updatedBy: r.ub || r.by || null });
+    source: r.source || "site", at: r.at || null, updatedAt: r.updated_at || r.at || null, updatedBy: r.ub || r.by || null,
+    media: (() => { try { return JSON.parse(r.media || "[]"); } catch (e) { return []; } })(), price: r.price == null ? null : +r.price });
   const SQL_LIST = "SELECT s.*, u.username by, v.username ub FROM twizz_scripts s LEFT JOIN users u ON u.id = s.user_id LEFT JOIN users v ON v.id = s.updated_by";
   app.get("/api/twizz/scripts", auth, mgr, (req, res) => {
     const cid = str(req.query.cid);
@@ -218,10 +220,21 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   });
   const saveScript = (b, uid) => {
     const title = String(b.title || "").trim().slice(0, 80), body = String(b.body || "").trim().slice(0, 2000), cat = String(b.cat || "").trim().slice(0, 30);
-    const creator = b.creator ? creatorOk(str(b.creator)) : null; if (!body) throw bad("Le script est vide");
-    if (b.id) { db.prepare("UPDATE twizz_scripts SET creator_id = ?, cat = ?, title = ?, body = ?, pinned = ?, updated_at = ?, updated_by = ? WHERE id = ?").run(creator, cat, title, body, b.pinned ? 1 : 0, Date.now(), uid, +b.id); return +b.id; }
-    return Number(db.prepare("INSERT INTO twizz_scripts (creator_id, cat, title, body, uses, user_id, at, updated_at, updated_by, source, ext_id, pinned) VALUES (?,?,?,?,0,?,?,?,?,?,?,?)")
-      .run(creator, cat, title, body, uid, Date.now(), Date.now(), uid, b.source || "site", b.ext ? str(b.ext) : null, b.pinned ? 1 : 0).lastInsertRowid);
+    const creator = b.creator ? creatorOk(str(b.creator)) : null;
+    // la messagerie modifie un script sans connaître ses médias ni son épingle : on garde ceux déjà enregistrés
+    const old = b.id ? db.prepare("SELECT media, price, pinned FROM twizz_scripts WHERE id = ?").get(+b.id) : null;
+    if (old && b.media === undefined) { try { b.media = JSON.parse(old.media || "[]"); } catch (e) { b.media = []; } b.price = old.price; }
+    if (old && b.pinned === undefined) b.pinned = !!old.pinned;
+    // médias du coffre joints au script (envoyés payants ou gratuits depuis la messagerie) : forcément ceux d'une seule créatrice
+    const media = (Array.isArray(b.media) ? b.media : []).slice(0, 20).map(f => ({ id: str(f && f.id), thumb: str(f && f.thumb).slice(0, 2000), url: str(f && f.url).slice(0, 2000), type: str(f && f.type).slice(0, 60),
+      keys: (Array.isArray(f && f.keys) ? f.keys : []).map(str).filter(Boolean).slice(0, 8), album: str(f && f.album) })).filter(f => f.id);
+    const price = media.length && b.price != null && b.price !== "" && isFinite(+b.price) ? Math.max(0, Math.round(+b.price * 100) / 100) : null;
+    if (!body && !media.length) throw bad("Le script est vide");
+    if (media.length && !creator) throw bad("Un script avec des médias doit être pour une seule créatrice : les médias viennent de son coffre");
+    const mj = media.length ? JSON.stringify(media) : null;
+    if (b.id) { db.prepare("UPDATE twizz_scripts SET creator_id = ?, cat = ?, title = ?, body = ?, pinned = ?, media = ?, price = ?, updated_at = ?, updated_by = ? WHERE id = ?").run(creator, cat, title, body, b.pinned ? 1 : 0, mj, price, Date.now(), uid, +b.id); return +b.id; }
+    return Number(db.prepare("INSERT INTO twizz_scripts (creator_id, cat, title, body, uses, user_id, at, updated_at, updated_by, source, ext_id, pinned, media, price) VALUES (?,?,?,?,0,?,?,?,?,?,?,?,?,?)")
+      .run(creator, cat, title, body, uid, Date.now(), Date.now(), uid, b.source || "site", b.ext ? str(b.ext) : null, b.pinned ? 1 : 0, mj, price).lastInsertRowid);
   };
   app.post("/api/twizz/scripts", auth, mgr, wrap(async req => ({ ok: true, id: saveScript(req.body || {}, req.user.id) })));
   app.post("/api/scripts/bulk", auth, mgr, wrap(async req => {
@@ -236,14 +249,15 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   const SCRIPT_PATHS = ["/scripts?creatorId=%c", "/scripts/creator/%c", "/business/scripts?creatorId=%c", "/chat-scripts?creatorId=%c", "/message-scripts?creatorId=%c", "/messages/scripts?creatorId=%c",
     "/quick-messages?creatorId=%c", "/saved-messages?creatorId=%c", "/message-templates?creatorId=%c", "/templates?creatorId=%c", "/business/quick-replies?creatorId=%c", "/quick-replies?creatorId=%c"];
   const textOf = x => str(x && (x.text || x.content || x.message || x.body || x.script || x.value || ""));
-  const mapTw = (x, cid) => ({ ext: str(x._id || x.id || ""), title: str(x.title || x.name || x.label || "").slice(0, 80), body: textOf(x).slice(0, 2000), cat: str(x.category || x.folder || x.type || x.tag || "").slice(0, 30), creator: cid });
+  const mapTw = (x, cid) => ({ ext: str(x._id || x.id || ""), title: str(x.title || x.name || x.label || "").slice(0, 80), body: textOf(x).slice(0, 2000), cat: str(x.category || x.folder || x.type || x.tag || "").slice(0, 30), creator: cid,
+    media: arr(x.medias || x.quickFiles || x.files || x.media || []).map(file).filter(f => f.id), price: isFinite(+x.price) && x.price != null ? +x.price : null });
   app.post("/api/scripts/import-twizz", auth, mgr, wrap(async req => {
     const C = mapped(); if (!C.length) throw bad("Teste d'abord la connexion Twizz");
     let path = S.get("twizz_scripts_path", "") || null; const tried = [];
     if (!path) for (const p of SCRIPT_PATHS) { tried.push(p.split("?")[0]);
       try { const j = await call("GET", p.replace("%c", enc(C[0].id)), null, true), L = arr(j); if (L.length && L.some(x => textOf(x))) { path = p; S.set("twizz_scripts_path", p); break; } } catch (e) {} }
     if (!path) return { found: false, tried };
-    const items = []; for (const c of C) { try { const j = await call("GET", path.replace("%c", enc(c.id)), null, true); arr(j).map(x => mapTw(x, c.id)).filter(x => x.body).forEach(x => items.push({ ...x, creatorLabel: c.label })); } catch (e) {} }
+    const items = []; for (const c of C) { try { const j = await call("GET", path.replace("%c", enc(c.id)), null, true); arr(j).map(x => mapTw(x, c.id)).filter(x => x.body || x.media.length).forEach(x => items.push({ ...x, creatorLabel: c.label })); } catch (e) {} }
     const known = new Set(db.prepare("SELECT ext_id FROM twizz_scripts WHERE ext_id IS NOT NULL").all().map(r => r.ext_id));
     return { found: true, items: items.map(x => ({ ...x, already: !!(x.ext && known.has(x.ext)) })) };
   }));

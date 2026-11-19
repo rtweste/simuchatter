@@ -122,6 +122,58 @@ mark{background:rgba(95,211,162,.14);color:var(--ac);border-radius:4px;padding:0
 @keyframes svd{0%{opacity:0;transform:scale(.6)}10%,80%{opacity:1;transform:none}100%{opacity:0}}
 .ednone{flex:1;display:grid;place-items:center;text-align:center;color:#6a6a6a;font:600 13px/1.6 Inter;padding:30px}
 .ednone b{display:block;color:#fff;font:900 16px Inter;margin-bottom:4px}
+/* ---- médias du coffre joints au script ---- */
+.mb{display:flex;flex-direction:column;gap:11px;padding:12px;border-radius:16px;border:1px solid #1f1f1f;background:#0e0e0e;transition:border-color .3s}
+.mb.has{border-color:rgba(232,194,122,.28);background:linear-gradient(135deg,rgba(232,194,122,.06),transparent 60%),#0e0e0e}
+.mb .mh{display:flex;align-items:center;gap:8px;font:600 12px/1.45 Inter;color:#8a8a8a}
+.mb .mh svg{color:#e8c27a;flex:none}
+.eyeb{margin-left:auto;display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 9px;border-radius:8px;border:1px solid #262626;background:#141414;color:#9a9a9a;font:800 11px Inter;cursor:pointer;flex:none}
+.eyeb.on{color:#fff;border-color:#3a3a3a}
+.mpick{display:flex;align-items:center;justify-content:center;gap:8px;height:50px;border-radius:13px;border:1px dashed #343434;background:transparent;color:#cfcfcf;font:800 13px Inter;cursor:pointer;transition:all .3s}
+.mpick:hover{border-style:solid;border-color:#e8c27a;color:#e8c27a;background:rgba(232,194,122,.05)}
+.mpick[disabled]{opacity:.45;cursor:not-allowed}.mpick[disabled]:hover{border-style:dashed;border-color:#343434;color:#cfcfcf;background:none}
+.mtray{display:flex;align-items:center;gap:12px}
+.mst{display:flex;flex:none}.mst span{position:relative;width:46px;height:46px;border-radius:12px;overflow:hidden;border:2px solid #0e0e0e;margin-left:-14px;background:#1c1c1c;box-shadow:0 8px 18px -8px #000;animation:mIn .5s cubic-bezier(.3,1.5,.5,1) both}
+.mst span:first-child{margin-left:0}.mst span:nth-child(2){animation-delay:.05s}.mst span:nth-child(3){animation-delay:.1s}.mst span:nth-child(4){animation-delay:.15s}
+@keyframes mIn{from{opacity:0;transform:translateX(-10px) scale(.8)}}
+.mst img{width:100%;height:100%;object-fit:cover;display:block;transition:filter .3s}
+.mst .more{display:grid;place-items:center;font:900 12px Inter;color:#e8c27a;background:#1a1712}
+.mtx{flex:1;min-width:0}.mtx b{display:block;font:800 13px Inter}.mtx small{display:block;font:600 11.5px Inter;color:#7a7a7a;margin-top:2px}
+.mlk{display:inline-flex;gap:6px}
+.prs{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.prs .lb{font:800 9.5px Inter;letter-spacing:.16em;text-transform:uppercase;color:#6a6a6a;margin-right:4px}
+.prs button{height:30px;padding:0 11px;border-radius:10px;border:1px solid #262626;background:#141414;color:#bdbdbd;font:800 12px Inter;cursor:pointer;transition:all .3s cubic-bezier(.3,1.4,.5,1)}
+.prs button:hover{border-color:#3a3a3a;color:#fff}
+.prs button.on{background:#e8c27a;color:#2a1d05;border-color:#e8c27a;box-shadow:0 8px 20px -8px rgba(232,194,122,.7);transform:translateY(-1px)}
+.prs input{width:100px;height:30px;border-radius:10px;border:1px solid #262626;background:#141414;color:#eee;font:700 12px Inter;padding:0 9px}
+.prs input.on{border-color:#e8c27a}
+.pv .ppvc{align-self:flex-end;width:236px;border-radius:16px;overflow:hidden;border:1px solid rgba(232,194,122,.38);background:#0d0d0d;position:relative;box-shadow:0 0 26px -10px rgba(232,194,122,.6);animation:pop .45s cubic-bezier(.3,1.5,.5,1)}
+.ppvc .g{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;height:118px;overflow:hidden}
+.ppvc .g.one{grid-template-columns:1fr}
+.ppvc .g img{width:100%;height:100%;object-fit:cover;display:block;filter:blur(12px) brightness(.65) saturate(.8);transform:scale(1.15)}
+.ppvc .ov{position:absolute;left:0;right:0;top:0;height:118px;display:grid;place-items:center;align-content:center;gap:5px;color:#fff;font:900 17px Inter;text-shadow:0 2px 12px #000}
+.ppvc .ov svg{filter:drop-shadow(0 2px 8px #000)}
+.ppvc .bt{display:flex;align-items:center;justify-content:space-between;padding:8px 11px;font:800 11.5px Inter;background:linear-gradient(90deg,rgba(232,194,122,.14),transparent);color:#f3dcae}
+.mchip{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 8px;border-radius:999px;flex:none;font:800 10px Inter;color:#f3dcae;background:rgba(232,194,122,.12);border:1px solid rgba(232,194,122,.35)}
+/* coffre : choisir les médias */
+.vbx{width:min(1000px,100%);height:min(700px,90vh);max-height:none}
+.vb{flex:1;min-height:0;display:grid;grid-template-columns:210px minmax(0,1fr)}
+.vr{border-right:1px solid #1c1c1c;padding:10px;overflow:auto;display:flex;flex-direction:column;gap:3px;scrollbar-width:thin}
+.al{position:relative;display:flex;align-items:center;gap:10px;width:100%;padding:7px;border-radius:13px;border:0;background:none;color:#cfcfcf;text-align:left;cursor:pointer;transition:background .2s;animation:cIn .5s both}
+.al:hover{background:#151515}.al.on{background:#1b1b1b;box-shadow:inset 0 0 0 1px #2a2a2a;color:#fff}
+.al .cv{width:42px;height:42px;border-radius:11px;overflow:hidden;background:#1c1c1c;flex:none}.al .cv img{width:100%;height:100%;object-fit:cover;display:block}
+.al b{display:block;font:800 12.5px Inter;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.al small{display:block;font:600 11px Inter;color:#6a6a6a;margin-top:1px}
+.al .sn{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;display:grid;place-items:center;font:900 10px Inter;background:#e8c27a;color:#2a1d05}
+.vg{padding:12px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:8px;align-content:start;scrollbar-width:thin}
+.vt{position:relative;aspect-ratio:1;border-radius:14px;overflow:hidden;border:0;padding:0;background:#151515;cursor:pointer;transition:transform .35s cubic-bezier(.3,1.5,.5,1);animation:cIn .5s both}
+.vt img{width:100%;height:100%;object-fit:cover;display:block;transition:filter .3s}
+.vt .n{position:absolute;top:7px;right:7px;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,.75);background:rgba(0,0,0,.3);display:grid;place-items:center;font:900 11px Inter;color:#2a1d05;transition:all .3s cubic-bezier(.3,1.6,.5,1)}
+.vt.on{transform:scale(.93)}.vt.on .n{background:#e8c27a;border-color:#e8c27a;transform:scale(1.12)}
+.vt.on:after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 2.5px #e8c27a;pointer-events:none}
+.vt .ty{position:absolute;left:7px;bottom:7px;font:900 8.5px Inter;letter-spacing:.14em;padding:3px 6px;border-radius:5px;background:rgba(0,0,0,.65);color:#fff}
+.vsk{aspect-ratio:1;border-radius:14px;background:linear-gradient(90deg,#141414 25%,#1b1b1b 50%,#141414 75%);background-size:200% 100%;animation:sk 1.2s infinite linear}
+body.vblur .mst img,body.vblur .vt img,body.vblur .al .cv img,body.vblur .irow img{filter:blur(14px) saturate(.8)}
+body.vblur .vt:hover img{filter:none}
 /* ---- import ---- */
 .mod{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.72);backdrop-filter:blur(3px);display:grid;place-items:center;padding:18px;animation:fd .25s both}
 @keyframes fd{from{opacity:0}}
@@ -141,9 +193,10 @@ mark{background:rgba(95,211,162,.14);color:var(--ac);border-radius:4px;padding:0
 .irow.dup{opacity:.5}
 .box .f{display:flex;align-items:center;gap:10px;padding:12px 18px;border-top:1px solid #1c1c1c;flex-wrap:wrap}
 .box .f .sel{display:flex;align-items:center;gap:8px;font:700 12px Inter;color:#8a8a8a}
+.box .f .eyeb{margin-left:0}
 .box .f input,.box .f select{height:34px;border-radius:10px;border:1px solid #262626;background:#151515;color:#eee;font:600 12.5px Inter;padding:0 10px}
 @media(max-width:1280px){.ws{grid-template-columns:200px minmax(0,1fr) 380px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:980px){.main-area.scm,.sc{height:auto;min-height:100dvh;overflow:visible}.ws{grid-template-columns:minmax(0,1fr)}.bar{flex-wrap:wrap}.srch{flex:1 1 100%}.ed .in{overflow:visible}.r2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.ed .ft{flex-wrap:wrap}.ed .ft .kbd,.hd .kbd,.srch .kbd{display:none}.ed .ft .sv{flex:1;justify-content:center}.side{border-right:0;border-bottom:1px solid #181818;display:flex;gap:6px;overflow-x:auto}.side .cap,.side hr{display:none}.fl{width:auto;white-space:nowrap}.ed{border-left:0;border-top:1px solid #181818}.hd h1{font-size:30px}.lst{grid-template-columns:1fr}}
+@media(max-width:980px){.vb{grid-template-columns:1fr}.vr{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid #1c1c1c}.al{width:auto;flex:none}.al small{display:none}.main-area.scm,.sc{height:auto;min-height:100dvh;overflow:visible}.ws{grid-template-columns:minmax(0,1fr)}.bar{flex-wrap:wrap}.srch{flex:1 1 100%}.ed .in{overflow:visible}.r2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.ed .ft{flex-wrap:wrap}.ed .ft .kbd,.hd .kbd,.srch .kbd{display:none}.ed .ft .sv{flex:1;justify-content:center}.side{border-right:0;border-bottom:1px solid #181818;display:flex;gap:6px;overflow-x:auto}.side .cap,.side hr{display:none}.fl{width:auto;white-space:nowrap}.ed{border-left:0;border-top:1px solid #181818}.hd h1{font-size:30px}.lst{grid-template-columns:1fr}}
 @media(max-width:900px){.main-area.scm{padding-bottom:90px!important}}
 </style>
 </head>
@@ -173,7 +226,18 @@ mark{background:rgba(95,211,162,.14);color:var(--ac);border-radius:4px;padding:0
 const $ = id => document.getElementById(id);
 const SV = (p, s = 16, w = 2.2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 const IC = { pin: '<path d="M12 17v5"/><path d="M8 3h8l-1.5 6L18 12.5H6L9.5 9z"/>', spark: '<path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><path d="M12 7.5c.6 2.4 2.1 3.9 4.5 4.5-2.4.6-3.9 2.1-4.5 4.5-.6-2.4-2.1-3.9-4.5-4.5 2.4-.6 3.9-2.1 4.5-4.5z"/>',
-  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', copy: '<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>', trash: '<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>' };
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', copy: '<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>', trash: '<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyex: '<path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/>', img: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>' };
+const eur = n => (+n).toLocaleString("fr-FR", { maximumFractionDigits: 2 }) + " €", pl = (k, a, b) => k + " " + (k > 1 ? b : a);
+const isV = f => /video/i.test(f.type || "") || /\.(mp4|mov|webm|m3u8)$/i.test(String(f.url || "").split("?")[0]);
+const priceTxt = p => p == null ? "prix au choix" : p ? eur(p) : "gratuit";
+// flou des médias : même réglage que la messagerie
+let BLUR = true; try { BLUR = localStorage.getItem("mx:blur") !== "0"; } catch (e) {}
+const setBlur = on => { BLUR = on; document.body.classList.toggle("vblur", on); try { localStorage.setItem("mx:blur", on ? "1" : "0"); } catch (e) {} document.querySelectorAll(".eyeb").forEach(b => { b.classList.toggle("on", on); b.innerHTML = SV(on ? IC.eyex : IC.eye, 12) + (on ? "Flouté" : "Visible"); }); };
+document.body.classList.toggle("vblur", BLUR);
+const eyeBtn = id => `<button class="eyeb ${BLUR ? "on" : ""}" id="${id}" title="Flouter les médias">${SV(BLUR ? IC.eyex : IC.eye, 12)}${BLUR ? "Flouté" : "Visible"}</button>`;
+let PV = () => {};
 const PAL = [["#b49cff", "#5b46b0", "#e2d8ff"], ["#7db4ff", "#2f5fa8", "#dbeaff"], ["#5fd3a2", "#1f6b4f", "#d2f7e7"], ["#f0b54a", "#7a5418", "#ffeccb"], ["#ff8fb1", "#8a2f4c", "#ffd9e5"], ["#6fe0e0", "#1d6b6b", "#d4f7f7"]];
 const pal = n => PAL[[...String(n || "?")].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 9973, 7) % PAL.length];
 const rav = (letter, size, p) => `<span class="rav" style="width:${size}px;height:${size}px;--c1:${p[0]};--c2:${p[1]};--c3:${p[2]}"><span style="width:${size - 6}px;height:${size - 6}px;font-size:${Math.max(8, Math.round(size / 2.6))}px;background:color-mix(in srgb,${p[0]} 22%,#0f0f0f);color:${p[0]}">${esc(letter)}</span></span>`;
@@ -219,7 +283,7 @@ function cards() {
   const L = list();
   $("lst").innerHTML = L.length ? L.map((x, i) => { const mx = Math.max(1, ...x.days), cr = x.creator ? crOf(x.creator) : null;
     return `<button class="card ${SEL === x.id ? "on" : ""}" data-id="${x.id}" style="animation-delay:${Math.min(i, 12) * .03}s">${SEL === x.id ? '<span class="trace"></span>' : ""}
-      <span class="t">${x.pinned ? `<span class="pin">${SV(IC.pin, 13)}</span>` : ""}<b>${esc(x.title || x.body.slice(0, 40))}</b>${x.cat ? `<span class="chip" style="--c:${catColor(x.cat)}">${esc(x.cat)}</span>` : ""}</span>
+      <span class="t">${x.pinned ? `<span class="pin">${SV(IC.pin, 13)}</span>` : ""}<b>${esc(x.title || x.body.slice(0, 40) || "Médias")}</b>${x.cat ? `<span class="chip" style="--c:${catColor(x.cat)}">${esc(x.cat)}</span>` : ""}${x.media && x.media.length ? `<span class="mchip">${SV(IC.lock, 11, 2.6)}${pl(x.media.length, "média", "médias")} · ${priceTxt(x.price)}</span>` : ""}</span>
       <span class="body">${hl(x.body)}</span>
       <span class="ft"><span class="chip" style="--c:${cr ? pal(cr.label)[0] : "#9a9a9a"}">${cr ? esc(cr.label) : "Toutes"}</span><span class="u"><b>${x.uses}</b> fois</span>${x.who.length ? `<span class="whos">${x.who.slice(0, 4).map(w => `<span class="w" style="--c:${pal(w.name)[0]}" title="${esc(w.name)} : ${w.n} fois">${esc(w.name[0].toUpperCase())}</span>`).join("")}</span>` : ""}
         <span class="spark" title="Utilisations des 14 derniers jours">${x.days.map((d, k) => `<i class="${k >= 12 && d ? "h" : ""}" style="height:${Math.max(2, d / mx * 20)}px"></i>`).join("")}</span></span></button>`; }).join("")
@@ -231,7 +295,8 @@ function cards() {
 function open(id, isNew) {
   SEL = id; AIV = null; GOAL = "";
   const x = id ? D.items.find(s => s.id === id) : null;
-  DRAFT = x ? { id: x.id, title: x.title, cat: x.cat, body: x.body, creator: x.creator, pinned: x.pinned } : { id: null, title: "", cat: F.cat || "", body: "", creator: F.creator && F.creator !== "_all" ? F.creator : null, pinned: false };
+  DRAFT = x ? { id: x.id, title: x.title, cat: x.cat, body: x.body, creator: x.creator, pinned: x.pinned, media: (x.media || []).slice(), price: x.price == null ? null : x.price }
+    : { id: null, title: "", cat: F.cat || "", body: "", creator: F.creator && F.creator !== "_all" ? F.creator : null, pinned: false, media: [], price: null };
   if (isNew || x) { cards(); editor(); if (innerWidth <= 980) $("ed").scrollIntoView({ behavior: "smooth", block: "start" }); setTimeout(() => (isNew ? $("eT") : $("eB")) && (isNew ? $("eT") : $("eB")).focus(), 60); }
 }
 function editor() {
@@ -244,18 +309,23 @@ function editor() {
     <div class="fld"><label>Pour quelle créatrice</label><div class="scope" id="eS"><button class="all ${!DRAFT.creator ? "on" : ""}" data-c="">Toutes</button>${D.creators.map(c => `<button class="${DRAFT.creator === c.id ? "on" : ""}" data-c="${esc(c.id)}">${rav(c.label[0], 26, pal(c.label))}${esc(c.label)}</button>`).join("")}</div></div>
     <div class="fld"><label for="eB">Le message</label><textarea id="eB" maxlength="2000" placeholder="Le message tel qu'il partira au fan…">${esc(DRAFT.body)}</textarea>
       <div class="vars"><button data-v="{prenom}">+ prénom du fan</button><button data-v="{creatrice}">+ nom de la créatrice</button><span class="cnt" id="eN"></span></div></div>
-    <div class="pv"><span class="cap">Aperçu dans la messagerie</span><div class="fan"><span class="fav">B</span><span class="bf">Coucou toi</span></div><div class="me"><div class="bm" id="eP"></div><span class="lbl"><i></i>Chatter · ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span></div></div>
+    <div class="fld"><label>Média payant</label><div id="eM"></div></div>
+    <div class="pv"><span class="cap">Aperçu dans la messagerie</span><div class="fan"><span class="fav">B</span><span class="bf">Coucou toi</span></div><div class="me"><div id="ePp"></div><div class="bm" id="eP"></div><span class="lbl"><i></i>Chatter · ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span></div></div>
     <div class="fld"><label>Variantes avec l'IA</label><div class="goal" id="eG">${["Plus court", "Plus joueur", "Plus doux", "Avec une question", "Pour vendre un PPV"].map(g => `<button class="${GOAL === g ? "on" : ""}" data-g="${esc(g)}">${esc(g)}</button>`).join("")}</div>
       <button class="btn2 ai" id="eA" style="align-self:flex-start">${SV(IC.spark, 15, 2)}Proposer 3 variantes</button><div class="aiv" id="eV"></div></div>
     ${x ? `<div class="meta">Utilisé <b>${x.uses} fois</b>${x.week ? `, dont <b>${x.week}</b> cette semaine` : ""}${x.who.length ? ` · par ${x.who.slice(0, 5).map(w => `<b>${esc(w.name)}</b> (${w.n})`).join(", ")}` : ""}<br>${x.updatedBy ? `Modifié par <b>${esc(x.updatedBy)}</b> ` : ""}${ago(x.updatedAt)}</div>` : ""}</div>
     <div class="ft">${x ? `<button class="btn2" id="eP2" title="Épingler en haut">${SV(IC.pin, 14)}${DRAFT.pinned ? "Désépingler" : "Épingler"}</button><button class="btn2" id="eD" title="Dupliquer">${SV(IC.copy, 14)}</button><button class="btn2 dl" id="eX" title="Supprimer">${SV(IC.trash, 14)}</button>` : `<button class="btn2" id="eQ">Annuler</button>`}
       <button class="btn2 g sv" id="eSv">${SV(IC.check, 15, 2.6)}Enregistrer <span class="kbd" style="background:rgba(5,38,26,.15);border-color:rgba(5,38,26,.25);color:#05261a">⌘S</span></button></div>`;
-  const pv = () => { const ex = crOf(DRAFT.creator).label || "SARAH", t = $("eB").value.replace(/\{pr[ée]nom\}/gi, "Ben").replace(/\{cr[ée]atrice\}/gi, ex);
-    $("eP").textContent = t || "…"; $("eP").classList.remove("pop"); void $("eP").offsetWidth; $("eP").classList.add("pop"); $("eN").textContent = `${$("eB").value.length} / 2000`; };
-  pv(); let pT = null;
+  const pv = () => { const ex = crOf(DRAFT.creator).label || "SARAH", t = $("eB").value.replace(/\{pr[ée]nom\}/gi, "Ben").replace(/\{cr[ée]atrice\}/gi, ex), M = DRAFT.media || [];
+    $("ePp").innerHTML = M.length ? `<div class="ppvc"><div class="g ${M.length === 1 ? "one" : ""}">${M.slice(0, 4).map(f => `<img src="${esc(f.thumb)}" alt="" loading="lazy">`).join("")}</div><div class="ov">${SV(IC.lock, 22, 2.4)}${DRAFT.price == null ? "Prix au choix" : DRAFT.price ? eur(DRAFT.price) : "Gratuit"}</div><div class="bt"><span>${pl(M.length, "média", "médias")}</span><span>${M.filter(isV).length ? pl(M.filter(isV).length, "vidéo", "vidéos") : "photos"}</span></div></div>` : "";
+    $("eP").hidden = !t && M.length > 0; $("eP").textContent = t || "…"; $("eP").classList.remove("pop"); void $("eP").offsetWidth; $("eP").classList.add("pop"); $("eN").textContent = `${$("eB").value.length} / 2000`; };
+  PV = pv; paintMedia(); pv(); let pT = null;
   $("eB").oninput = () => { DRAFT.body = $("eB").value; clearTimeout(pT); pT = setTimeout(pv, 120); };
   $("eT").oninput = () => DRAFT.title = $("eT").value; $("eC").oninput = () => DRAFT.cat = $("eC").value;
-  E.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { DRAFT.creator = b.dataset.c || null; E.querySelectorAll("[data-c]").forEach(y => y.classList.toggle("on", y === b)); pv(); });
+  E.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { const nc = b.dataset.c || null; if (nc === DRAFT.creator) return;
+    if (DRAFT.media.length && !confirm(`Les médias viennent du coffre de ${crOf(DRAFT.creator).label}. Changer de créatrice les retire du script. Continuer ?`)) return;
+    if (DRAFT.media.length) { DRAFT.media = []; DRAFT.price = null; }
+    DRAFT.creator = nc; E.querySelectorAll("[data-c]").forEach(y => y.classList.toggle("on", y === b)); paintMedia(); pv(); });
   E.querySelectorAll("[data-v]").forEach(b => b.onclick = () => { const ta = $("eB"), a = ta.selectionStart, z = ta.selectionEnd; ta.setRangeText(b.dataset.v, a, z, "end"); ta.focus(); ta.dispatchEvent(new Event("input")); });
   E.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { GOAL = GOAL === b.dataset.g ? "" : b.dataset.g; E.querySelectorAll("[data-g]").forEach(y => y.classList.toggle("on", y.dataset.g === GOAL)); });
   $("eA").onclick = variants; paintAI();
@@ -265,6 +335,53 @@ function editor() {
   if ($("eD")) $("eD").onclick = async () => { try { const r = await api("/api/twizz/scripts", { body: { ...DRAFT, id: null, title: (DRAFT.title || "Script") + " (copie)" } }); await load(); open(r.id); notify("Script dupliqué", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
   if ($("eX")) $("eX").onclick = async () => { if (!confirm(`Supprimer le script « ${DRAFT.title || DRAFT.body.slice(0, 30)} » ? Les chatters ne le verront plus.`)) return;
     try { await api(`/api/twizz/scripts/${DRAFT.id}`, { method: "DELETE" }); DRAFT = null; SEL = null; await load(); notify("Script supprimé", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
+}
+function paintMedia() {
+  const B = $("eM"); if (!B) return; const M = DRAFT.media || [], cr = DRAFT.creator ? crOf(DRAFT.creator) : null;
+  B.className = "mb" + (M.length ? " has" : "");
+  if (!cr || !cr.id) { B.innerHTML = `<div class="mh">${SV(IC.lock, 14)}<span>Pour joindre des photos ou vidéos payantes, choisis d'abord <b style="color:#ddd">une créatrice</b> au-dessus : les médias viennent de son coffre.</span></div>`; return; }
+  if (!M.length) { B.innerHTML = `<div class="mh">${SV(IC.lock, 14)}<span>Facultatif : des médias du coffre de ${esc(cr.label)}, envoyés avec le message, payants ou gratuits.</span></div><button class="mpick" id="mP">${SV(IC.img, 16)}Joindre des médias du coffre</button>`; $("mP").onclick = pickMedia; return; }
+  const nv = M.filter(isV).length, np = M.length - nv, P = [null, 0, 5, 10, 15, 20, 30, 50], custom = DRAFT.price != null && !P.includes(DRAFT.price);
+  B.innerHTML = `<div class="mh">${SV(IC.lock, 14)}<span>Médias du coffre de <b style="color:#ddd">${esc(cr.label)}</b></span>${eyeBtn("mB")}</div>
+    <div class="mtray"><span class="mst">${M.slice(0, 4).map(f => `<span><img src="${esc(f.thumb)}" alt="" loading="lazy"></span>`).join("")}${M.length > 4 ? `<span class="more">+${M.length - 4}</span>` : ""}</span>
+      <span class="mtx"><b>${pl(M.length, "média", "médias")}</b><small>${[nv ? pl(nv, "vidéo", "vidéos") : "", np ? pl(np, "photo", "photos") : ""].filter(Boolean).join(" · ")}</small></span>
+      <span class="mlk"><button class="btn2" id="mE" style="height:34px">Changer</button><button class="btn2 dl" id="mX" style="height:34px" title="Retirer les médias">${SV(IC.trash, 13)}</button></span></div>
+    <div class="prs"><span class="lb">Prix</span>${P.map(p => `<button data-p="${p === null ? "" : p}" class="${!custom && DRAFT.price === p ? "on" : ""}">${p === null ? "Au choix" : p ? p + " €" : "Gratuit"}</button>`).join("")}<input id="mPr" class="${custom ? "on" : ""}" type="number" min="0" step="0.5" placeholder="Autre prix" value="${custom ? DRAFT.price : ""}"></div>
+    <div class="mh" style="font-size:11.5px">${DRAFT.price == null ? "Le chatter choisira le prix au moment d'envoyer." : "Le chatter pourra encore changer le prix avant d'envoyer."}</div>`;
+  B.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { DRAFT.price = b.dataset.p === "" ? null : +b.dataset.p; paintMedia(); PV(); });
+  $("mPr").oninput = () => { const v = $("mPr").value; DRAFT.price = v === "" ? null : Math.max(0, +v); B.querySelectorAll("[data-p]").forEach(x => x.classList.toggle("on", false)); $("mPr").classList.toggle("on", v !== ""); PV(); };
+  $("mPr").onchange = () => paintMedia();
+  $("mE").onclick = pickMedia; $("mX").onclick = () => { DRAFT.media = []; DRAFT.price = null; paintMedia(); PV(); }; $("mB").onclick = () => setBlur(!BLUR);
+}
+async function pickMedia() {
+  const cr = crOf(DRAFT.creator); if (!cr.id) return;
+  const SEL = (DRAFT.media || []).map(f => ({ ...f })), at = id => SEL.findIndex(f => f.id === id), base = `/api/twizz/inbox/${encodeURIComponent(cr.id)}/vault`;
+  const m = document.createElement("div"); m.className = "mod";
+  m.innerHTML = `<div class="box vbx"><div class="h"><b>Coffre de ${esc(cr.label)}</b><span class="hint">Clique les médias dans l'ordre où ils partiront</span><button class="btn2 x" id="vX">Fermer</button></div>
+    <div class="vb"><nav class="vr" id="vR" aria-label="Albums">${[0, 1, 2].map(() => `<div class="vsk" style="aspect-ratio:auto;height:52px"></div>`).join("")}</nav><div class="vg" id="vG">${Array.from({ length: 12 }, () => `<div class="vsk"></div>`).join("")}</div></div>
+    <div class="f"><span class="sel" id="vN"></span>${eyeBtn("vBl")}<button class="btn2 g" id="vOk" style="margin-left:auto">${SV(IC.check, 15, 2.6)}Valider</button></div></div>`;
+  document.body.appendChild(m);
+  let files = [], album = null, albums = [];
+  const close = () => { m.remove(); document.removeEventListener("keydown", k); }, k = e => { if (e.key === "Escape") close(); };
+  document.addEventListener("keydown", k); $("vX").onclick = close; m.onclick = e => { if (e.target === m) close(); }; $("vBl").onclick = () => setBlur(!BLUR);
+  const upd = () => { $("vN").textContent = SEL.length ? pl(SEL.length, "média choisi", "médias choisis") : "Aucun média choisi";
+    $("vG").querySelectorAll(".vt").forEach(t => { const i = at(t.dataset.id); t.classList.toggle("on", i >= 0); t.querySelector(".n").textContent = i >= 0 ? i + 1 : ""; });
+    m.querySelectorAll(".al").forEach(b => { const n = SEL.filter(f => f.album === b.dataset.id).length, sn = b.querySelector(".sn"); sn.hidden = !n; sn.textContent = n; }); };
+  function grid() { const G = $("vG");
+    G.innerHTML = files.length ? files.map((f, i) => `<button class="vt" data-id="${esc(f.id)}" style="animation-delay:${Math.min(i, 14) * .03}s" aria-label="${isV(f) ? "Vidéo" : "Photo"}"><img src="${esc(f.thumb)}" alt="" loading="lazy"><span class="n"></span>${isV(f) ? '<span class="ty">VIDÉO</span>' : ""}</button>`).join("") : `<div class="empty">Album vide</div>`;
+    G.querySelectorAll(".vt").forEach(t => t.onclick = () => { const i = at(t.dataset.id); if (i >= 0) SEL.splice(i, 1); else { if (SEL.length >= 20) return notify("20 médias au plus", "", "err"); const f = files.find(x => x.id === t.dataset.id); SEL.push({ id: f.id, thumb: f.thumb, url: f.url, type: f.type, keys: f.keys || [], album }); } upd(); });
+    upd(); }
+  async function openAlbum(a) { album = a.id; m.querySelectorAll(".al").forEach(b => b.classList.toggle("on", b.dataset.id === a.id)); $("vG").innerHTML = Array.from({ length: 12 }, () => `<div class="vsk"></div>`).join("");
+    try { const r = await api(`${base}/${encodeURIComponent(a.id)}`); if (album !== a.id) return; files = r.files; grid(); }
+    catch (e) { $("vG").innerHTML = `<div class="empty" style="color:#ff9a9a">${esc(e.message)}</div>`; } }
+  try { albums = (await api(base)).albums;
+    $("vR").innerHTML = albums.length ? albums.map((a, i) => `<button class="al" data-id="${esc(a.id)}" style="animation-delay:${i * .04}s"><span class="cv">${a.cover ? `<img src="${esc(a.cover)}" alt="" loading="lazy">` : ""}</span><span style="min-width:0"><b>${esc(a.name)}</b><small>${a.count ? pl(a.count, "média", "médias") : "Album"}</small></span><span class="sn" hidden></span></button>`).join("") : "";
+    m.querySelectorAll(".al").forEach(b => b.onclick = () => openAlbum(albums.find(a => a.id === b.dataset.id)));
+    if (!albums.length) { $("vG").innerHTML = `<div class="empty"><b>Le coffre est vide</b></div>`; upd(); }
+    else openAlbum(albums.find(a => SEL[0] && a.id === SEL[0].album) || albums[0]); }
+  catch (e) { $("vR").innerHTML = ""; $("vG").innerHTML = `<div class="empty"><b>Coffre inaccessible</b>${esc(e.message)}</div>`; }
+  $("vOk").onclick = () => { DRAFT.media = SEL; if (!SEL.length) DRAFT.price = null; close(); paintMedia(); PV(); };
+  upd();
 }
 function paintAI() { const V = $("eV"); if (!V) return;
   if (!AIV) { V.innerHTML = ""; return; }
@@ -278,8 +395,8 @@ async function variants() { AIV = { loading: true }; paintAI();
   try { AIV = await api("/api/scripts/ai", { body: { body: $("eB").value, title: $("eT").value, cat: $("eC").value, creator: DRAFT.creator, goal: GOAL } }); } catch (e) { AIV = { error: e.message }; }
   paintAI(); }
 async function save(quiet) {
-  const body = { id: DRAFT.id, title: $("eT").value, cat: $("eC").value, body: $("eB").value, creator: DRAFT.creator, pinned: DRAFT.pinned };
-  if (!body.body.trim()) return notify("Le script est vide", "", "err");
+  const body = { id: DRAFT.id, title: $("eT").value, cat: $("eC").value, body: $("eB").value, creator: DRAFT.creator, pinned: DRAFT.pinned, media: DRAFT.media, price: DRAFT.media.length ? DRAFT.price : null };
+  if (!body.body.trim() && !DRAFT.media.length) return notify("Le script est vide", "Écris un message ou joins des médias", "err");
   try { const r = await api("/api/twizz/scripts", { body }); await load(); open(r.id); if (quiet !== true) $("svd").innerHTML = `<span class="saved">${SV(IC.check, 12, 3)}Enregistré</span>`; }
   catch (e) { notify("Script non enregistré", e.message, "err"); }
 }
@@ -303,7 +420,7 @@ function importer() {
   const close = () => { m.remove(); document.removeEventListener("keydown", k); }, k = e => { if (e.key === "Escape") close(); };
   document.addEventListener("keydown", k); $("iX").onclick = close; m.onclick = e => { if (e.target === m) close(); };
   const rows = () => { const C = $("iC").querySelector("#iL"); if (!C) return;
-    C.innerHTML = items.length ? items.map((x, i) => `<label class="irow ${x.already ? "dup" : ""}"><input type="checkbox" data-i="${i}" ${x.on ? "checked" : ""} ${x.already ? "disabled" : ""}><span><b>${esc(x.title || "Sans titre")}${x.cat ? ` · <span style="color:${catColor(x.cat)}">${esc(x.cat)}</span>` : ""}${x.creatorLabel ? ` · ${esc(x.creatorLabel)}` : ""}${x.already ? " · déjà importé" : ""}</b><small>${hl(x.body)}</small></span></label>`).join("") : "";
+    C.innerHTML = items.length ? items.map((x, i) => `<label class="irow ${x.already ? "dup" : ""}"><input type="checkbox" data-i="${i}" ${x.on ? "checked" : ""} ${x.already ? "disabled" : ""}><span><b>${esc(x.title || "Sans titre")}${x.cat ? ` · <span style="color:${catColor(x.cat)}">${esc(x.cat)}</span>` : ""}${x.creatorLabel ? ` · ${esc(x.creatorLabel)}` : ""}${x.media && x.media.length ? ` · <span style="color:#f3dcae">${pl(x.media.length, "média", "médias")} · ${priceTxt(x.price)}</span>` : ""}${x.already ? " · déjà importé" : ""}</b><small>${hl(x.body)}</small></span></label>`).join("") : "";
     C.querySelectorAll("[data-i]").forEach(c => c.onchange = () => { items[+c.dataset.i].on = c.checked; upd(); }); upd(); };
   const upd = () => { const n = items.filter(x => x.on && !x.already).length; $("iGo").disabled = !n; $("iGo").textContent = n ? `Importer ${n} script${n > 1 ? "s" : ""}` : "Importer"; };
   function paintTab() {
@@ -322,7 +439,7 @@ function importer() {
   }
   m.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { tab = b.dataset.t; paintTab(); });
   $("iGo").onclick = async () => { const cat = $("iCat").value.trim(), cr = $("iCr").value || null;
-    const L = items.filter(x => x.on && !x.already).map(x => ({ title: x.title, body: x.body, cat: cat || x.cat || "", creator: tab === "tw" && !cr ? x.creator || null : cr, source: tab === "tw" ? "twizz" : "site", ext: x.ext || null }));
+    const L = items.filter(x => x.on && !x.already).map(x => ({ title: x.title, body: x.body, cat: cat || x.cat || "", creator: x.media && x.media.length ? x.creator : tab === "tw" && !cr ? x.creator || null : cr, source: tab === "tw" ? "twizz" : "site", ext: x.ext || null, media: x.media || [], price: x.price == null ? null : x.price }));
     try { const r = await api("/api/scripts/bulk", { body: { items: L } }); close(); await load(); notify(`${r.added} script${r.added > 1 ? "s" : ""} importé${r.added > 1 ? "s" : ""}`, "", "ok"); } catch (e) { notify("Import impossible", e.message, "err"); } };
   paintTab();
 }
