@@ -1,10 +1,12 @@
 // Messagerie Twizz sur le site — VERSION DE TEST, réservée au fondateur.
 // Le site relaie les conversations du CRM Twizz Business. Rien n'est marqué comme lu automatiquement,
 // et l'envoi est bloqué tant que le fondateur n'a pas activé l'interrupteur « Envoi activé ».
-module.exports = function mount(app, db, auth, admin, { twizz }) {
+module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   const { call, S } = twizz;
   db.exec("CREATE TABLE IF NOT EXISTS twizz_fan_notes (creator_id TEXT, fan_id TEXT, text TEXT, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id))");
   if (!db.prepare("PRAGMA table_info(twizz_sent)").all().some(x => x.name === "files")) db.exec("ALTER TABLE twizz_sent ADD COLUMN files TEXT");
+  // scripts : messages tout prêts, pour toutes les créatrices (creator_id vide) ou une seule
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_scripts (id INTEGER PRIMARY KEY, creator_id TEXT, cat TEXT, title TEXT, body TEXT, uses INTEGER DEFAULT 0, user_id INTEGER, at INTEGER)");
   const founder = (req, res, next) => req.user.rk === "founder" && !req.viewAs ? next() : res.status(403).json({ error: "Messagerie en test : réservée au fondateur" });
   // petit cache mémoire : une conversation déjà ouverte se réaffiche tout de suite (vidé par le temps réel et les envois)
   const CACHE = new Map();
@@ -99,7 +101,10 @@ module.exports = function mount(app, db, auth, admin, { twizz }) {
     const fresh = req.query.fresh === "1"; if (fresh) drop(`/conversations/user/${enc(cid)}?page=${page}&type=${type}`);
     const j = q ? await G(`/conversations/user/${enc(cid)}/search?search=${enc(q)}`, 10e3) : await G(`/conversations/user/${enc(cid)}?page=${page}&type=${type}&creatorId=${enc(cid)}`, 20e3);
     const d = j && j.data, items = arr(j).map(c => conv(c, cid));
-    const by = authors(items.filter(c => !c.last.fromFan).map(c => c.last.id)); items.forEach(c => { c.last.by = by[c.last.id] || null; });
+    const by = authors(items.filter(c => !c.last.fromFan).map(c => c.last.id));
+    const near = db.prepare("SELECT u.username name, s.at FROM twizz_sent s JOIN users u ON u.id = s.user_id WHERE s.conv_id = ? ORDER BY s.at DESC LIMIT 1");
+    items.forEach(c => { if (c.last.fromFan) return; c.last.by = by[c.last.id] || null;
+      if (!c.last.by && c.last.at) { const r = near.get(c.id); if (r && Math.abs(r.at - Date.parse(c.last.at)) < 120e3) c.last.by = r.name; } });
     return { items, page, more: !!(d && (d.totalPages ? page < d.totalPages : arr(j).length >= 10)), sample: req.query.debug ? arr(j)[0] : undefined };
   }));
   app.get("/api/twizz/inbox/:cid/messages/:conv", auth, founder, wrap(async req => {
@@ -169,6 +174,44 @@ module.exports = function mount(app, db, auth, admin, { twizz }) {
   app.get("/api/twizz/inbox/:cid/spend/:fan", auth, founder, wrap(async req => {
     const cid = creatorOk(req.params.cid), j = await G(`/business/get-fan-purchase-stats/${enc(req.params.fan)}?creatorId=${enc(cid)}`, 600e3), d = (j && (j.data ?? j)) || {};
     const k = Object.keys(d).find(k => /totalSpent|spent/i.test(k)); return { total: k ? +d[k] || 0 : null };
+  }));
+
+  /* ---------- scripts ---------- */
+  const scriptOut = r => ({ id: r.id, creator: r.creator_id || null, cat: r.cat || "", title: r.title || "", body: r.body || "", uses: r.uses || 0, by: r.by || null });
+  app.get("/api/twizz/scripts", auth, founder, (req, res) => {
+    const cid = str(req.query.cid);
+    res.json({ items: db.prepare("SELECT s.*, u.username by FROM twizz_scripts s LEFT JOIN users u ON u.id = s.user_id WHERE s.creator_id IS NULL OR s.creator_id = '' OR s.creator_id = ? ORDER BY s.uses DESC, s.id DESC").all(cid).map(scriptOut) });
+  });
+  app.post("/api/twizz/scripts", auth, founder, wrap(async req => {
+    const b = req.body || {}, title = String(b.title || "").trim().slice(0, 80), body = String(b.body || "").trim().slice(0, 2000), cat = String(b.cat || "").trim().slice(0, 30);
+    const creator = b.creator ? creatorOk(str(b.creator)) : null;
+    if (!body) throw bad("Le script est vide");
+    if (b.id) db.prepare("UPDATE twizz_scripts SET creator_id = ?, cat = ?, title = ?, body = ? WHERE id = ?").run(creator, cat, title, body, +b.id);
+    else db.prepare("INSERT INTO twizz_scripts (creator_id, cat, title, body, uses, user_id, at) VALUES (?,?,?,?,0,?,?)").run(creator, cat, title, body, req.user.id, Date.now());
+    return { ok: true };
+  }));
+  app.post("/api/twizz/scripts/:id/use", auth, founder, (req, res) => { db.prepare("UPDATE twizz_scripts SET uses = uses + 1 WHERE id = ?").run(+req.params.id); res.json({ ok: true }); });
+  app.delete("/api/twizz/scripts/:id", auth, founder, (req, res) => { db.prepare("DELETE FROM twizz_scripts WHERE id = ?").run(+req.params.id); res.json({ ok: true }); });
+
+  /* ---------- assistant IA : 3 réponses proposées au chatter ---------- */
+  const aiLast = new Map();
+  app.post("/api/twizz/inbox/:cid/ai/:conv", auth, founder, wrap(async req => {
+    if (!ai || !ai.replies) throw bad("Assistant IA indisponible");
+    const cid = creatorOk(req.params.cid), conv = str(req.params.conv), fan = str(req.body?.fan);
+    const k = req.user.id + ":" + conv; if (Date.now() - (aiLast.get(k) || 0) < 4000) throw bad("Doucement : attends quelques secondes avant de redemander");
+    aiLast.set(k, Date.now());
+    const j = await G(`/messages/find-all-messages?conversationId=${enc(conv)}&creatorId=${enc(cid)}&page=1`, 15e3);
+    const L = ((j && j.data && j.data.data) || []).map(m => msg(m, fan)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(-24);
+    const line = m => m.type === "FILE" && !m.fromFan ? `[CRÉATRICE ENVOIE ${m.medias.length > 1 ? m.medias.length + " MÉDIAS" : "UN MÉDIA"}${m.price > 0 ? ` À ${m.price} € — ${m.status === "accepted" ? "acheté" : "pas encore acheté"}` : " GRATUIT"}]${m.text ? " " + m.text : ""}`
+      : `[${m.fromFan ? "FAN" : "CRÉATRICE"}] ${m.text || (m.medias.length ? "(média)" : "")}`;
+    const cr = db.prepare("SELECT label, note FROM twizz_creators WHERE twizz_id = ?").get(cid) || {};
+    const note = db.prepare("SELECT text FROM twizz_fan_notes WHERE creator_id = ? AND fan_id = ?").get(cid, fan);
+    let stats = ""; try { const sj = await G(`/business/get-fan-purchase-stats/${enc(fan)}?creatorId=${enc(cid)}`, 600e3), d = (sj && (sj.data ?? sj)) || {};
+      const tk = Object.keys(d).find(x => /totalSpent|spent/i.test(x)), nk = Object.keys(d).find(x => /totalPurchases|purchases$/i.test(x));
+      stats = [tk ? `a dépensé ${d[tk]} € au total` : "", nk ? `${d[nk]} achats` : ""].filter(Boolean).join(", "); } catch (e) {}
+    const r = await ai.replies({ creator: cr.label || "la créatrice", rules: cr.note || "", note: note && note.text || "", fan: [str(req.body?.name), stats].filter(Boolean).join(", ") || "rien de particulier",
+      transcript: L.map(line).filter(Boolean).join("\n") }, { user: req.user.id });
+    return r;
   }));
 
   /* ---------- actions (bloquées tant que l'envoi n'est pas activé) ---------- */
