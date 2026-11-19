@@ -25,6 +25,16 @@ if (!ai.MOCK && !process.env.ANTHROPIC_API_KEY) {
 
 /* ================= Base de données ================= */
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+// restauration d'une sauvegarde : variable RESTORE_BACKUP = nom du fichier dans /data/backups (une seule fois, la base actuelle est mise de côté avant)
+(() => { const name = String(process.env.RESTORE_BACKUP || "").trim(); if (!name) return;
+  const dir = path.join(path.dirname(DB_PATH), "backups"), src = path.join(dir, path.basename(name)), mark = path.join(dir, ".restaure-" + path.basename(name));
+  if (!/^stellads-[\w-]+\.db$/.test(path.basename(name)) || !fs.existsSync(src)) return console.error("❌ RESTORE_BACKUP : sauvegarde introuvable", name);
+  if (fs.existsSync(mark)) return console.log("ℹ️ RESTORE_BACKUP déjà appliquée (" + name + ") : retire la variable");
+  if (fs.existsSync(DB_PATH)) fs.copyFileSync(DB_PATH, path.join(dir, "avant-restauration-" + Date.now() + ".db"));
+  for (const x of ["-wal", "-shm"]) try { fs.unlinkSync(DB_PATH + x); } catch (e) {}
+  fs.copyFileSync(src, DB_PATH); fs.writeFileSync(mark, new Date().toISOString());
+  console.log("✅ Sauvegarde restaurée :", name);
+})();
 const db = new DatabaseSync(DB_PATH);
 // Coût de l'IA : chaque appel est enregistré avec son prix (dollars, tarifs Anthropic par million de tokens)
 db.exec("CREATE TABLE IF NOT EXISTS ai_usage (id INTEGER PRIMARY KEY, at INTEGER NOT NULL, sim_id INTEGER, user_id INTEGER, kind TEXT, model TEXT, in_tok INTEGER, out_tok INTEGER, cache_w INTEGER, cache_r INTEGER, cost REAL)");
@@ -538,7 +548,8 @@ CAND_CTX.referrals = require("./referrals")(app, db, auth, admin, { compta: COMP
 const ALERTS = require("./alerts")(app, db, auth, admin, { planning: PLAN, gest: GEST });
 require("./roles")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, gest: GEST, perms: PERM, alerts: ALERTS, PERSONAS });   // rôles, équipes des Team Leaders, réglages du Fondateur
 require("./purge")(app, db, auth, admin, { gest: GEST });
-require("./notify")(app, db, auth, admin, { bcrypt, PROD, gest: GEST, planning: PLAN });
+const NOTIFY = require("./notify")(app, db, auth, admin, { bcrypt, PROD, gest: GEST, planning: PLAN });
+require("./backups")(app, db, auth, admin, { dbPath: DB_PATH, notify: NOTIFY, gest: GEST });   // sauvegardes de nuit + téléchargement fondateur
 require("./profile")(app, db, auth, { bcrypt, PERM });   // Mon profil, Paramètres, carte de profil dans le chat   // notifications sur le téléphone, invitations, premier lancement
 require("./announce")(app, db, auth, admin, { gest: GEST });   // annonces importantes / urgentes : bandeau, écran bloquant, suivi de lecture   // comptes désactivés depuis 24 h : supprimés (historique gardé)   // alertes du shift en cours (cloche manager, salle de contrôle)
 /* ----- Simu Chatter : suivi en direct, conseils du manager, entraînements ----- */

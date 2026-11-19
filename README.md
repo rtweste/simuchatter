@@ -89,3 +89,14 @@ Puis ouvrez http://localhost:3000 avec l'identifiant `admin` et le mot de passe 
 - Les mots de passe sont chiffrés.
 - Les consignes cachées des profils de fans ne sont jamais envoyées aux chatters.
 - Désactiver un chatter le déconnecte immédiatement.
+
+## Sauvegardes et restauration
+
+Le site fait une copie de la base chaque nuit vers 4 h (heure de Paris) dans le volume Railway, dossier `/data/backups`. On garde les 14 dernières nuits, une par semaine sur 8 semaines et les 5 dernières sauvegardes manuelles. Tout se gère dans **Réglages fondateur → Sauvegardes** : sauvegarder maintenant, télécharger une sauvegarde, ou télécharger l'**archive complète** (base + captures de ventes, photos, fichiers du chat). Télécharge l'archive complète une fois par semaine sur ton ordinateur : un rappel arrive chaque lundi.
+
+**Revenir à une sauvegarde de nuit (la base est abîmée ou une erreur a tout cassé) :**
+1. Dans Réglages fondateur → Sauvegardes, repère le nom de la sauvegarde voulue (ex. `stellads-2026-11-19-0400.db` : passe la souris sur le lien de téléchargement pour voir le nom).
+2. Sur Railway, ouvre le service → **Variables** → ajoute `RESTORE_BACKUP` = ce nom de fichier, puis laisse Railway redéployer.
+3. Au démarrage, le site met la base actuelle de côté (`avant-restauration-….db`) puis remet la sauvegarde. Une fois le site revenu, **supprime la variable** `RESTORE_BACKUP` (elle ne s'applique qu'une fois, mais autant la retirer).
+
+**Si le volume entier est perdu :** crée un nouveau volume monté sur `/data`, puis remets-y le contenu de ta dernière archive complète (le fichier `app.db` et les dossiers `uploads`, `chat`, `studio`). Railway propose aussi ses propres sauvegardes de volume dans les réglages du volume : active-les si ton offre le permet.

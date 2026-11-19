@@ -38,6 +38,12 @@
 .rl.ro .rz{display:none}
 .rl .rz .seg button{max-width:150px;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:760px){.rl .stair{margin-top:46px;gap:4px}.rl .stp b{font-size:11.5px}.rl .stp .pr{font-size:9px;padding:1px 4px}.rl .trow{grid-template-columns:22px repeat(3,minmax(0,1fr)) 28px}.rl .stpr button{width:22px}}
+.bkb{height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;border:1px solid #2a2a2a;background:#161616;color:#eee;font:700 13px Inter,sans-serif;cursor:pointer;text-decoration:none}
+.bkb:hover{background:#1c1c1c}.bkb.g{background:linear-gradient(120deg,#fff1cf,#e8c27a 60%,#d2a352);color:#1b1306;border:0}.bkb[disabled]{opacity:.6}
+.bkl{display:flex;flex-direction:column;border-top:1px solid #1c1c1c}
+.bkl a{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid #1c1c1c;color:#cfcfcf;text-decoration:none;font-size:13px}
+.bkl a:hover{color:#fff;background:#141414}.bkl a span{flex:1;min-width:0}.bkl a b{color:#fff;font-weight:700}.bkl a small{color:#7a7a7a;font-size:12px}
+.bkl a em{font-style:normal;font-size:10.5px;font-weight:800;letter-spacing:.08em;color:#f3d9a4;background:rgba(243,217,164,.1);padding:2px 6px;border-radius:999px;margin-left:4px}
 </style>
 </head>
 <body>
@@ -147,6 +153,32 @@
       <div class="pick"><select aria-label="Nommer un manager"><option value="">Nommer un manager…</option>${(D.cands || []).map(p => `<option value="${p.id}">${esc(N(p.username))} · ${p.rk === "assistant" ? "Assistante" : p.rk === "tl" ? "Team Leader" : "Chatter"}</option>`).join("")}</select><button class="sb w" data-nm style="height:40px">Nommer</button></div>
       ${lockov("Seul le Fondateur peut nommer ou retirer un manager.")}</div>`;
   }
+  /* ----- sauvegardes ----- */
+  let BK = null;
+  const fsz = n => n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(n / 1024)) + " Ko";
+  const bkDay = d => { const t = new Date(), y = new Date(Date.now() - 864e5), iso = x => x.toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" });
+    return d === iso(t) ? "Aujourd'hui" : d === iso(y) ? "Hier" : new Date(d + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }); };
+  function bkCard() {
+    const DL = "M12 3v12M7 10l5 5 5-5M5 21h14";
+    if (!BK) return `<div class="card bk" id="sauvegardes" style="--d:.16s"><div class="ch"><h3>Les <em>sauvegardes</em></h3></div><div class="ld" style="padding:20px">Chargement…</div></div>`;
+    const last = BK.list[0], fresh = last && Date.now() - last.at < 36 * 3600e3;
+    return `<div class="card bk" id="sauvegardes" style="--d:.16s"><div class="ch"><h3>Les <em>sauvegardes</em></h3><span class="mut">Une copie de tout le site chaque nuit vers 4 h</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;margin:4px 0 12px;background:${fresh ? "rgba(95,211,162,.07)" : "rgba(240,181,74,.08)"};border:1px solid ${fresh ? "rgba(95,211,162,.3)" : "rgba(240,181,74,.35)"}">
+        <span style="width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:none;background:${fresh ? "rgba(95,211,162,.14)" : "rgba(240,181,74,.14)"};color:${fresh ? "#5fd3a2" : "#f0b54a"}">${SV(fresh ? "M5 12.5l4.5 4.5L19 7.5" : "M12 8v5M12 16.5v.01", 16, 2.6)}</span>
+        <div style="min-width:0"><b style="font-size:13.5px">${last ? `Dernière sauvegarde : ${esc(bkDay(last.date).toLowerCase())} à ${esc(last.time)}` : "Pas encore de sauvegarde"}</b><div class="mut" style="margin-top:2px">${last ? `${BK.list.length} copie${BK.list.length > 1 ? "s" : ""} gardée${BK.list.length > 1 ? "s" : ""} · base de ${fsz(last.size)} · fichiers du site : ${fsz(BK.dataSize)}` : "La première sera faite cette nuit, ou maintenant avec le bouton."}</div></div></div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+        <button class="bkb" data-bknow type="button">${SV("M12 5v14M5 12h14", 15, 2.4)}Sauvegarder maintenant</button>
+        <a class="bkb g" href="/api/admin/backups/full" data-bkfull>${SV(DL, 15, 2.2)}Archive complète</a></div>
+      <div class="mut" style="margin:10px 0 8px;line-height:1.5">L'archive complète contient la base et tous les fichiers (captures de ventes, photos, chat). Télécharge-la sur ton ordinateur une fois par semaine : c'est ta copie de secours si le serveur a un problème.</div>
+      <div class="bkl">${BK.list.slice(0, 8).map(b => `<a href="/api/admin/backups/file/${encodeURIComponent(b.file)}" download><span><b>${esc(bkDay(b.date))}</b> · ${esc(b.time)}${b.manual ? ' <em>manuelle</em>' : ""}</span><small>${fsz(b.size)}</small>${SV(DL, 15, 2.2)}</a>`).join("")}</div>
+      ${BK.list.length > 8 ? `<div class="mut" style="margin-top:6px">+ ${BK.list.length - 8} plus ancienne${BK.list.length - 8 > 1 ? "s" : ""} (${esc(BK.keep)})</div>` : `<div class="mut" style="margin-top:6px">On garde : ${esc(BK.keep)}.</div>`}</div>`;
+  }
+  async function loadBk() { try { BK = await api("/api/admin/backups"); const c = q(".bk"); if (c) { c.outerHTML = bkCard(); bindBk(); } } catch (e) {} }
+  function bindBk() {
+    const b = q("[data-bknow]"); if (b) b.onclick = async () => { b.disabled = true; b.lastChild.textContent = "Sauvegarde…";
+      try { const r = await api("/api/admin/backups", { body: {} }); BK.list = r.list; q(".bk").outerHTML = bkCard(); bindBk(); toast2("Sauvegarde faite ✓", true); } catch (x) { b.disabled = false; toast2(esc(x.message)); } };
+    const f = q("[data-bkfull]"); if (f) f.onclick = () => toast2("Préparation de l'archive… le téléchargement va démarrer", true);
+  }
   function logCard() {
     return `<div class="card" style="--d:.18s"><div class="ch"><h3>Journal <em>sensible</em></h3><span class="mut">Paliers, parts, clôtures, managers</span></div><div class="jl">${D.log.map(l => `<div><i></i><span><b>${esc(N(l.username || "?"))}</b> ${esc(l.text)} · ${new Date(l.at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} à ${new Date(l.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span></div>`).join("") || '<div><span class="mut">Rien pour le moment.</span></div>'}</div></div>`;
   }
@@ -156,9 +188,10 @@
     root.innerHTML = `<div class="hdr"><div><div class="eb">FONDATEUR${fd ? " · " + esc(ME.username.toUpperCase()) : ""}</div><h1 class="ttl">Réglages <em class="gd">fondateur.</em></h1></div>
       <div class="hr2"><span class="rb f" style="height:30px;padding:0 12px;font-size:12px">${SV(CROWN, 13, 2.4)}Fondateur seulement</span>${fd ? '<button class="sw2" type="button"><span>Aperçu vue manager</span><span class="tg3"></span></button>' : ""}</div></div>
       ${fd ? "" : `<div class="roban">${SV(LOCK, 16, 2)}Ces réglages sont réservés au Fondateur : tu vois les valeurs, sans pouvoir les modifier.</div>`}
-      <div class="fgr"><div class="col">${tiersCard()}${closeCard()}${resetCard()}</div><div class="col">${creaCard()}${mgrCard()}${logCard()}</div></div><div class="toast" role="status"></div>`;
+      <div class="fgr"><div class="col">${tiersCard()}${closeCard()}${resetCard()}</div><div class="col">${creaCard()}${mgrCard()}${fd ? bkCard() : ""}${logCard()}</div></div><div class="toast" role="status"></div>`;
     bind(); setTimeout(drawStair, 60);
-    if (D.founder) { if (RS) bindReset(); else loadReset(); }
+    if (D.founder) { if (RS) bindReset(); else loadReset(); if (BK) bindBk(); else loadBk(); }
+    if (location.hash === "#sauvegardes") setTimeout(() => q("#sauvegardes")?.scrollIntoView({ behavior: "smooth", block: "start" }), 400);
   }
   function bind() {
     qa("[data-st]").forEach(b => b.addEventListener("click", () => { const [i, f, d] = b.dataset.st.split(":"); const st = f === "rate" ? .5 : f === "prime" ? 10 : 100;
