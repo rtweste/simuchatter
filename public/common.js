@@ -147,6 +147,9 @@ function renderShell(active, me) {
     document.head.appendChild(st); document.body.appendChild(b);
     b.querySelector("button").onclick = async () => { try { await api("/api/view-as/stop", { method: "POST" }); } catch (e) {} try { sessionStorage.clear(); } catch (e) {} location.href = "/admin"; };
   }
+  // anniversaire ou ancienneté : confettis une fois par jour à l'ouverture du site
+  if (me && me.celebrate && !me.pushNeeded) { const k = "cel:" + me.celebrate.key + ":" + new Date().toDateString(); let seen = false; try { seen = !!localStorage.getItem(k); localStorage.setItem(k, "1"); } catch (e) {}
+    if (!seen) setTimeout(() => celebrateFx(me.celebrate), 700); }
   // chatters : notifications obligatoires (écran bloquant tant qu'aucun appareil n'est abonné)
   if (me && me.pushNeeded && !EMBED) loadPush(() => PUSH.gate());
   // accueil : configurer son compte (premier lancement), puis activer les notifications
@@ -573,3 +576,23 @@ const DEADLINE = window.DEADLINE = (() => {
   }
   return { mount: set, set };
 })();
+
+// fête (anniversaire, ancienneté) : pluie de confettis + carte au centre, se ferme d'un clic
+function celebrateFx(c) {
+  const red = matchMedia("(prefers-reduced-motion: reduce)").matches, ic = c.type === "bday" ? ["🎂", "🎉", "🎈", "✨", "🥳"] : ["⭐", "🎉", "✨", "🏆", "💫"];
+  const ov = document.createElement("div"); ov.className = "cel-ov";
+  ov.innerHTML = `<style>.cel-ov{position:fixed;inset:0;z-index:2147482500;display:grid;place-items:center;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);opacity:0;transition:opacity .4s;overflow:hidden;cursor:pointer}
+    .cel-ov.on{opacity:1}.cel-ov i{position:absolute;top:-60px;font-style:normal;animation:celF linear forwards;pointer-events:none}
+    @keyframes celF{to{transform:translate(var(--dx),115vh) rotate(var(--r))}}
+    .cel-bx{position:relative;text-align:center;padding:30px 34px 26px;border-radius:26px;background:radial-gradient(120% 120% at 50% 0,rgba(255,210,63,.18),#121212 65%);border:1px solid rgba(255,210,63,.35);box-shadow:0 40px 90px -20px #000;max-width:min(420px,calc(100vw - 32px));transform:scale(.85);transition:transform .5s cubic-bezier(.2,.9,.3,1.3)}
+    .cel-ov.on .cel-bx{transform:none}.cel-bx .e{font-size:54px;line-height:1;animation:celB 1.6s ease-in-out infinite}
+    @keyframes celB{50%{transform:translateY(-6px) rotate(-6deg)}}
+    .cel-bx b{display:block;margin-top:14px;font:900 24px/1.2 Inter,system-ui,sans-serif;letter-spacing:-.02em;color:#fff}
+    .cel-bx p{margin:8px 0 18px;color:#c9c9c9;font:500 14.5px/1.45 Inter,system-ui,sans-serif}
+    .cel-bx button{height:40px;padding:0 18px;border-radius:12px;border:0;background:linear-gradient(120deg,#ffd23f,#ff9a3d);color:#1b1306;font:800 13.5px Inter,system-ui,sans-serif;cursor:pointer}</style>
+    <div class="cel-bx" role="dialog" aria-label="${esc(c.title)}"><div class="e">${ic[0]}</div><b>${esc(c.title)}</b><p>${esc(c.sub)}</p><button type="button">Merci ✨</button></div>`;
+  if (!red) for (let i = 0; i < 70; i++) { const p = document.createElement("i"); p.textContent = ic[i % ic.length];
+    p.style.cssText = `left:${Math.random() * 100}%;font-size:${16 + Math.random() * 20}px;animation-duration:${3 + Math.random() * 3}s;animation-delay:${Math.random() * 1.8}s;--dx:${(Math.random() - .5) * 160}px;--r:${(Math.random() - .5) * 720}deg`; ov.appendChild(p); }
+  document.body.appendChild(ov); requestAnimationFrame(() => ov.classList.add("on"));
+  const close = () => { ov.classList.remove("on"); setTimeout(() => ov.remove(), 400); }; ov.onclick = close; setTimeout(close, 9000);
+}

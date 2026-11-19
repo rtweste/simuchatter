@@ -31,22 +31,26 @@ module.exports = function mount(app, db, auth, ctx) {
     let sales = 0, wins = 0;
     try { sales = db.prepare("SELECT COUNT(*) n FROM sales WHERE user_id = ? AND status = 'validated' AND sold_at > ?").get(u.id, Date.now() - 15 * 864e5).n; } catch (e) {}
     try { wins = db.prepare("SELECT COUNT(*) n FROM challenge_results WHERE user_id = ? AND won = 1").get(u.id).n; } catch (e) {}
+    let motm = []; try { motm = db.prepare("SELECT month FROM motm_winners WHERE user_id = ? ORDER BY month DESC").all(u.id).map(r => r.month); } catch (e) {}
     const av = db.prepare("SELECT updated_at FROM user_avatars WHERE user_id = ?").get(u.id);
     return { id: u.id, username: u.username, name: u.display_name || u.username, bio: u.bio || "", color: COLORS.includes(u.color) ? u.color : COLORS[1],
       avatar: av ? `/api/avatar/${u.id}?v=${av.updated_at}` : null, role: u.role, roleLabel: PERM.LABEL[PERM.rk(u)] || (u.role === "admin" ? "Manager" : "Chatter"),
-      team: tl ? (tl.display_name || tl.username) : null, models, months: Math.max(0, Math.floor((Date.now() - u.created_at) / (30.44 * 864e5))), sales, wins, shift: shiftOf(u.id) };
+      team: tl ? (tl.display_name || tl.username) : null, models, months: Math.max(0, Math.floor((Date.now() - u.created_at) / (30.44 * 864e5))), sales, wins, motm, shift: shiftOf(u.id) };
   }
   const user = id => db.prepare("SELECT * FROM users WHERE id = ?").get(id);
 
   app.get("/api/profile", auth, noTrainee, (req, res) => {
     const u = user(req.user.id);
-    res.json({ ...card(u), colors: COLORS, nets: NETS, allModels: db.prepare("SELECT id, name FROM models ORDER BY name").all(),
+    res.json({ ...card(u), birthday: u.birthday || "", colors: COLORS, nets: NETS, allModels: db.prepare("SELECT id, name FROM models ORDER BY name").all(),
       mine: db.prepare("SELECT model_id FROM user_models WHERE user_id = ?").all(u.id).map(r => r.model_id),
       pay: { method: u.pay_method || "crypto", network: u.pay_network || NETS[0], address: u.pay_address || "", iban: u.pay_iban || "", paypal: u.pay_paypal || "" } });
   });
   app.put("/api/profile", auth, noTrainee, (req, res) => {
     const b = req.body || {}, u = user(req.user.id);
     const name = String(b.name ?? u.display_name ?? "").trim().slice(0, 24), bio = String(b.bio ?? u.bio ?? "").trim().slice(0, 80);
+    // anniversaire : jour et mois seulement (« MM-JJ »), facultatif
+    let bday = b.birthday === undefined ? (u.birthday || null) : String(b.birthday || "").trim() || null;
+    if (bday) { const [mm, dd] = bday.split("-").map(Number); if (!/^\d{2}-\d{2}$/.test(bday) || mm < 1 || mm > 12 || dd < 1 || dd > new Date(Date.UTC(2024, mm, 0)).getUTCDate()) return res.status(400).json({ error: "Date d'anniversaire invalide" }); }
     const color = COLORS.includes(b.color) ? b.color : u.color;
     const p = b.pay || {}, method = ["crypto", "iban", "paypal"].includes(p.method) ? p.method : (u.pay_method || "crypto");
     const net = NETS.includes(p.network) ? p.network : (u.pay_network || NETS[0]);
@@ -58,6 +62,7 @@ module.exports = function mount(app, db, auth, ctx) {
     try {
       db.prepare("UPDATE users SET display_name = ?, bio = ?, color = ?, pay_method = ?, pay_network = ?, pay_address = ?, pay_iban = ?, pay_paypal = ? WHERE id = ?")
         .run(name || null, bio || null, color || null, method, net, addr || null, iban || null, pp || null, u.id);
+      try { db.prepare("UPDATE users SET birthday = ? WHERE id = ?").run(bday, u.id); } catch (e) {}
       if (Array.isArray(b.models)) { db.prepare("DELETE FROM user_models WHERE user_id = ?").run(u.id);
         b.models.map(Number).filter(id => db.prepare("SELECT 1 FROM models WHERE id = ?").get(id)).forEach(id => db.prepare("INSERT OR IGNORE INTO user_models (user_id, model_id) VALUES (?,?)").run(u.id, id)); }
       db.exec("COMMIT");

@@ -280,6 +280,7 @@ if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "simu_int
 // nom affiché, couleur et photo de profil (pour le menu)
 function profBits(uid) { try { const u = db.prepare("SELECT display_name, color FROM users WHERE id = ?").get(uid) || {}, a = db.prepare("SELECT updated_at FROM user_avatars WHERE user_id = ?").get(uid);
   return { name: u.display_name || null, color: u.color || null, avatar: a ? `/api/avatar/${uid}?v=${a.updated_at}` : null }; } catch (e) { return {}; } }
+let COMM = null;
 // vue chatter du fondateur (aperçu en lecture seule)
 app.post("/api/view-as", auth, (req, res) => {
   const real = req.realUser || req.user; if (real.rk !== "founder") return res.status(403).json({ error: "Réservé au fondateur" });
@@ -300,7 +301,8 @@ app.get("/api/me", auth, (req, res) => {
   res.json({ id: req.user.id, username: req.user.username, role: req.user.role, grade: req.user.grade || null, rk: req.user.rk, roleLabel: PERM.LABEL[req.user.rk], onboarded: !!(ob && ob.onboarded_at),
     teamLead: tl ? { id: tl.id, username: tl.username } : null, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro, ...profBits(req.user.id), simuIntroSeen: iu.simu_intro_seen ? 1 : 0, mgrIntroSeen: iu.mgr_intro_seen ? 1 : 0, deadline,
     sells: req.user.role === "admin" && !!(ob && ob.sells), pushNeeded: !req.viewAs && pushNeeded(req.user),
-    viewAs: req.viewAs ? { username: req.user.username, real: req.realUser.username } : null });
+    viewAs: req.viewAs ? { username: req.user.username, real: req.realUser.username } : null,
+    celebrate: !req.viewAs && COMM ? COMM.celebrate(req.user.id) : null });
 });
 // nouvelle version de la vidéo : les élèves déjà inscrits la regardent une fois (une seule réinitialisation)
 setTimeout(() => { try { const k = db.prepare("SELECT value FROM settings WHERE key = 'intro_version'").get();
@@ -527,7 +529,8 @@ HAND = require("./handover")(app, db, auth, admin, { planning: PLAN, gest: GEST 
 require("./teamfx")(app, db, auth, admin, { planning: PLAN, gest: GEST, PERSONAS });   // salle de contrôle, radar, mur des ventes
 require("./extras")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, gest: GEST, ai });   // assistant, Wrapped, team leaders
 STUDIO = require("./studio")(app, db, auth, admin, { dataDir: path.dirname(DB_PATH), gest: GEST, planning: PLAN });   // contenus perso, fiches créatrices, pauses
-require("./chat")(app, db, auth, admin, { dataDir: path.dirname(DB_PATH), gest: GEST, planning: PLAN });   // chat d'équipe
+const CHAT = require("./chat")(app, db, auth, admin, { dataDir: path.dirname(DB_PATH), gest: GEST, planning: PLAN });   // chat d'équipe
+COMM = require("./community")(app, db, auth, admin, { chat: CHAT, compta: COMPTA });   // vie d'équipe : victoires, anniversaires, coéquipier du mois, #off
 require("./tests")(app, db, auth, admin, { gest: GEST });   // tests d'aptitude : débit et frappe
 require("./challenges")(app, db, auth, admin, { compta: COMPTA, gest: GEST });   // défis de la semaine
 CAND_CTX.referrals = require("./referrals")(app, db, auth, admin, { compta: COMPTA, gest: GEST });   // parrainage

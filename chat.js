@@ -23,6 +23,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
   CREATE TABLE IF NOT EXISTS chat_acks (message_id INTEGER NOT NULL, user_id INTEGER NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (message_id, user_id));
   CREATE TABLE IF NOT EXISTS chat_mutes (user_id INTEGER PRIMARY KEY, until INTEGER NOT NULL, by INTEGER);
   `);
+  const HOOKS = {};   // état calculé de certains messages (ex. vote du coéquipier du mois), branché par d'autres modules
   const J = (s, d) => { try { return s ? JSON.parse(s) : d; } catch (e) { return d; } };
   const now = () => Date.now();
   const user = id => db.prepare("SELECT id, username, role, active FROM users WHERE id = ?").get(id);
@@ -34,6 +35,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
   function seed() {
     ensure("informations", "informations", { readonly: 1, emoji: "📣", position: 0, topic: "Annonces de l'équipe de direction · seuls les managers écrivent ici" });
     ensure("general", "général", { emoji: "💬", position: 10, topic: "Tout et rien, entre nous" });
+    ensure("off", "off", { emoji: "☕", position: 12, topic: "La pause café : tout sauf le boulot · une question du jour chaque matin" });
     ensure("ventes", "ventes", { emoji: "💸", position: 20, topic: "Chaque vente validée arrive ici automatiquement" });
     ensure("formation", "formation", { kind: "training", emoji: "🎓", position: 5, topic: "Le salon des élèves en formation · seuls les élèves et les managers le voient" });
     ensure("problemes-techniques", "problèmes-techniques", { emoji: "🛠️", position: 30, topic: "Un bug, un accès qui ne marche pas, Twizz qui rame ? C'est ici" });
@@ -122,6 +124,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
         thread_root: r.thread_root, reactions: rx, thread: t ? { n: t.n, last: t.last, users: String(t.us || "").split(",").map(Number).filter(Boolean).slice(0, 4) } : null };
       if (r.kind === "poll") { const vs = votes.filter(v => v.message_id === r.id); o.poll = { counts: (meta.options || []).map((_, i) => vs.filter(v => v.opt === i).length), mine: vs.filter(v => v.user_id === uid).map(v => v.opt), voters: new Set(vs.map(v => v.user_id)).size, who: (meta.options || []).map((_, i) => vs.filter(v => v.opt === i).map(v => v.username)) }; }
       if (r.pinned || meta.announce) { const a = acks.filter(x => x.message_id === r.id); o.acks = { n: a.length, of: teamN, me: a.some(x => x.user_id === uid), who: isAdmin ? a.map(x => ({ username: x.username, at: x.at })) : [] }; }
+      if (HOOKS[r.kind]) try { o[r.kind] = HOOKS[r.kind](meta, uid); } catch (e) {}
       if (r.kind === "swap" && meta.swap_id) { const w = db.prepare("SELECT w.*, t.username to_name FROM shift_swaps w LEFT JOIN users t ON t.id = w.to_user WHERE w.id = ?").get(meta.swap_id); if (w) o.swap = { status: w.status, to_user: w.to_user, to_name: w.to_name }; }
       if (r.kind === "sos") { const best = db.prepare("SELECT m.id, m.body, u.username, COUNT(r.user_id) n FROM chat_messages m JOIN users u ON u.id = m.user_id JOIN chat_reactions r ON r.message_id = m.id AND r.emoji = '⭐' WHERE m.thread_root = ? AND m.deleted_at IS NULL GROUP BY m.id ORDER BY n DESC, m.id LIMIT 1").get(r.id); o.best = best || null; }
       return o;
@@ -159,7 +162,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
       const last = db.prepare("SELECT m.body, m.kind, m.created_at, u.username FROM chat_messages m LEFT JOIN users u ON u.id = m.user_id WHERE m.channel_id = ? AND m.thread_root IS NULL AND m.deleted_at IS NULL ORDER BY m.id DESC LIMIT 1").get(c.id);
       let other = null; if (c.kind === "dm") { const o = db.prepare("SELECT u.id, u.username, u.role FROM chat_members cm JOIN users u ON u.id = cm.user_id WHERE cm.channel_id = ? AND cm.user_id <> ?").get(c.id, u.id); other = o || null; }
       return { id: c.id, slug: c.slug, name: other ? other.username : c.name, kind: c.kind, topic: c.topic, readonly: !!c.readonly, canWrite: !c.readonly || isAdmin, emoji: c.emoji, model_id: c.model_id,
-        other, unread, mentions: ment, last: last ? { body: last.kind === "voice" ? "🎤 Message vocal" : last.kind === "image" ? "📷 Photo" : last.kind === "poll" ? "📊 Sondage" : last.kind === "swap" ? "🔁 Remplacement de shift" : last.kind === "sos" ? "🆘 Aide fan" : last.kind === "sale" ? "💸 Nouvelle vente" : last.body.slice(0, 80), at: last.created_at, username: last.username } : null };
+        other, unread, mentions: ment, last: last ? { body: last.kind === "voice" ? "🎤 Message vocal" : last.kind === "image" ? "📷 Photo" : last.kind === "poll" ? "📊 Sondage" : last.kind === "swap" ? "🔁 Remplacement de shift" : last.kind === "sos" ? "🆘 Aide fan" : last.kind === "sale" ? "💸 Nouvelle vente" : last.kind === "win" ? "🎉 Victoire d'équipe" : last.kind === "motm" ? "🏅 Vote du coéquipier du mois" : last.kind === "qotd" ? "☕ Question du jour" : last.body.slice(0, 80), at: last.created_at, username: last.username } : null };
     });
   }
   app.get("/api/chat/boot", auth, noTrainee, (req, res) => {
@@ -340,5 +343,5 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
       post(ch, null, "", "sale", { sale_id: s.id, amount: s.amount, user_id: s.user_id, username: s.username, model: s.model, super: s.amount >= SUPER() }); });
   } catch (e) {} }, 8000);
 
-  return { post, emit };
+  return { post, emit, bump, hooks: HOOKS };
 };

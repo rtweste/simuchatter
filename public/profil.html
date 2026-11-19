@@ -33,7 +33,7 @@
     warn: "M12 3l10 18H2zM12 10v5M12 18h.01", gear: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", check: "M5 12.5l4.5 4.5L19 7.5" };
   let ME = null, P = null, F = null;
   const clone = o => JSON.parse(JSON.stringify(o));
-  const pick = p => ({ name: p.name === p.username ? "" : p.name, bio: p.bio, color: p.color, models: [...p.mine].sort((a, b) => a - b), pay: { ...p.pay } });
+  const pick = p => ({ name: p.name === p.username ? "" : p.name, bio: p.bio, birthday: p.birthday || "", color: p.color, models: [...p.mine].sort((a, b) => a - b), pay: { ...p.pay } });
   const dirty = () => JSON.stringify(F) !== JSON.stringify(pick(P));
 
   // aperçu de la carte avec ce qui est en train d'être modifié
@@ -62,6 +62,10 @@
         <div class="pf-two"><div><label class="pf-lab" for="fName">NOM AFFICHÉ</label><input class="pf-in" id="fName" maxlength="24" placeholder="${esc(P.username)}" value="${esc(F.name)}" autocomplete="nickname"><div class="pf-cnt"><span id="cName">${F.name.length}</span> / 24</div></div>
           <div><label class="pf-lab">IDENTIFIANT</label><input class="pf-in" value="@${esc(P.username)}" disabled style="opacity:.55"><div class="pf-cnt">Pour te connecter, ne change pas</div></div></div>
         <div><label class="pf-lab" for="fBio">PHRASE D'ACCROCHE</label><textarea class="pf-in" id="fBio" maxlength="80" placeholder="Ex. : Spécialiste des PPV du soir 🌙">${esc(F.bio)}</textarea><div class="pf-cnt"><span id="cBio">${F.bio.length}</span> / 80</div></div>
+        <div><span class="pf-lab">MON ANNIVERSAIRE <span style="opacity:.6;font-weight:600;letter-spacing:0">· facultatif</span></span><div class="pf-two" style="margin-top:0">
+          <select class="pf-in" id="fBd" aria-label="Jour"><option value="">Jour</option>${Array.from({ length: 31 }, (_, i) => `<option value="${String(i + 1).padStart(2, "0")}"${F.birthday.slice(3) === String(i + 1).padStart(2, "0") ? " selected" : ""}>${i + 1}</option>`).join("")}</select>
+          <select class="pf-in" id="fBm" aria-label="Mois"><option value="">Mois</option>${["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"].map((l, i) => `<option value="${String(i + 1).padStart(2, "0")}"${F.birthday.slice(0, 2) === String(i + 1).padStart(2, "0") ? " selected" : ""}>${l}</option>`).join("")}</select></div>
+          <div class="pf-cnt" style="text-align:left">Juste le jour et le mois. L'équipe te le souhaitera dans le chat 🎂</div></div>
       </section>
       <section class="pf-sec"><div class="pf-sh"><span class="ic">${SV(IC.spark)}</span><div><h3>Mes créatrices</h3><small>Celles sur qui tu travailles le plus souvent. Ton accueil et tes renforts sont préparés pour elles.</small></div></div>
         ${P.allModels.length ? `<div class="pf-chips">${P.allModels.map(m => `<button type="button" class="pf-chip${F.models.includes(m.id) ? " on" : ""}" aria-pressed="${F.models.includes(m.id)}" data-m="${m.id}"><span class="bx">${SV(IC.check, 14, 3)}</span>${esc(m.name)}</button>`).join("")}</div>` : `<div class="pf-empty">Aucune créatrice pour l'instant.</div>`}
@@ -89,6 +93,7 @@
     root.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { F.color = b.dataset.c; root.querySelectorAll("[data-c]").forEach(x => { x.classList.toggle("on", x === b); x.setAttribute("aria-checked", x === b); }); preview(); });
     const tx = (id, key, cnt) => { const el = $(id); el.oninput = () => { F[key] = el.value; if (cnt) $(cnt).textContent = el.value.length; preview(); }; };
     tx("fName", "name", "cName"); tx("fBio", "bio", "cBio");
+    const bd = () => { const d = $("fBd").value, m = $("fBm").value; F.birthday = d && m ? `${m}-${d}` : ""; preview(); }; $("fBd").onchange = bd; $("fBm").onchange = bd;
     root.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { const id = +b.dataset.m, on = !F.models.includes(id);
       F.models = on ? [...F.models, id].sort((a, c) => a - c) : F.models.filter(x => x !== id); b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); preview(); });
     root.querySelectorAll("[data-pm]").forEach((b, i) => b.onclick = () => { F.pay.method = b.dataset.pm;
@@ -149,7 +154,7 @@
   $("undo").onclick = () => { F = clone(pick(P)); draw(); };
   $("save").onclick = async () => {
     const bar = $("bar"); if (bar.classList.contains("busy")) return; bar.classList.add("busy");
-    try { const c = await api("/api/profile", { method: "PUT", body: { name: F.name.trim(), bio: F.bio.trim(), color: F.color, models: F.models, pay: F.pay } });
+    try { const c = await api("/api/profile", { method: "PUT", body: { name: F.name.trim(), bio: F.bio.trim(), birthday: F.birthday, color: F.color, models: F.models, pay: F.pay } });
       Object.assign(P, c); P.mine = [...F.models]; P.pay = { ...F.pay }; F = clone(pick(P));
       bar.classList.add("done"); $("barT").textContent = "Enregistré"; side();
       setTimeout(() => { bar.classList.remove("on", "done"); $("barT").textContent = "Non enregistré"; }, 1100);

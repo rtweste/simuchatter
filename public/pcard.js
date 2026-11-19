@@ -18,6 +18,7 @@ window.PCARD = (() => {
       <div class="pc-av${c.avatar ? " ph" : ""}">${av}${c.shift && c.shift.state === "on" ? '<b class="dot" aria-label="En shift"></b>' : ""}</div>
       <div class="pc-b"><h3><span data-pcn>${e(c.name)}</span><small>${e((c.roleLabel || "").toUpperCase())}</small></h3><div class="pc-hd">@${e(c.username)}${c.team ? ` · Équipe de ${e(c.team)}` : ""}</div>
         <p class="pc-bio${c.bio ? "" : " ph"}" data-pcb>${c.bio ? e(c.bio) : "Ajoute une phrase d'accroche…"}</p>
+        ${c.motm && c.motm.length ? `<div class="pc-motm" style="display:inline-flex;align-items:center;gap:7px;margin:0 0 10px;padding:5px 11px 5px 8px;border-radius:999px;background:linear-gradient(120deg,rgba(255,210,63,.16),rgba(255,154,61,.1));border:1px solid rgba(255,210,63,.4);color:#ffe08a;font:800 11.5px Inter,system-ui,sans-serif"><span style="font-size:14px">🏅</span>Coéquipier du mois${c.motm.length > 1 ? ` ×${c.motm.length}` : ""} · ${e(new Date(c.motm[0] + "-15T12:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" }))}</div>` : ""}
         ${shift(c.shift)}
         ${tags ? `<div class="pc-tags">${tags}</div>` : ""}
         ${o.stats === false ? "" : `<div class="pc-st"><div><small>VENTES · 15 J</small><b>${c.sales || 0}</b></div><div><small>ANCIENNETÉ</small><b>${c.months || 0}<span> mois</span></b></div><div><small>DÉFIS GAGNÉS</small><b>${c.wins || 0}</b></div></div>`}
