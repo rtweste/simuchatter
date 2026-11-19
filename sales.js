@@ -144,11 +144,18 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
   /* ---------- Déclarer une vente pour un autre chatter : fondateur et managers qui vendent ---------- */
   const canDeclareFor = u => u.role === "admin" && (u.rk === "founder" || !!(db.prepare("SELECT sells FROM users WHERE id = ?").get(u.id) || {}).sells);
   const targetsOf = me => db.prepare("SELECT id, username, role FROM users WHERE active = 1 AND id <> ? AND (role = 'chatter' OR (role = 'admin' AND sells = 1)) ORDER BY username COLLATE NOCASE").all(me);
-  // anciens chatters (comptes désactivés) : pour faire entrer au CA des ventes qu'ils avaient faites
-  const exOf = () => db.prepare("SELECT id, username, role FROM users WHERE active = 0 AND role = 'chatter' ORDER BY username COLLATE NOCASE").all();
+  // « Ancien chatter » : compte technique (désactivé, invisible dans l'équipe) pour faire entrer au CA les ventes
+  // d'un chatter qui n'est plus là, sans commission
+  function exUser() {
+    const k = db.prepare("SELECT value FROM settings WHERE key = 'ex_chatter'").get(), id = k && +k.value;
+    if (id && db.prepare("SELECT 1 FROM users WHERE id = ?").get(id)) return id;
+    let name = "Ancien chatter", n = 1; while (db.prepare("SELECT 1 FROM users WHERE username = ?").get(name)) name = "Ancien chatter " + ++n;
+    const nid = db.prepare("INSERT INTO users (username, pass_hash, role, created_at, active, deleted_at) VALUES (?,?,?,?,0,?)").run(name, "!", "chatter", Date.now(), Date.now()).lastInsertRowid;
+    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('ex_chatter', ?)").run(String(nid)); return nid;
+  }
   app.get("/api/sales/targets", auth, (req, res) => {
     if (!canDeclareFor(req.user)) return res.status(403).json({ error: "Réservé au fondateur et aux managers qui vendent" });
-    res.json({ self: !!(db.prepare("SELECT sells FROM users WHERE id = ?").get(req.user.id) || {}).sells, users: targetsOf(req.user.id), ex: exOf(),
+    res.json({ self: !!(db.prepare("SELECT sells FROM users WHERE id = ?").get(req.user.id) || {}).sells, users: targetsOf(req.user.id), exId: exUser(),
       models: db.prepare("SELECT id, name FROM models ORDER BY name").all() });
   });
 
@@ -162,13 +169,14 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     // vente déclarée pour un autre chatter (fondateur, ou manager qui vend)
     const forId = parseInt(req.query.for_user, 10), other = forId && forId !== req.user.id;
     if (other && !canDeclareFor(req.user)) return res.status(403).json({ error: "Seuls le fondateur et les managers qui vendent peuvent déclarer une vente pour un autre chatter" });
-    const target = other ? (targetsOf(req.user.id).find(u => u.id === forId) || exOf().find(u => u.id === forId)) : null;
-    const exTarget = !!(target && exOf().some(u => u.id === target.id));
+    const exTarget = other && forId === exUser();
+    const target = other ? (exTarget ? { id: forId, username: "Ancien chatter" } : targetsOf(req.user.id).find(u => u.id === forId)) : null;
     if (other && !target) return res.status(400).json({ error: "Chatter introuvable ou inactif" });
     const uid = other ? target.id : req.user.id;
     // vente déclarée pour un chatter : le manager peut retirer tout ou partie de sa commission (ex. vente refusée qu'on fait entrer au CA)
     let com = null, comWhy = null;
-    if (other && req.query.com_amount !== undefined && req.query.com_amount !== "") {
+    if (exTarget) { com = 0; comWhy = String(req.query.com_reason || "").trim().slice(0, 200) || "Vente d'un ancien chatter"; }
+    else if (other && req.query.com_amount !== undefined && req.query.com_amount !== "") {
       com = num(String(req.query.com_amount).replace(",", "."), 0, 1e6);
       if (com === null) return res.status(400).json({ error: "Part du chatter invalide" });
       comWhy = String(req.query.com_reason || "").trim().slice(0, 200);
@@ -201,7 +209,7 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     if (com !== null) { com = Math.round(com * 100) / 100; if (com >= amount) { com = null; comWhy = null; } }
     const info = db.prepare(`INSERT INTO sales (user_id, model_id, amount, declared_amount, sold_at, note, mime, created_at, declared_by, items, com_amount, com_reason)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(uid, model_id, amount, amount, sold_at, note, mime, Date.now(), other ? req.user.id : null, JSON.stringify(items), com, comWhy);
-    logEv(info.lastInsertRowid, req.user.id, "declared", `${euro(amount)}${other ? " pour " + target.username + (exTarget ? " (ancien chatter)" : "") : ""}${com !== null ? ` · ${com > 0 ? euro(com) + " pour le chatter" : "hors commission"} · ${comWhy}` : ""}`, null, other && !exTarget ? uid : null);
+    logEv(info.lastInsertRowid, req.user.id, "declared", `${euro(amount)}${other ? " pour " + target.username : ""}${com !== null ? ` · ${com > 0 ? euro(com) + " pour le chatter" : "hors commission"} · ${comWhy}` : ""}`, null, other && !exTarget ? uid : null);
     const file = `sale-${info.lastInsertRowid}-${Date.now().toString(36)}.${MIME[mime]}`;
     fs.writeFileSync(path.join(UP, file), req.body);
     db.prepare("UPDATE sales SET image = ? WHERE id = ?").run(file, info.lastInsertRowid);
