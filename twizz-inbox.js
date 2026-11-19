@@ -3,6 +3,8 @@
 // et l'envoi est bloqué tant que le fondateur n'a pas activé l'interrupteur « Envoi activé ».
 module.exports = function mount(app, db, auth, admin, { twizz }) {
   const { call, S } = twizz;
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_fan_notes (creator_id TEXT, fan_id TEXT, text TEXT, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id))");
+  if (!db.prepare("PRAGMA table_info(twizz_sent)").all().some(x => x.name === "files")) db.exec("ALTER TABLE twizz_sent ADD COLUMN files TEXT");
   const founder = (req, res, next) => req.user.rk === "founder" && !req.viewAs ? next() : res.status(403).json({ error: "Messagerie en test : réservée au fondateur" });
   // petit cache mémoire : une conversation déjà ouverte se réaffiche tout de suite (vidé par le temps réel et les envois)
   const CACHE = new Map();
@@ -18,6 +20,9 @@ module.exports = function mount(app, db, auth, admin, { twizz }) {
     if (Array.isArray(t) && t.length) { const c = t.find(y => y && y.type === "CLEAR") || t[0]; return str((c && (c.absolutePath || c.url || c.path)) || ""); }
     if (t && typeof t === "object") return str(t.small || t.medium || t.large || "");
     return str((x && (x.thumbnail || x.thumbUrl)) || ""); };
+  // un même fichier n'a pas toujours le même identifiant côté coffre et côté message : on garde tous ses repères
+  const pathOf = u => { try { const x = new URL(u); return /^https?:$/.test(x.protocol) && x.pathname.length > 8 ? x.pathname : ""; } catch (e) { return ""; } };
+  const keysOf = x => [x && x.fileId, x && x._id, x && x.id, x && x.quickFileId, pathOf(str(x && x.url))].map(str).filter(k => k && k !== "/");
   const wrap = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.twizz ? 502 : e.status || 500).json({ error: e.message }); } };
   const bad = msg => { const e = new Error(msg); e.status = 400; return e; };
   const mapped = () => db.prepare("SELECT t.twizz_id id, t.label, t.note, t.model_id, m.name model FROM twizz_creators t LEFT JOIN models m ON m.id = t.model_id ORDER BY t.label").all();
@@ -34,17 +39,17 @@ module.exports = function mount(app, db, auth, admin, { twizz }) {
   function conv(c, cid) {
     const fanRaw = c.interlocutor || c.fan || c.user || (Array.isArray(c.participants) ? c.participants.find(x => str(x._id || x.userId) !== cid) : null) || {};
     const fan = person(fanRaw), last = c.lastMessage || c.last_message || {};
-    return { id: str(c._id || c.id), fan, last: { text: str(last.text || ""), type: str(last.type || ""), at: last.createdAt || c.updatedAt || c.createdAt || null, fromFan: !!fan.id && str(last.senderId) === fan.id },
+    return { id: str(c._id || c.id), fan, last: { id: str(last._id || ""), text: str(last.text || ""), type: str(last.type || ""), at: last.createdAt || c.updatedAt || c.createdAt || null, fromFan: !!fan.id && str(last.senderId) === fan.id },
       unread: +(c.unreadCount ?? c.unread ?? c.unreadMessages ?? 0) || 0, type: str(c.type || ""), tags: (c.tags || []).map(t => str(t.name || t.label || t)).filter(Boolean) };
   }
   function msg(m, fanId) {
     const p = m.mediaPushPrice || {};
     return { id: str(m._id), fromFan: !!fanId && str(m.senderId) === fanId, sender: str(m.senderId), type: str(m.type), text: str(m.text), status: str(m.status), at: m.createdAt,
       read: !!m.isRead, price: p.resultPrice ?? p.price ?? null, mediaPushId: str(m.mediaPushId || ""),
-      medias: (m.medias || []).map(x => ({ url: str(x.url), thumb: thumbOf(x), audio: !!x.isAudio, private: !!x.isPrivate })) };
+      medias: (m.medias || []).map(x => ({ url: str(x.url), thumb: thumbOf(x), audio: !!x.isAudio, private: !!x.isPrivate, video: /video/i.test(str(x.type || x.mimeType)) || /\.(mp4|mov|webm|m3u8)$/i.test(pathOf(str(x.url))), keys: keysOf(x) })) };
   }
   const file = f => ({ id: str(f._id || f.id || f.fileId), url: str(f.url || f.Location || f.path || ""), thumb: thumbOf(f) || str(f.absolutePath || f.url || ""),
-    type: str(f.type || f.mimeType || f.fileType || ""), name: str(f.originalFileName || f.name || f.filename || "") });
+    type: str(f.type || f.mimeType || f.fileType || ""), name: str(f.originalFileName || f.name || f.filename || ""), keys: keysOf(f) });
 
   /* ---------- temps réel : socket Twizz -> flux vers la page ---------- */
   const SUBS = new Set(); let sock = null, live = false, idleT = null;
@@ -93,7 +98,9 @@ module.exports = function mount(app, db, auth, admin, { twizz }) {
     const q = String(req.query.q || "").trim().slice(0, 60);
     const fresh = req.query.fresh === "1"; if (fresh) drop(`/conversations/user/${enc(cid)}?page=${page}&type=${type}`);
     const j = q ? await G(`/conversations/user/${enc(cid)}/search?search=${enc(q)}`, 10e3) : await G(`/conversations/user/${enc(cid)}?page=${page}&type=${type}&creatorId=${enc(cid)}`, 20e3);
-    const d = j && j.data; return { items: arr(j).map(c => conv(c, cid)), page, more: !!(d && (d.totalPages ? page < d.totalPages : arr(j).length >= 10)), sample: req.query.debug ? arr(j)[0] : undefined };
+    const d = j && j.data, items = arr(j).map(c => conv(c, cid));
+    const by = authors(items.filter(c => !c.last.fromFan).map(c => c.last.id)); items.forEach(c => { c.last.by = by[c.last.id] || null; });
+    return { items, page, more: !!(d && (d.totalPages ? page < d.totalPages : arr(j).length >= 10)), sample: req.query.debug ? arr(j)[0] : undefined };
   }));
   app.get("/api/twizz/inbox/:cid/messages/:conv", auth, founder, wrap(async req => {
     const cid = creatorOk(req.params.cid), page = Math.max(1, +req.query.page || 1), fanId = str(req.query.fan);
@@ -128,6 +135,42 @@ module.exports = function mount(app, db, auth, admin, { twizz }) {
     return { files: L.map(file).filter(f => f.id), sample: req.query.debug ? L[0] : undefined };
   }));
 
+  // historique d'un fan : médias envoyés (achetés ou pas), qui les a envoyés, l'équipe sur ce fan, la note d'équipe
+  // (3 pages de messages au plus, gardées 2 min : peu de requêtes vers Twizz)
+  app.get("/api/twizz/inbox/:cid/history/:conv", auth, founder, wrap(async req => {
+    const cid = creatorOk(req.params.cid), conv = str(req.params.conv), fan = str(req.query.fan);
+    if (req.query.fresh === "1") drop(conv);
+    const all = []; let pages = 1, twNote = null;
+    for (let p = 1; p <= Math.min(pages, 3); p++) {
+      const j = await G(`/messages/find-all-messages?conversationId=${enc(conv)}&creatorId=${enc(cid)}&page=${p}`, p === 1 ? 15e3 : 120e3);
+      const d = (j && j.data) || {}; pages = d.totalPages || 1; if (p === 1) twNote = d.creatorFanNote || null;
+      (d.data || []).forEach(m => all.push(msg(m, fan)));
+    }
+    const media = all.filter(m => !m.fromFan && m.type === "FILE" && m.medias.length).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+    const by = authors(media.map(m => m.id));
+    const items = media.map(m => ({ id: m.id, at: m.at, price: m.price, status: m.status, bought: m.status === "accepted" && m.price > 0, by: by[m.id] || null,
+      n: m.medias.length, videos: m.medias.filter(x => x.video).length, thumbs: m.medias.slice(0, 3).map(x => x.thumb), keys: [...new Set(m.medias.flatMap(x => x.keys))] }));
+    // fichiers envoyés depuis le site (même au-delà des 3 pages lues)
+    const site = db.prepare("SELECT files FROM twizz_sent WHERE conv_id = ? AND files IS NOT NULL").all(conv).flatMap(r => { try { return JSON.parse(r.files) || []; } catch (e) { return []; } }).map(str);
+    const team = {}; db.prepare("SELECT u.username name, COUNT(*) n FROM twizz_sent s JOIN users u ON u.id = s.user_id WHERE s.conv_id = ? GROUP BY s.user_id").all(conv).forEach(r => team[r.name] = { name: r.name, msgs: r.n, sold: 0, amount: 0 });
+    items.forEach(i => { if (i.by && i.bought) { const t = team[i.by] || (team[i.by] = { name: i.by, msgs: 0, sold: 0, amount: 0 }); t.sold++; t.amount += +i.price || 0; } });
+    const note = db.prepare("SELECT n.text, n.at, u.username by FROM twizz_fan_notes n LEFT JOIN users u ON u.id = n.user_id WHERE n.creator_id = ? AND n.fan_id = ?").get(cid, fan) || null;
+    const tw = twNote && (twNote.note || twNote.text || twNote.content || (typeof twNote === "string" ? twNote : "")) || "";
+    return { items, siteFiles: site, team: Object.values(team).sort((a, b) => b.amount - a.amount || b.msgs - a.msgs), note, twizzNote: str(tw), partial: pages > 3 };
+  }));
+  // note d'équipe sur un fan : enregistrée sur le site seulement (rien n'est écrit chez Twizz)
+  app.post("/api/twizz/inbox/:cid/note/:fan", auth, founder, wrap(async req => {
+    const cid = creatorOk(req.params.cid), fan = str(req.params.fan), text = String(req.body?.text || "").trim().slice(0, 1000), at = Date.now();
+    if (!fan) throw bad("Fan inconnu");
+    db.prepare("INSERT INTO twizz_fan_notes (creator_id, fan_id, text, user_id, at) VALUES (?,?,?,?,?) ON CONFLICT(creator_id, fan_id) DO UPDATE SET text = excluded.text, user_id = excluded.user_id, at = excluded.at").run(cid, fan, text, req.user.id, at);
+    return { ok: true, note: { text, at, by: req.user.username } };
+  }));
+  // total dépensé d'un fan (pour classer la file « À traiter »), gardé 10 min
+  app.get("/api/twizz/inbox/:cid/spend/:fan", auth, founder, wrap(async req => {
+    const cid = creatorOk(req.params.cid), j = await G(`/business/get-fan-purchase-stats/${enc(req.params.fan)}?creatorId=${enc(cid)}`, 600e3), d = (j && (j.data ?? j)) || {};
+    const k = Object.keys(d).find(k => /totalSpent|spent/i.test(k)); return { total: k ? +d[k] || 0 : null };
+  }));
+
   /* ---------- actions (bloquées tant que l'envoi n'est pas activé) ---------- */
   app.post("/api/twizz/inbox/:cid/send", auth, founder, wrap(async req => {
     mustSend(); const cid = creatorOk(req.params.cid), text = String(req.body?.text || "").trim().slice(0, 4000), conversationId = str(req.body?.conversationId);
@@ -149,7 +192,7 @@ module.exports = function mount(app, db, auth, admin, { twizz }) {
     const j = await call("POST", "/mediapush/conversation", f, true);
     const d = (j && j.data) || j || {}, nm = d.newMessage || null;
     if (!nm && d.message) throw bad("Twizz a refusé l'envoi : " + d.message);
-    db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at) VALUES (?,?,?,?,?,?,?)").run(str(nm && nm._id), conversationId, fan, cid, req.user.id, price, Date.now());
+    db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at, files) VALUES (?,?,?,?,?,?,?,?)").run(str(nm && nm._id), conversationId, fan, cid, req.user.id, price, Date.now(), JSON.stringify(files));
     if (b.acceptId) await call("PATCH", "/messages/update-message-status", { messageId: str(b.acceptId), action: "accepted", creatorId: cid, userType: "creator" }, true).catch(() => {});
     drop(conversationId, `/conversations/user/${enc(cid)}`);
     return { ok: true, message: nm ? msg(nm, fan) : null };
