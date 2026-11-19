@@ -111,7 +111,8 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
       }
       if (isBlocked(r)) throw fail("Twizz bloque les requêtes du serveur (protection Cloudflare)");
       if (r.status === 429) throw fail("Twizz demande de ralentir (trop de requêtes)");
-      if (r.status >= 400 || !r.json) throw fail(`Twizz a répondu une erreur (code ${r.status})${r.json && r.json.message ? " : " + r.json.message : ""}`);
+      if (r.status >= 400 || !r.json) { const v = r.json && r.json.validation, why = v && typeof v === "object" ? Object.values(v).map(x => x && x.message).filter(Boolean).join(" ; ").slice(0, 240) : "";
+        throw fail(`Twizz a répondu une erreur (code ${r.status})${r.json && r.json.message ? " : " + r.json.message : ""}${why ? " (" + why + ")" : ""}`); }
       return r.json;
     }, fast);
   }

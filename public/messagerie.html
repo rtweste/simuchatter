@@ -1652,8 +1652,8 @@ async function vault(acceptId, preset) {
         <div class="wtb vwt" id="vF"><span class="ind"></span><button class="on" data-f="0">Tout<span class="cn" id="vc0">0</span></button><button data-f="1"><i class="i-new"></i>Jamais envoyés<span class="cn" id="vc1">0</span></button><button data-f="2"><i class="i-sent"></i>Pas achetés<span class="cn" id="vc2">0</span></button><button data-f="3"><i class="i-buy"></i>Déjà achetés<span class="cn" id="vc3">0</span></button></div>
         <div id="vS"></div><div id="vW"></div><div class="vgrid" id="vG"></div></div></div>
     <div class="vf"><div class="vdock"><span class="dkst" id="vDk"><span class="dkemp"></span></span><span class="dt"><b id="vDt">Rien de choisi</b><small id="vDs">Clique sur les médias</small></span></div>
-      <div class="pz"><div class="prow" id="vP">${[0, 5, 10, 15, 20, 30, 50].map(p => `<button data-p="${p}">${p ? p + " €" : "Gratuit"}</button>`).join("")}<input id="vPrice" type="number" min="0" step="0.5" placeholder="Autre prix"></div>
-        <input class="tx" id="vTxt" placeholder="Message avec le média (facultatif)"><span class="hint" id="vH" hidden><i></i>Les prix que ${first1} achète le plus souvent</span></div>
+      <div class="pz"><div class="prow" id="vP">${[0, 5, 10, 15, 20, 30, 50].map(p => `<button data-p="${p}">${p ? p + " €" : "Gratuit"}</button>`).join("")}<input id="vPrice" type="number" min="0" max="500" step="1" placeholder="Autre prix"></div>
+        <input class="tx" id="vTxt" placeholder="Message avec le média (obligatoire sur Twizz)"><span class="hint" id="vH" hidden><i></i>Les prix que ${first1} achète le plus souvent</span></div>
       <button class="go2" id="vGo" disabled>${SV(IC.send, 18, 2.6)}<span id="vGl">Choisis un média</span><span class="kbd">↵</span></button></div></div>`;
   document.body.appendChild(m);
   const SEL = [], FILES = new Map(); let price = null, filter = 0, files = [], album = null, warnId = null;
@@ -1677,14 +1677,17 @@ async function vault(acceptId, preset) {
     const vids = bo.filter(i => i.videos).length;
     $("vI").innerHTML = (fav.length ? `<span>${SV(IC.coin, 13)}Achète surtout <b>${fav.map(p => E(p)).join(" – ")}</b></span>` : "") + (bo.length && vids * 2 > bo.length ? `<span>${SV(IC.play, 11)}Préfère <b>les vidéos</b></span>` : "") + (paid.length ? `<span>${SV(IC.check, 12, 3)}<b>${bo.length} / ${paid.length}</b> PPV achetés</span>` : "");
     m.querySelectorAll("#vP [data-p]").forEach(b => b.classList.toggle("hb", fav.includes(+b.dataset.p))); $("vH").hidden = !fav.length; }
-  const upd = () => { const go = $("vGo"), n = SEL.length; go.disabled = !n || price === null;
-    $("vGl").textContent = !n ? "Choisis un média" : price === null ? "Choisis un prix" : `Envoyer à ${conv.fan.name.split(" ")[0]} · ${price ? E(price) : "gratuit"}`;
+  // mêmes règles que Twizz : prix rond, 3 € minimum (ou gratuit), 500 € maximum, et un texte
+  const pWhy = () => price === null || !price ? "" : price % 1 ? "Prix sans centimes" : price < 3 ? "3 € minimum sur Twizz" : price > 500 ? "500 € maximum sur Twizz" : "";
+  const upd = () => { const go = $("vGo"), n = SEL.length, pw = pWhy(), tx = !!$("vTxt").value.trim(); go.disabled = !n || price === null || !!pw || !tx;
+    $("vGl").textContent = !n ? "Choisis un média" : price === null ? "Choisis un prix" : pw ? pw : !tx ? "Écris un message avec le média" : `Envoyer à ${conv.fan.name.split(" ")[0]} · ${price ? E(price) : "gratuit"}`;
     const ch = SEL.map(id => FILES.get(id)).filter(Boolean), nv = ch.filter(f => /video/i.test(f.type) || isVid(f.url)).length, np = ch.length - nv, pl = (k, a, b) => k + " " + (k > 1 ? b : a);
     $("vDk").innerHTML = ch.length ? ch.slice(0, 5).map(f => `<span class="dk"><img src="${esc(f.thumb)}" alt=""></span>`).join("") : `<span class="dkemp"></span>`;
     $("vDt").textContent = n ? pl(n, "média choisi", "médias choisis") : "Rien de choisi"; $("vDs").textContent = n ? [nv ? pl(nv, "vidéo", "vidéos") : "", np ? pl(np, "photo", "photos") : ""].filter(Boolean).join(" · ") : "Clique sur les médias";
     $("vG").querySelectorAll(".vt").forEach(t => { const k = SEL.indexOf(t.dataset.id); t.classList.toggle("on", k >= 0); t.querySelector(".num").textContent = k >= 0 ? k + 1 : "";
       const tr = t.querySelector(".trace"); if (k >= 0 && !tr) t.insertAdjacentHTML("beforeend", '<span class="trace"></span>'); if (k < 0 && tr) tr.remove(); }); };
   m.querySelectorAll("#vP [data-p]").forEach(b => b.onclick = () => { price = +b.dataset.p; $("vPrice").value = ""; m.querySelectorAll("#vP [data-p]").forEach(x => x.classList.toggle("on", x === b)); upd(); });
+  $("vTxt").addEventListener("input", () => upd());
   $("vPrice").oninput = () => { price = $("vPrice").value === "" ? null : Math.max(0, +$("vPrice").value); m.querySelectorAll("#vP [data-p]").forEach(x => x.classList.remove("on")); upd(); };
   m.querySelectorAll("#vF [data-f]").forEach(b => b.onclick = () => { filter = +b.dataset.f; m.querySelectorAll("#vF [data-f]").forEach(x => x.classList.toggle("on", x === b)); slideInd($("vF")); grid(); });
   requestAnimationFrame(() => slideInd($("vF")));
