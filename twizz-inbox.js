@@ -16,9 +16,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   db.exec("CREATE TABLE IF NOT EXISTS twizz_tag_log (creator_id TEXT, fan_id TEXT, tag_id INTEGER, action TEXT, user_id INTEGER, at INTEGER)");
   // ce que l'on sait d'un fan, appris au fil des pages ouvertes (aucune requête Twizz en plus) : sert aux règles
   db.exec("CREATE TABLE IF NOT EXISTS twizz_fan_facts (creator_id TEXT, fan_id TEXT, name TEXT, spend REAL, buys INTEGER, vids INTEGER, first_at INTEGER, team_at INTEGER, fan_at INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id))");
-  const RULES = { gp: ["Gros payeur", "#e8c27a", 300, 1], vid: ["Vidéos", "#7db4ff", 50, 1], nv: ["Nouveau", "#5fd3a2", 7, 1], in: ["Inactif", "#ff8a8a", 7, 0] };
+  const RULES = { gp: ["Spender", "#3dff8a", 300, 1], vid: ["Vidéos", "#7db4ff", 50, 1], nv: ["Nouveau", "#5fd3a2", 7, 1], in: ["Inactif", "#ff8a8a", 7, 0] };
   for (const [k, [name, color, thr, on]] of Object.entries(RULES))
     if (!db.prepare("SELECT 1 FROM twizz_tags WHERE rule = ?").get(k)) db.prepare("INSERT INTO twizz_tags (name, color, rule, thr, active, at) VALUES (?,?,?,?,?,?)").run(name, color, k, thr, on, Date.now());
+  db.prepare("UPDATE twizz_tags SET name = 'Spender', color = '#3dff8a' WHERE rule = 'gp' AND name = 'Gros payeur'").run();
   const ruleTags = () => db.prepare("SELECT * FROM twizz_tags WHERE rule IS NOT NULL").all();
   const known = (r, f) => r.rule === "gp" ? f.spend != null : r.rule === "vid" ? f.buys != null : r.rule === "nv" ? f.first_at != null : r.rule === "in" ? f.team_at != null || f.fan_at != null : false;
   const matches = (r, f, now) => r.rule === "gp" ? f.spend > r.thr

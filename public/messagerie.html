@@ -256,9 +256,9 @@
 .tgp{--c:#9a9a9a;position:relative;display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px 0 6px;border-radius:999px;font:800 10.5px Inter;white-space:nowrap;flex:none;color:color-mix(in srgb,var(--c) 78%,#fff);background:color-mix(in srgb,var(--c) 13%,transparent);border:1px solid color-mix(in srgb,var(--c) 34%,transparent)}
 .tgp .d{width:5px;height:5px;border-radius:50%;background:var(--c);box-shadow:0 0 7px var(--c);flex:none}
 .tgp>svg{color:var(--c);flex:none;margin:0 -2px 0 -1px}
-.tgp.gd{color:#2a1d05;background:linear-gradient(105deg,#fff3d6,#e8c27a 55%,#c99a4e);border-color:#e8c27a;overflow:hidden}
-.tgp.gd .d{background:#2a1d05;box-shadow:none}.tgp.gd>svg{color:#2a1d05}
-.tgp.gd:after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 35%,rgba(255,255,255,.7) 50%,transparent 65%);background-size:300% 100%;animation:tgShim 3.4s ease-in-out infinite;pointer-events:none}
+.tgp.sp{color:#02240f;background:linear-gradient(105deg,#c9ffdf,#3dff8a 50%,#12d96a);border-color:#3dff8a;overflow:hidden;box-shadow:0 0 14px -2px rgba(61,255,138,.65)}
+.tgp.sp .d{background:#02240f;box-shadow:none}.tgp.sp>svg{color:#02240f}
+.tgp.sp:after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 35%,rgba(255,255,255,.7) 50%,transparent 65%);background-size:300% 100%;animation:tgShim 3.4s ease-in-out infinite;pointer-events:none}
 @keyframes tgShim{0%{background-position:150% 0}60%,100%{background-position:-60% 0}}
 .tgp.tw{--c:#8a8a8a;border-style:dashed}
 .tgp.lg{height:30px;padding:0 5px 0 11px;font-size:12.5px;gap:7px}.tgp.lg.nx{padding-right:12px}.tgp.lg .d{width:6px;height:6px}
@@ -988,7 +988,7 @@ const lowc = x => String(x || "").toLocaleLowerCase("fr");
 const tagById = id => TAGS && TAGS.cid === CID ? TAGS.tags.find(t => t.id === id) : null;
 const fanTagIds = id => (TAGS && TAGS.cid === CID && TAGS.map[id]) || [];
 const ruleTxt = t => t.rule === "gp" ? `a dépensé plus de ${E(t.thr)}` : t.rule === "vid" ? `plus de ${t.thr} % de vidéos dans ses achats` : t.rule === "nv" ? `arrivé depuis moins de ${t.thr} jours` : t.rule === "in" ? `ne répond plus depuis ${t.thr} jours ou plus` : "";
-const tagPill = (t, cls = "") => `<span class="tgp ${cls} ${t.rule === "gp" ? "gd" : ""}" style="--c:${esc(t.color || "#9a9a9a")}" title="${esc(t.rule ? "Posé tout seul : " + ruleTxt(t) : t.name)}"><i class="d"></i>${t.rule ? SV(IC.bolt, 10, 2.4) : ""}${esc(t.name)}</span>`;
+const tagPill = (t, cls = "") => `<span class="tgp ${cls} ${t.rule === "gp" ? "sp" : ""}" style="--c:${esc(t.color || "#9a9a9a")}" title="${esc(t.rule ? "Posé tout seul : " + ruleTxt(t) : t.name)}"><i class="d"></i>${t.rule ? SV(IC.bolt, 10, 2.4) : ""}${esc(t.name)}</span>`;
 function rowTags(c) { const L = fanTagIds(c.fan.id).map(tagById).filter(Boolean); if (!L.length) return "";
   return `<span class="tgs2">${L.slice(0, 2).map(t => tagPill(t)).join("")}${L.length > 2 ? `<span class="mo">+${L.length - 2}</span>` : ""}</span>`; }
 function headTagsHtml() { if (!CUR) return ""; const L = fanTagIds(CUR.fan.id).map(tagById).filter(Boolean); return L.slice(0, 3).map(t => tagPill(t)).join("") + (L.length > 3 ? tagPill({ name: "+" + (L.length - 3), color: "#8a8a8a" }) : ""); }
@@ -1009,7 +1009,7 @@ const TSPK = [[10, -10, -16, -14], [85, -15, 16, -16], [50, 100, 4, 16], [95, 60
 function paintTags() {
   const B = $("fTg"); if (!B || !CUR || TPOP) return; const c = CUR, k = CID + "|" + c.fan.id, R = FTAGS[k], tw = (FANS[k] && FANS[k].tags) || [];
   if (!R) { B.innerHTML = `<div class="sk" style="height:30px;width:55%;border-radius:999px"></div>`; return; }
-  B.innerHTML = `<div class="row">${R.tags.map(t => `<span class="tgp lg ${t.rule ? "nx" : ""} ${t.rule === "gp" ? "gd" : ""} ${TNEW === t.id ? "nw" : ""}" style="--c:${esc(t.color)}" title="${esc(t.auto ? "Posé tout seul : " + ruleTxt(t) : `Ajouté${t.by ? " par " + t.by : ""}${t.at ? " le " + day(t.at) : ""}`)}"><i class="d"></i>${t.rule ? SV(IC.bolt, 11, 2.4) : ""}${esc(t.name)}${t.rule ? "" : `<button class="rm" data-rm="${t.id}" aria-label="Retirer le tag ${esc(t.name)}">${SV(IC.x, 11, 2.6)}</button>`}${TNEW === t.id ? '<span class="rp"></span><span class="rp b"></span>' + TSPK : ""}</span>`).join("")}
+  B.innerHTML = `<div class="row">${R.tags.map(t => `<span class="tgp lg ${t.rule ? "nx" : ""} ${t.rule === "gp" ? "sp" : ""} ${TNEW === t.id ? "nw" : ""}" style="--c:${esc(t.color)}" title="${esc(t.auto ? "Posé tout seul : " + ruleTxt(t) : `Ajouté${t.by ? " par " + t.by : ""}${t.at ? " le " + day(t.at) : ""}`)}"><i class="d"></i>${t.rule ? SV(IC.bolt, 11, 2.4) : ""}${esc(t.name)}${t.rule ? "" : `<button class="rm" data-rm="${t.id}" aria-label="Retirer le tag ${esc(t.name)}">${SV(IC.x, 11, 2.6)}</button>`}${TNEW === t.id ? '<span class="rp"></span><span class="rp b"></span>' + TSPK : ""}</span>`).join("")}
     ${tw.map(t => `<span class="tgp lg tw nx" title="Tag posé sur Twizz (lecture seule)"><i class="d"></i>${esc(t.name)}</span>`).join("")}
     <button class="tadd" id="tAdd">${SV(IC.tag, 13)}${R.tags.length || tw.length ? "Tag" : "Ajouter un tag"}</button></div>
     ${R.log.length ? `<div class="lg2">${R.log.slice(0, 2).map(l => `<span><i style="--c:${esc(l.color)}"></i>${esc(logTxt(l))}</span>`).join("")}</div>` : ""}`;
