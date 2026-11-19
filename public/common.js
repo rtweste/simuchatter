@@ -63,7 +63,8 @@ const ICONS = {
   gift: '<path d="M20 12v8H4v-8M2.5 7.5h19V12h-19zM12 21V7.5"/><path d="M12 7.5H8a2.5 2.5 0 0 1 0-5c3 0 4 5 4 5zM12 7.5h4a2.5 2.5 0 0 0 0-5c-3 0-4 5-4 5z"/>',
   users: '<circle cx="9" cy="7.5" r="3.2"/><path d="M3 20c.6-3.6 3-5.5 6-5.5s5.4 1.9 6 5.5"/><circle cx="17" cy="9" r="2.4"/><path d="M16.5 14.4c2.4.3 4 2 4.5 5.1"/><circle cx="9" cy="7.5" r="7.2" stroke-dasharray="2 3.2" opacity=".55"/>',
   crown: '<path d="M3 8l4.2 4L12 5l4.8 7L21 8l-2 11H5z"/><path d="M5.5 19h13"/>',
-  bag: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>'
+  bag: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  mic: '<path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/>'
 };
 const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ""}</svg>`;
 const MODULES = [
@@ -78,6 +79,8 @@ const MODULES = [
     desc: "Déclarez vos ventes avec la capture d'écran. Le manager les valide." },
   { id: "chat", label: "Chat d'équipe", short: "Chat", href: "/chat", icon: "bubbles", section: "Organisation", roles: ["admin", "chatter", "trainee"],
     desc: "Le chat de toute l'équipe : salons, messages privés, annonces, sondages." },
+  { id: "vocal", label: "Salon vocal", short: "Vocal", href: "/vocal", icon: "mic", section: "Organisation", roles: ["admin", "chatter"], nodock: ["admin", "chatter", "tl"],
+    desc: "Le vocal de l'équipe pendant les shifts, avec partage d'écran pour les managers." },
   { id: "creatrices", label: "Créatrices", short: "Créas", href: "/creatrices", icon: "spark", section: "Organisation", roles: ["admin", "chatter"], nodock: ["admin", "tl"],
     desc: "Les fiches des créatrices : personnalité, façon d'écrire, catalogue, à faire et à éviter." },
   { id: "parrainage", label: "Parrainage", href: "/parrainage", icon: "gift", section: "Organisation", roles: ["admin", "chatter"], nodock: ["admin", "chatter"], hide: ["assistant"],
@@ -137,7 +140,35 @@ function loadPush(cb) {
   const sc = document.createElement("script"); sc.src = "/push-ui.js"; sc.onload = () => { try { cb && cb(); } catch (e) {} }; document.body.appendChild(sc);
 }
 function openPush() { loadPush(() => PUSH.sheet()); }
+// salon vocal : il vit dans sa propre petite fenêtre pour ne pas couper quand on change de page
+function openVoice() {
+  let w = null; try { w = window.open("", "stellads-vocal", "width=460,height=780"); } catch (e) {}
+  if (!w) { location.href = "/vocal"; return false; }
+  try { if (!w.location.href || w.location.href === "about:blank") w.location.href = "/vocal"; } catch (e) {}
+  try { w.focus(); } catch (e) {} return true;
+}
+window.openVoice = openVoice;
+document.addEventListener("click", e => { const a = e.target.closest && e.target.closest('a[href="/vocal"]'); if (!a || location.pathname === "/vocal") return; e.preventDefault(); openVoice(); });
+const VOICE_UI = (() => {
+  let on = false, n = 0, seen = 0, need = false, bar = null;
+  const paint = () => {
+    document.querySelectorAll('.sidebar a[href="/vocal"]').forEach(a => { let p = a.querySelector(".nav-voc");
+      if (!p) { p = document.createElement("span"); p.className = "nav-voc"; p.style.cssText = "margin-left:auto;display:inline-flex;align-items:center;gap:5px;font:800 11.5px Inter,sans-serif;color:#5fd3a2"; a.appendChild(p); }
+      p.innerHTML = on ? `<i style="width:7px;height:7px;border-radius:50%;background:#5fd3a2;box-shadow:0 0 8px #5fd3a2"></i>${n}` : ""; });
+    if (need && !on) { if (!bar) { bar = document.createElement("div"); bar.className = "vo-bar";
+        bar.style.cssText = "position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:2147481000;display:flex;align-items:center;gap:12px;padding:8px 8px 8px 16px;border-radius:999px;background:rgba(15,30,24,.92);border:1px solid rgba(95,211,162,.5);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#cdeedd;font:600 13px Inter,system-ui,sans-serif;box-shadow:0 20px 50px -10px rgba(0,0,0,.8);max-width:calc(100vw - 20px)";
+        bar.innerHTML = `<span>🎙 Le vocal est obligatoire pendant ton shift</span><button type="button" style="height:32px;border-radius:999px;border:0;background:#5fd3a2;color:#05261a;font:800 12.5px Inter,sans-serif;padding:0 14px;cursor:pointer;flex-shrink:0">Rejoindre</button>`;
+        bar.querySelector("button").onclick = openVoice; document.body.appendChild(bar); } }
+    else if (bar) { bar.remove(); bar = null; }
+  };
+  try { const bc = new BroadcastChannel("stellads-voice"); bc.onmessage = e => { on = !!e.data.on; n = e.data.count || 0; seen = Date.now(); paint(); }; } catch (e) {}
+  setInterval(() => { if (on && Date.now() - seen > 12e3) { on = false; paint(); } }, 4e3);
+  async function check() { try { const r = await api("/api/voice/presence"); if (r.me) { on = true; seen = Date.now(); } n = r.count; } catch (e) {} paint(); }
+  return { start(me) { need = !!me.voiceNeeded; if (me.role === "trainee" || me.viewAs) return; check(); setInterval(async () => { if (document.hidden) return;
+    try { const m = await api("/api/me", { fresh: true }); need = !!m.voiceNeeded; } catch (e) {} check(); }, 30e3); } };
+})();
 function renderShell(active, me) {
+  if (me && !EMBED && location.pathname !== "/vocal") setTimeout(() => VOICE_UI.start(me), 1200);
   if (me && me.role === "chatter") PLANREM.start();
   // Stella's : styles et cosmétiques partout, solde et petites notifications pour les chatters
   if (me && !document.querySelector('link[href="/stellas.css"]')) { const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/stellas.css"; document.head.appendChild(l);

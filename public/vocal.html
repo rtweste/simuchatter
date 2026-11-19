@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Salon vocal — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="stylesheet" href="/style.css">
+<style>
+body{margin:0;background:#0a0a0a;color:#f5f5f5;font-family:Inter,system-ui,sans-serif;overflow:hidden}
+.vc{height:100dvh;display:flex;flex-direction:column;background:radial-gradient(700px 360px at 50% -120px,rgba(95,211,162,.10),transparent 70%),#0a0a0a}
+.vc-hd{display:flex;align-items:center;gap:12px;padding:16px 18px 10px}
+.vc-hd .ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(95,211,162,.12);color:#5fd3a2;flex:none}
+.vc-hd b{display:block;font:900 17px Inter;letter-spacing:-.02em}.vc-hd small{display:block;font-size:12px;color:#8f8f8f;margin-top:2px}
+.vc-hd .live{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font:800 11px Inter;letter-spacing:.12em;color:#5fd3a2}
+.vc-hd .live i{width:8px;height:8px;border-radius:50%;background:#5fd3a2;box-shadow:0 0 0 0 rgba(95,211,162,.6);animation:vcPulse 1.6s infinite}
+.vc-hd .live.off{color:#e07a7a}.vc-hd .live.off i{background:#e07a7a;animation:none}
+@keyframes vcPulse{70%{box-shadow:0 0 0 8px rgba(95,211,162,0)}100%{box-shadow:0 0 0 0 rgba(95,211,162,0)}}
+.vc-grid{flex:1;overflow:auto;padding:8px 14px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;align-content:start}
+.vt{position:relative;border-radius:18px;background:#121212;border:1px solid #232323;padding:16px 10px 12px;display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center;transition:border-color .2s,background .2s}
+.vt .av{position:relative;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font:900 24px Inter;color:#fff;background:var(--ac,#3a3a3a) center/cover;transition:box-shadow .12s}
+.vt.talk .av{box-shadow:0 0 0 3px #0a0a0a,0 0 0 6px #5fd3a2,0 0 26px rgba(95,211,162,.45)}
+.vt.talk{border-color:rgba(95,211,162,.45);background:#101814}
+.vt .nm{font:800 13.5px Inter;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vt .rl{font:800 9.5px Inter;letter-spacing:.1em;color:#f3d9a4}
+.vt .st{position:absolute;right:calc(50% - 40px);top:60px;display:flex;gap:3px}
+.vt .st span{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#2a1414;color:#ff8a8a;border:2px solid #121212}
+.vt .st span svg{width:12px;height:12px}
+.vt .sc{display:inline-flex;align-items:center;gap:6px;font:800 11px Inter;color:#7dd3fc;background:rgba(125,211,252,.1);border:1px solid rgba(125,211,252,.35);border-radius:999px;padding:4px 9px}
+.vt button.w{height:34px;padding:0 12px;border-radius:10px;border:0;background:#f5f5f5;color:#0a0a0a;font:800 12px Inter;cursor:pointer}
+.vt button.g{height:30px;padding:0 10px;border-radius:9px;border:1px solid #2f2f2f;background:transparent;color:#bdbdbd;font:700 11.5px Inter;cursor:pointer}
+.vt.me{border-style:dashed}
+.vc-bar{display:flex;justify-content:center;gap:10px;padding:12px 14px calc(14px + env(safe-area-inset-bottom));border-top:1px solid #1a1a1a;background:rgba(10,10,10,.9)}
+.vb{width:54px;height:54px;border-radius:18px;border:1px solid #2a2a2a;background:#161616;color:#eee;display:grid;place-items:center;cursor:pointer;transition:background .2s,transform .12s;position:relative}
+.vb:hover{background:#1d1d1d}.vb:active{transform:scale(.95)}.vb svg{width:22px;height:22px}
+.vb.off{background:#2a1414;border-color:#5a2424;color:#ff8a8a}
+.vb.on{background:rgba(125,211,252,.14);border-color:rgba(125,211,252,.5);color:#7dd3fc}
+.vb.red{background:#e0484a;border-color:#e0484a;color:#fff}.vb.red:hover{background:#c93d3f}
+.vb small{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font:700 10px Inter;color:#777;white-space:nowrap}
+.vc-bar{padding-bottom:calc(26px + env(safe-area-inset-bottom))}
+.vc-gate{position:absolute;inset:0;z-index:20;display:grid;place-items:center;background:rgba(10,10,10,.92);padding:24px;text-align:center}
+.vc-gate .bx{max-width:340px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.vc-gate .big{width:84px;height:84px;border-radius:28px;display:grid;place-items:center;background:rgba(95,211,162,.12);color:#5fd3a2}.vc-gate .big svg{width:38px;height:38px}
+.vc-gate b{font:900 22px Inter;letter-spacing:-.02em}.vc-gate p{margin:0;color:#a3a3a3;font-size:14px;line-height:1.5}
+.vc-gate button{height:48px;padding:0 22px;border-radius:14px;border:0;background:#5fd3a2;color:#05261a;font:900 14.5px Inter;cursor:pointer;margin-top:6px}
+.vc-view{position:absolute;inset:0;z-index:15;background:#000;display:flex;flex-direction:column}
+.vc-view .top{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0d0d0d;border-bottom:1px solid #1f1f1f}
+.vc-view .top b{font-size:13.5px}.vc-view .top small{color:#8f8f8f;font-size:12px}
+.vc-view .top button{margin-left:auto;height:34px;padding:0 12px;border-radius:10px;border:1px solid #333;background:#161616;color:#eee;font:700 12px Inter;cursor:pointer}
+.vc-view .top button+button{margin-left:6px}
+.vc-view video{flex:1;width:100%;min-height:0;object-fit:contain;background:#000}
+.vc-view .wait{position:absolute;inset:50px 0 0;display:grid;place-items:center;color:#8f8f8f;font-size:13px;pointer-events:none}
+.vc-toast{position:absolute;left:12px;right:12px;bottom:96px;z-index:25;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#161616;border:1px solid #2f2f2f;box-shadow:0 20px 40px -10px #000;font-size:13px}
+.vc-toast b{color:#fff}.vc-toast button{margin-left:auto;height:34px;padding:0 12px;border-radius:10px;border:0;background:#7dd3fc;color:#04202d;font:800 12px Inter;cursor:pointer;flex:none}
+.vc-toast .x{background:transparent;color:#999;border:1px solid #333;margin-left:6px}
+.vc-net{font-size:11.5px;color:#8f8f8f;padding:0 18px 6px}
+</style>
+</head>
+<body>
+<div class="vc" id="vc">
+  <div class="vc-hd"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="18" height="18"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM19 11a7 7 0 0 1-14 0M12 18v3"/></svg></span>
+    <div><b>Salon vocal</b><small id="cnt">Connexion…</small></div><span class="live off" id="live"><i></i><span>HORS LIGNE</span></span></div>
+  <div class="vc-net" id="net" hidden></div>
+  <div class="vc-grid" id="grid"></div>
+  <div class="vc-bar">
+    <button class="vb" id="bMic" aria-label="Couper le micro"><small>Micro</small></button>
+    <button class="vb" id="bDeaf" aria-label="Couper le son"><small>Son</small></button>
+    <button class="vb" id="bScr" aria-label="Partager mon écran"><small>Écran</small></button>
+    <button class="vb red" id="bLeave" aria-label="Quitter le vocal"><small>Quitter</small></button>
+  </div>
+</div>
+<script src="/common.js"></script>
+<script>
+(() => {
+const I = {
+  mic: '<path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM19 11a7 7 0 0 1-14 0M12 18v3"/>',
+  micOff: '<path d="M3 3l18 18M9 9v3a3 3 0 0 0 5.1 2.1M15 9.3V6a3 3 0 0 0-5.7-1.3M19 11a7 7 0 0 1-1.2 3.9M5 11a7 7 0 0 0 11.2 5.6M12 18v3"/>',
+  head: '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><path d="M4 15h3v5H5a1 1 0 0 1-1-1zM20 15h-3v5h2a1 1 0 0 0 1-1z"/>',
+  headOff: '<path d="M3 3l18 18M4 15v-3a8 8 0 0 1 12.6-6.5M20 12v3"/><path d="M4 15h3v5H5a1 1 0 0 1-1-1zM17 17v3h2a1 1 0 0 0 1-1v-2"/>',
+  scr: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  leave: '<path d="M10 14l2-2-2-2M12 12H3M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/>'
+};
+const SV = (p, s = 22) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const $ = id => document.getElementById(id);
+let ME = null, MGR = false, ICE = [], LOCAL = null, SCREEN = null, ES = null, MUTED = false, DEAF = false, INSHIFT = false;
+const PEERS = new Map();      // id -> { info, pc, audio, pend:[], level, talk }
+const SPC = new Map();        // partage d'écran : clé "out:<watcher>" (je partage) ou "in:<sharer>" (je regarde) -> RTCPeerConnection
+const BC = (() => { try { return new BroadcastChannel("stellads-voice"); } catch (e) { return null; } })();
+let AC = null;
+const ac = () => { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === "suspended") AC.resume().catch(() => {}); return AC; };
+
+/* ---------- interface ---------- */
+function paintBar() {
+  $("bMic").innerHTML = SV(MUTED ? I.micOff : I.mic) + "<small>Micro</small>"; $("bMic").classList.toggle("off", MUTED); $("bMic").setAttribute("aria-label", MUTED ? "Activer le micro" : "Couper le micro");
+  $("bDeaf").innerHTML = SV(DEAF ? I.headOff : I.head) + "<small>Son</small>"; $("bDeaf").classList.toggle("off", DEAF);
+  $("bScr").innerHTML = SV(I.scr) + `<small>${SCREEN ? "Arrêter" : "Écran"}</small>`; $("bScr").classList.toggle("on", !!SCREEN);
+  $("bScr").hidden = !(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+  $("bLeave").innerHTML = SV(I.leave) + "<small>Quitter</small>";
+}
+function tile(p, me) {
+  const st = [p.muted ? `<span title="Micro coupé">${SV(I.micOff, 12)}</span>` : "", p.deaf ? `<span title="Son coupé">${SV(I.headOff, 12)}</span>` : ""].join("");
+  const watching = SPC.has("in:" + p.id);
+  const act = p.sharing ? `<span class="sc">${SV(I.scr, 12)}Écran partagé</span>${MGR && !me ? `<button class="w" data-watch="${p.id}">${watching ? "Ouvrir" : "Regarder"}</button>` : ""}`
+    : MGR && !me && !p.mgr ? `<button class="g" data-ask="${p.id}">Demander l'écran</button>` : "";
+  return `<div class="vt${me ? " me" : ""}" data-id="${p.id}"><span class="av" style="--ac:${esc(p.color || "#3a3a3a")};${p.avatar ? `background-image:url(${esc(p.avatar)});font-size:0` : ""}">${esc((p.name || "?")[0].toUpperCase())}</span>
+    <div class="st">${st}</div><div class="nm">${esc(p.name)}${me ? " (toi)" : ""}</div>${p.mgr ? `<div class="rl">MANAGER</div>` : ""}${act}</div>`;
+}
+function render() {
+  const meP = { id: ME, name: SELF.name, color: SELF.color, avatar: SELF.avatar, mgr: MGR, muted: MUTED, deaf: DEAF, sharing: !!SCREEN };
+  const list = [meP, ...[...PEERS.values()].map(x => x.info).sort((a, b) => a.joined - b.joined)];
+  $("grid").innerHTML = list.map(p => tile(p, p.id === ME)).join("");
+  $("cnt").textContent = `${list.length} personne${list.length > 1 ? "s" : ""} connectée${list.length > 1 ? "s" : ""}`;
+  $("grid").querySelectorAll("[data-watch]").forEach(b => b.onclick = () => watch(+b.dataset.watch));
+  $("grid").querySelectorAll("[data-ask]").forEach(b => b.onclick = async () => { try { await api("/api/voice/ask-share", { body: { id: +b.dataset.ask } }); notify("Demande envoyée", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } });
+  bcast();
+}
+function setLive(on) { $("live").classList.toggle("off", !on); $("live").querySelector("span").textContent = on ? "EN DIRECT" : "HORS LIGNE"; }
+function bcast() { try { BC && BC.postMessage({ on: !!ES, muted: MUTED, count: PEERS.size + 1 }); } catch (e) {} }
+function toast(html, btn, fn) { document.querySelector(".vc-toast")?.remove(); const t = document.createElement("div"); t.className = "vc-toast"; t.innerHTML = `<span>${html}</span>${btn ? `<button>${btn}</button>` : ""}<button class="x">✕</button>`;
+  document.body.appendChild(t); if (btn) t.querySelector("button").onclick = () => { t.remove(); fn(); }; t.querySelector(".x").onclick = () => t.remove(); setTimeout(() => t.remove(), 20000); }
+
+/* ---------- niveau sonore (qui parle) ---------- */
+function meter(stream, id) {
+  try { const a = ac(), src = a.createMediaStreamSource(stream), an = a.createAnalyser(); an.fftSize = 512; src.connect(an); const buf = new Uint8Array(an.fftSize);
+    return () => { an.getByteTimeDomainData(buf); let s = 0; for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; s += v * v; } return Math.sqrt(s / buf.length); }; } catch (e) { return () => 0; }
+}
+let selfLvl = () => 0;
+setInterval(() => {
+  const set = (id, on) => { const el = document.querySelector(`.vt[data-id="${id}"]`); if (el) el.classList.toggle("talk", on); };
+  set(ME, !MUTED && selfLvl() > .04);
+  PEERS.forEach((p, id) => set(id, !p.info.muted && p.level && p.level() > .035));
+}, 120);
+
+/* ---------- audio entre participants ---------- */
+const sig = (to, type, data, kind = "audio") => api("/api/voice/signal", { body: { to, type, data, kind } }).catch(() => {});
+function newPc(id, kind) {
+  const pc = new RTCPeerConnection({ iceServers: ICE });
+  pc.onicecandidate = e => { if (e.candidate) sig(id, "ice", e.candidate.toJSON(), kind); };
+  return pc;
+}
+function audioPeer(id) {
+  const P = PEERS.get(id); if (!P) return null;
+  if (P.pc) { try { P.pc.close(); } catch (e) {} }
+  const pc = newPc(id, "audio"); P.pc = pc; P.pend = [];
+  if (LOCAL) LOCAL.getAudioTracks().forEach(t => pc.addTrack(t, LOCAL));
+  pc.ontrack = e => { const s = e.streams[0] || new MediaStream([e.track]);
+    if (!P.audio) { P.audio = new Audio(); P.audio.autoplay = true; document.body.appendChild(P.audio); }
+    P.audio.srcObject = s; P.audio.muted = DEAF; P.audio.play().catch(() => needClick()); P.level = meter(s, id); };
+  pc.onconnectionstatechange = () => { if (pc.connectionState === "failed" && P.pc === pc && ME < id) callPeer(id); netCheck(); };
+  return pc;
+}
+async function callPeer(id) {   // c'est moi qui appelle (j'arrive après lui)
+  const pc = audioPeer(id); if (!pc) return;
+  const o = await pc.createOffer(); await pc.setLocalDescription(o); sig(id, "offer", pc.localDescription.toJSON());
+}
+async function onSignal(d) {
+  if (d.kind === "screen") return onScreenSignal(d);
+  let P = PEERS.get(d.from); if (!P) return;
+  if (d.type === "offer") { const pc = audioPeer(d.from); await pc.setRemoteDescription(d.data); const a = await pc.createAnswer(); await pc.setLocalDescription(a); sig(d.from, "answer", pc.localDescription.toJSON()); flush(P); }
+  else if (d.type === "answer" && P.pc) { try { await P.pc.setRemoteDescription(d.data); flush(P); } catch (e) {} }
+  else if (d.type === "ice" && P.pc) { if (P.pc.remoteDescription) P.pc.addIceCandidate(d.data).catch(() => {}); else P.pend.push(d.data); }
+}
+const flush = P => { (P.pend || []).forEach(c => P.pc.addIceCandidate(c).catch(() => {})); P.pend = []; };
+function drop(id) { const P = PEERS.get(id); if (!P) return; try { P.pc && P.pc.close(); } catch (e) {} if (P.audio) { P.audio.srcObject = null; P.audio.remove(); } PEERS.delete(id);
+  ["out:" + id, "in:" + id].forEach(k => { const pc = SPC.get(k); if (pc) { try { pc.close(); } catch (e) {} SPC.delete(k); } }); if (VIEW === id) closeView(); }
+function netCheck() { const bad = [...PEERS.values()].filter(p => p.pc && ["failed", "disconnected"].includes(p.pc.connectionState)).map(p => p.info.name);
+  $("net").hidden = !bad.length; $("net").textContent = bad.length ? `Connexion difficile avec ${bad.join(", ")}… nouvelle tentative en cours` : ""; }
+let clickAsked = false;
+function needClick() { if (clickAsked) return; clickAsked = true; toast("Clique pour activer le son du salon", "Activer", () => { ac(); PEERS.forEach(p => p.audio && p.audio.play().catch(() => {})); clickAsked = false; }); }
+
+/* ---------- partage d'écran (vers les managers) ---------- */
+async function shareStart() {
+  try { SCREEN = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 12, max: 15 }, width: { max: 1920 }, height: { max: 1080 } }, audio: false }); }
+  catch (e) { SCREEN = null; return; }
+  SCREEN.getVideoTracks()[0].onended = () => shareStop();
+  try { SCREEN.getVideoTracks()[0].contentHint = "text"; } catch (e) {}
+  await api("/api/voice/state", { body: { sharing: true } }).catch(() => {}); paintBar(); render();
+}
+async function shareStop() {
+  if (SCREEN) SCREEN.getTracks().forEach(t => t.stop()); SCREEN = null;
+  [...SPC.keys()].filter(k => k.startsWith("out:")).forEach(k => { try { SPC.get(k).close(); } catch (e) {} SPC.delete(k); });
+  await api("/api/voice/state", { body: { sharing: false } }).catch(() => {}); paintBar(); render();
+}
+async function sendScreenTo(mgrId) {   // un manager veut regarder : je lui envoie mon écran
+  if (!SCREEN) return;
+  const k = "out:" + mgrId; if (SPC.has(k)) { try { SPC.get(k).close(); } catch (e) {} }
+  const pc = newPc(mgrId, "screen"); pc._pend = []; SPC.set(k, pc);
+  SCREEN.getVideoTracks().forEach(t => { const s = pc.addTrack(t, SCREEN); try { const p = s.getParameters(); p.encodings = [{ maxBitrate: 1200000, maxFramerate: 12 }]; s.setParameters(p).catch(() => {}); } catch (e) {} });
+  const o = await pc.createOffer(); await pc.setLocalDescription(o); sig(mgrId, "offer", pc.localDescription.toJSON(), "screen");
+}
+async function onScreenSignal(d) {
+  if (d.type === "offer") {   // je suis le manager qui regarde
+    const k = "in:" + d.from; if (SPC.has(k)) { try { SPC.get(k).close(); } catch (e) {} }
+    const pc = newPc(d.from, "screen"); pc._pend = []; SPC.set(k, pc);
+    pc.ontrack = e => { if (VIEW === d.from) { const v = document.querySelector(".vc-view video"); if (v) { v.srcObject = e.streams[0] || new MediaStream([e.track]); document.querySelector(".vc-view .wait")?.remove(); } } };
+    await pc.setRemoteDescription(d.data); const a = await pc.createAnswer(); await pc.setLocalDescription(a); sig(d.from, "answer", pc.localDescription.toJSON(), "screen");
+    pc._pend.forEach(c => pc.addIceCandidate(c).catch(() => {})); pc._pend = [];
+  } else { const pc = SPC.get("out:" + d.from) || SPC.get("in:" + d.from); if (!pc) return;
+    if (d.type === "answer") { await pc.setRemoteDescription(d.data).catch(() => {}); pc._pend.forEach(c => pc.addIceCandidate(c).catch(() => {})); pc._pend = []; }
+    else if (d.type === "ice") { if (pc.remoteDescription) pc.addIceCandidate(d.data).catch(() => {}); else pc._pend.push(d.data); } }
+}
+let VIEW = null;
+async function watch(id) {
+  const P = PEERS.get(id); if (!P) return; VIEW = id;
+  document.querySelector(".vc-view")?.remove();
+  const v = document.createElement("div"); v.className = "vc-view";
+  v.innerHTML = `<div class="top"><div><b>Écran de ${esc(P.info.name)}</b><br><small>Seuls les managers voient cet écran</small></div><button data-fs>Plein écran</button><button data-close>Fermer</button></div><video autoplay playsinline muted></video><div class="wait">Connexion à l'écran…</div>`;
+  document.body.appendChild(v);
+  v.querySelector("[data-close]").onclick = closeView; v.querySelector("[data-fs]").onclick = () => v.querySelector("video").requestFullscreen?.().catch(() => {});
+  const old = SPC.get("in:" + id);
+  if (old) { const r = old.getReceivers().find(x => x.track && x.track.kind === "video"); if (r) { v.querySelector("video").srcObject = new MediaStream([r.track]); v.querySelector(".wait").remove(); return; } }
+  try { await api("/api/voice/watch", { body: { id } }); } catch (e) { notify("Impossible", e.message, "err"); closeView(); }
+}
+function closeView() { const id = VIEW; VIEW = null; document.querySelector(".vc-view")?.remove();
+  if (id != null) { const pc = SPC.get("in:" + id); if (pc) { try { pc.close(); } catch (e) {} SPC.delete("in:" + id); } api("/api/voice/watch", { body: { id, stop: true } }).catch(() => {}); } render(); }
+
+/* ---------- connexion au salon ---------- */
+let SELF = {};
+async function join() {
+  try { LOCAL = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+  catch (e) { return gate("mic"); }
+  document.querySelector(".vc-gate")?.remove();
+  selfLvl = meter(LOCAL, ME);
+  try { ICE = (await api("/api/voice/ice")).iceServers; } catch (e) { ICE = [{ urls: "stun:stun.l.google.com:19302" }]; }
+  connect();
+}
+function connect() {
+  if (ES) try { ES.close(); } catch (e) {}
+  ES = new EventSource("/api/voice/stream");
+  ES.addEventListener("welcome", e => { const d = JSON.parse(e.data); ME = d.me; MGR = d.mgr; setLive(true);
+    [...PEERS.keys()].forEach(drop); d.peers.forEach(p => { PEERS.set(p.id, { info: p, pend: [] }); callPeer(p.id); });
+    if (MUTED || DEAF || SCREEN) api("/api/voice/state", { body: { muted: MUTED, deaf: DEAF, sharing: !!SCREEN } }).catch(() => {});
+    render(); });
+  ES.addEventListener("join", e => { const p = JSON.parse(e.data); if (p.id === ME) return; drop(p.id); PEERS.set(p.id, { info: p, pend: [] }); render(); try { SND?.notif?.(); } catch (er) {} });
+  ES.addEventListener("rejoin", e => { const p = JSON.parse(e.data); if (p.id === ME) return; drop(p.id); PEERS.set(p.id, { info: p, pend: [] }); render(); });
+  ES.addEventListener("leave", e => { drop(JSON.parse(e.data).id); render(); });
+  ES.addEventListener("state", e => { const p = JSON.parse(e.data), P = PEERS.get(p.id); if (!P) return; const was = P.info.sharing; P.info = { ...P.info, ...p };
+    if (was && !p.sharing && VIEW === p.id) { closeView(); notify("Partage terminé", `${p.name} a arrêté de partager son écran`, "info"); } render(); });
+  ES.addEventListener("signal", e => onSignal(JSON.parse(e.data)));
+  ES.addEventListener("watch", e => { const d = JSON.parse(e.data); sendScreenTo(d.by); });
+  ES.addEventListener("unwatch", e => { const d = JSON.parse(e.data), pc = SPC.get("out:" + d.by); if (pc) { try { pc.close(); } catch (er) {} SPC.delete("out:" + d.by); } });
+  ES.addEventListener("ask-share", e => { const d = JSON.parse(e.data); if (SCREEN) return; toast(`<b>${esc(d.name)}</b> te demande de partager ton écran`, "Partager", shareStart); });
+  ES.addEventListener("replaced", () => { ES.close(); ES = null; setLive(false); gate("replaced"); });
+  ES.onerror = () => { setLive(false); };
+  ES.onopen = () => setLive(true);
+  bcast();
+}
+function leave(final) {
+  if (ES) { try { ES.close(); } catch (e) {} ES = null; }
+  [...PEERS.keys()].forEach(drop); if (SCREEN) shareStop();
+  if (LOCAL) LOCAL.getTracks().forEach(t => t.stop()); LOCAL = null; setLive(false); bcast();
+  if (final) { try { BC && BC.postMessage({ on: false }); } catch (e) {} window.close(); setTimeout(() => gate("left"), 300); }
+}
+function gate(why) {
+  document.querySelector(".vc-gate")?.remove(); const g = document.createElement("div"); g.className = "vc-gate";
+  const T = { start: ["Rejoindre le salon vocal", INSHIFT ? "Le vocal est obligatoire pendant ton shift. Ton micro sera demandé par le navigateur." : "Parle avec l'équipe en direct. Ton micro sera demandé par le navigateur.", "Rejoindre"],
+    mic: ["Micro inaccessible", "Autorise le micro pour ce site (icône à gauche de l'adresse), puis réessaie.", "Réessayer"],
+    replaced: ["Ouvert ailleurs", "Le salon vocal est ouvert dans une autre fenêtre ou un autre appareil.", "Le reprendre ici"],
+    left: ["Tu as quitté le salon", INSHIFT ? "Pense à revenir : le vocal est obligatoire pendant ton shift." : "Tu peux revenir quand tu veux.", "Revenir"] }[why];
+  g.innerHTML = `<div class="bx"><span class="big">${SV(I.mic, 38)}</span><b>${T[0]}</b><p>${T[1]}</p><button>${T[2]}</button></div>`;
+  document.getElementById("vc").appendChild(g); g.querySelector("button").onclick = () => { ac(); join(); };
+}
+
+/* ---------- boutons ---------- */
+$("bMic").onclick = () => { MUTED = !MUTED; if (LOCAL) LOCAL.getAudioTracks().forEach(t => t.enabled = !MUTED); api("/api/voice/state", { body: { muted: MUTED } }).catch(() => {}); paintBar(); render(); };
+// couper le son coupe aussi le micro (comme sur Discord)
+$("bDeaf").onclick = () => { DEAF = !DEAF; PEERS.forEach(p => { if (p.audio) p.audio.muted = DEAF; });
+  if (DEAF && !MUTED) { MUTED = true; if (LOCAL) LOCAL.getAudioTracks().forEach(t => t.enabled = false); }
+  api("/api/voice/state", { body: { deaf: DEAF, muted: MUTED } }).catch(() => {}); paintBar(); render(); };
+$("bScr").onclick = () => SCREEN ? shareStop() : shareStart();
+$("bLeave").onclick = () => { if (INSHIFT && !confirm("Le vocal est obligatoire pendant ton shift. Quitter quand même ?")) return; leave(true); };
+window.addEventListener("pagehide", () => { try { BC && BC.postMessage({ on: false }); } catch (e) {} });
+// raccourci : Ctrl/Cmd + M pour couper le micro
+document.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") { e.preventDefault(); $("bMic").click(); } });
+
+(async () => {
+  let me; try { me = await api("/api/me"); } catch (e) { location.href = "/login"; return; }
+  if (me.role === "trainee") { document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#aaa;font-family:Inter">Le salon vocal est réservé à l\'équipe.</div>'; return; }
+  INSHIFT = me.role === "chatter" && !!me.voiceNeeded || false;
+  try { const p = await api("/api/profile"); SELF = { name: p.name || me.username, color: p.color, avatar: p.avatar }; } catch (e) { SELF = { name: me.username }; }
+  paintBar();
+  // micro déjà autorisé : on rejoint directement, sinon un bouton (le navigateur exige un clic)
+  let granted = false; try { granted = (await navigator.permissions.query({ name: "microphone" })).state === "granted"; } catch (e) {}
+  if (granted) join(); else gate("start");
+})();
+})();
+</script>
+</body>
+</html>

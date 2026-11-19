@@ -557,7 +557,7 @@ function renderHero() {
       <div class="p-acts"><button class="p-wbtn" id="inBtn">Commencer un shift quand même</button></div></div>`;
   }
   const ib = $("inBtn"); if (ib) ib.onclick = async () => {
-    ib.disabled = true; const late = st === "late";
+    ib.disabled = true; const late = st === "late"; try { window.openVoice && openVoice(); } catch (e) {}
     try { await api("/api/clock/in", { body: { model_id: n ? n.model_id : $("inModel").value } }); VS.start();
       notify("Shift commencé", late ? `Retard de ${Math.round((Date.now() - n.start_ms) / 60000)} min noté` : `${n ? n.model_name : ""} · bon courage !`, late ? "info" : "ok"); }
     catch (e) { notify("Impossible de pointer", e.message, "err"); }

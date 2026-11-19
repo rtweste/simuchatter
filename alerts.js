@@ -24,6 +24,9 @@ module.exports = function mount(app, db, auth, admin, ctx) {
           title: `${p.username} est en pause depuis ${dur(m)}`, sub: `Maximum autorisé : ${max} min`, actions: [{ label: "Lui écrire", href: "/chat" }] });
       });
     }
+    // 1 bis. en shift mais pas dans le salon vocal (obligatoire)
+    try { if (ctx.voice) ctx.voice.missing().forEach(c => push({ key: "voice:" + c.user_id + ":" + c.start_at, kind: "voice", at: c.start_at + 5 * 60e3, who: c.username,
+      title: `${c.username} n'est pas dans le salon vocal`, sub: `En shift depuis ${dur(mins(now - c.start_at))}`, actions: [{ label: "Lui écrire", href: "/chat" }] })); } catch (e) {}
     // 2. shifts commencés sans pointage, 3. échanges à reprendre ou à valider, 4. renforts demandés sans réponse
     try {
       const today = parisDate(now), thr = +a.missedAlert || 10;

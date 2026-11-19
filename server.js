@@ -290,7 +290,7 @@ if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "simu_int
 // nom affiché, couleur et photo de profil (pour le menu)
 function profBits(uid) { try { const u = db.prepare("SELECT display_name, color FROM users WHERE id = ?").get(uid) || {}, a = db.prepare("SELECT updated_at FROM user_avatars WHERE user_id = ?").get(uid);
   return { name: u.display_name || null, color: u.color || null, avatar: a ? `/api/avatar/${uid}?v=${a.updated_at}` : null }; } catch (e) { return {}; } }
-let COMM = null, STELLAS = null;
+let COMM = null, STELLAS = null, VOICE = null;
 // vue chatter du fondateur (aperçu en lecture seule)
 app.post("/api/view-as", auth, (req, res) => {
   const real = req.realUser || req.user; if (real.rk !== "founder") return res.status(403).json({ error: "Réservé au fondateur" });
@@ -312,7 +312,8 @@ app.get("/api/me", auth, (req, res) => {
     teamLead: tl ? { id: tl.id, username: tl.username } : null, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro, ...profBits(req.user.id), simuIntroSeen: iu.simu_intro_seen ? 1 : 0, mgrIntroSeen: iu.mgr_intro_seen ? 1 : 0, deadline,
     sells: req.user.role === "admin" && !!(ob && ob.sells), pushNeeded: !req.viewAs && pushNeeded(req.user),
     viewAs: req.viewAs ? { username: req.user.username, real: req.realUser.username } : null,
-    celebrate: !req.viewAs && COMM ? COMM.celebrate(req.user.id) : null });
+    celebrate: !req.viewAs && COMM ? COMM.celebrate(req.user.id) : null,
+    voiceNeeded: !req.viewAs && req.user.role === "chatter" && VOICE ? (!!db.prepare("SELECT 1 FROM clocks WHERE user_id = ? AND end_at IS NULL AND reinforce = 0").get(req.user.id) && !VOICE.inRoom(req.user.id)) : false });
 });
 // nouvelle version de la vidéo : les élèves déjà inscrits la regardent une fois (une seule réinitialisation)
 setTimeout(() => { try { const k = db.prepare("SELECT value FROM settings WHERE key = 'intro_version'").get();
@@ -541,11 +542,12 @@ require("./extras")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, gest
 STUDIO = require("./studio")(app, db, auth, admin, { dataDir: path.dirname(DB_PATH), gest: GEST, planning: PLAN });   // contenus perso, fiches créatrices, pauses
 const CHAT = require("./chat")(app, db, auth, admin, { dataDir: path.dirname(DB_PATH), gest: GEST, planning: PLAN });   // chat d'équipe
 COMM = require("./community")(app, db, auth, admin, { chat: CHAT, compta: COMPTA });   // vie d'équipe : victoires, anniversaires, coéquipier du mois, #off
+VOICE = require("./voice")(app, db, auth, admin, { gest: GEST, planning: PLAN });   // salon vocal (WebRTC) + partage d'écran pour les managers
 STELLAS = require("./stellas")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, gest: GEST, community: COMM });   // Stella's : monnaie et boutique
 require("./tests")(app, db, auth, admin, { gest: GEST });   // tests d'aptitude : débit et frappe
 require("./challenges")(app, db, auth, admin, { compta: COMPTA, gest: GEST });   // défis de la semaine
 CAND_CTX.referrals = require("./referrals")(app, db, auth, admin, { compta: COMPTA, gest: GEST });   // parrainage
-const ALERTS = require("./alerts")(app, db, auth, admin, { planning: PLAN, gest: GEST });
+const ALERTS = require("./alerts")(app, db, auth, admin, { planning: PLAN, gest: GEST, voice: VOICE });
 require("./roles")(app, db, auth, admin, { compta: COMPTA, planning: PLAN, gest: GEST, perms: PERM, alerts: ALERTS, PERSONAS });   // rôles, équipes des Team Leaders, réglages du Fondateur
 require("./purge")(app, db, auth, admin, { gest: GEST });
 const NOTIFY = require("./notify")(app, db, auth, admin, { bcrypt, PROD, gest: GEST, planning: PLAN });

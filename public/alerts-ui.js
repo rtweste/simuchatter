@@ -2,6 +2,7 @@
 window.ALERTS = (() => {
   const KIND = {
     pause: ["#e0a35f", '<path d="M10 9v6M14 9v6"/><circle cx="12" cy="12" r="9"/>'],
+    voice: ["#7dd3fc", '<path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM19 11a7 7 0 0 1-14 0M12 18v3"/>'],
     late: ["#ff5c7a", '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/>'],
     swap: ["#7dd3fc", '<path d="M7 7h11l-3-3M17 17H6l3 3"/>'],
     help: ["#b388ff", '<path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/>'],
