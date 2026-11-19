@@ -419,6 +419,9 @@ const PLANREM = (() => {
   const seen = k => { try { const m = JSON.parse(localStorage.getItem("stRem") || "{}"); if (m[k]) return true; m[k] = Date.now();
     Object.keys(m).forEach(x => { if (Date.now() - m[x] > 3 * 864e5) delete m[x]; }); localStorage.setItem("stRem", JSON.stringify(m)); return false; } catch (e) { return false; } };
   const hm = ms => new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  // heure de Paris (agence) → timestamp, quel que soit le fuseau du téléphone (chatters à l'étranger)
+  window.parisTs = (date, hhmm) => { const [y, mo, d] = date.split("-").map(Number), [h, mi] = String(hhmm).split(":").map(Number), utc = Date.UTC(y, mo - 1, d, h, mi || 0);
+    const off = (new Date(utc).toLocaleString("en-US", { timeZone: "Europe/Paris", timeZoneName: "shortOffset" }).match(/GMT([+-]\d+)/) || [])[1]; return utc - (off ? +off : 1) * 3600e3; };
   function push(title, body, url) {
     notify(title, body, "info");
     try { if (window.Notification && Notification.permission === "granted" && navigator.serviceWorker)

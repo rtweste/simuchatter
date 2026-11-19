@@ -455,7 +455,8 @@ const pad = n => String(n).padStart(2, "0");
 const DAYN = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 let SLOTS = [["3–9", "03:00", "09:00"], ["9–15", "09:00", "15:00"], ["15–21", "15:00", "21:00"], ["21–3", "21:00", "03:00"]];
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const hm = ms => new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+// heures affichées en heure de Paris, comme les créneaux (chatters à l'étranger)
+const hm = ms => new Date(ms).toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" });
 const dOf = s => new Date(s + "T12:00:00");
 const isoD = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const addD = (s, n) => { const d = dOf(s); d.setDate(d.getDate() + n); return isoD(d); };
@@ -1034,7 +1035,7 @@ $("fDel").onclick = async () => {
 /* ----- onglet pointages ----- */
 let CL = null, PERIOD = null, EDC = null;
 const toLocalInput = ms => { const d = new Date(ms); return `${isoD(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
-const fmtDT = ms => new Date(ms).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const fmtDT = ms => new Date(ms).toLocaleString("fr-FR", { timeZone: "Europe/Paris", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 async function loadClocks(p) {
   CL = await api("/api/admin/clocks" + (p || PERIOD ? `?period=${p || PERIOD}` : "")); PERIOD = CL.period.key;
   $("periodLabel").textContent = CL.period.label;

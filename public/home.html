@@ -723,7 +723,7 @@ function shiftV3() {
     : `<div class="crea"><div class="st1">Aucun créneau prévu : tu peux quand même pointer sur une créatrice.</div></div>`;
   return `<div class="b a-shift shV" style="${wv("shift")}"><div class="shd"><h3>${op ? "Mon <em>shift en cours</em>" : "Mon <em>prochain shift</em>"}</h3><span class="mut">${op ? `sur <b>${esc(op.model_name)}</b>` : when}</span></div>
     <div class="g3"><div class="cdw"><span class="k" id="rollK">${op ? "EN SHIFT DEPUIS" : nx ? "COMMENCE DANS" : "PRÊT QUAND TU L'ES"}</span><div class="roll" id="roll"></div>
-      <div class="mut" style="margin-top:8px">${wk}${nx && !op ? `<b>${String(dur).replace(".", ",")} h</b>` : op ? `depuis ${new Date(op.start_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}` : ""}</div></div>${crea}</div>
+      <div class="mut" style="margin-top:8px">${wk}${nx && !op ? `<b>${String(dur).replace(".", ",")} h</b>` : op ? `depuis ${new Date(op.start_at).toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" })}` : ""}</div></div>${crea}</div>
     ${op ? `<div class="liveb"><span class="dot"></span><span class="mut">Bon shift sur <b>${esc(op.model_name)}</b> !</span><button class="btn ghost small" id="pzBtn" hidden></button><button class="btn ghost small stop" id="outBtn">Terminer</button></div>`
       : `<div class="mpk"><span class="k">SUR QUELLE CRÉATRICE ?</span><div class="g" id="mPick" role="radiogroup" aria-label="Créatrice">${pick}</div><div class="wr" id="mWarn"></div></div>
         <div class="slrow"><button class="slide" id="slide" aria-label="Glisser pour commencer mon shift"><span class="fill" id="sFill"></span><span class="lbl" id="sLbl">Glisser pour commencer</span><span class="knob" id="sKnob"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button></div>`}</div>`;
@@ -738,7 +738,8 @@ function rollSet(el, txt) {
 function bindShiftV3() {
   clearInterval(tick);
   const roll = $("roll"), nx = D.upcoming[0], op = D.open;
-  const startAt = nx ? new Date(`${nx.date}T${nx.start}:00`).getTime() : null;
+  // le créneau est en heure de Paris : pas de faux retard pour un téléphone réglé sur un autre fuseau
+  const startAt = nx ? parisTs(nx.date, nx.start) : null;
   const upd = () => { if (!roll || !roll.isConnected) return clearInterval(tick);
     let t; if (op) t = Math.floor((Date.now() - op.start_at) / 1000);
     else if (startAt) { const d = Math.floor((startAt - Date.now()) / 1000), late = d <= 0, k = $("rollK");
