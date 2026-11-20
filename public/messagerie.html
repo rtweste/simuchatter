@@ -1772,7 +1772,6 @@ async function vault(acceptId, preset) {
     const go = $("vGo"); if (go.disabled) return;
     if (!(await hereOk())) return;
     const promo = PR.on && price ? { type: PR.type, value: PR.value, time: PR.time } : null;
-    if (!confirm(`Envoyer ${SEL.length} média${SEL.length > 1 ? "s" : ""} à ${conv.fan.name} ${price ? "pour " + E(promoPrice()) + (promo ? ` (promo : ${PR.type === "eur" ? "-" + E(PR.value) : "-" + PR.value + " %"} pendant ${PROMO_T.find(x => x[0] === PR.time)[1].toLowerCase()}, au lieu de ${E(price)})` : "") : "gratuitement"} ?`)) return;
     go.disabled = true; $("vGl").textContent = "Envoi…";
     try { const sr = await api2("/send-media", { body: { conversationId: conv.id, fan: conv.fan.id, files: SEL.slice(), price, promo, text: $("vTxt").value, acceptId: acceptId || null } });
       if (preset && preset.run) runAfterSend(conv, "media", sr && sr.message && sr.message.id);
