@@ -223,7 +223,7 @@ function voiceBlocked(url) {
 window.openVoice = openVoice;
 document.addEventListener("click", e => { const a = e.target.closest && e.target.closest('a[href="/vocal"]'); if (!a || location.pathname === "/vocal") return; e.preventDefault(); openVoice(); });
 const VOICE_UI = (() => {
-  let on = false, n = 0, seen = 0, need = false, bar = null;
+  let on = false, n = 0, seen = 0, need = false, bar = null, blk = false, bbar = null;
   const paint = () => {
     document.querySelectorAll('.sidebar a[href="/vocal"]').forEach(a => { let p = a.querySelector(".nav-voc");
       if (!p) { p = document.createElement("span"); p.className = "nav-voc"; p.style.cssText = "margin-left:auto;display:inline-flex;align-items:center;gap:5px;font:800 11.5px Inter,sans-serif;color:#5fd3a2"; a.appendChild(p); }
@@ -233,8 +233,14 @@ const VOICE_UI = (() => {
         bar.innerHTML = `<span>🎙 Le vocal est obligatoire pendant ton shift</span><button type="button" style="height:32px;border-radius:999px;border:0;background:#5fd3a2;color:#05261a;font:800 12.5px Inter,sans-serif;padding:0 14px;cursor:pointer;flex-shrink:0">Rejoindre</button>`;
         bar.querySelector("button").onclick = () => openVoice("equipe"); document.body.appendChild(bar); } }
     else if (bar) { bar.remove(); bar = null; }
+    // la fenêtre du vocal n'a pas le droit de jouer le son tant qu'on n'a pas cliqué dedans
+    if (on && blk && location.pathname !== "/vocal") { if (!bbar) { bbar = document.createElement("div"); bbar.className = "vo-bar vo-blkd";
+        bbar.style.cssText = "position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:2147481000;display:flex;align-items:center;gap:12px;white-space:nowrap;max-width:calc(100vw - 24px);padding:8px 8px 8px 16px;border-radius:999px;background:rgba(58,42,6,.95);border:1px solid #f0b54a;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);font:700 13px Inter,sans-serif;color:#ffe2a8;box-shadow:0 12px 40px rgba(0,0,0,.5)";
+        bbar.innerHTML = `<span>🔇 Tu n'entends pas le salon : clique dans la fenêtre du vocal</span><button type="button" style="height:32px;border-radius:999px;border:0;background:#f0b54a;color:#2a1c00;font:800 12.5px Inter,sans-serif;padding:0 14px;cursor:pointer;flex-shrink:0">Ouvrir la fenêtre</button>`;
+        bbar.querySelector("button").onclick = () => openVoice(); document.body.appendChild(bbar); } }
+    else if (bbar) { bbar.remove(); bbar = null; }
   };
-  let bc = null; try { bc = new BroadcastChannel("stellads-voice"); bc.onmessage = e => { const d = e.data || {}; if (!("on" in d)) return; on = !!d.on; n = d.count || 0; seen = Date.now(); paint(); }; } catch (e) {}
+  let bc = null; try { bc = new BroadcastChannel("stellads-voice"); bc.onmessage = e => { const d = e.data || {}; if (!("on" in d)) return; on = !!d.on; n = d.count || 0; blk = !!d.blocked; seen = Date.now(); paint(); }; } catch (e) {}
   try { bc && location.pathname !== "/vocal" && bc.postMessage({ cmd: "ping" }); } catch (e) {}   // la fenêtre vocale répond avec son état
   // push-to-talk : la touche choisie marche aussi quand une page du site est au premier plan
   if (bc && location.pathname !== "/vocal") {
