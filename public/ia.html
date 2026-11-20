@@ -56,6 +56,9 @@ details.pv{margin-top:10px}details.pv summary{cursor:pointer;font:700 12.5px Int
 .cin{display:flex;gap:8px;margin-top:6px}.cin .inp{flex:1}
 .emp{padding:14px;text-align:center;font:600 13px/1.5 Inter;color:#6f6f6f}
 .hs{padding:9px 0;border-top:1px solid #181818}.hs:first-child{border-top:0}.hs b{font:800 13px Inter}.hs small{display:block;font:500 12px/1.45 Inter;color:#7f7f7f;margin-top:2px}
+.an{display:flex;align-items:center;gap:10px;margin-top:7px}.an span{flex:none;width:130px;font:700 12.5px Inter;color:#cfcfcf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.an .inp{flex:1;min-width:0}
+.cmp{width:100%;border-collapse:collapse;font:600 13px Inter}.cmp th{font:800 10.5px Inter;letter-spacing:.06em;text-transform:uppercase;color:#7a7a7a;text-align:right;padding:6px 8px}.cmp th:first-child,.cmp td:first-child{text-align:left}
+.cmp td{padding:9px 8px;border-top:1px solid #1a1a1a;text-align:right;color:#ddd}.cmp td:first-child{color:#9a9a9a}.cmp td.w{color:#3ddc97;font-weight:900}.cmpn{font:500 11.5px/1.5 Inter;color:#6f6f6f;margin-top:8px}
 .lock{font:700 11px Inter;color:#7a7a7a;margin-left:6px}.row[hidden]{display:none}
 @media(max-width:1100px){.cols{grid-template-columns:1fr}}
 @media(max-width:860px){.ia-w{padding:16px 12px 120px}.hd h1{font-size:28px}.auto{margin-left:0;width:100%;box-sizing:border-box}.row{flex-wrap:wrap}}
@@ -118,8 +121,13 @@ async function paintBody() {
         <div class="row"><div class="t"><b>Vendre des médias</b><small>L'IA peut joindre un média payant du coffre quand le moment s'y prête.</small></div><button class="sw ${M.sell ? "on" : ""}" data-m="sell" aria-label="Vendre des médias"><i></i></button></div>
         <div class="row"><div class="t"><b>Prix maximum d'un média</b><small>L'IA suit le catalogue de la fiche, sans jamais dépasser ce prix.</small></div><input class="inp n" type="number" min="3" max="500" data-n="maxPrice" value="${M.maxPrice}"><span class="unit">€</span></div>
         <div class="row"><div class="t"><b>Délai entre deux médias payants</b><small>Pour un même fan.</small></div><input class="inp n" type="number" min="0" max="1440" data-n="gap" value="${M.gap}"><span class="unit">min</span></div>
-        <div class="row"><div class="t"><b>Un média à la fois</b><small>Pas de nouveau média payant tant que le fan n'a pas acheté le précédent.</small></div><button class="sw ${M.pile ? "on" : ""}" data-m="pile" aria-label="Un média à la fois"><i></i></button></div>
+        <div class="row"><div class="t"><b>Un média à la fois</b><small>Pas de nouveau média payant tant que le fan n'a pas acheté le précédent${M.promo ? ", sauf une deuxième chance avec une remise" : ""}.</small></div><button class="sw ${M.pile ? "on" : ""}" data-m="pile" aria-label="Un média à la fois"><i></i></button></div>
+        <div class="row"><div class="t"><b>Remises</b><small>Quand le fan hésite ou n'a pas acheté, l'IA peut lui refaire une proposition moins chère (promo Twizz). Jamais à la première proposition.</small></div><button class="sw ${M.promo ? "on" : ""}" data-m="promo" aria-label="Remises"><i></i></button></div>
+        <div class="row" ${M.promo ? "" : "hidden"}><div class="t"><b>Remise maximum</b></div><input class="inp n" type="number" min="5" max="90" data-n="maxDiscount" value="${M.maxDiscount}"><span class="unit">%</span><select class="inp" id="mPromoH" style="min-width:120px">${[6, 12, 24, 48].map(h => `<option value="${h}" ${M.promoHours === h ? "selected" : ""}>pendant ${h} h</option>`).join("")}</select></div>
+        <div class="row"><div class="t"><b>Voir les médias</b><small>Grok regarde chaque média du coffre une fois et le décrit : l'IA choisit le média qui colle à ce que veut le fan et en parle comme si elle l'avait sous les yeux. Elle voit aussi les photos que le fan envoie. <b id="medN">${c.media} média${c.media > 1 ? "s" : ""} décrit${c.media > 1 ? "s" : ""}</b></small></div><button class="btn sm" id="scanB">${c.scan && c.scan.running ? `Analyse… ${c.scan.done}/${c.scan.total}` : "Analyser le coffre"}</button><button class="sw ${M.vision ? "on" : ""}" data-m="vision" aria-label="Voir les médias"><i></i></button></div>
         <div class="row" style="display:block"><div class="t"><b>Albums que l'IA peut vendre</b><small>Aucun choisi = tous les albums photo et vidéo du coffre.</small></div><div class="chips" id="albs"><span class="hint">Chargement du coffre…</span></div></div>
+        <div class="row" style="display:block"><div class="t"><b>Ce qu'il y a dans chaque album</b><small>En quelques mots, ce que contient l'album : l'IA s'en sert pour savoir ce qu'elle vend et faire monter l'envie (en plus de l'analyse du coffre).</small></div><div id="anotes"></div></div>
+        <div class="row"><div class="t"><b>S'inspirer des scripts</b><small>L'IA reçoit les scripts épinglés et les plus utilisés de la bibliothèque comme exemples de messages qui marchent.</small></div><button class="sw ${M.scripts ? "on" : ""}" data-m="scripts" aria-label="S'inspirer des scripts"><i></i></button></div>
         <div class="row" style="display:block"><div class="t"><b>Fans laissés à l'équipe</b><small>L'IA ne répond pas aux fans qui ont un de ces tags : ils restent pour les chatters.</small></div><div class="chips" id="tags"><span class="hint">Chargement…</span></div></div>
       </div>
       <div class="pn up" style="animation-delay:.06s"><div class="ph"><h3>Personnalité</h3><div class="r"><a class="btn sm" href="/creatrices">Ouvrir les fiches</a></div></div>
@@ -139,15 +147,16 @@ async function paintBody() {
         <div class="pvh" style="margin-top:10px">Ajouté à chaque message <span>ce qu'on sait du fan et ce que l'IA peut vendre</span></div>
         <pre class="pvp" id="pLive">Chargement…</pre>
         <div class="pvh">3 · Règles fixes <span>toujours ajoutées à la fin · modifiable</span>
-          <button class="btn sm" id="lockedReset" style="float:right;margin-top:-6px">Rétablir par défaut</button>
-        </div>
-        <textarea class="inp mono" id="locked" maxlength="4000" spellcheck="false"></textarea>
-        <small class="pvn">{creatrice} et {mark} sont remplacés automatiquement.</small>
+  <button class="btn sm" id="lockedReset" style="float:right;margin-top:-6px">Rétablir par défaut</button>
+</div>
+<textarea class="inp mono" id="locked" maxlength="4000" spellcheck="false"></textarea>
+<small class="pvn">{creatrice} et {mark} sont remplacés automatiquement.</small>
       </div>
     </div>
     <div>
       <div class="pn up" style="animation-delay:.02s"><div class="ph"><h3>Essayer <em>l'IA</em></h3><div class="r"><button class="btn sm" id="tryR">Recommencer</button></div></div>
         <p class="lead" style="margin:0 0 8px">Écris comme un fan : l'IA répond ici avec les réglages de ${esc(c.label)}. <b>Rien n'est envoyé sur Twizz.</b></p>
+        <div class="row" style="padding:0 0 8px;border:0"><div class="t"><b>Fan de l'essai</b></div><select class="inp" id="tryFan"><option value="new">Nouveau, n'a jamais acheté</option><option value="reg">Régulier, 150 € dépensés</option><option value="big">Gros payeur, 850 € dépensés</option></select></div>
         <div class="chat" id="chat"></div>
         <div class="cin"><input class="inp" id="tryIn" placeholder="Message du fan…" maxlength="1000"><button class="btn w" id="tryGo">Envoyer</button></div></div>
       <div class="pn up" style="animation-delay:.05s"><div class="ph"><h3>Réglages <em>pour toutes</em></h3></div>
@@ -161,15 +170,21 @@ async function paintBody() {
         <div class="row"><div class="t"><b>Fans qui ont écrit dans les dernières</b><small>Plus ancien, elle ne répond pas.</small></div><input class="inp n" type="number" min="1" max="72" data-g="fanWindow" value="${G.fanWindow}"><span class="unit">h</span></div>
         <div class="row"><div class="t"><b>Réponses maximum par fan</b><small>Par séance.</small></div><input class="inp n" type="number" min="1" max="300" data-g="perFan" value="${G.perFan}"></div>
         <div class="row"><div class="t"><b>Durée maximum d'une séance</b><small>Elle s'arrête toute seule au bout de ce temps.</small></div><input class="inp n" type="number" min="1" max="24" data-g="maxHours" value="${G.maxHours}"><span class="unit">h</span></div>
+        <div class="row"><div class="t"><b>Relances</b><small>Pendant sa séance, l'IA relance les fans à qui elle a parlé et qui ne répondent plus (ou n'ont pas acheté le dernier média).</small></div><button class="sw ${G.relance ? "on" : ""}" id="gRel" aria-label="Relances"><i></i></button></div>
+        <div class="row" ${G.relance ? "" : "hidden"}><div class="t"><b>Relancer après</b><small>De silence du fan.</small></div><input class="inp n" type="number" min="10" max="720" data-g="relanceAfter" value="${G.relanceAfter}"><span class="unit">min</span></div>
+        <div class="row" ${G.relance ? "" : "hidden"}><div class="t"><b>Relances maximum par fan</b><small>Par séance.</small></div><input class="inp n" type="number" min="1" max="5" data-g="relanceMax" value="${G.relanceMax}"></div>
+        <div class="row" ${G.relance ? "" : "hidden"}><div class="t"><b>Pas de relance entre</b><small>Heure de Paris. Elle répond toujours aux fans qui écrivent.</small></div><input class="inp n" type="number" min="0" max="23" data-g="quietFrom" value="${G.quietFrom}"><span class="unit">h et</span><input class="inp n" type="number" min="0" max="23" data-g="quietTo" value="${G.quietTo}"><span class="unit">h</span></div>
+        <div class="row"><div class="t"><b>Mémoire</b><small>Toutes les 3 réponses, l'IA complète la fiche du fan (prénom, ville, goûts, résumé) : l'IA et les chatters s'en souviendront la prochaine fois.</small></div><button class="sw ${G.memory ? "on" : ""}" id="gMem" aria-label="Mémoire"><i></i></button></div>
         <div class="row"><div class="t"><b>Modèle Grok</b></div><select class="inp" id="gModel">${D.models.map(m => `<option value="${m.id}" ${G.model === m.id ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></div>
       </div>
+      <div class="pn up" style="animation-delay:.07s"><div class="ph"><h3>IA contre <em>chatters</em></h3><div class="r"><select class="inp" id="cmpD"><option value="7">7 jours</option><option value="30" selected>30 jours</option><option value="90">90 jours</option></select></div></div><div id="cmp"><div class="emp">Chargement…</div></div></div>
       <div class="pn up" style="animation-delay:.08s"><div class="ph"><h3>Dernières <em>séances</em></h3></div><div id="hist"></div></div>
     </div></div>`;
   paintRun(); paintHist(); paintChat();
   // réglages de la créatrice
   document.querySelectorAll("[data-m]").forEach(b => b.onclick = async () => { const k = b.dataset.m, v = !cur().cfg[k];
     if (k === "ok" && !v && cur().run && !confirm(`Retirer l'accord de ${cur().label} ?\n\nL'IA qui tourne sur elle va s'arrêter.`)) return;
-    if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { [k]: v })) { b.classList.toggle("on", v); paintCrs(); paintRun(); loadInfo(true); } });
+    if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { [k]: v })) { if (k === "promo") return paintBody(); b.classList.toggle("on", v); paintCrs(); paintRun(); loadInfo(true); } });
   document.querySelectorAll("[data-n]").forEach(i => i.onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { [i.dataset.n]: +i.value })) { notify("Enregistré", "", "ok"); loadInfo(true); } });
   $("base").onchange = async () => { if (await save("/api/twizz/ai/cfg", { base: $("base").value })) { notify("Instructions enregistrées", "Elles valent pour toutes les créatrices", "ok"); INFO = {}; loadInfo(true); } };
     $("locked").onchange = async () => { if (await save("/api/twizz/ai/cfg", { locked: $("locked").value })) { notify("Règles fixes enregistrées", "Elles valent pour toutes les créatrices", "ok"); INFO = {}; loadInfo(true); } };
@@ -181,6 +196,11 @@ async function paintBody() {
   // réglages pour toutes
   if (F) $("gNotice").onclick = async () => { if (await save("/api/twizz/ai/cfg", { notice: !D.cfg.notice })) { notify(D.cfg.notice ? "Message IA rallumé" : "Message IA coupé", D.cfg.notice ? "" : "Le 🤖 reste à la fin de chaque message", "info"); paintBody(); } };
   if (F) $("gMark").onclick = async () => { if (await save("/api/twizz/ai/cfg", { mark: !D.cfg.mark })) { notify(D.cfg.mark ? "🤖 remis dans les messages" : "🤖 retiré des messages", "", "info"); paintBody(); } };
+  $("gRel").onclick = async () => { if (await save("/api/twizz/ai/cfg", { relance: !D.cfg.relance })) paintBody(); };
+  $("gMem").onclick = async () => { if (await save("/api/twizz/ai/cfg", { memory: !D.cfg.memory })) paintBody(); };
+  $("mPromoH").onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { promoHours: +$("mPromoH").value })) notify("Durée enregistrée", "", "ok"); };
+  $("scanB").onclick = async () => { const b = $("scanB"); b.disabled = true; if (await save(`/api/twizz/ai/scan/${enc(CID)}`, {})) { notify("Analyse du coffre lancée", "Grok décrit chaque média, une seule fois", "ok"); scanPoll(); } else b.disabled = false; };
+  if (c.scan && c.scan.running) scanPoll();
   $("gText").onchange = async () => { if (await save("/api/twizz/ai/cfg", { noticeText: $("gText").value })) notify("Message enregistré", "", "ok"); };
   $("gFreq").onchange = async () => { if (await save("/api/twizz/ai/cfg", { noticeFreq: $("gFreq").value })) paintBody(); };
   $("gModel").onchange = async () => { if (await save("/api/twizz/ai/cfg", { model: $("gModel").value })) notify("Modèle enregistré", "", "ok"); };
@@ -188,20 +208,45 @@ async function paintBody() {
   // essai
   $("tryGo").onclick = tryIt; $("tryIn").onkeydown = e => { if (e.key === "Enter") tryIt(); };
   $("tryR").onclick = () => { CHAT[CID] = []; paintChat(); };
-  loadInfo();
+  loadInfo(); loadCmp();
+  $("cmpD").onchange = loadCmp;
 }
+async function loadCmp() {
+  const cid = CID, box = $("cmp"); if (!box) return; let R;
+  try { R = await api(`/api/twizz/ai/compare/${enc(cid)}?days=${$("cmpD").value}`, { fresh: true }); } catch (e) { box.innerHTML = `<div class="emp">${esc(e.message)}</div>`; return; }
+  if (cid !== CID) return; const A = R.ai, T = R.team, f = (v, u) => v == null ? "—" : u === "€" ? eur(v) : u === "%" ? String(v).replace(".", ",") + " %" : String(v).replace(".", ",") + (u || "");
+  const row = (l, k, u, best) => { const a = A[k], t = T[k], win = best && a != null && t != null && a !== t ? (best === "max" ? (a > t ? "a" : "t") : (a < t ? "a" : "t")) : "";
+    return `<tr><td>${l}</td><td class="${win === "a" ? "w" : ""}">${f(a, u)}</td><td class="${win === "t" ? "w" : ""}">${f(t, u)}</td></tr>`; };
+  box.innerHTML = `<table class="cmp"><tr><th></th><th>🤖 IA</th><th>Chatters</th></tr>
+    ${row("Heures couvertes", "hours", " h")}${row("Médias payants envoyés", "paid")}${row("Ventes en conversation", "sales")}${row("Chiffre d'affaires net", "net", "€", "max")}
+    ${row("Par heure couverte", "perHour", "€", "max")}${row("Taux d'achat", "rate", "%", "max")}${row("Panier moyen", "basket", "€", "max")}</table>
+    <div class="cmpn">Estimations sur ${R.days} jours pour ${esc(cur().label)}. Côté chatters : leurs heures pointées, les médias envoyés depuis le site et toutes les ventes de médias privés qui ne viennent pas de l'IA. Pour une vraie comparaison, fais tourner l'IA plusieurs séances aux mêmes heures que les chatters.</div>`;
+}
+let scT = null;
+async function scanPoll() { clearTimeout(scT); try { D = await api("/api/twizz/ai", { fresh: true }); } catch (e) { return; }
+  const c = cur(), b = $("scanB"), n = $("medN"); if (!c || !b) return; const S = c.scan;
+  if (n) n.textContent = `${c.media} média${c.media > 1 ? "s" : ""} décrit${c.media > 1 ? "s" : ""}`;
+  if (S && S.running) { b.disabled = true; b.textContent = `Analyse… ${S.done}/${S.total}`; scT = setTimeout(scanPoll, 3000); }
+  else { b.disabled = false; b.textContent = "Analyser le coffre"; if (S && S.end && Date.now() - S.end < 8000) { notify("Coffre analysé", `${S.done - S.errors} média${S.done - S.errors > 1 ? "s" : ""} décrit${S.errors ? ` · ${S.errors} erreur${S.errors > 1 ? "s" : ""}` : ""}`, S.errors ? "info" : "ok"); loadInfo(true); } } }
 async function loadInfo(fresh) {
   const cid = CID; if (fresh || !INFO[cid]) { try { INFO[cid] = await api(`/api/twizz/ai/info/${enc(cid)}`, { fresh: true }); } catch (e) { INFO[cid] = { albums: [], tags: [], base: "", profile: "", live: e.message, locked: "" }; } }
   if (cid !== CID || !$("albs")) return; const I = INFO[cid], M = cur().cfg;
-  if (document.activeElement !== $("base")) $("base").value = I.base || ""; $("pLive").textContent = I.live || ""; 
+  if (document.activeElement !== $("base")) $("base").value = I.base || "";
+  if (document.activeElement !== $("locked")) $("locked").value = I.locked || "";
+  $("pLive").textContent = I.live || "";
   if (document.activeElement !== $("prof")) $("prof").value = I.profile || "";
   $("profReset").hidden = !I.profileCustom; $("profTag").textContent = I.profileCustom ? "écrit à la main · la fiche n'est plus utilisée par l'IA" : "tiré de sa fiche · modifiable";
   $("profNote").textContent = I.profileCustom ? "Ce texte remplace la fiche, les consignes et le catalogue pour l'IA (la fiche elle-même ne change pas). « Revenir à la fiche » pour reprendre la fiche à jour." : "Si tu modifies ce texte, il remplacera la fiche pour l'IA de cette créatrice (la fiche elle-même ne change pas).";
   $("baseReset").disabled = !I.custom;
+    $("lockedReset").disabled = !I.customLocked;
   const chips = (box, L, sel, key, empty) => { $(box).innerHTML = L.length ? L.map(x => `<button data-v="${esc(String(x.id))}" class="${sel.includes(key === "albums" ? x.id : x.id) ? "on" : ""}">${esc(x.name)}${x.count != null ? ` · ${x.count}` : ""}</button>`).join("") : `<span class="hint">${empty}</span>`;
     $(box).querySelectorAll("[data-v]").forEach(b => b.onclick = async () => { const v = key === "albums" ? b.dataset.v : +b.dataset.v, cur0 = cur().cfg[key], nx = cur0.includes(v) ? cur0.filter(x => x !== v) : cur0.concat([v]);
       if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { [key]: nx })) { b.classList.toggle("on", nx.includes(v)); loadInfo(true); } }); };
   chips("albs", I.albums, M.albums, "albums", "Aucun album photo ou vidéo dans le coffre");
+  const AN = M.albumNotes || {}, shown = M.albums.length ? I.albums.filter(a => M.albums.includes(a.id)) : I.albums;
+  if (!$("anotes").contains(document.activeElement)) $("anotes").innerHTML = shown.length ? shown.map(a => `<div class="an"><span title="${esc(a.name)}">${esc(a.name)}</span><input class="inp" data-an="${esc(a.id)}" maxlength="240" placeholder="ex. lingerie rouge, 5 photos, de dos" value="${esc(AN[a.id] || "")}"></div>`).join("") : `<span class="hint" style="font:600 12px Inter;color:#6f6f6f">Aucun album</span>`;
+  $("anotes").querySelectorAll("[data-an]").forEach(i => i.onchange = async () => { const nx = { ...(cur().cfg.albumNotes || {}) }; if (i.value.trim()) nx[i.dataset.an] = i.value.trim(); else delete nx[i.dataset.an];
+    if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { albumNotes: nx })) { notify("Description enregistrée", "", "ok"); loadInfo(true); } });
   chips("tags", I.tags, M.skipTags, "skipTags", "Aucun tag : crée-les dans l'onglet Tags");
 }
 function paintRun() {
@@ -219,14 +264,14 @@ function paintHist() {
 function paintChat() {
   const L = CHAT[CID] || [], box = $("chat"); if (!box) return;
   box.innerHTML = L.length ? L.map(m => m.fan ? `<div class="bb f">${esc(m.text)}</div>` : m.leave ? `<div class="bb x">L'IA laisserait ce fan à l'équipe : ${esc(m.leave)}</div>`
-    : `<div class="bb a">${esc(m.text)}${D.cfg.mark ? " 🤖" : ""}${m.media ? `<small>+ média de « ${esc(m.media)} » à ${m.prix} €</small>` : ""}</div>`).join("") : `<div class="emp">Commence par un message de fan, par exemple « coucou ça va ? »</div>`;
+    : `<div class="bb a">${esc(m.text)}${D.cfg.mark ? " 🤖" : ""}${m.media ? `<small>+ média de « ${esc(m.media)} »${m.what ? ` (${esc(m.what)})` : ""} à ${m.prix} €${m.remise ? ` · remise ${m.remise} %` : ""}</small>` : ""}</div>`).join("") : `<div class="emp">Commence par un message de fan, par exemple « coucou ça va ? »</div>`;
   box.scrollTop = box.scrollHeight;
 }
 async function tryIt() {
   const t = $("tryIn").value.trim(); if (!t) return; const cid = CID, L = CHAT[cid] = CHAT[cid] || [];
   L.push({ fan: true, text: t }); $("tryIn").value = ""; paintChat(); $("tryGo").disabled = true; $("tryGo").textContent = "…";
-  try { const r = await api(`/api/twizz/ai/try/${enc(cid)}`, { body: { messages: L.filter(m => !m.leave).map(m => ({ fan: !!m.fan, text: m.text })) } });
-    L.push(r.laisser ? { leave: r.laisser } : { text: r.message, media: r.album, prix: r.prix }); }
+  try { const r = await api(`/api/twizz/ai/try/${enc(cid)}`, { body: { fan: $("tryFan").value, messages: L.filter(m => !m.leave).map(m => ({ fan: !!m.fan, text: m.text })) } });
+    if (r.laisser) L.push({ leave: r.laisser }); else r.bulles.forEach((b, i) => { const lst = i === r.bulles.length - 1; L.push({ text: b, media: lst ? r.album : null, what: lst ? r.media : null, prix: r.prix, remise: lst ? r.remise : null }); }); }
   catch (e) { notify("Essai impossible", e.message, "err"); L.pop(); $("tryIn").value = t; }
   $("tryGo").disabled = false; $("tryGo").textContent = "Envoyer"; if (cid === CID) paintChat();
 }
