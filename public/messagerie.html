@@ -932,22 +932,32 @@ let qT = null; $("q").oninput = () => { clearTimeout(qT); qT = setTimeout(() => 
 /* ================= conversations ================= */
 async function fetchList(t, fresh, more) {
   const k = lkey(t), L = LISTS[k], page = more && L ? L.page + 1 : 1, q = t === "QUEUE" ? "" : Q;
-  // fil « Général » : on ajoute tous les fans « à répondre » de Twizz, même ceux des pages suivantes (plus besoin de « Charger plus »)
-  const ua = t === "GENERAL" && !q && page === 1 ? api2(`/unanswered${fresh ? "?fresh=1" : ""}`).catch(() => null) : null;
   const r = await api2(`/conversations?type=${t}&page=${page}${q ? "&q=" + enc(q) : ""}${fresh ? "&fresh=1" : ""}`);
   r.items.forEach(c => fixFan(c.fan));
   const ins = (list, add) => { const out = list.slice(); add.forEach(c => { const t0 = Date.parse(c.last.at) || 0, i = out.findIndex(x => (Date.parse(x.last.at) || Infinity) < t0); i < 0 ? out.push(c) : out.splice(i, 0, c); }); return out; };
-  LISTS[k] = page === 1 ? { items: r.items, page: 1, more: r.more && !q } : { items: ins(L.items, r.items.filter(x => !L.items.some(y => y.id === x.id))), page, more: r.more };
-  const U = ua && await ua;
-  if (U && U.items) { U.items.forEach(c => fixFan(c.fan)); const have = new Set(LISTS[k].items.map(c => c.id)); LISTS[k].items = ins(LISTS[k].items, U.items.filter(c => !have.has(c.id))); }
+  // rafraîchissement de la 1re page : on garde en attendant les pages suivantes déjà chargées tout seul (relues juste après par deepen)
+  const keep = page === 1 && L && L.deep && !q ? L.items.slice(L.n1 || 0).filter(x => !r.items.some(y => y.id === x.id)) : [];
+  LISTS[k] = page === 1 ? { items: r.items.concat(keep), page: keep.length ? L.page : 1, n1: r.items.length, deep: !!keep.length, more: keep.length ? L.more : r.more && !q }
+    : { ...L, items: ins(L.items, r.items.filter(x => !L.items.some(y => y.id === x.id))), page, more: r.more };
   return LISTS[k];
 }
+// fil « Général » : quand la 1re page est remplie de fans qui attendent, on charge les suivantes tout seul (plus besoin de « Charger plus »)
+let deepBusy = false;
+async function deepen(fresh) { const k = lkey("GENERAL"), L = LISTS[k]; if (deepBusy || !L || !L.n1 || Q) return;
+  const p1 = L.items.slice(0, L.n1), w = p1.filter(c => c.last.fromFan).length;
+  if (w < Math.max(2, Math.ceil(p1.length / 3))) { if (L.deep) { L.items = p1; L.page = 1; L.deep = false; } return; }
+  deepBusy = true;
+  try { const r = await api2(`/conversations?type=GENERAL&deep=1${fresh ? "&fresh=1" : ""}`); const L2 = LISTS[k]; if (!L2 || !L2.n1) return;
+    r.items.forEach(c => fixFan(c.fan)); const b = L2.items.slice(0, L2.n1), have = new Set(b.map(c => c.id));
+    L2.items = b.concat(r.items.filter(c => !have.has(c.id))); L2.page = r.page; L2.more = r.more; L2.deep = r.page > 1;
+    if (lkey("GENERAL") === k) { if (TYPE === "QUEUE") { renderQueue(); spends(); } else if (TYPE === "GENERAL") renderList(); } }
+  catch (e) {} finally { deepBusy = false; } }
 async function loadList(fresh, more) {
   if (!CID) return; if (TYPE === "QUEUE") return loadQueue(fresh);
   const k = lkey(), L = LISTS[k];
   if (!more) { if (L) renderList(); else $("cl").innerHTML = skelRows(); }
   tagFilterBar();
-  try { await fetchList(TYPE, fresh, more); if (lkey() !== k) return; renderList(); syncCur(LISTS[k]); loadTags(); if (!more) { loadPins(); loadSplit(); } }
+  try { await fetchList(TYPE, fresh, more); if (lkey() !== k) return; renderList(); syncCur(LISTS[k]); loadTags(); if (!more) { loadPins(); loadSplit(); if (TYPE === "GENERAL") deepen(fresh); } }
   catch (e) { if (!LISTS[k]) $("cl").innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; else notify("Twizz", e.message, "err"); }
 }
 const skelRows = () => Array.from({ length: 8 }, (_, i) => `<div class="mx-c" style="animation-delay:${i * .03}s;cursor:default"><span class="mx-av sk"></span><span class="t"><span class="sk" style="display:block;height:12px;width:${50 + (i * 17) % 40}%"></span><span class="sk" style="display:block;height:10px;width:${60 + (i * 13) % 30}%;margin-top:8px"></span></span></div>`).join("");
@@ -1023,7 +1033,7 @@ function renderList() {
 async function loadQueue(fresh) {
   if (!LISTS[lkey("GENERAL")]) $("cl").innerHTML = skelRows();
   tagFilterBar();
-  try { await fetchList("GENERAL", fresh); renderQueue(); syncCur(LISTS[lkey("GENERAL")]); spends(); loadTags(); loadPins(); loadSplit(); }
+  try { await fetchList("GENERAL", fresh); renderQueue(); syncCur(LISTS[lkey("GENERAL")]); spends(); loadTags(); loadPins(); loadSplit(); deepen(fresh); }
   catch (e) { if (!LISTS[lkey("GENERAL")]) $("cl").innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; }
 }
 function queueItems() {
