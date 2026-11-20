@@ -759,14 +759,15 @@
 
 /* ===== Fil « Général » · style Halo ===== */
 .mx-c.hl{padding:10px 10px 10px 12px}
+#cl>.mx-c{contain:paint;isolation:isolate}
 .mx-c.hl.un{background:none}.mx-c.hl.un:hover{background:#121212}
 .mx-c.hl.wait:before{display:none}
 .mx-c.hl.on,.mx-c.hl.un.on{background:linear-gradient(90deg,#171717,#111)}
 .mx-c.hl.un:after{left:0;top:14px;bottom:14px}
 .mx-c.hl .mx-av{position:relative;width:42px;height:42px;font-size:15px}
-.mx-av.rg:before{content:"";position:absolute;inset:-3px;border-radius:50%;background:conic-gradient(from var(--hla),#5fd3a2,#7db4ff,#b49cff,#5fd3a2);animation:hlSpin 4s linear infinite;-webkit-mask:radial-gradient(circle,transparent 62%,#000 64%);mask:radial-gradient(circle,transparent 62%,#000 64%);pointer-events:none}
+.mx-av.rg:before{content:"";position:absolute;inset:-3px;border-radius:50%;background:conic-gradient(#5fd3a2,#7db4ff,#b49cff,#5fd3a2);animation:hlRot 4s linear infinite;will-change:transform;-webkit-mask:radial-gradient(circle,transparent 62%,#000 64%);mask:radial-gradient(circle,transparent 62%,#000 64%);pointer-events:none}
 @property --hla{syntax:"<angle>";inherits:false;initial-value:0deg}
-@keyframes hlSpin{to{--hla:360deg}}
+@keyframes hlSpin{to{--hla:360deg}}@keyframes hlRot{to{transform:rotate(360deg)}}
 .mx-c.hl .nl{display:flex;align-items:center;gap:6px;min-width:0}
 .mx-c.hl .nl b{display:inline;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 14px Inter;color:#cfcfcf}
 .mx-c.hl.un .nl b{color:#fff;font-weight:800;text-shadow:0 0 18px rgba(255,255,255,.25)}
@@ -1026,7 +1027,10 @@ function rowHtml(c) { const waitMin = c.last.fromFan && c.last.at ? (Date.now() 
       <span class="t"><span class="nl">${p ? `<span class="pn-i" title="Épinglé${p.by ? " par " + esc(p.by) : ""}">${SV(IC.pin, 12, 2.6)}</span>` : ""}<b>${esc(c.fan.name)}</b>${other ? `<span class="ow-row" style="margin-left:0">${esc(inbName(o))}</span>` : ""}${T.map(t => tagPill(t)).join("")}</span><small>${prefix(c)}${esc(prev)}</small></span>
       <span class="r">${hereChip(c)}${wait ? `<span class="wpl ${late ? "lt" : ""}" title="Attend une réponse depuis ${since(c.last.at)}">${SV(IC.clock, 10, 2.6)}${since(c.last.at)}</span>` : `<span>${ago(c.last.at)}</span>`}${c.unread ? `<span class="udot" title="${c.unread} message${c.unread > 1 ? "s" : ""} non lu${c.unread > 1 ? "s" : ""}"></span>` : val}</span></button>`; }
 // met à jour la liste sans tout redessiner (pas de clignotement) ; les lignes qui partent glissent hors de la liste
+// Safari garde parfois l'ancienne image d'une ligne remplacée : on lui fait repeindre la liste
+function repaint(el) { requestAnimationFrame(() => { el.style.transform = "translateZ(0)"; requestAnimationFrame(() => { el.style.transform = ""; }); }); }
 function paintRows(rows, find, outAnim) {
+  { const seen = new Set(); rows = rows.filter(r => !seen.has(r[0]) && seen.add(r[0])); }   // jamais deux fois la même ligne
   const cl = $("cl"), first = !cl.querySelector("[data-conv]");
   [...cl.children].forEach(ch => { if (!ch.dataset.conv && !ch.classList.contains("keep")) ch.remove(); });
   const cur = [...cl.querySelectorAll("[data-conv]:not(.out)")], keepIds = new Set(rows.map(r => r[0]));
@@ -1038,7 +1042,7 @@ function paintRows(rows, find, outAnim) {
     rows.forEach(([id, html]) => { const t = document.createElement("div"); t.innerHTML = html; const nn = t.firstElementChild; nn.dataset.sig = html;
       if (!known.has(id)) { nn.classList.add("nw"); nn.addEventListener("animationend", () => nn.classList.remove("nw"), { once: true }); }
       nn.onclick = () => openConv(find(id)); frag.appendChild(nn); });
-    cl.replaceChildren(frag); cl.scrollTop = top; return;
+    cl.replaceChildren(frag); cl.scrollTop = top; repaint(cl); return;
   }
   const old = new Map(cur.map(n => [n.dataset.conv, n]));
   let prev = null;
@@ -1054,7 +1058,8 @@ function paintRows(rows, find, outAnim) {
     old.delete(id);
     const want = prev ? prev.nextSibling : cl.firstChild; if (n !== want) cl.insertBefore(n, want); prev = n;
   });
-  old.forEach(n => { if (outAnim) { n.classList.add("out"); setTimeout(() => n.remove(), 480); } else n.remove(); });
+  old.forEach(n => { if (outAnim) { n.classList.add("out"); setTimeout(() => { n.remove(); repaint(cl); }, 480); } else n.remove(); });
+  repaint(cl);
 }
 function renderList() {
   if (TYPE === "QUEUE") return renderQueue();
