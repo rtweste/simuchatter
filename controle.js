@@ -14,20 +14,23 @@ module.exports = function mount(app, db, auth, admin) {
     const C = cfg(), since = Date.now() - 30 * 864e5, out = [];
     const done = new Map(db.prepare("SELECT key, status FROM ctrl_flags").all().map(r => [r.key, r.status]));
     if (has("twizz_tx")) {
-      const rows = db.prepare(`SELECT s.id, s.user_id, s.amount, s.com_amount, s.sold_at, u.username, m.name model, t.type, t.net, t.fan_id, t.fan_name, t.conv_id, t.at
+      const rows = db.prepare(`SELECT s.id, s.user_id, s.amount, s.com_amount, s.sold_at, u.username, m.name model, t.type, t.net, t.fan_id, t.fan_name, t.conv_id, t.creator_id, t.at
         FROM sales s JOIN twizz_tx t ON t.sale_id = s.id JOIN users u ON u.id = s.user_id LEFT JOIN models m ON m.id = s.model_id
         WHERE s.source = 'twizz' AND s.status = 'validated' AND s.sold_at > ? ORDER BY s.sold_at DESC LIMIT 400`).all(since);
       const fanAvg = db.prepare(`SELECT AVG(net) a, COUNT(*) n FROM twizz_tx WHERE fan_id = ? AND type IN ('privatemedia','mediapush') AND net > 0 AND refund = 0 AND at < ?`);
-      const sent = has("twizz_sent") ? db.prepare("SELECT price, promo FROM twizz_sent WHERE conv_id = ? AND price IS NOT NULL AND at <= ? AND at > ? ORDER BY at DESC LIMIT 1") : null;
+      const sent = has("twizz_sent") ? db.prepare("SELECT s.msg_id, s.price, s.promo, s.at, u.username FROM twizz_sent s LEFT JOIN users u ON u.id = s.user_id WHERE s.conv_id = ? AND s.price > 0 AND s.at <= ? AND s.at > ? ORDER BY s.at DESC LIMIT 1") : null;
       rows.forEach(r => {
         const key = "sale:" + r.id; if (done.has(key) || r.com_amount != null) return;
         const why = [];
         if (PPV.includes(r.type) && C.min > 0 && r.amount < C.min) why.push({ k: "low", t: `Vendu ${eur(r.amount)} : sous le minimum de ${eur(C.min)}` });
         if (PPV.includes(r.type) && r.fan_id) { const f = fanAvg.get(r.fan_id, r.at); if (f && f.n >= 3 && f.a >= 10 && r.net < f.a * .4) why.push({ k: "fan", t: `${r.fan_name || "Ce fan"} paie d'habitude ${eur(f.a / (r.net / r.amount))} en moyenne (${f.n} achats)` }); }
-        if (sent && r.conv_id) { const x = sent.get(r.conv_id, r.at + 60e3, r.at - 7 * 864e5); let p = null; try { p = x && x.promo && JSON.parse(x.promo); } catch (e) {}
+        let x = null; if (sent && r.conv_id) { x = sent.get(r.conv_id, r.at + 60e3, r.at - 7 * 864e5); let p = null; try { p = x && x.promo && JSON.parse(x.promo); } catch (e) {}
           if (p && +p.value > 0) { const pct = p.type === "pct" ? +p.value : Math.round(+p.value / (+x.price + +p.value) * 100);
             if (pct > C.disc) why.push({ k: "promo", t: `Promo de ${p.type === "pct" ? p.value + " %" : "−" + eur(+p.value) + " (" + pct + " %)"} : plus que les ${C.disc} % permis` }); } }
-        if (why.length) out.push({ key, kind: "sale", at: r.sold_at, why, sale: { id: r.id, amount: r.amount, net: r.net, model: r.model || "", user: r.username, user_id: r.user_id, fan: r.fan_name || "", type: LABEL[r.type] || r.type } });
+        // de quoi aller voir la vente dans la conversation : le PPV envoyé depuis la messagerie s'il existe
+        let px = null; try { px = x && x.promo && JSON.parse(x.promo); } catch (e) {}
+        const src = x ? { site: true, by: x.username || "", msg: x.msg_id || "", price: x.price, promo: px && +px.value > 0 ? (px.type === "pct" ? `−${px.value} %` : `−${eur(+px.value)}`) : "" } : { site: false };
+        if (why.length) out.push({ key, kind: "sale", at: r.sold_at, why, src, sale: { id: r.id, amount: r.amount, net: r.net, model: r.model || "", user: r.username, user_id: r.user_id, fan: r.fan_name || "", type: LABEL[r.type] || r.type, conv: r.conv_id || "", fan_id: r.fan_id || "", cr: r.creator_id || "", at: r.at } });
       });
     }
     // médias offerts depuis la messagerie (hors scripts) : signalés à partir d'un certain nombre par chatter et par jour

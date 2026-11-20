@@ -153,6 +153,8 @@
 .ck-why i{width:6px;height:6px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
 .vt-com.ck-c{margin-top:12px;display:flex;flex-direction:column;gap:9px}.vt-com.ck-c .sg{grid-template-columns:repeat(2,minmax(110px,auto));align-self:flex-start}.ck-c .pr{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#9a9a9a}.ck-c .pr input{width:90px;height:38px;border-radius:11px;border:1px solid #2a2a2a;background:#151515;color:#fff;font:inherit;font-weight:800;padding:0 10px}
 .ck-c .vt-val{align-self:flex-start}
+.ck-src{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #1c1c1c;font-size:12px;color:#8a8a8a}.ck-src b{color:#d6d6d6}
+.ck-cv{margin-left:auto;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:10px;border:1px solid rgba(95,211,162,.35);background:rgba(95,211,162,.08);color:#7fe0b8;font-weight:800;font-size:12px;text-decoration:none}.ck-cv:hover{background:rgba(95,211,162,.14)}
 .ck-empty{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:34px 18px}.ck-ok{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;color:#5fd3a2;background:rgba(95,211,162,.1);border:1px solid rgba(95,211,162,.3)}
 
 /* ----- manager : file focus ----- */
@@ -1223,7 +1225,9 @@ function paintCtrl() { const D = CK; ckTab(D.count);
       ${S ? `<b class="ck-am">${E(S.amount)}</b><span class="ck-who"><b>${esc(S.user)}</b><span class="vt-mut">${esc(S.type)}${S.model ? " · " + esc(S.model) : ""}${S.fan ? " · " + esc(S.fan) : ""} · ${whenTxt(x.at)}</span></span>`
           : `<b class="ck-am">${F.n}</b><span class="ck-who"><b>${esc(F.user)}</b><span class="vt-mut">médias offerts · ${esc(F.day.split("-").reverse().join("/"))}</span></span>`}
       <span class="ck-acts">${S ? `<button class="ck-cut" data-cut="${i}">Baisser la commission</button>` : ""}<button class="ck-okb" data-ok="${i}">${S ? "C'est bon" : "Vu"}</button></span></div>
-      <div class="ck-why">${x.why.map(w => `<span style="--c:${CKI[w.k]}"><i></i>${esc(w.t)}</span>`).join("")}</div><div class="ck-form" id="ckF${i}"></div></div>`; }).join("");
+      <div class="ck-why">${x.why.map(w => `<span style="--c:${CKI[w.k]}"><i></i>${esc(w.t)}</span>`).join("")}</div>
+      ${S ? `<div class="ck-src">${x.src && x.src.site ? `<span>Envoyé depuis la messagerie${x.src.by ? " par <b>" + esc(x.src.by) + "</b>" : ""} · ${E(x.src.price)}${x.src.promo ? " · promo " + esc(x.src.promo) : ""}</span>` : `<span>Envoyé depuis le CRM Twizz : le média et la négo sont dans la conversation</span>`}${S.conv && S.fan_id && S.cr ? `<a class="ck-cv" target="_blank" rel="noopener" href="/messagerie?${new URLSearchParams({ cr: S.cr, conv: S.conv, fan: S.fan_id, name: S.fan || "Fan", msg: (x.src && x.src.msg) || "", amt: S.amount, at: S.at })}">Voir la conversation<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a>` : ""}</div>` : ""}
+      <div class="ck-form" id="ckF${i}"></div></div>`; }).join("");
   document.querySelectorAll("[data-ok]").forEach(b => b.onclick = () => ckDone(D.items[+b.dataset.ok], "ok"));
   document.querySelectorAll("[data-cut]").forEach(b => b.onclick = () => ckCut(+b.dataset.cut)); }
 async function ckDone(x, status) { try { CK = await api("/api/admin/controle/done", { body: { key: x.key, status } }); paintCtrl(); } catch (e) { notify("Erreur", e.message, "err"); } }

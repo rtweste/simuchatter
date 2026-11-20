@@ -813,6 +813,7 @@
 .aur-spk{position:absolute;color:#fff;width:12px;height:12px;pointer-events:none;z-index:4;filter:drop-shadow(0 0 4px #fff) drop-shadow(0 0 9px #5fd3a2);animation:aurSpk 2.4s ease-in-out infinite}
 .aur-spk svg{display:block;width:100%;height:100%}
 @keyframes aurSpk{0%,100%{opacity:0;transform:scale(.4) rotate(0)}50%{opacity:1;transform:scale(1) rotate(45deg)}}
+.ppv.deep{animation:ppvDeep 1.4s ease-in-out 3}@keyframes ppvDeep{50%{box-shadow:0 0 0 3px #f0b54a,0 0 40px -6px rgba(240,181,74,.9)}}
 .aur-pm{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 14px 10px;padding:8px 10px;border-radius:13px;background:linear-gradient(90deg,rgba(255,98,241,.1),rgba(240,181,74,.08));border:1px solid rgba(255,98,241,.28);font:700 11.5px Inter;color:#e7d3e4}
 .aur-pm .tg{font:900 9px Inter;letter-spacing:.14em;padding:3px 6px;border-radius:6px;background:linear-gradient(90deg,#ff62f1,#f0b54a);color:#1a0716}.aur-pm b{font-weight:900;color:#fff}
 .aur-pm .tm{margin-left:auto;display:inline-flex;align-items:center;gap:6px;color:#f0b54a}.aur-pm .cd{font-variant-numeric:tabular-nums;font-weight:900;color:#ffd38a}
@@ -1165,6 +1166,13 @@ async function openConv(c) {
   if (!c) return; markSeen(c); if (!CUR || CUR.id !== c.id) { PANEL = null; hereLeave(); } CUR = c; HEREO = []; hereBeat(); $("mx").classList.add("open"); renderList(); thread(); loadMsgs(); loadHist(); loadRun(); setTimeout(fanCard, 150);
 }
 const isPPV = m => !m.fromFan && m.type === "FILE" && m.price != null && m.medias.length;
+// vente à montrer après un lien direct : le PPV envoyé (ou celui au bon prix juste avant l'achat) est mis en avant
+let DEEP = null;
+function showDeep() { const d = DEEP; if (!d || !CUR || CUR.id !== d.conv) return; const T = THREADS[CUR.id]; if (!T) return;
+  const ppv = T.items.filter(m => isPPV(m) && !m.fromFan); let m = d.msg && ppv.find(x => x.id === d.msg);
+  if (!m && d.amt) m = ppv.filter(x => Math.abs((x.price || 0) - d.amt) < .6 && (!d.at || Date.parse(x.at) <= d.at + 60e3)).sort((a, b) => Date.parse(b.at) - Date.parse(a.at))[0];
+  DEEP = null; if (!m) return notify("Vente plus haut dans la conversation", "Remonte le fil pour retrouver le média vendu", "info");
+  const el = document.querySelector(`[data-ppv="${CSS.escape(m.id)}"]`); if (!el) return; el.scrollIntoView({ block: "center", behavior: "smooth" }); el.classList.add("deep"); setTimeout(() => el.classList.remove("deep"), 4200); }
 async function loadMsgs(fresh) {
   if (!CUR) return; const id = CUR.id, T = THREADS[id];
   try { const r = await api2(`/messages/${enc(id)}?fan=${enc(CUR.fan.id)}${fresh ? "&fresh=1" : ""}`); if (!CUR || CUR.id !== id) return;
@@ -1175,6 +1183,7 @@ async function loadMsgs(fresh) {
     const before = T ? JSON.stringify(T.items.map(m => m.id + m.status)) : "";
     THREADS[id] = { items: older.concat(r.items, pend), page: T ? T.page : 1, totalPages: r.totalPages, note: r.note };
     if (JSON.stringify(THREADS[id].items.map(m => m.id + m.status)) !== before) thread(true);
+    if (DEEP) setTimeout(showDeep, 350);
     const won = prevSt ? r.items.filter(m => isPPV(m) && m.price > 0 && m.status === "accepted" && prevSt.has(m.id) && prevSt.get(m.id) !== "accepted") : [];
     if (won.length) { won.forEach(celebrate); FANS[CID + "|" + CUR.fan.id] && delete FANS[CID + "|" + CUR.fan.id]; loadHist(true); fanCard(); } }
   catch (e) { if (!T && $("sc")) $("sc").innerHTML = `<div class="mx-empty" style="color:#e07a7a">${esc(e.message)}</div>`; }
@@ -1923,7 +1932,12 @@ document.addEventListener("keydown", e => { if (e.key !== "ArrowDown" || e.metaK
   try { ST = await api("/api/twizz/inbox/state"); } catch (e) { $("mx").innerHTML = `<div class="mx-empty">${esc(e.message)}</div>`; return; }
   let saved = null, ty = null; try { saved = localStorage.getItem("mx:cid"); ty = localStorage.getItem("mx:ty"); } catch (e) {}
   CID = ST.creators.some(c => c.id === saved) ? saved : (ST.creators[0] || {}).id || null;
+  // lien direct vers une conversation (depuis « À vérifier » dans Ventes) : la créatrice, le fan, et la vente à montrer
+  const Q0 = new URLSearchParams(location.search), dl = Q0.get("conv") && Q0.get("fan") && ST.creators.some(c => c.id === Q0.get("cr")) ? { cr: Q0.get("cr"), conv: Q0.get("conv"), fan: Q0.get("fan"), name: Q0.get("name") || "Fan", msg: Q0.get("msg") || "", amt: +Q0.get("amt") || 0, at: +Q0.get("at") || 0 } : null;
+  if (dl) { CID = dl.cr; ty = "GENERAL"; history.replaceState(null, "", location.pathname); }
   top(); unreads(); setInterval(() => { if (!document.hidden) unreads(); }, 120e3); liveUi(); thread(); fanCard(); setType(["QUEUE", "GENERAL"].includes(ty) ? ty : "QUEUE"); if (CID) stream();
+  if (dl) { DEEP = dl; const L = LISTS[lkey("GENERAL")], c = L && L.items.find(x => x.id === dl.conv);
+    openConv(c || { id: dl.conv, fan: fixFan({ id: dl.fan, name: dl.name, avatar: "" }), last: { at: null, text: "", fromFan: false, type: "" }, unread: 0, online: false }); }
 })();
 })();
 </script>
