@@ -117,7 +117,7 @@ const RKOF = me => me.rk || (me.role === "admin" ? "manager" : me.role);
 /* ---------- côté managers : moins d'entrées dans le menu, les pages proches sont regroupées avec des onglets en haut de page ---------- */
 const MGR_GROUPS = {
   "g-ventes": { label: "Ventes", icon: "receipt", tabs: [["ventes", "Ventes"], ["compta", "Compta"]] },
-  "g-msg": { label: "Messagerie", short: "Twizz", icon: "bubbles", nodock: 1, tabs: [["messagerie", "Conversations"], ["scripts", "Scripts"], ["tags", "Tags"]] },
+  "g-msg": { label: "Messagerie", short: "Twizz", icon: "bubbles", tabs: [["messagerie", "Conversations"], ["scripts", "Scripts"], ["tags", "Tags"]] },
   "g-crea": { label: "Créatrices", icon: "spark", nodock: 1, tabs: [["creatrices", "Fiches"], ["admin#crea", "Gestion des créatrices"]] },
   "g-form": { label: "Formation", icon: "gauge", nodock: 1, tabs: [["simu", "Simu Chatter"], ["tests", "Tests d'aptitude"]] },
   "g-motiv": { label: "Motivation", icon: "flag", nodock: 1, tabs: [["defis", "Défis"], ["admin#stel", "Stella's"], ["boutique", "Boutique"], ["parrainage", "Parrainage"]] },
