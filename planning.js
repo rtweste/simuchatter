@@ -111,7 +111,7 @@ function mountPlanning(app, db, auth, admin) {
     const candidates = models().filter(m => (!open || m.id !== open.model_id) && !mineRf.includes(m.id)).map(m => {
       const h = hs.find(x => x.model_id === m.id), on = [...new Set(live.filter(l => l.model_id === m.id && l.username !== meName).map(l => l.username))];
       const planned = nowShifts.filter(s => s.model_id === m.id);
-      const note = h ? (h.for_user && h.created_by !== h.for_user ? `${h.for_name} n'a pas pointé` : `${h.for_name || h.by_name || "Un chatter"} a un souci${h.reason ? " · " + h.reason : ""}`)
+      const note = h ? (!h.for_user ? `Renfort demandé par ${h.by_name || "le manager"}${h.reason ? " · " + h.reason : ""}` : h.created_by !== h.for_user ? `${h.for_name} n'a pas pointé` : `${h.for_name} a un souci${h.reason ? " · " + h.reason : ""}`)
         : on.length ? `En cours avec ${on.join(", ")}` : planned.some(s => s.state === "missing" && s.user_id !== uid) ? `${planned.find(s => s.state === "missing" && s.user_id !== uid).username} n'a pas pointé` : "Personne dessus en ce moment";
       return { id: m.id, name: m.name, help: h ? { id: h.id, at: h.created_at } : null, busy: on.length > 0, note };
     }).sort((a, b) => (b.help ? 2 : 0) + (!b.busy ? 1 : 0) - (a.help ? 2 : 0) - (!a.busy ? 1 : 0));
@@ -238,7 +238,8 @@ function mountPlanning(app, db, auth, admin) {
     const model_id = s ? s.model_id : parseInt(req.body?.model_id, 10);
     if (!db.prepare("SELECT 1 FROM models WHERE id = ?").get(model_id)) return res.status(400).json({ error: "Créatrice invalide" });
     if (!db.prepare("SELECT 1 FROM help_requests WHERE model_id = ? AND resolved_at IS NULL AND created_at > ?").get(model_id, Date.now() - 12 * 3.6e6))
-      db.prepare("INSERT INTO help_requests (model_id, for_user, created_by, reason, created_at) VALUES (?,?,?,?,?)").run(model_id, s ? s.user_id : null, req.user.id, s ? "pas pointé" : "", Date.now());
+      db.prepare("INSERT INTO help_requests (model_id, for_user, created_by, reason, created_at) VALUES (?,?,?,?,?)").run(model_id, s ? s.user_id : null, req.user.id, s ? "pas pointé" : String(req.body?.reason || "").trim().slice(0, 120), Date.now());
+    else return res.json({ ok: true, already: true });
     res.json({ ok: true });
   });
 

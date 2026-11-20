@@ -356,7 +356,7 @@
         </div>
         <div class="p-side">
           <div class="p-card" style="--d:.1s"><div class="p-ch" style="margin-bottom:4px"><h3>Échanges <em>à valider</em></h3></div><div id="swapList"></div></div>
-          <div class="p-card" style="--d:.14s"><div class="p-ch" style="margin-bottom:4px"><h3>Renforts <em>en cours</em></h3></div><div id="rfList"></div></div>
+          <div class="p-card" style="--d:.14s"><div class="p-ch" style="margin-bottom:4px"><h3>Renforts <em>en cours</em></h3><button class="p-sb g" id="askRf" type="button">+ Demander un renfort</button></div><div id="rfList"></div></div>
           <div class="p-card" style="--d:.18s"><div class="p-ch" style="margin-bottom:2px"><h3>Ponctualité <em>équipe</em></h3><span class="p-mut" id="tpLab"></span></div><div id="teamPq"></div></div>
           <div class="p-card" style="--d:.22s"><div class="p-ch" style="margin-bottom:2px"><h3>Présence au <em>vocal</em></h3><span class="p-mut" id="vpLab"></span></div><div id="teamVoc"></div></div>
         </div>
@@ -438,6 +438,15 @@
   <div class="p-endh" id="enHint"></div>
   <div class="p-srow" style="margin-top:16px"><button class="p-send" id="enGo">Terminer le shift</button></div>
   <div class="p-err" id="enErr"></div>
+</div>
+
+<div class="p-sheet" id="arSheet" role="dialog" aria-modal="true" aria-labelledby="arT">
+  <div class="p-shd"><b id="arT">Demander un renfort</b><button class="p-x" data-close aria-label="Fermer">✕</button></div>
+  <div class="p-info">Les chatters en shift reçoivent une notification et voient la créatrice en tête de leur liste de renfort. La demande se ferme dès que quelqu'un la prend.</div>
+  <div class="p-fl"><span class="p-lab">Créatrice</span><select class="p-fi" id="arModel"></select></div>
+  <div class="p-fl"><span class="p-lab">Motif (facultatif)</span><input class="p-fi" id="arWhy" maxlength="120" placeholder="ex. beaucoup de fans en ligne"></div>
+  <div class="p-srow" style="margin-top:16px"><button class="p-send" id="arGo">Envoyer la demande</button></div>
+  <div class="p-err" id="arErr"></div>
 </div>
 
 <div class="p-sheet" id="ckSheet" role="dialog" aria-modal="true" aria-labelledby="ckT">
@@ -863,13 +872,25 @@ function renderSwaps() {
       if (ok) NEWID = w.shift_id; await sleep(350); loadAdmin(); } catch (e) { notify("Erreur", e.message, "err"); }
   });
 }
+// le manager demande un renfort sur la créatrice de son choix
+function askRfSheet() {
+  const busy = new Set(A.helps.map(h => h.model_id));
+  $("arModel").innerHTML = A.models.map(m => `<option value="${m.id}" ${busy.has(m.id) ? "disabled" : ""}>${esc(m.name)}${busy.has(m.id) ? " · déjà demandé" : ""}</option>`).join("");
+  const first = A.models.find(m => !busy.has(m.id)); if (first) $("arModel").value = first.id;
+  $("arWhy").value = ""; $("arErr").textContent = ""; $("arGo").disabled = !first; openSheet("arSheet");
+}
+$("askRf").onclick = askRfSheet;
+$("arGo").onclick = async () => { const b = $("arGo"); b.disabled = true; $("arErr").textContent = "";
+  try { const m = A.models.find(x => x.id === +$("arModel").value), r = await api("/api/admin/help", { body: { model_id: +$("arModel").value, reason: $("arWhy").value.trim() } });
+    closeSheet(); VS.rf(); notify(r.already ? "Renfort déjà demandé" : "Renfort demandé", r.already ? `Une demande est déjà ouverte pour ${m ? m.name : "cette créatrice"}` : `Les chatters en shift sont prévenus pour ${m ? m.name : "cette créatrice"}`, r.already ? "info" : "ok"); loadAdmin(); }
+  catch (e) { $("arErr").textContent = e.message; } finally { b.disabled = false; } };
 function renderRf() {
   const R = A.renforts, H = A.helps;
   $("rfList").innerHTML = (!R.length && !H.length) ? `<div class="p-empty">Aucun renfort en cours.</div>` :
     R.map(r => `<div class="p-rq"><b>${esc(r.username)} · ${r.main_model_name ? esc(r.main_model_name) + " + " : ""}${esc(r.model_name)}</b>
       <small>Depuis ${hm(r.start_at)}${r.until_at ? " · jusqu'à " + hm(r.until_at) : " · jusqu'à la fin de son shift"}<br>Ventes sur ${esc(r.model_name)} pendant le renfort : ${eur(r.amount)} (comptées pour ${esc(r.username)})</small>
       <div class="ab"><button class="p-sb" data-stop="${r.id}">Arrêter le renfort</button></div></div>`).join("") +
-    H.map(h => `<div class="p-rq" style="border-style:dashed"><b>${esc(h.model_name)} · renfort demandé</b><small>${h.for_name ? esc(h.for_name) + (h.created_by === h.for_user ? " a un souci" : " n'a pas pointé") : "Demandé par " + esc(h.by_name)} · ${ago(h.created_at)}<br>Personne ne l'a encore pris</small>
+    H.map(h => `<div class="p-rq" style="border-style:dashed"><b>${esc(h.model_name)} · renfort demandé</b><small>${h.for_name ? esc(h.for_name) + (h.created_by === h.for_user ? " a un souci" : " n'a pas pointé") : "Demandé par " + esc(h.by_name) + (h.reason ? " · " + esc(h.reason) : "")} · ${ago(h.created_at)}<br>Personne ne l'a encore pris</small>
       <div class="ab"><button class="p-sb" data-hclose="${h.id}">Clore la demande</button></div></div>`).join("");
   document.querySelectorAll("[data-stop]").forEach(b => b.onclick = async () => { b.disabled = true; await api(`/api/reinforce/${b.dataset.stop}/stop`, { body: {} }); notify("Renfort arrêté", "", "info"); loadAdmin(); });
   document.querySelectorAll("[data-hclose]").forEach(b => b.onclick = async () => { await api(`/api/help/${b.dataset.hclose}`, { method: "DELETE" }); loadAdmin(); });
