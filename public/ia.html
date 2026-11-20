@@ -193,7 +193,7 @@ async function paintBody() {
 async function loadInfo(fresh) {
   const cid = CID; if (fresh || !INFO[cid]) { try { INFO[cid] = await api(`/api/twizz/ai/info/${enc(cid)}`, { fresh: true }); } catch (e) { INFO[cid] = { albums: [], tags: [], base: "", profile: "", live: e.message, locked: "" }; } }
   if (cid !== CID || !$("albs")) return; const I = INFO[cid], M = cur().cfg;
-  if (document.activeElement !== $("base")) $("base").value = I.base || ""; $("pLive").textContent = I.live || ""; $("pLock").textContent = I.locked || "";
+  if (document.activeElement !== $("base")) $("base").value = I.base || ""; $("pLive").textContent = I.live || ""; 
   if (document.activeElement !== $("prof")) $("prof").value = I.profile || "";
   $("profReset").hidden = !I.profileCustom; $("profTag").textContent = I.profileCustom ? "écrit à la main · la fiche n'est plus utilisée par l'IA" : "tiré de sa fiche · modifiable";
   $("profNote").textContent = I.profileCustom ? "Ce texte remplace la fiche, les consignes et le catalogue pour l'IA (la fiche elle-même ne change pas). « Revenir à la fiche » pour reprendre la fiche à jour." : "Si tu modifies ce texte, il remplacera la fiche pour l'IA de cette créatrice (la fiche elle-même ne change pas).";
