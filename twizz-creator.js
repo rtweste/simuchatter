@@ -23,6 +23,7 @@ module.exports = function mount(app, db, auth, admin, { gest, notify, dataDir })
     CREATE TABLE IF NOT EXISTS twizz_pub_slots (creator_id TEXT NOT NULL, slot TEXT NOT NULL, post_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, slot));
     CREATE TABLE IF NOT EXISTS twizz_pres (id INTEGER PRIMARY KEY, creator_id TEXT NOT NULL, name TEXT, type TEXT, size INTEGER, pos REAL NOT NULL, status TEXT NOT NULL DEFAULT 'queued',
       discover_id TEXT, error TEXT, via TEXT, created_by INTEGER, created_at INTEGER NOT NULL, sent_at INTEGER, sent_by INTEGER);`);
+  if (!db.prepare("PRAGMA table_info(twizz_posts)").all().some(x => x.name === "cycles")) db.exec("ALTER TABLE twizz_posts ADD COLUMN cycles INTEGER NOT NULL DEFAULT 0");
 
   /* ---------- créatrices et mots de passe (variables Railway) ---------- */
   const varName = u => "TWIZZ_PW_" + str(u).toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
@@ -114,7 +115,7 @@ module.exports = function mount(app, db, auth, admin, { gest, notify, dataDir })
   const wrap = fn => async (req, res) => { try { res.json(await fn(req, res)); } catch (e) { if (!e.twizz) console.error("Publications", e); res.status(e.code || 400).json({ error: e.message || "Erreur" }); } };
   const okC = cid => { const c = creatorOf(cid); if (!c) throw fail("Créatrice inconnue"); return c; };
   const autoOn = () => !!S.get("twizz_pub_auto", false);
-  const ruleOf = cid => ({ on: false, times: ["19:00"], ...(S.get("twizz_pub_rule:" + cid, {}) || {}) });
+  const ruleOf = cid => ({ on: false, times: ["19:00"], recycle: false, ...(S.get("twizz_pub_rule:" + cid, {}) || {}) });
   const presRuleOf = cid => ({ on: false, days: 7, ...(S.get("twizz_pres_rule:" + cid, {}) || {}) });
 
   /* ---------- heures de Paris ---------- */
@@ -142,7 +143,8 @@ module.exports = function mount(app, db, auth, admin, { gest, notify, dataDir })
       const f = new FormData(); f.set("isPrivate", p.blurred ? "true" : "false"); f.set("type", p.file.kind === "video" ? "video" : "photo"); f.set("text", p.text || ""); f.set("quickFiles", str(p.file.id));
       // même clé à chaque nouvel essai : Twizz ne crée pas deux fois la même publication
       const j = await call(p.creator_id, "POST", "/feeds/creators", f, { "x-idempotency-key": p.idem });
-      const d = dataOf(j) || {}, fid = str(d._id || d.id || (d.feed && d.feed._id) || "");
+      const d = dataOf(j) || {}; let fid = str(d._id || d.id || (d.feed && d.feed._id) || (d.newFeed && d.newFeed._id) || "");
+      if (!fid) try { const L = dataOf(await call(p.creator_id, "GET", "/feeds/creators?page=1")); const A = Array.isArray(L) ? L : (L && (L.feeds || L.data || L.items)) || []; const top = A.slice().sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0))[0]; if (top && Date.now() - Date.parse(top.createdAt || 0) < 10 * 60e3) fid = str(top._id || top.id || ""); } catch (e) {}
       db.prepare("UPDATE twizz_posts SET status = 'published', feed_id = ?, published_at = ?, published_by = ?, via = ?, error = NULL WHERE id = ?").run(fid || null, now(), by || null, via, id);
       setStat(p.creator_id, { ok: true, error: null });
       log(by || 0, "a", `Publication sur le feed de **${(creatorOf(p.creator_id) || {}).label || "?"}**${via === "auto" ? " (automatique)" : ""}`, (p.text || "").slice(0, 80));
@@ -151,6 +153,16 @@ module.exports = function mount(app, db, auth, admin, { gest, notify, dataDir })
       db.prepare("UPDATE twizz_posts SET status = 'failed', error = ? WHERE id = ?").run(str(e.message).slice(0, 300), id);
       setStat(p.creator_id, { ok: false, error: str(e.message).slice(0, 300) }); throw e;
     } finally { busy.delete(id); }
+  }
+
+  // banque qui tourne : la plus ancienne publication est retirée de Twizz puis republiée (même média, même description)
+  async function recycle(id, by, via) {
+    const p = db.prepare("SELECT * FROM twizz_posts WHERE id = ?").get(id); if (!p) throw fail("Publication introuvable");
+    if (p.status !== "published") throw fail("Seule une publication déjà publiée peut être republiée");
+    if (p.feed_id) { try { await call(p.creator_id, "DELETE", `/feeds/creators/${encodeURIComponent(p.feed_id)}`); }
+      catch (e) { if (!/code 404|not found|introuvable/i.test(e.message)) { db.prepare("UPDATE twizz_posts SET error = ? WHERE id = ?").run(("Retrait de l'ancienne publication impossible : " + e.message).slice(0, 300), id); throw e; } } }
+    db.prepare("UPDATE twizz_posts SET status = 'queued', feed_id = NULL, idem = ?, cycles = cycles + 1 WHERE id = ?").run(crypto.randomUUID(), id);
+    return publish(id, by, via);
   }
 
   /* ---------- vidéos de présentation ---------- */
@@ -199,9 +211,11 @@ module.exports = function mount(app, db, auth, admin, { gest, notify, dataDir })
         if (t < at || t - at > 2 * 3600e3) continue;   // créneau passé depuis plus de 2 h (serveur arrêté) : on ne rattrape pas
         if (db.prepare("SELECT 1 FROM twizz_pub_slots WHERE creator_id = ? AND slot = ?").get(c.id, slot)) continue;
         const next = db.prepare("SELECT id FROM twizz_posts WHERE creator_id = ? AND status = 'queued' ORDER BY pos LIMIT 1").get(c.id);
-        db.prepare("INSERT OR IGNORE INTO twizz_pub_slots (creator_id, slot, post_id, at) VALUES (?,?,?,?)").run(c.id, slot, next ? next.id : null, t);
-        if (!next) { log(0, "a", `File de publications vide pour **${c.label}** : rien n'a été publié à ${hm}`, ""); continue; }
-        await publish(next.id, null, "auto").catch(e => console.error("Publication automatique", c.label, e.message));
+        const old = !next && R.recycle ? db.prepare("SELECT id FROM twizz_posts WHERE creator_id = ? AND status = 'published' ORDER BY published_at LIMIT 1").get(c.id) : null;
+        db.prepare("INSERT OR IGNORE INTO twizz_pub_slots (creator_id, slot, post_id, at) VALUES (?,?,?,?)").run(c.id, slot, next ? next.id : old ? old.id : null, t);
+        if (next) await publish(next.id, null, "auto").catch(e => console.error("Publication automatique", c.label, e.message));
+        else if (old) await recycle(old.id, null, "auto").catch(e => console.error("Republication automatique", c.label, e.message));
+        else log(0, "a", `File de publications vide pour **${c.label}** : rien n'a été publié à ${hm}`, "");
       }
       const P = presRuleOf(c.id);
       if (P.on && P.days > 0) {
@@ -234,14 +248,14 @@ module.exports = function mount(app, db, auth, admin, { gest, notify, dataDir })
     catch (e) { setStat(c.id, { ok: false, error: str(e.message).slice(0, 300), tested: now() }); throw e; }
   }));
   app.post("/api/pub/:cid/rule", auth, mgr, wrap(async req => { const c = okC(req.params.cid), b = req.body || {}, R = ruleOf(c.id);
-    const n = { on: typeof b.on === "boolean" ? b.on : R.on, times: b.times ? cleanTimes(b.times) : R.times }; S.set("twizz_pub_rule:" + c.id, n); return summary({ ...c, ...creators().find(x => x.id === c.id) }); }));
+    const n = { on: typeof b.on === "boolean" ? b.on : R.on, times: b.times ? cleanTimes(b.times) : R.times, recycle: typeof b.recycle === "boolean" ? b.recycle : !!R.recycle }; S.set("twizz_pub_rule:" + c.id, n); return summary({ ...c, ...creators().find(x => x.id === c.id) }); }));
   app.post("/api/pub/:cid/pres-rule", auth, mgr, wrap(async req => { const c = okC(req.params.cid), b = req.body || {}, R = presRuleOf(c.id);
     const days = b.days != null ? Math.max(1, Math.min(60, parseInt(b.days, 10) || 7)) : R.days; S.set("twizz_pres_rule:" + c.id, { on: typeof b.on === "boolean" ? b.on : R.on, days }); return summary({ ...c, ...creators().find(x => x.id === c.id) }); }));
 
   // file de publications
   app.get("/api/pub/:cid/posts", auth, mgr, wrap(async req => { const c = okC(req.params.cid);
     const q = db.prepare("SELECT p.*, u.username by_name FROM twizz_posts p LEFT JOIN users u ON u.id = p.created_by WHERE p.creator_id = ? AND p.status IN ('queued','publishing','failed') ORDER BY CASE p.status WHEN 'failed' THEN 0 ELSE 1 END, p.pos").all(c.id).map(postRow);
-    const done = db.prepare("SELECT p.*, u.username by_name FROM twizz_posts p LEFT JOIN users u ON u.id = COALESCE(p.published_by, p.created_by) WHERE p.creator_id = ? AND p.status = 'published' ORDER BY p.published_at DESC LIMIT 40").all(c.id).map(postRow);
+    const done = db.prepare("SELECT p.*, u.username by_name FROM twizz_posts p LEFT JOIN users u ON u.id = COALESCE(p.published_by, p.created_by) WHERE p.creator_id = ? AND p.status = 'published' ORDER BY p.published_at DESC LIMIT 100").all(c.id).map(postRow);
     return { queue: q, history: done, summary: summary({ ...c, ...creators().find(x => x.id === c.id) }) }; }));
   app.post("/api/pub/:cid/posts", auth, mgr, wrap(async req => { const c = okC(req.params.cid), L = Array.isArray(req.body && req.body.files) ? req.body.files.slice(0, 50) : [];
     if (!L.length) throw fail("Choisis au moins un média du coffre");
@@ -262,6 +276,7 @@ module.exports = function mount(app, db, auth, admin, { gest, notify, dataDir })
         else if (b.move === "down" && i < L.length - 1) { db.prepare("UPDATE twizz_posts SET pos = ? WHERE id = ?").run(L[i + 1].pos, id); db.prepare("UPDATE twizz_posts SET pos = ? WHERE id = ?").run(L[i].pos, L[i + 1].id); } } }
     return { ok: true }; }));
   app.post("/api/pub/posts/:id/publish", auth, mgr, wrap(async req => publish(parseInt(req.params.id, 10), req.user.id, "manual")));
+  app.post("/api/pub/posts/:id/recycle", auth, mgr, wrap(async req => recycle(parseInt(req.params.id, 10), req.user.id, "manual")));
 
   // vidéos de présentation : envoi du fichier depuis le téléphone ou l'ordinateur (gardé sur le serveur jusqu'à sa mise en ligne)
   app.post("/api/pub/:cid/pres/upload", auth, mgr, async (req, res) => {
