@@ -1403,7 +1403,7 @@ function paintAI() {
 }
 
 /* ================= tags des fans (sur le site seulement, rien n'est écrit chez Twizz) ================= */
-let TAGS = null, TAGF = "", tagT = 0, TNEW = 0, TPOP = false, TPOPX = null; const FTAGS = {}, TAGAI = {};
+let TAGS = null, TAGF = "", tagT = 0, TNEW = 0, TPOP = false, TPOPX = null; const FTAGS = {};
 const SWT = ["#5fd3a2", "#7db4ff", "#b49cff", "#ff8fb1", "#f0b54a", "#6fe0e0", "#ff8a8a"];
 const lowc = x => String(x || "").toLocaleLowerCase("fr");
 const tagById = id => TAGS && TAGS.cid === CID ? TAGS.tags.find(t => t.id === id) : null;
@@ -1443,7 +1443,7 @@ function tagPop() {
   if (!CUR || TPOP) return; const c = CUR, k = CID + "|" + c.fan.id, B = $("fTg"), first1 = (c.fan.name || "").split(" ")[0]; let q = "", col = 0;
   TPOP = true; $("tAdd").classList.add("on");
   const P = document.createElement("div"); P.className = "tpop"; B.appendChild(P);
-  P.innerHTML = `<div class="tpin">${SV(IC.search, 15)}<input id="tpQ" maxlength="30" placeholder="Chercher ou créer un tag…" autocomplete="off"><span class="kbd">Esc</span></div><div id="tpAI"></div><div class="tpg"><span class="cap">Tags de l'équipe</span><div id="tpL"></div></div><div id="tpMk"></div><div class="tph">${SV(IC.bolt, 11, 2.4)}<span>Les tags avec l'éclair se posent tout seuls, selon les règles du manager.</span></div>`;
+  P.innerHTML = `<div class="tpin">${SV(IC.search, 15)}<input id="tpQ" maxlength="30" placeholder="Chercher ou créer un tag…" autocomplete="off"><span class="kbd">Esc</span></div><div class="tpg"><span class="cap">Tags de l'équipe</span><div id="tpL"></div></div><div id="tpMk"></div><div class="tph">${SV(IC.bolt, 11, 2.4)}<span>Les tags avec l'éclair se posent tout seuls, selon les règles du manager.</span></div>`;
   const out = e => { if (!P.contains(e.target) && !(e.target.closest && e.target.closest("#tAdd"))) close(); };
   const close = silent => { if (!TPOP) return; TPOP = false; TPOPX = null; P.remove(); document.removeEventListener("mousedown", out, true); if (silent !== true) paintTags(); };
   TPOPX = close; setTimeout(() => document.addEventListener("mousedown", out, true));
@@ -1461,19 +1461,10 @@ function tagPop() {
     $("tpMk").querySelectorAll("[data-c]").forEach(b => b.onclick = () => { col = +b.dataset.c; list(); $("tpQ").focus(); });
     if ($("tpGo")) $("tpGo").onclick = () => add({ name: q.trim(), color: SWT[col] });
   }
-  function ai() {
-    const box = $("tpAI"); if (!box) return; const A = TAGAI[c.id];
-    if (A === undefined) { TAGAI[c.id] = null; api2(`/tag-ai/${enc(c.id)}`, { body: { fan: c.fan.id } }).then(r => { TAGAI[c.id] = r; }).catch(e => { TAGAI[c.id] = { tags: [], error: e.message }; }).finally(() => { if (TPOP && CUR === c) ai(); }); }
-    if (!TAGAI[c.id]) { box.innerHTML = `<div class="tpg"><span class="cap">${SV(IC.spark, 11, 2.4)}L'IA lit la conversation…</span><div class="tsk"></div><div class="tsk" style="animation-delay:.1s"></div></div>`; return; }
-    const R = TAGAI[c.id], cur = FTAGS[k] ? FTAGS[k].tags : [], L = R.tags.filter(x => !cur.some(t => lowc(t.name) === lowc(x.name)));
-    box.innerHTML = L.length ? `<div class="tpg"><span class="cap">${SV(IC.spark, 11, 2.4)}Suggéré par l'IA d'après la conversation</span>${L.map((x, i) => `<button class="tsg" data-i="${i}" style="--c:${esc(x.color || SWT[(i + 3) % SWT.length])};animation-delay:${i * .07}s"><span class="st"><i class="d"></i>${esc(x.name)}${x.id ? "" : '<span class="nwt">nouveau tag</span>'}</span><small>${esc(x.why)}</small><span class="pl">+</span></button>`).join("")}</div>`
-      : R.error ? `<div class="tph">L'IA n'a pas pu lire la conversation : ${esc(R.error)}</div>` : "";
-    box.querySelectorAll("[data-i]").forEach(b => b.onclick = () => { const x = L[+b.dataset.i]; add(x.id ? { add: x.id } : { name: x.name, color: SWT[(+b.dataset.i + 3) % SWT.length] }); });
-  }
   $("tpQ").oninput = () => { q = $("tpQ").value; list(); };
   $("tpQ").onkeydown = e => { if (e.key === "Escape") { e.preventDefault(); close(); }
     else if (e.key === "Enter") { e.preventDefault(); const t = q.trim(); if (!t) return; const f = matchL()[0], exact = (TAGS ? TAGS.tags : []).some(x => lowc(x.name) === lowc(t)); if (f) add({ add: f.id }); else if (!exact) add({ name: t, color: SWT[col] }); } };
-  list(); ai(); $("tpQ").focus();
+  list(); $("tpQ").focus();
 }
 
 /* ================= historique d'un fan ================= */
