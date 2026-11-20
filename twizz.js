@@ -24,6 +24,7 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     CREATE TABLE IF NOT EXISTS twizz_sent (id INTEGER PRIMARY KEY, msg_id TEXT, conv_id TEXT, fan_id TEXT, creator_id TEXT, user_id INTEGER, price REAL, at INTEGER);
     CREATE INDEX IF NOT EXISTS twizz_sent_conv ON twizz_sent(conv_id, at);`);
   if (!db.prepare("PRAGMA table_info(twizz_creators)").all().some(x => x.name === "note")) db.exec("ALTER TABLE twizz_creators ADD COLUMN note TEXT");
+  if (!db.prepare("PRAGMA table_info(twizz_creators)").all().some(x => x.name === "username")) db.exec("ALTER TABLE twizz_creators ADD COLUMN username TEXT");   // pseudo Twizz (connexion au compte de la créatrice)
   for (const [c, t] of [["source", "TEXT"], ["twizz_id", "TEXT"]])
     if (!db.prepare("PRAGMA table_info(sales)").all().some(x => x.name === c)) db.exec(`ALTER TABLE sales ADD COLUMN ${c} ${t}`);
   const S = {
@@ -124,7 +125,7 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     const id = String(c.creatorId || d._id || c._id || c.id || "");
     const full = [o.firstName || o.creatorFirstName, o.lastName || o.creatorLastName].filter(Boolean).join(" ").trim();
     const label = String(d.name || c.name || full || o.username || id).trim();
-    return { id, label, note: String(d.note || c.note || "").slice(0, 2000), alts: [d.name, d.firstName, d.username, full].filter(Boolean).map(String) };
+    return { id, label, username: String(d.username || o.username || "").trim(), note: String(d.note || c.note || "").slice(0, 2000), alts: [d.name, d.firstName, d.username, full].filter(Boolean).map(String) };
   };
   async function loadCreators() {
     const j = await get("/business/creators");
@@ -134,8 +135,8 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     const guess = c => { for (const a of c.alts) { const A = norm(a); if (!A) continue; const m = models.find(x => norm(x.name) && (A === norm(x.name) || A.startsWith(norm(x.name)) || norm(x.name).startsWith(A))); if (m) return m.id; } return null; };
     list.forEach(c => {
       const ex = db.prepare("SELECT * FROM twizz_creators WHERE twizz_id = ?").get(c.id);
-      if (ex) return db.prepare("UPDATE twizz_creators SET label = ?, note = ?, model_id = COALESCE(model_id, ?), seen_at = ? WHERE twizz_id = ?").run(c.label, c.note, guess(c), now(), c.id);
-      db.prepare("INSERT INTO twizz_creators (twizz_id, label, note, model_id, seen_at) VALUES (?,?,?,?,?)").run(c.id, c.label, c.note, guess(c), now());
+      if (ex) return db.prepare("UPDATE twizz_creators SET label = ?, note = ?, username = COALESCE(NULLIF(?, ''), username), model_id = COALESCE(model_id, ?), seen_at = ? WHERE twizz_id = ?").run(c.label, c.note, c.username, guess(c), now(), c.id);
+      db.prepare("INSERT INTO twizz_creators (twizz_id, label, note, username, model_id, seen_at) VALUES (?,?,?,?,?,?)").run(c.id, c.label, c.note, c.username || null, guess(c), now());
     });
     return list;
   }

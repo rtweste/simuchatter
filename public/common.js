@@ -99,6 +99,8 @@ const MODULES = [
     desc: "Les défis de la semaine : objectifs d'équipe ou perso, progression et récompenses." },
   { id: "scripts", label: "Scripts", href: "/scripts", icon: "doc", section: "Manager", roles: ["admin"], nodock: ["admin"], hide: ["assistant"],
     desc: "La bibliothèque de messages tout prêts des chatters : créer, modifier, importer depuis Twizz, voir ceux qui marchent." },
+  { id: "publications", label: "Publications", href: "/publications", icon: "film", section: "Manager", roles: ["admin"], nodock: ["admin"], hide: ["assistant"],
+    desc: "Le feed et les vidéos de présentation des créatrices sur Twizz : file d'attente et publication automatique." },
   { id: "tags", label: "Tags", href: "/tags", icon: "tag", section: "Manager", roles: ["admin"], nodock: ["admin"], hide: ["assistant"],
     desc: "Les tags des fans : règles qui les posent tout seuls (gros payeur, nouveau, inactif…), tags de l'équipe et ce que valent leurs fans." },
   { id: "admin", label: "Gestion", href: "/admin", icon: "team", section: "Manager", roles: ["admin"],
@@ -118,7 +120,7 @@ const RKOF = me => me.rk || (me.role === "admin" ? "manager" : me.role);
 const MGR_GROUPS = {
   "g-ventes": { label: "Ventes", icon: "receipt", tabs: [["ventes", "Ventes"], ["compta", "Compta"]] },
   "g-msg": { label: "Messagerie", short: "Twizz", icon: "bubbles", tabs: [["messagerie", "Conversations"], ["scripts", "Scripts"], ["tags", "Tags"]] },
-  "g-crea": { label: "Créatrices", icon: "spark", nodock: 1, tabs: [["creatrices", "Fiches"], ["admin#crea", "Gestion des créatrices"]] },
+  "g-crea": { label: "Créatrices", icon: "spark", nodock: 1, tabs: [["creatrices", "Fiches"], ["publications", "Publications"], ["admin#crea", "Gestion des créatrices"]] },
   "g-form": { label: "Formation", icon: "gauge", nodock: 1, tabs: [["simu", "Simu Chatter"], ["tests", "Tests d'aptitude"]] },
   "g-motiv": { label: "Motivation", icon: "flag", nodock: 1, tabs: [["defis", "Défis"], ["admin#stel", "Stella's"], ["boutique", "Boutique"], ["parrainage", "Parrainage"]] },
   "g-reg": { label: "Réglages agence", short: "Réglages", icon: "crown", nodock: 1, tabs: [["admin#reg", "Agence"], ["fondateur", "Fondateur"]] }

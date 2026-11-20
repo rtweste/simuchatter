@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Publications — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="stylesheet" href="/style.css">
+<style>
+.main-area.pbm{padding:0!important}
+.pb-w{position:relative;min-height:100dvh;padding:26px 28px 70px;background:radial-gradient(900px 300px at 30% -120px,rgba(95,211,162,.07),transparent 70%),#0a0a0a;box-sizing:border-box}
+.up{animation:up .7s cubic-bezier(.16,1,.3,1) both}@keyframes up{from{opacity:0;transform:translateY(12px);filter:blur(4px)}}
+.cap{font:800 10px Inter;letter-spacing:.2em;text-transform:uppercase;color:#6a6a6a}
+.met{font-style:italic;background:linear-gradient(100deg,#fff,#8a8a8a 55%,#e6e6e6);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.08em}
+.hd{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap}
+.hd h1{margin:6px 0 0;font:900 38px Inter;letter-spacing:-.045em;line-height:1.02}
+.lead{font:500 13px/1.55 Inter;color:#7a7a7a;max-width:760px;margin:8px 0 18px}.lead b{color:#cfcfcf}
+.auto{margin-left:auto;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px;border-radius:16px;background:#111;border:1px solid #232323}
+.auto b{display:block;font:800 13px Inter;color:#eee}.auto small{display:block;font:600 11.5px Inter;color:#7a7a7a;margin-top:2px}
+.sw{flex:none;width:44px;height:26px;border-radius:999px;border:0;background:#2a2a2a;position:relative;cursor:pointer;transition:background .25s}.sw i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#bbb;transition:transform .25s,background .25s}
+.sw.on{background:#3ddc97}.sw.on i{transform:translateX(18px);background:#fff}.sw:disabled{opacity:.5;cursor:not-allowed}
+.crs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px;margin-bottom:14px}.crs::-webkit-scrollbar{display:none}
+.crs button{flex:none;display:flex;align-items:center;gap:9px;height:44px;padding:4px 16px 4px 4px;border-radius:999px;border:1px solid #232323;background:#121212;color:#bbb;font:800 13px Inter;cursor:pointer}
+.crs button .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#1d1d1d;border:1px solid #333;font:900 13px Inter;color:#eee}
+.crs button.on{background:#f5f5f5;color:#0a0a0a;border-color:#f5f5f5}.crs button.on .av{background:#0a0a0a;color:#fff;border-color:#0a0a0a}
+.crs button .q{min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#2a2a2a;color:#ddd;font:900 10px/18px Inter;text-align:center}.crs button.on .q{background:#0a0a0a;color:#fff}
+.pn{position:relative;border-radius:20px;background:linear-gradient(180deg,#101010,#0c0c0c);border:1px solid #1c1c1c;padding:16px 18px;margin-bottom:14px}
+.pn h3{margin:0;font:900 17px Inter;letter-spacing:-.02em}.pn h3 em{font-style:italic;color:#9a9a9a}
+.ph{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}.ph .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn{height:38px;padding:0 14px;border-radius:12px;border:1px solid #262626;background:#151515;color:#e8e8e8;font:800 12.5px Inter;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.btn:hover{background:#1c1c1c}.btn.w{background:#f2f2f2;color:#0a0a0a;border-color:#f2f2f2}.btn.g{background:rgba(95,211,162,.12);color:#5fd3a2;border-color:rgba(95,211,162,.4)}.btn.r{color:#ff8a8a}
+.btn:disabled{opacity:.5;cursor:not-allowed}.btn.sm{height:32px;padding:0 10px;font-size:12px;border-radius:10px}
+.cn{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.cn .dot{width:10px;height:10px;border-radius:50%;background:#555;flex:none}.cn .dot.ok{background:#3ddc97;box-shadow:0 0 10px #3ddc97}.cn .dot.ko{background:#ff6b6b}
+.cn b{font:800 14px Inter}.cn small{display:block;font:600 12px/1.45 Inter;color:#8a8a8a;margin-top:2px}.cn code{font:700 12px ui-monospace,Menlo,monospace;color:#e8e8e8;background:#1a1a1a;border:1px solid #2a2a2a;padding:1px 6px;border-radius:6px}
+.tabs{display:inline-flex;padding:4px;border-radius:14px;background:#111;border:1px solid #222;margin:4px 0 14px}.tabs button{height:36px;padding:0 16px;border:0;border-radius:10px;background:none;color:#9a9a9a;font:800 13px Inter;cursor:pointer}.tabs button.on{background:#f2f2f2;color:#0a0a0a}
+.times{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.tm{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 6px 0 12px;border-radius:10px;background:#181818;border:1px solid #2a2a2a;font:800 13px Inter}
+.tm button{width:22px;height:22px;border-radius:7px;border:0;background:#262626;color:#bbb;cursor:pointer;font:900 12px Inter}
+.inp{width:auto;max-width:130px;flex:none;height:32px;border-radius:10px;border:1px solid #2a2a2a;background:#141414;color:#eee;font:700 13px Inter;padding:0 10px;color-scheme:dark}
+.nx{font:600 12.5px Inter;color:#8a8a8a;margin-top:10px}.nx b{color:#5fd3a2}
+.it{display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:12px;align-items:start;padding:10px;border-radius:16px;background:#121212;border:1px solid #1f1f1f;margin-top:8px}
+.it.fail{border-color:rgba(255,107,107,.45);background:#1a1010}
+.th{width:84px;height:84px;border-radius:12px;background:#1c1c1c center/cover no-repeat;position:relative;overflow:hidden}.th video{width:100%;height:100%;object-fit:cover}
+.th .k{position:absolute;left:5px;top:5px;padding:2px 6px;border-radius:6px;background:rgba(0,0,0,.6);font:800 10px Inter;color:#fff}
+.it textarea{width:100%;box-sizing:border-box;min-height:60px;resize:vertical;border-radius:12px;border:1px solid #262626;background:#0f0f0f;color:#eee;font:500 13.5px/1.45 Inter;padding:9px 10px;outline:none}
+.it textarea:focus{border-color:#3a3a3a}.it .meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:7px;font:700 12px Inter;color:#8a8a8a}
+.it .er{margin-top:6px;font:700 12px/1.4 Inter;color:#ff8a8a}
+.it .ac{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.mini{display:inline-flex;align-items:center;gap:7px;cursor:pointer;user-select:none}.mini .sw{width:34px;height:20px}.mini .sw i{width:14px;height:14px}.mini .sw.on i{transform:translateX(14px)}
+.hs{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid #181818}.hs:first-child{border-top:0}.hs .th{width:52px;height:52px;border-radius:10px}.hs .t{min-width:0;flex:1}
+.hs .t b{display:block;font:700 13px Inter;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hs .t small{font:600 11.5px Inter;color:#7a7a7a}
+.emp{padding:18px;text-align:center;font:600 13px/1.5 Inter;color:#6f6f6f}
+.badge{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:7px;font:900 10.5px Inter;letter-spacing:.04em}
+.badge.ACTIVE{background:rgba(61,220,151,.14);color:#3ddc97}.badge.PENDING{background:rgba(240,181,74,.14);color:#f0b54a}.badge.REJECTED{background:rgba(255,107,107,.14);color:#ff8a8a}.badge.EXPIRED{background:#1f1f1f;color:#8a8a8a}
+.st{display:grid;grid-template-columns:52px minmax(0,1fr) repeat(3,auto);gap:12px;align-items:center;padding:9px 0;border-top:1px solid #181818}.st:first-child{border-top:0}
+.st .n{font:900 15px Inter;text-align:right}.st .n small{display:block;font:700 10.5px Inter;color:#7a7a7a}.st .lo{color:#f0b54a}
+.bar{height:6px;border-radius:4px;background:#1f1f1f;overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;width:0;background:#5fd3a2;transition:width .2s}
+/* coffre */
+.md{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.75);display:grid;place-items:center;padding:18px}
+.mb{width:min(980px,100%);max-height:90dvh;display:flex;flex-direction:column;border-radius:22px;background:#0d0d0d;border:1px solid #262626;overflow:hidden}
+.mh{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #1c1c1c}.mh h3{margin:0;font:900 18px Inter}.mh .r{margin-left:auto;display:flex;gap:8px}
+.alb{display:flex;gap:8px;overflow-x:auto;padding:10px 16px;border-bottom:1px solid #1c1c1c;scrollbar-width:none}.alb button{flex:none;height:34px;padding:0 12px;border-radius:10px;border:1px solid #262626;background:#141414;color:#bbb;font:800 12.5px Inter;cursor:pointer}.alb button.on{background:#f2f2f2;color:#0a0a0a}
+.gr{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;padding:14px 16px;align-content:start}
+.gi{position:relative;aspect-ratio:1;border-radius:14px;background:#1a1a1a center/cover no-repeat;border:2px solid transparent;cursor:pointer;overflow:hidden}.gi.on{border-color:#5fd3a2;box-shadow:0 0 0 3px rgba(95,211,162,.25)}
+.gi .k{position:absolute;left:6px;top:6px;padding:2px 6px;border-radius:6px;background:rgba(0,0,0,.6);font:800 10px Inter;color:#fff}.gi .c{position:absolute;right:6px;top:6px;width:22px;height:22px;border-radius:50%;background:#5fd3a2;color:#05261a;font:900 12px/22px Inter;text-align:center;display:none}.gi.on .c{display:block}
+.mf{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid #1c1c1c}.mf .r{margin-left:auto;display:flex;gap:8px}
+@media(max-width:860px){.pb-w{padding:16px 12px 120px}.hd h1{font-size:28px}.auto{margin-left:0;width:100%;box-sizing:border-box}.it{grid-template-columns:64px minmax(0,1fr)}.it .ac{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}.th{width:64px;height:64px}
+  .st{grid-template-columns:44px minmax(0,1fr) auto auto}.st .n:last-child{display:none}.md{padding:0}.mb{max-height:100dvh;height:100dvh;border-radius:0}.gr{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area pbm">
+<div class="pb-w" id="w">
+  <div class="hd up"><div><div class="cap">Créatrices</div><h1>Publications <em class="met">Twizz.</em></h1></div><div class="auto" id="auto" hidden></div></div>
+  <p class="lead up" style="animation-delay:.04s">Le feed et les vidéos de présentation de chaque créatrice, publiés depuis le site avec <b>son propre compte Twizz</b>. Tu remplis une file, le site publie aux heures choisies quand la publication automatique est allumée.</p>
+  <div class="crs up" id="crs" style="animation-delay:.06s"></div>
+  <div id="body"></div>
+</div>
+</main>
+</div>
+<script src="/common.js"></script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const SV = (p, s = 15, w = 2.2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const I = { up: '<path d="M12 19V5M6 11l6-6 6 6"/>', down: '<path d="M12 5v14M6 13l6 6 6-6"/>', trash: '<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>', send: '<path d="M5 12h14M13 6l6 6-6 6"/>', plus: '<path d="M12 5v14M5 12h14"/>', vault: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>', video: '<rect x="3" y="5" width="13" height="14" rx="2.5"/><path d="M16 10l5-3v10l-5-3z"/>', refresh: '<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/>' };
+let D = null, CID = null, TAB = "feed", ME = null;
+try { CID = localStorage.getItem("pb:cid"); TAB = localStorage.getItem("pb:tab") || "feed"; } catch (e) {}
+const when = ms => { if (!ms) return "—"; const d = new Date(ms), t = new Date(), y = new Date(t.getTime() + 864e5), same = (a, b) => a.toDateString() === b.toDateString();
+  const hm = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }); return same(d, t) ? `aujourd'hui à ${hm}` : same(d, y) ? `demain à ${hm}` : d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) + " à " + hm; };
+const ago = ms => { if (!ms) return ""; const m = Math.round((Date.now() - ms) / 6e4); return m < 1 ? "à l'instant" : m < 60 ? `il y a ${m} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }); };
+const cur = () => D && D.creators.find(c => c.id === CID);
+const mb = n => (n / 1048576).toFixed(n > 10485760 ? 0 : 1) + " Mo";
+
+async function load() {
+  D = await api("/api/pub", { fresh: true });
+  if (!D.creators.length) { $("crs").innerHTML = ""; $("body").innerHTML = `<div class="pn emp">Aucune créatrice Twizz : teste d'abord la connexion Twizz dans Réglages fondateur.</div>`; return; }
+  if (!cur()) CID = D.creators[0].id;
+  paintAuto(); paintCrs(); await paintBody();
+}
+function paintAuto() {
+  const A = $("auto"); A.hidden = false;
+  A.innerHTML = `<div><b>Publication automatique</b><small>${D.auto ? "Allumée : le site publie aux heures choisies." : "Coupée : rien ne part tout seul, seulement à la main."}${D.founder ? "" : " Réglée par le fondateur."}</small></div><button class="sw ${D.auto ? "on" : ""}" id="autoSw" ${D.founder ? "" : "disabled"} aria-label="Publication automatique"><i></i></button>`;
+  if (D.founder) $("autoSw").onclick = async () => { if (!D.auto && !confirm("Allumer la publication automatique ?\n\nLe site publiera tout seul sur le feed des créatrices aux heures choisies, en prenant la file dans l'ordre.")) return;
+    try { const r = await api("/api/pub/auto", { body: { on: !D.auto } }); D.auto = r.auto; notify(D.auto ? "Publication automatique allumée" : "Publication automatique coupée", "", D.auto ? "ok" : "info"); await load(); } catch (e) { notify("Erreur", e.message, "err"); } };
+}
+function paintCrs() {
+  $("crs").innerHTML = D.creators.map(c => `<button data-c="${esc(c.id)}" class="${c.id === CID ? "on" : ""}"><span class="av">${esc((c.label || "?")[0].toUpperCase())}</span>${esc(c.label)}${c.queue ? `<span class="q">${c.queue}</span>` : ""}</button>`).join("");
+  $("crs").querySelectorAll("[data-c]").forEach(b => b.onclick = () => { CID = b.dataset.c; try { localStorage.setItem("pb:cid", CID); } catch (e) {} paintCrs(); paintBody(); });
+}
+function connHtml(c) {
+  const st = c.stat || {};
+  if (!c.username) return `<div class="cn"><span class="dot ko"></span><div><b>Pseudo Twizz inconnu</b><small>Le site ne connaît pas encore le pseudo de ${esc(c.label)}. Teste la connexion Twizz dans Réglages fondateur pour le récupérer.</small></div></div>`;
+  if (!c.hasPassword) return `<div class="cn"><span class="dot ko"></span><div><b>Compte de ${esc(c.label)} pas encore relié</b><small>Ajoute dans Railway la variable <code>${esc(c.varName)}</code> avec le mot de passe Twizz de @${esc(c.username)}, puis teste la connexion.</small></div><button class="btn sm" id="tst" style="margin-left:auto">Tester la connexion</button></div>`;
+  const ok = st.ok === true, ko = st.ok === false;
+  return `<div class="cn"><span class="dot ${ok ? "ok" : ko ? "ko" : ""}"></span><div><b>${ok ? `Compte @${esc(c.username)} relié` : ko ? "Connexion au compte impossible" : `Compte @${esc(c.username)} pas encore testé`}</b><small>${ko ? esc(st.error || "") : ok ? `Dernier contact avec Twizz ${ago(st.at)}.` : "Mot de passe présent dans Railway."}</small></div><button class="btn sm" id="tst" style="margin-left:auto">Tester la connexion</button></div>`;
+}
+async function paintBody() {
+  const c = cur(); if (!c) return;
+  $("body").innerHTML = `<div class="pn up" id="conn">${connHtml(c)}</div>
+    <div class="tabs"><button data-t="feed" class="${TAB === "feed" ? "on" : ""}">Feed</button><button data-t="pres" class="${TAB === "pres" ? "on" : ""}">Vidéos de présentation</button></div><div id="tab"><div class="pn emp">Chargement…</div></div>`;
+  const tb = $("tst"); if (tb) tb.onclick = async () => { tb.disabled = true; tb.textContent = "Connexion…"; try { const r = await api(`/api/pub/${enc(c.id)}/test`, { body: {} }); notify("Compte relié", `Connecté à @${r.username}`, "ok"); } catch (e) { notify("Connexion impossible", e.message, "err"); } await load(); };
+  document.querySelectorAll(".tabs [data-t]").forEach(b => b.onclick = () => { TAB = b.dataset.t; try { localStorage.setItem("pb:tab", TAB); } catch (e) {} document.querySelectorAll(".tabs [data-t]").forEach(x => x.classList.toggle("on", x === b)); paintTab(); });
+  paintTab();
+}
+const enc = encodeURIComponent;
+function paintTab() { return TAB === "pres" ? paintPres() : paintFeed(); }
+
+/* ---------------- feed ---------------- */
+async function paintFeed() {
+  const c = cur(); let P; try { P = await api(`/api/pub/${enc(c.id)}/posts`, { fresh: true }); } catch (e) { $("tab").innerHTML = `<div class="pn emp">${esc(e.message)}</div>`; return; }
+  const R = c.rule, nx = P.summary.next;
+  $("tab").innerHTML = `
+    <div class="pn"><div class="ph"><h3>Rythme <em>de publication</em></h3><div class="r"><label class="mini"><span>${R.on ? "Activé" : "Désactivé"} pour ${esc(c.label)}</span><button class="sw ${R.on ? "on" : ""}" id="rOn" aria-label="Activer le rythme"><i></i></button></label></div></div>
+      <div class="times">Tous les jours à ${R.times.map(t => `<span class="tm">${t}<button data-rm="${t}" aria-label="Retirer ${t}">✕</button></span>`).join("") || "<span style='color:#7a7a7a'>aucune heure</span>"}
+        <input class="inp" type="time" id="tAdd" aria-label="Ajouter une heure"><button class="btn sm" id="tAddB">${SV(I.plus, 13)}Ajouter</button></div>
+      <div class="nx">${!D.auto ? "La publication automatique est coupée par le fondateur : la file ne part qu'à la main." : !R.on ? "Rythme désactivé pour cette créatrice." : nx ? `Prochaine publication : <b>${when(nx)}</b>${P.queue.filter(x => x.status === "queued").length ? "" : " · <span style='color:#f0b54a'>la file est vide</span>"}` : "Aucune heure prévue."}</div></div>
+    <div class="pn"><div class="ph"><h3>File <em>d'attente</em></h3><div class="r"><button class="btn w" id="addB">${SV(I.vault)}Ajouter depuis le coffre</button></div></div><div id="q"></div></div>
+    <div class="pn"><div class="ph"><h3>Déjà <em>publiées</em></h3></div><div id="h"></div></div>`;
+  $("q").innerHTML = P.queue.length ? P.queue.map((p, i) => `<div class="it ${p.status === "failed" ? "fail" : ""}" data-id="${p.id}">
+      <div class="th" style="background-image:url('${esc(p.file.thumb || "")}')"><span class="k">${p.file.kind === "video" ? "Vidéo" : "Photo"}</span></div>
+      <div><textarea data-tx placeholder="Description de la publication (facultatif)" maxlength="2000">${esc(p.text || "")}</textarea>
+        <div class="meta"><label class="mini"><button class="sw ${p.blurred ? "on" : ""}" data-bl aria-label="Flouter"><i></i></button>Flouté (réservé aux abonnés)</label><span>${p.status === "publishing" ? "Publication en cours…" : `N° ${i + 1} dans la file`}</span></div>
+        ${p.status === "failed" ? `<div class="er">Échec : ${esc(p.error || "")}</div>` : ""}</div>
+      <div class="ac">${p.status === "failed" ? `<button class="btn sm g" data-retry>Remettre dans la file</button>` : `<button class="btn sm" data-mv="up" ${i === 0 ? "disabled" : ""}>${SV(I.up, 13)}</button><button class="btn sm" data-mv="down" ${i === P.queue.length - 1 ? "disabled" : ""}>${SV(I.down, 13)}</button>`}
+        <button class="btn sm w" data-pub ${p.status === "publishing" ? "disabled" : ""}>${SV(I.send, 13)}Publier</button><button class="btn sm r" data-rm aria-label="Retirer de la file">${SV(I.trash, 13)}</button></div></div>`).join("")
+    : `<div class="emp">La file est vide. Ajoute des photos ou vidéos du coffre de ${esc(c.label)}.</div>`;
+  $("h").innerHTML = P.history.length ? P.history.map(p => `<div class="hs"><div class="th" style="background-image:url('${esc(p.file.thumb || "")}')"></div><div class="t"><b>${esc(p.text || "Sans description")}</b><small>${new Date(p.published_at).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · ${p.via === "auto" ? "automatique" : "à la main" + (p.by_name ? " par " + esc(p.by_name) : "")}${p.blurred ? " · flouté" : ""}</small></div></div>`).join("")
+    : `<div class="emp">Rien de publié depuis le site pour l'instant.</div>`;
+  const rule = async b => { try { await api(`/api/pub/${enc(c.id)}/rule`, { body: b }); await load(); } catch (e) { notify("Erreur", e.message, "err"); } };
+  $("rOn").onclick = () => rule({ on: !R.on });
+  $("tAddB").onclick = () => { const v = $("tAdd").value; if (!v) return notify("Choisis une heure", "", "info"); rule({ times: [...R.times, v] }); };
+  $("tab").querySelectorAll("[data-rm]").forEach(b => { if (b.closest(".tm")) b.onclick = () => rule({ times: R.times.filter(t => t !== b.dataset.rm) }); });
+  $("addB").onclick = () => vault(c);
+  $("q").querySelectorAll(".it").forEach(el => { const id = el.dataset.id, post = b => api(`/api/pub/posts/${id}`, { body: b });
+    const tx = el.querySelector("[data-tx]"); let t0 = tx.value; tx.onblur = async () => { if (tx.value === t0) return; try { await post({ text: tx.value }); t0 = tx.value; notify("Description enregistrée", "", "ok"); } catch (e) { notify("Erreur", e.message, "err"); } };
+    el.querySelector("[data-bl]").onclick = async e => { const on = !e.currentTarget.classList.contains("on"); try { await post({ blurred: on }); e.currentTarget.classList.toggle("on", on); } catch (er) { notify("Erreur", er.message, "err"); } };
+    el.querySelectorAll("[data-mv]").forEach(b => b.onclick = async () => { await post({ move: b.dataset.mv }).catch(e => notify("Erreur", e.message, "err")); paintFeed(); });
+    const rt = el.querySelector("[data-retry]"); if (rt) rt.onclick = async () => { await post({ retry: true }).catch(e => notify("Erreur", e.message, "err")); paintFeed(); };
+    el.querySelector(".ac [data-rm]").onclick = async () => { if (!confirm("Retirer cette publication de la file ?")) return; await post({ remove: true }).catch(e => notify("Erreur", e.message, "err")); await load(); };
+    el.querySelector("[data-pub]").onclick = async b => { if (tx.value !== t0) { try { await post({ text: tx.value }); t0 = tx.value; } catch (e) {} }
+      if (!confirm(`Publier maintenant sur le feed de ${c.label} ?\n\nLa publication sera visible tout de suite sur Twizz.`)) return;
+      const bt = b.currentTarget; bt.disabled = true; bt.textContent = "Publication…";
+      try { await api(`/api/pub/posts/${id}/publish`, { body: {} }); notify("Publié sur Twizz", `Sur le feed de ${c.label}`, "ok"); } catch (e) { notify("Publication impossible", e.message, "err"); } await load(); };
+  });
+}
+
+/* ---------------- coffre (choix des médias) ---------------- */
+async function vault(c) {
+  const m = document.createElement("div"); m.className = "md"; document.body.appendChild(m);
+  const SEL = new Map(); let albums = [], alb = null, files = [];
+  const close = () => m.remove(); m.onclick = e => { if (e.target === m) close(); };
+  const paint = () => {
+    m.innerHTML = `<div class="mb"><div class="mh"><h3>Coffre de ${esc(c.label)}</h3><div class="r"><button class="btn sm" data-x>Fermer</button></div></div>
+      <div class="alb">${albums.filter(a => a.type !== "audio").map(a => `<button data-a="${esc(a.id)}" class="${alb === a.id ? "on" : ""}">${esc(a.name)} · ${a.count}</button>`).join("") || "<span style='color:#777;font:600 13px Inter'>Aucun album</span>"}</div>
+      <div class="gr">${files.length ? files.map(f => `<div class="gi ${SEL.has(f.id) ? "on" : ""}" data-f="${esc(f.id)}" style="background-image:url('${esc(f.thumb || "")}')"><span class="k">${f.kind === "video" ? "Vidéo" : "Photo"}</span><span class="c">✓</span></div>`).join("") : `<div class="emp" style="grid-column:1/-1">${alb ? "Pas de photo ni de vidéo dans cet album." : "Choisis un album."}</div>`}</div>
+      <div class="mf"><span style="font:700 13px Inter;color:#9a9a9a">${SEL.size} média${SEL.size > 1 ? "s" : ""} choisi${SEL.size > 1 ? "s" : ""}</span><div class="r"><button class="btn w" data-ok ${SEL.size ? "" : "disabled"}>Ajouter à la file</button></div></div></div>`;
+    m.querySelector("[data-x]").onclick = close;
+    m.querySelectorAll("[data-a]").forEach(b => b.onclick = () => openAlb(b.dataset.a));
+    m.querySelectorAll("[data-f]").forEach(g => g.onclick = () => { const f = files.find(x => x.id === g.dataset.f); if (SEL.has(f.id)) SEL.delete(f.id); else SEL.set(f.id, { ...f, album: alb }); paint(); });
+    const ok = m.querySelector("[data-ok]"); if (ok) ok.onclick = async () => { ok.disabled = true;
+      try { await api(`/api/pub/${enc(c.id)}/posts`, { body: { files: [...SEL.values()].map(f => ({ id: f.id, kind: f.kind, thumb: f.thumb, name: f.name, album: f.album })) } }); notify("Ajouté à la file", `${SEL.size} publication${SEL.size > 1 ? "s" : ""} pour ${c.label}`, "ok"); close(); await load(); }
+      catch (e) { notify("Erreur", e.message, "err"); ok.disabled = false; } };
+  };
+  async function openAlb(id) { alb = id; files = []; paint(); try { const r = await api(`/api/twizz/inbox/${enc(c.id)}/vault/${enc(id)}`); files = (r.files || []).filter(f => f.kind === "image" || f.kind === "video"); } catch (e) { notify("Coffre", e.message, "err"); } paint(); }
+  m.innerHTML = `<div class="mb"><div class="emp">Ouverture du coffre…</div></div>`;
+  try { const r = await api(`/api/twizz/inbox/${enc(c.id)}/vault`); albums = r.albums || []; } catch (e) { notify("Coffre", e.message, "err"); }
+  const first = albums.find(a => a.type !== "audio"); if (first) await openAlb(first.id); else paint();
+}
+
+/* ---------------- vidéos de présentation ---------------- */
+async function paintPres(stats) {
+  const c = cur(); let P; try { P = await api(`/api/pub/${enc(c.id)}/pres${stats ? "?stats=" + stats : ""}`, { fresh: true }); } catch (e) { $("tab").innerHTML = `<div class="pn emp">${esc(e.message)}</div>`; return; }
+  const R = c.presRule, last = P.sent[0];
+  $("tab").innerHTML = `
+    <div class="pn"><div class="ph"><h3>Renouvellement <em>automatique</em></h3><div class="r"><label class="mini"><span>${R.on ? "Activé" : "Désactivé"}</span><button class="sw ${R.on ? "on" : ""}" id="pOn" aria-label="Renouveler automatiquement"><i></i></button></label></div></div>
+      <div class="times">Mettre en ligne la vidéo suivante de la file tous les <input class="inp" type="number" min="1" max="60" id="pDays" value="${R.days}" style="width:70px"> jours</div>
+      <div class="nx">${!D.auto ? "La publication automatique est coupée par le fondateur : les vidéos ne partent qu'à la main." : !R.on ? "Renouvellement désactivé pour cette créatrice." : last ? `Prochaine vidéo vers le <b>${new Date(last.sent_at + R.days * 864e5).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</b>` : "La première vidéo de la file partira au prochain passage."} Twizz vérifie chaque vidéo avant de la mettre en avant.</div></div>
+    <div class="pn"><div class="ph"><h3>Vidéos <em>à mettre en ligne</em></h3><div class="r"><label class="btn w" style="cursor:pointer">${SV(I.video)}Ajouter une vidéo<input type="file" id="pf" accept="video/*" hidden></label></div></div><div id="pup"></div><div id="pq"></div></div>
+    <div class="pn"><div class="ph"><h3>Statistiques <em>Twizz</em></h3><div class="r"><button class="btn sm" id="pst">${SV(I.refresh, 13)}${P.stats ? "Actualiser" : "Charger"}</button></div></div><div id="ps"></div></div>`;
+  $("pq").innerHTML = P.queue.length ? P.queue.map((v, i) => `<div class="it ${v.status === "failed" ? "fail" : ""}" data-id="${v.id}">
+      <div class="th"><video src="/api/pub/pres/${v.id}/file" muted playsinline preload="metadata"></video></div>
+      <div><b style="font:800 13.5px Inter;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v.name || "Vidéo")}</b><div class="meta">${mb(v.size || 0)} · ${v.status === "sending" ? "Envoi à Twizz en cours…" : v.status === "uploading" ? "Envoi en cours…" : `N° ${i + 1} dans la file`}${v.by_name ? " · ajoutée par " + esc(v.by_name) : ""}</div>
+        ${v.status === "failed" ? `<div class="er">Échec : ${esc(v.error || "")}</div>` : ""}</div>
+      <div class="ac">${v.status === "failed" ? `<button class="btn sm g" data-retry>Remettre dans la file</button>` : ""}<button class="btn sm w" data-send ${v.status !== "queued" && v.status !== "failed" ? "disabled" : ""}>${SV(I.send, 13)}Mettre en ligne</button><button class="btn sm r" data-rm aria-label="Retirer">${SV(I.trash, 13)}</button></div></div>`).join("")
+    : `<div class="emp">Aucune vidéo en attente. Ajoute une vidéo de présentation (moins d'une minute, verticale de préférence).</div>`;
+  $("ps").innerHTML = P.statsError ? `<div class="emp" style="color:#ff8a8a">${esc(P.statsError)}</div>` : !P.stats ? `<div class="emp">Les vues, clics et conversion de chaque vidéo, lus sur Twizz. Clique sur « Charger ».</div>`
+    : P.stats.length ? P.stats.map(s => `<div class="st"><div class="th" style="width:52px;height:52px;border-radius:10px;background-image:url('${esc(s.thumb)}')"></div><div><span class="badge ${esc(s.status)}">${{ ACTIVE: "EN COURS", PENDING: "EN VÉRIFICATION", REJECTED: "REFUSÉE", EXPIRED: "TERMINÉE" }[s.status] || esc(s.status)}</span><div style="font:600 11.5px Inter;color:#7a7a7a;margin-top:4px">${s.from ? new Date(s.from).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}${s.to ? " → " + new Date(s.to).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}</div></div>
+        <div class="n">${s.views.toLocaleString("fr-FR")}<small>vues</small></div><div class="n">${s.clicks.toLocaleString("fr-FR")}<small>clics</small></div><div class="n ${s.conv < 20 ? "lo" : ""}">${s.conv} %<small>conversion</small></div></div>`).join("") : `<div class="emp">Aucune vidéo de présentation sur Twizz.</div>`;
+  const rule = async b => { try { await api(`/api/pub/${enc(c.id)}/pres-rule`, { body: b }); await load(); } catch (e) { notify("Erreur", e.message, "err"); } };
+  $("pOn").onclick = () => rule({ on: !R.on }); $("pDays").onchange = () => rule({ days: +$("pDays").value });
+  $("pst").onclick = () => paintPres(P.stats ? "fresh" : "1");
+  $("pf").onchange = () => { const f = $("pf").files[0]; if (f) uploadPres(c, f); };
+  $("pq").querySelectorAll(".it").forEach(el => { const id = el.dataset.id;
+    const rt = el.querySelector("[data-retry]"); if (rt) rt.onclick = async () => { await api(`/api/pub/pres/${id}`, { body: { retry: true } }).catch(e => notify("Erreur", e.message, "err")); paintPres(); };
+    el.querySelector("[data-rm]").onclick = async () => { if (!confirm("Retirer cette vidéo de la file ?")) return; await api(`/api/pub/pres/${id}`, { body: { remove: true } }).catch(e => notify("Erreur", e.message, "err")); await load(); };
+    el.querySelector("[data-send]").onclick = async b => { if (!confirm(`Mettre cette vidéo en ligne comme vidéo de présentation de ${c.label} ?\n\nTwizz la vérifiera avant de la mettre en avant.`)) return;
+      const bt = b.currentTarget; bt.disabled = true; bt.textContent = "Envoi à Twizz…";
+      try { await api(`/api/pub/pres/${id}/send`, { body: {} }); notify("Vidéo envoyée à Twizz", "Elle sera en ligne après leur vérification", "ok"); } catch (e) { notify("Envoi impossible", e.message, "err"); } await load(); };
+  });
+}
+function uploadPres(c, f) {
+  if (!/^video\//.test(f.type)) return notify("Choisis une vidéo", "", "err");
+  if (f.size > 300 * 1048576) return notify("Vidéo trop lourde", "300 Mo au plus", "err");
+  const box = $("pup"); box.innerHTML = `<div class="it"><div class="th"></div><div><b style="font:800 13.5px Inter">${esc(f.name)}</b><div class="meta">Envoi au site… <span id="pp">0 %</span></div><div class="bar"><i id="pb"></i></div></div></div>`;
+  const x = new XMLHttpRequest(); x.open("POST", `/api/pub/${enc(c.id)}/pres/upload`); x.setRequestHeader("Content-Type", f.type); x.setRequestHeader("X-File-Name", encodeURIComponent(f.name));
+  x.upload.onprogress = e => { if (e.lengthComputable) { const p = Math.round(e.loaded / e.total * 100); $("pb").style.width = p + "%"; $("pp").textContent = p + " %"; } };
+  x.onload = async () => { let r = {}; try { r = JSON.parse(x.responseText); } catch (e) {} if (x.status >= 400) { notify("Envoi impossible", r.error || "Erreur", "err"); box.innerHTML = ""; return; } notify("Vidéo ajoutée à la file", f.name, "ok"); await load(); };
+  x.onerror = () => { notify("Envoi interrompu", "Vérifie ta connexion", "err"); box.innerHTML = ""; };
+  x.send(f);
+}
+
+(async () => {
+  ME = await api("/api/me"); renderShell("publications", ME);
+  if (ME.role !== "admin" || ME.rk === "assistant") { $("body").innerHTML = `<div class="pn emp">Réservé aux managers</div>`; return; }
+  try { await load(); } catch (e) { $("body").innerHTML = `<div class="pn emp">${esc(e.message)}</div>`; }
+})();
+})();
+</script>
+</body>
+</html>
