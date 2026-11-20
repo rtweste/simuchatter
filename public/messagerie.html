@@ -185,6 +185,8 @@
 .mx-md img{width:100%;height:100%;object-fit:cover;display:block;transition:filter .25s}
 .mx-md .pl{position:absolute;inset:0;display:grid;place-items:center;color:#fff}.mx-md .pl svg{width:34px;height:34px;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6))}
 .blur .mx-md img,.blur .vt img,.blur .fan3 img,.blur .th img,.blur .dk img,.blur .wth img{filter:blur(16px) saturate(.8)}.blur .mx-md button:hover img,.blur .vt:hover img{filter:none}
+/* téléphone et tablette (pas de survol) : le coffre n'est jamais flouté, il faut voir ce qu'on envoie */
+@media(hover:none),(max-width:860px){.mx-mod.blur .vt img,.mx-mod.blur .dk img,.mx-mod.blur .th img,.mx-mod.blur .wth img{filter:none}}
 .mx-pr{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border-radius:999px;font:800 11.5px Inter;background:#1d1d1d;color:#bbb;margin-top:2px}
 .mx-pr.accepted{background:rgba(95,211,162,.14);color:var(--ac)}.mx-pr.refused{background:rgba(224,122,122,.14);color:#ff9a9a}.mx-pr.pending{background:rgba(240,181,74,.12);color:var(--am)}
 /* carte PPV */
