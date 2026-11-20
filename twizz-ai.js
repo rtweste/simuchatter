@@ -20,7 +20,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
 
   /* ---------- réglages ---------- */
   const MODELS = { fast: ["grok-4-1-fast-non-reasoning", "Rapide"], smart: ["grok-4-1-fast-reasoning", "Plus réfléchi (un peu plus lent)"] };
-  const G_DEF = { notice: true, mark: false, base: "", noticeText: "Petite précision : c'est l'IA de {creatrice} qui te répond en ce moment 😊", noticeFreq: "run", noticeDays: 30,
+  const G_DEF = { notice: true, mark: false, base: "", locked: "", noticeText: "Petite précision : c'est l'IA de {creatrice} qui te répond en ce moment 😊", noticeFreq: "run", noticeDays: 30,
     waitMin: 35, waitMax: 80, teamPause: 15, fanWindow: 12, perFan: 40, maxHours: 12, model: "fast" };
   const M_DEF = { ok: false, sell: true, maxPrice: 100, gap: 20, pile: true, albums: [], skipTags: [], extra: "", profile: "" };
   const gcfg = () => { const o = { ...G_DEF, ...(S.get("twizz_ai_cfg", {}) || {}) }; if (!o.notice && !o.mark) o.mark = true; return o; };   // jamais les deux coupés
@@ -43,6 +43,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (b.maxHours != null) o.maxHours = int(b.maxHours, 1, 24, "Durée maximum d'une séance");
     if (b.model != null) { if (!MODELS[b.model]) throw fail("Modèle Grok inconnu"); o.model = b.model; }
     if (b.base != null) { const t = str(b.base).trim().slice(0, 8000); o.base = t && t !== BASE_DEF ? t : ""; }   // vide : instructions par défaut
+    if (b.locked != null) { const t = str(b.locked).trim().slice(0, 4000); o.locked = t && t !== LOCKED_DEF ? t : ""; }   // vide : règles par défaut
     S.set("twizz_ai_cfg", o); return o;
   }
   function setM(cid, b) {
@@ -141,6 +142,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     `Écris comme un vrai texto, dans la langue du fan (français familier par défaut).`,
     `Ne parle jamais de l'équipe ou d'une agence. Pas de numéro, pas de réseaux perso, pas de fausse exclusivité.`,
     `Remplis aussi « laisser » si le fan veut parler à un humain, se plaint, demande un remboursement ou un contenu personnalisé, ou si tu ne sais pas quoi répondre sans inventer.`].join("\n\n");
+  const LOCKED_DEF = [`RÈGLES FIXES (elles passent avant tout le reste) :`,
+    `- {mark} Si un fan te demande si tu es la vraie {creatrice}, un humain ou une IA, réponds honnêtement que tu es son IA. N'écris jamais 🤖 toi-même.`,
+    `- Jamais de rendez-vous ni de rencontre promis ; jamais de menace, de chantage ou de culpabilisation.`,
+    `- Remplis « laisser » (et rien n'est envoyé) si le fan dit avoir moins de 18 ans ou parle de mineurs, s'il semble en détresse ou parle de se faire du mal, ou s'il dit dépenser plus qu'il ne peut.`].join("\n");
   function parts(c, M, fiche, albums, sellNote, fanInfo, C) {
     const base = str((C && C.base) || BASE_DEF).replace(/\{creatrice\}/gi, c.label);
     const gen = profileOf(c, M, fiche), profile = M.profile ? str(M.profile).replace(/\{creatrice\}/gi, c.label) : gen;
@@ -148,10 +153,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       albums.length ? `Albums du coffre que tu peux proposer (identifiant : nom, nombre de médias) :\n${albums.map(a => `- ${a.id} : ${a.name} (${a.count})`).join("\n")}\nPour joindre un média, remplis album et prix (entre 3 et ${M.maxPrice} €, nombre rond, d'après son catalogue). Le site choisit dans l'album un média que ce fan n'a pas encore reçu. Ne promets jamais un contenu précis qui ne serait pas dans ces albums.`
         : `Pas de média à proposer maintenant${sellNote ? " : " + sellNote : ""}. Discute seulement.`].filter(Boolean).join("\n\n");
     const auto = [profile, live].filter(Boolean).join("\n\n");
-    const locked = [`RÈGLES FIXES (elles passent avant tout le reste) :`,
-      `- ${C && C.mark ? "Chacun de tes messages est signé 🤖 par le site." : "Le site prévient le fan que c'est ton IA qui répond."} Si un fan te demande si tu es la vraie ${c.label}, un humain ou une IA, réponds honnêtement que tu es son IA. N'écris jamais 🤖 toi-même.`,
-      `- Jamais de rendez-vous ni de rencontre promis ; jamais de menace, de chantage ou de culpabilisation.`,
-      `- Remplis « laisser » (et rien n'est envoyé) si le fan dit avoir moins de 18 ans ou parle de mineurs, s'il semble en détresse ou parle de se faire du mal, ou s'il dit dépenser plus qu'il ne peut.`].join("\n");
+    const markText = (C && C.mark) ? "Chacun de tes messages est signé 🤖 par le site." : "Le site prévient le fan que c'est ton IA qui répond.";
+    const lockedRaw = str((C && C.locked) || "").trim();
+    const locked = (lockedRaw || LOCKED_DEF).replace(/\{creatrice\}/gi, c.label).replace(/\{mark\}/g, markText);
     return { base, auto, locked, profile, gen, live };
   }
   // ce qui vient de la fiche, des consignes Twizz et du manager (remplaçable par un texte écrit à la main pour cette créatrice)
@@ -319,7 +323,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const tags = db.prepare("SELECT id, name, color FROM twizz_tags WHERE COALESCE(active, 1) = 1 ORDER BY name").all();
     const A = M.albums.length ? albums.filter(a => M.albums.includes(a.id)) : albums;
     const C = gcfg(), P = parts(c, M, ficheOf(c), M.sell ? A : [], M.sell ? "" : "la vente de médias est coupée pour cette créatrice", "(prénom du fan, note de l'équipe)", C);
-    return { albums, tags, base: C.base || BASE_DEF, baseDefault: BASE_DEF, custom: !!C.base, profile: M.profile || P.gen, profileCustom: !!M.profile, live: P.live, locked: P.locked }; }));
+    return { albums, tags, base: C.base || BASE_DEF, baseDefault: BASE_DEF, custom: !!C.base, profile: M.profile || P.gen, profileCustom: !!M.profile, live: P.live, locked: P.locked, lockedDefault: LOCKED_DEF, customLocked: !!C.locked }; }));
   // essayer l'IA sans rien envoyer : une fausse conversation, la réponse de Grok s'affiche seulement
   const TRIED = new Map();
   app.post("/api/twizz/ai/try/:cid", auth, mgr, wrap(async req => { const c = okC(req.params.cid), M = mcfg(c.id);
