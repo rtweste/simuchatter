@@ -218,13 +218,20 @@ mark{background:rgba(95,211,162,.14);color:var(--ac);border-radius:4px;padding:0
 .al:hover{background:#151515}.al.on{background:#1b1b1b;box-shadow:inset 0 0 0 1px #2a2a2a;color:#fff}
 .al .cv{width:42px;height:42px;border-radius:11px;overflow:hidden;background:#1c1c1c;flex:none}.al .cv img{width:100%;height:100%;object-fit:cover;display:block}
 .al b{display:block;font:800 12.5px Inter;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.al small{display:block;font:600 11px Inter;color:#6a6a6a;margin-top:1px}
-.al .sn{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;display:grid;place-items:center;font:900 10px Inter;background:#e8c27a;color:#2a1d05}
+.al .sn[hidden]{display:none}.al .sn{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;display:grid;place-items:center;font:900 10px Inter;background:#e8c27a;color:#2a1d05}
 .vg{padding:12px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:8px;align-content:start;scrollbar-width:thin}
 .vg{grid-auto-rows:max-content}
 .vt{position:relative;display:block;width:100%;border-radius:14px;overflow:hidden;border:0;padding:0;background:#151515;cursor:pointer;transition:transform .35s cubic-bezier(.3,1.5,.5,1);animation:cIn .5s both}
 .vt:before{content:"";display:block;padding-top:100%}
 .vt img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;transition:filter .3s}
 .tph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,#1e1e1e,#121212);color:#5a5a5a;font-size:20px}.tph b{font:800 9.5px Inter;letter-spacing:.12em;color:#5fd3a2}.ppvc .g .tph{position:static;width:100%;height:100%}
+.tph.au{flex-direction:column;gap:6px}.tph.au b{max-width:86%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vply{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#5fd3a2;box-shadow:0 8px 22px -6px rgba(95,211,162,.7);cursor:pointer;transition:transform .3s cubic-bezier(.3,1.6,.5,1)}.vply:hover{transform:scale(1.08)}.vply:active{transform:scale(.92)}
+.vply svg{color:#06140e;stroke:#06140e;margin-left:2px}.vply svg.vps{display:none;margin-left:0}.vt.aupl .vply svg{display:none}.vt.aupl .vply svg.vps{display:block}.vt.aupl .vply{box-shadow:0 0 0 6px rgba(95,211,162,.18),0 8px 22px -6px rgba(95,211,162,.7)}
+.vpg{width:60%;height:3px;border-radius:2px;background:#262626;overflow:hidden}.vpg i{display:block;height:100%;width:calc(var(--ap,0) * 100%);background:#5fd3a2;transition:width .25s linear}
+.tph small.vdu{font:700 10px Inter;color:#8fd9b8;min-height:12px}
+.vcap{display:flex;align-items:center;gap:6px;margin:12px 8px 6px;font:800 9.5px Inter;letter-spacing:.2em;text-transform:uppercase;color:#5fd3a2}.vcap.m{margin-top:2px;color:#6a6a6a}
+.al.au .cv{display:grid;place-items:center;color:#5fd3a2;background:radial-gradient(circle at 50% 40%,#1c2a24,#101512)}
 .vt .n{position:absolute;top:7px;right:7px;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,.75);background:rgba(0,0,0,.3);display:grid;place-items:center;font:900 11px Inter;color:#2a1d05;transition:all .3s cubic-bezier(.3,1.6,.5,1)}
 .vt.on{transform:scale(.93)}.vt.on .n{background:#e8c27a;border-color:#e8c27a;transform:scale(1.12)}
 .vt.on:after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 2.5px #e8c27a;pointer-events:none}
@@ -290,6 +297,8 @@ const IC = { pin: '<path d="M12 17v5"/><path d="M8 3h8l-1.5 6L18 12.5H6L9.5 9z"/
 const eur = n => (+n).toLocaleString("fr-FR", { maximumFractionDigits: 2 }) + " €", pl = (k, a, b) => k + " " + (k > 1 ? b : a);
 // vignette d'un média du coffre : image, sinon repli sur le fichier, sinon un pictogramme (vidéo sans aperçu, vocal)
 window.thumbErr = img => { const u = img.dataset.f; if (u && img.getAttribute("src") !== u) { img.dataset.f = ""; img.src = u; return; } const s = document.createElement("span"); s.className = "tph"; img.replaceWith(s); };
+const MIC = '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>';
+const auTile = f => `<span class="tph au"><span class="vply" role="button" tabindex="0" data-au="${esc(f.id)}" aria-label="Écouter le vocal">${SV(IC.play || '<path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/>', 15, 2.6)}${SV('<path d="M8.5 5.5v13M15.5 5.5v13"/>', 15, 3.6).replace("<svg ", '<svg class="vps" ')}</span><span class="vpg"><i></i></span><b>${esc(f.title || "VOCAL")}</b><small class="vdu"></small></span>`;
 const thumbHtml = f => f.kind === "audio" ? `<span class="tph au"><b>VOCAL</b></span>` : f.thumb ? `<img src="${esc(f.thumb)}" alt="" loading="lazy" data-f="${f.kind === "image" && f.url && f.url !== f.thumb ? esc(f.url) : ""}" onerror="thumbErr(this)">` : `<span class="tph">${isV(f) ? "▶" : ""}</span>`;
 const isV = f => /video/i.test(f.type || "") || /\.(mp4|mov|webm|m3u8)$/i.test(String(f.url || "").split("?")[0]);
 const priceTxt = p => p == null ? "prix au choix" : p ? eur(p) : "gratuit";
@@ -456,20 +465,34 @@ async function pickMedia(k) {
     <div class="f"><span class="sel" id="vN"></span>${eyeBtn("vBl")}<button class="btn2 g" id="vOk" style="margin-left:auto">${SV(IC.check, 15, 2.6)}Valider</button></div></div>`;
   document.body.appendChild(m);
   let files = [], album = null, albums = [];
-  const close = () => { m.remove(); document.removeEventListener("keydown", kk); }, kk = e => { if (e.key === "Escape") close(); };
+  // écouter un vocal avant de le choisir (un seul à la fois, arrêté à la fermeture)
+  let AU = null, AUID = null; const fmtT = t => isFinite(t) ? Math.floor(t / 60) + ":" + String(Math.floor(t % 60)).padStart(2, "0") : "";
+  function playAu(id) { const f = files.find(x => x.id === id); if (!f || !f.url) return;
+    if (AU && AUID === id) { if (AU.paused) AU.play().catch(() => {}); else AU.pause(); return; }
+    if (AU) AU.pause(); const A = new Audio(f.url); AU = A; AUID = id;
+    const paint = () => { if (AU !== A) return; m.querySelectorAll(".vt.aup").forEach(t => { if (t.dataset.id !== id) { t.classList.remove("aup", "aupl"); t.style.removeProperty("--ap"); } });
+      const t = m.querySelector(`.vt[data-id="${CSS.escape(id)}"]`); if (!t) return; t.classList.add("aup"); t.classList.toggle("aupl", !A.paused && !A.ended);
+      t.style.setProperty("--ap", A.duration ? (A.currentTime / A.duration).toFixed(3) : 0); const du = t.querySelector(".vdu"); if (du) du.textContent = A.duration ? fmtT(A.currentTime) + " / " + fmtT(A.duration) : "…"; };
+    ["play", "pause", "timeupdate", "ended", "loadedmetadata"].forEach(ev => A.addEventListener(ev, paint));
+    A.play().then(paint).catch(() => notify("Vocal", "Impossible de lire ce vocal", "err")); paint(); }
+  const close = () => { if (AU) AU.pause(); m.remove(); document.removeEventListener("keydown", kk); }, kk = e => { if (e.key === "Escape") close(); };
   document.addEventListener("keydown", kk); $("vX").onclick = close; m.onclick = e => { if (e.target === m) close(); }; $("vBl").onclick = () => setBlur(!BLUR);
   const upd = () => { $("vN").textContent = SEL.length ? pl(SEL.length, "média choisi", "médias choisis") : "Aucun média choisi";
     $("vG").querySelectorAll(".vt").forEach(t => { const i = at(t.dataset.id); t.classList.toggle("on", i >= 0); t.querySelector(".n").textContent = i >= 0 ? i + 1 : ""; });
     m.querySelectorAll(".al").forEach(b => { const n = SEL.filter(f => f.album === b.dataset.id).length, sn = b.querySelector(".sn"); sn.hidden = !n; sn.textContent = n; }); };
   function grid() { const G = $("vG");
-    G.innerHTML = files.length ? files.map((f, i) => `<button class="vt" data-id="${esc(f.id)}" style="animation-delay:${Math.min(i, 14) * .03}s" aria-label="${isV(f) ? "Vidéo" : "Photo"}">${thumbHtml(f)}<span class="n"></span>${isV(f) ? '<span class="ty">VIDÉO</span>' : ""}</button>`).join("") : `<div class="empty">Album vide</div>`;
-    G.querySelectorAll(".vt").forEach(t => t.onclick = () => { const i = at(t.dataset.id); if (i >= 0) SEL.splice(i, 1); else { if (SEL.length >= 20) return notify("20 médias au plus", "", "err"); const f = files.find(x => x.id === t.dataset.id); SEL.push({ id: f.id, thumb: f.thumb, url: f.url, type: f.type, keys: f.keys || [], album }); } upd(); });
+    G.innerHTML = files.length ? files.map((f, i) => `<button class="vt" data-id="${esc(f.id)}" style="animation-delay:${Math.min(i, 14) * .03}s" aria-label="${f.kind === "audio" ? "Vocal" : isV(f) ? "Vidéo" : "Photo"}">${f.kind === "audio" ? auTile(f) : thumbHtml(f)}<span class="n"></span>${isV(f) ? '<span class="ty">VIDÉO</span>' : ""}</button>`).join("") : `<div class="empty">Album vide</div>`;
+    G.querySelectorAll("[data-au]").forEach(b => { b.onclick = e => { e.stopPropagation(); playAu(b.dataset.au); }; b.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); playAu(b.dataset.au); } }; });
+    if (AUID && AU) { const t = G.querySelector(`.vt[data-id="${CSS.escape(AUID)}"]`); if (t) { t.classList.add("aup"); t.classList.toggle("aupl", !AU.paused); } }
+    G.querySelectorAll(".vt").forEach(t => t.onclick = () => { const i = at(t.dataset.id); if (i >= 0) SEL.splice(i, 1); else { if (SEL.length >= 20) return notify("20 médias au plus", "", "err"); const f = files.find(x => x.id === t.dataset.id); SEL.push({ id: f.id, thumb: f.thumb, url: f.url, type: f.type, kind: f.kind, title: f.title || "", keys: f.keys || [], album }); } upd(); });
     upd(); }
   async function openAlbum(a) { album = a.id; m.querySelectorAll(".al").forEach(b => b.classList.toggle("on", b.dataset.id === a.id)); $("vG").innerHTML = Array.from({ length: 12 }, () => `<div class="vsk"></div>`).join("");
     try { const r = await api(`${base}/${encodeURIComponent(a.id)}`); if (album !== a.id) return; files = r.files; grid(); }
     catch (e) { $("vG").innerHTML = `<div class="empty" style="color:#ff9a9a">${esc(e.message)}</div>`; } }
-  try { albums = (await api(base)).albums;
-    $("vR").innerHTML = albums.length ? albums.map((a, i) => `<button class="al" data-id="${esc(a.id)}" style="animation-delay:${i * .04}s"><span class="cv">${a.cover ? `<img src="${esc(a.cover)}" alt="" loading="lazy">` : ""}</span><span style="min-width:0"><b>${esc(a.name)}</b><small>${a.count ? pl(a.count, "média", "médias") : "Album"}</small></span><span class="sn" hidden></span></button>`).join("") : "";
+  try { const A0 = (await api(base)).albums; albums = A0.filter(a => a.type !== "audio").concat(A0.filter(a => a.type === "audio"));   // photos et vidéos, puis les vocaux à part
+    const hasM = albums.some(a => a.type !== "audio");
+    $("vR").innerHTML = albums.length ? albums.map((a, i) => { const au = a.type === "audio";
+      return `${i === 0 && hasM ? `<div class="vcap m">Photos et vidéos</div>` : ""}${au && (i === 0 || albums[i - 1].type !== "audio") ? `<div class="vcap">${SV(MIC, 11, 2.4)}Vocaux</div>` : ""}<button class="al${au ? " au" : ""}" data-id="${esc(a.id)}" style="animation-delay:${i * .04}s"><span class="cv">${au ? SV(MIC, 18, 2.2) : a.cover ? `<img src="${esc(a.cover)}" alt="" loading="lazy">` : ""}</span><span style="min-width:0"><b>${esc(a.name)}</b><small>${a.count ? (au ? pl(a.count, "vocal", "vocaux") : pl(a.count, "média", "médias")) : au ? "Vocaux" : "Album"}</small></span><span class="sn" hidden></span></button>`; }).join("") : "";
     m.querySelectorAll(".al").forEach(b => b.onclick = () => openAlbum(albums.find(a => a.id === b.dataset.id)));
     if (!albums.length) { $("vG").innerHTML = `<div class="empty"><b>Le coffre est vide</b></div>`; upd(); }
     else openAlbum(albums.find(a => SEL[0] && a.id === SEL[0].album) || albums[0]); }

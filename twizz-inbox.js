@@ -350,7 +350,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   // coffre de la créatrice (albums « quick-files » de Twizz)
   app.get("/api/twizz/inbox/:cid/vault", auth, mgrOrInbox, wrap(async req => {
     const cid = creatorOk(req.params.cid), j = await G(`/quick-files/albums?creatorId=${enc(cid)}`, 300e3);
-    return { albums: arr(j).map(a => ({ id: str(a._id || a.id), name: str(a.name || a.title || "Album"), count: +(a.filesCount ?? a.count ?? (a.files || []).length ?? 0) || 0,
+    // type d'album comme dans l'appli Twizz : « media » (photos et vidéos) ou « audio » (vocaux)
+    return { albums: arr(j).map(a => ({ id: str(a._id || a.id), name: str(a.name || a.title || "Album"), type: str(a.type) === "audio" || (!a.type && /vocal|audio|voix/i.test(str(a.name))) ? "audio" : "media", count: +(a.filesCount ?? a.count ?? (a.files || []).length ?? 0) || 0,
       cover: file((a.files || [])[0] || a.cover || {}).thumb })), sample: req.query.debug ? arr(j)[0] : undefined };
   }));
   app.get("/api/twizz/inbox/:cid/vault/:album", auth, mgrOrInbox, wrap(async req => {

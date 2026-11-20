@@ -647,6 +647,7 @@
 .vt{position:relative;aspect-ratio:1;border-radius:16px;border:0;padding:0;background:#1a1a1a;cursor:pointer;transform-style:preserve-3d;transition:transform .5s cubic-bezier(.2,.9,.3,1.2),box-shadow .4s;animation:tlIn .7s cubic-bezier(.16,1,.3,1) both}
 @keyframes tlIn{from{opacity:0;transform:translateY(18px) rotateX(-18deg) scale(.94)}}
 .vt .cl{position:absolute;inset:0;border-radius:inherit;overflow:hidden}
+.vcap{display:flex;align-items:center;gap:6px;margin:14px 8px 8px!important;color:#5fd3a2!important}.al.au .fan3 i.mic{position:absolute;inset:0;display:grid;place-items:center;color:#5fd3a2;background:radial-gradient(circle at 50% 40%,#1c2a24,#101512)}
 .vwv{display:flex;align-items:center;gap:3px;height:22px;width:62%}.vwv i{flex:1;border-radius:2px;background:linear-gradient(#5fd3a2,#3fae80);opacity:.55}
 .vpg{width:62%;height:3px;border-radius:2px;background:#262626;overflow:hidden}.vpg i{display:block;height:100%;width:calc(var(--ap,0) * 100%);background:#5fd3a2;transition:width .25s linear}
 .vt.aupl .vwv i{animation:vwvP .9s ease-in-out infinite alternate}.vt.aupl .vwv i:nth-child(3n){animation-delay:-.3s}.vt.aupl .vwv i:nth-child(3n+1){animation-delay:-.6s}@keyframes vwvP{to{transform:scaleY(.45);opacity:.9}}
@@ -1884,12 +1885,17 @@ async function vault(acceptId, preset) {
     catch (e) { $("vG").innerHTML = `<div class="mx-empty" style="grid-column:1/-1;color:#e07a7a">${esc(e.message)}</div>`; } }
   try { const r = await api2("/vault");
     if (!r.albums.length) { $("vG").innerHTML = `<div class="mx-empty" style="grid-column:1/-1">Le coffre est vide</div>`; $("vA").textContent = ""; }
-    r.albums.forEach((a, i) => { const b = document.createElement("button"); b.className = "al"; b.style.animationDelay = i * .05 + "s";
-      b.innerHTML = `<span class="fan3"><span></span><span></span><span>${a.cover ? `<img src="${esc(a.cover)}" alt="" loading="lazy">` : ""}</span></span><span class="tx"><b>${esc(a.name)}</b><small>${a.count ? a.count + " média" + (a.count > 1 ? "s" : "") : "Album"}</small></span>`;
+    // photos et vidéos d'abord, puis les albums de vocaux à part
+    const AL = r.albums.filter(a => a.type !== "audio").concat(r.albums.filter(a => a.type === "audio"));
+    $("vR").querySelector(".cap").textContent = AL.some(a => a.type !== "audio") ? "Photos et vidéos" : "Albums";
+    AL.forEach((a, i) => { const au = a.type === "audio";
+      if (au && (i === 0 || AL[i - 1].type !== "audio")) $("vR").insertAdjacentHTML("beforeend", `<div class="cap vcap">${SV(MIC, 11, 2.4)}Vocaux</div>`);
+      const b = document.createElement("button"); b.className = "al" + (au ? " au" : ""); b.style.animationDelay = i * .05 + "s";
+      b.innerHTML = `<span class="fan3"><span></span><span></span><span>${au ? `<i class="mic">${SV(MIC, 18, 2.2)}</i>` : a.cover ? `<img src="${esc(a.cover)}" alt="" loading="lazy">` : ""}</span></span><span class="tx"><b>${esc(a.name)}</b><small>${a.count ? a.count + (au ? (a.count > 1 ? " vocaux" : " vocal") : " média" + (a.count > 1 ? "s" : "")) : au ? "Vocaux" : "Album"}</small></span>`;
       b.onclick = () => openAlbum(a, b); $("vR").appendChild(b); });
-    // avec un script : on ouvre l'album de ses médias
-    const want = preset && preset.files[0] && preset.files[0].album, ai = Math.max(0, r.albums.findIndex(a => a.id === want));
-    if (r.albums.length) openAlbum(r.albums[ai], $("vR").querySelectorAll(".al")[ai]); }
+    // avec un script : on ouvre l'album de ses médias ; sinon le premier album de photos et vidéos
+    const want = preset && preset.files[0] && preset.files[0].album, ai = Math.max(0, AL.findIndex(a => a.id === want));
+    if (AL.length) openAlbum(AL[ai], $("vR").querySelectorAll(".al")[ai]); }
   catch (e) { $("vG").innerHTML = `<div class="mx-empty" style="grid-column:1/-1;color:#e07a7a">${esc(e.message)}</div>`; }
   intel(); presetCheck(); const hT = setInterval(() => { if (!document.body.contains(m)) return clearInterval(hT); if (H()) { intel(); presetCheck(); if (files.length) { comp(); grid(); } clearInterval(hT); } }, 500);
   $("vGo").onclick = async () => {
