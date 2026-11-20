@@ -146,7 +146,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     media: { type: "string", description: "Facultatif : identifiant précis du média choisi dans la liste de l'album (m:…), si l'album en liste." },
     teaser: { type: "boolean", description: "Mets true quand ton message fait envie d'un média précis sans l'envoyer (tu l'annonces, tu le décris, tu le fais désirer). Obligatoire avant de pouvoir envoyer un média. C'est un champ technique : n'écris jamais « teaser » dans le texte de tes messages." },
     remise: { type: "integer", description: "Facultatif : remise en % sur ce média, seulement dans les cas permis par les consignes." },
-    prix: { type: "integer", description: "Prix du média en euros, nombre rond (obligatoire si album est rempli)." },
+    prix: { type: "number", description: "Prix du média en euros, centimes possibles (ex. 9.99) (obligatoire si album est rempli)." },
     laisser: { type: "string", description: "Facultatif : remplis-le seulement si l'équipe doit reprendre ce fan elle-même (raison courte). Rien n'est alors envoyé au fan." }
   } } } };
   async function grok(messages, o = {}) {
@@ -336,6 +336,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (seen) out.teaser = true;
     return out;
   }
+  const cents = v => Math.round((parseFloat(str(v).replace(",", ".")) || 0) * 100) / 100;   // 9,99 ou 9.99 → 9.99
   const bubbles = out => (Array.isArray(out.bulles) && out.bulles.length ? out.bulles : [out.message]).map(x => str(x).replace(/🤖/g, "").trim().slice(0, 1200)).filter(Boolean).slice(0, 3);
 
   /* ---------- une conversation ---------- */
@@ -374,7 +375,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     }
     const B = bubbles(out); if (!B.length) { if (relance) mark({}); return false; }   // pas de relance utile : on ne redemande pas
     const tell = needNotice(cr, c, row, C), tail = C.mark ? " 🤖" : "";
-    let price = Math.round(+out.prix || 0), f = null, promo = null;
+    let price = cents(out.prix), f = null, promo = null;
     if (out.album && sell.albums.some(a => a.id === str(out.album)) && price >= 3) {
       price = Math.min(price, M.maxPrice);
       const pct = Math.round(+out.remise || 0), hesit = !!sell.open || L.some(m => !m.fromFan && m.type === "FILE" && m.price > 0 && m.status !== "accepted");
@@ -551,7 +552,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const out = unleak(await grok([{ role: "system", content: system(c, M, ficheOf(c), albums, sell.note, FANS[req.body && req.body.fan] || "", gcfg()) }, ...L.map(m => m.role === "user" ? m : { ...m, content: untag(m.content) })]));
     const al = out.album ? albums.find(a => a.id === str(out.album)) : null, it = al && (al.items || []).find(x => x.id === str(out.media).replace(/^m:/, ""));
     const pct = Math.round(+out.remise || 0);
-    return { bulles: bubbles(out), album: al ? al.name : null, media: it ? it.descr : null, prix: al ? Math.min(Math.round(+out.prix || 0), M.maxPrice) : null,
+    return { bulles: bubbles(out), album: al ? al.name : null, media: it ? it.descr : null, prix: al ? Math.min(cents(out.prix), M.maxPrice) : null,
       remise: al && M.promo && pct >= 5 ? Math.min(pct, M.maxDiscount) : null, laisser: str(out.laisser).trim() || null,
       teaser: !al && !!out.teaser && !!(sell.teaseNow || albums.length), gate: albums.length ? "" : sell.note };
   }));

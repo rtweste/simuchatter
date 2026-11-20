@@ -269,7 +269,7 @@ function paintHist() {
 function paintChat() {
   const L = CHAT[CID] || [], box = $("chat"); if (!box) return;
   box.innerHTML = L.length ? L.map(m => m.fan ? `<div class="bb f">${esc(m.text)}</div>` : m.leave ? `<div class="bb x">L'IA laisserait ce fan à l'équipe : ${esc(m.leave)}</div>`
-    : `<div class="bb a">${esc(m.text)}${D.cfg.mark ? " 🤖" : ""}${m.media ? `<small>+ média de « ${esc(m.media)} »${m.what ? ` (${esc(m.what)})` : ""} à ${m.prix} €${m.remise ? ` · remise ${m.remise} %` : ""}</small>` : m.teaser ? `<small>teasing : elle pourra envoyer le média après ta réponse</small>` : ""}</div>`).join("") : `<div class="emp">Commence par un message de fan, par exemple « coucou ça va ? »</div>`;
+    : `<div class="bb a">${esc(m.text)}${D.cfg.mark ? " 🤖" : ""}${m.media ? `<small>+ média de « ${esc(m.media)} »${m.what ? ` (${esc(m.what)})` : ""} à ${String(m.prix).replace(".", ",")} €${m.remise ? ` · remise ${m.remise} %` : ""}</small>` : m.teaser ? `<small>teasing : elle pourra envoyer le média après ta réponse</small>` : ""}</div>`).join("") : `<div class="emp">Commence par un message de fan, par exemple « coucou ça va ? »</div>`;
   box.scrollTop = box.scrollHeight;
 }
 async function tryIt() {
