@@ -105,6 +105,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   const CACHE = new Map();
   const G = (path, ttl = 0) => { const c = ttl && CACHE.get(path); if (c && Date.now() - c.at < ttl) return Promise.resolve(c.data);
     return call("GET", path, null, true).then(d => { if (ttl) CACHE.set(path, { at: Date.now(), data: d }); if (CACHE.size > 400) CACHE.delete(CACHE.keys().next().value); return d; }); };
+  // même chose, sans se presser (pages anciennes lues en tâche de fond, comme quelqu'un qui fait défiler)
+  const GS = (path, ttl = 0) => { const c = ttl && CACHE.get(path); if (c && Date.now() - c.at < ttl) return Promise.resolve(c.data);
+    return call("GET", path, null, false).then(d => { if (ttl) CACHE.set(path, { at: Date.now(), data: d }); if (CACHE.size > 400) CACHE.delete(CACHE.keys().next().value); return d; }); };
   const drop = (...needles) => { for (const k of [...CACHE.keys()]) if (!needles.length || needles.some(n => n && k.includes(n))) CACHE.delete(k); };
   const enc = encodeURIComponent;
   const arr = j => { const d = j && (j.data !== undefined ? j.data : j); if (Array.isArray(d)) return d; if (d && Array.isArray(d.data)) return d.data;
@@ -301,6 +304,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const j = await G(path, 15e3);
     const d = (j && j.data) || {}, L = (d.data || []).map(m => msg(m, fanId)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
     const by = authors(L.filter(m => !m.fromFan).map(m => m.id)); L.forEach(m => { if (!m.fromFan) m.by = by[m.id] || null; });
+    if (fanId) try { keepMedia(cid, str(req.params.conv), L); setDepth(str(req.params.conv), page, d.totalPages || 1); } catch (e) {}
     if (page >= (d.totalPages || 1)) try { firstSeen(cid, fanId, L); } catch (e) {}
     return { items: L, page, totalPages: d.totalPages || 1, note: d.creatorFanNote || null, sample: req.query.debug ? (d.data || [])[0] : undefined };
   }));
@@ -330,20 +334,40 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   }));
 
   // historique d'un fan : médias envoyés (achetés ou pas), qui les a envoyés, l'équipe sur ce fan, la note d'équipe
-  // (3 pages de messages au plus, gardées 2 min : peu de requêtes vers Twizz)
+  // chaque média vu dans une page de la conversation est gardé sur le site : il ne disparaît plus quand la conversation avance
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_media_hist (msg_id TEXT PRIMARY KEY, creator_id TEXT, conv_id TEXT, at TEXT, price REAL, status TEXT, n INTEGER, videos INTEGER, thumbs TEXT, keys TEXT)");
+  db.exec("CREATE INDEX IF NOT EXISTS twizz_media_hist_conv ON twizz_media_hist (conv_id)");
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_hist_depth (conv_id TEXT PRIMARY KEY, pages INTEGER, total INTEGER, at INTEGER)");
+  const keepMedia = (cid, conv, L) => { const st = db.prepare("INSERT INTO twizz_media_hist (msg_id, creator_id, conv_id, at, price, status, n, videos, thumbs, keys) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(msg_id) DO UPDATE SET status = excluded.status, price = excluded.price, n = excluded.n, videos = excluded.videos, thumbs = excluded.thumbs, keys = excluded.keys");
+    L.filter(m => m.id && !m.fromFan && m.type === "FILE" && m.medias.length).forEach(m => st.run(m.id, cid, conv, m.at || null, m.price == null ? null : +m.price, m.status, m.medias.length, m.medias.filter(x => x.video).length,
+      JSON.stringify(m.medias.slice(0, 3).map(x => x.thumb)), JSON.stringify([...new Set(m.medias.flatMap(x => x.keys))]))); };
+  const depthOf = conv => db.prepare("SELECT pages, total FROM twizz_hist_depth WHERE conv_id = ?").get(conv) || null;
+  const setDepth = (conv, pages, total) => db.prepare("INSERT INTO twizz_hist_depth (conv_id, pages, total, at) VALUES (?,?,?,?) ON CONFLICT(conv_id) DO UPDATE SET pages = MAX(pages, excluded.pages), total = excluded.total, at = excluded.at").run(conv, pages, total, Date.now());
+  const pagePath = (cid, conv, p) => `/messages/find-all-messages?conversationId=${enc(conv)}&creatorId=${enc(cid)}&page=${p}`;
+  // pages plus anciennes : lues tranquillement, une fois par conversation (puis sur demande « plus ancien »)
+  const FILLING = new Set();
+  async function readOld(cid, conv, fan, from, to) { let total = to;
+    for (let p = from; p <= to && p <= total; p++) { const j = await GS(pagePath(cid, conv, p), 600e3); const d = (j && j.data) || {}; total = d.totalPages || 1;
+      keepMedia(cid, conv, (d.data || []).map(m => msg(m, fan))); setDepth(conv, Math.min(p, total), total); } }
   app.get("/api/twizz/inbox/:cid/history/:conv", auth, inbox, wrap(async req => {
     const cid = creatorOk(req.params.cid), conv = str(req.params.conv), fan = str(req.query.fan);
     if (req.query.fresh === "1") drop(conv);
     const all = []; let pages = 1, twNote = null;
     for (let p = 1; p <= Math.min(pages, 3); p++) {
-      const j = await G(`/messages/find-all-messages?conversationId=${enc(conv)}&creatorId=${enc(cid)}&page=${p}`, p === 1 ? 15e3 : 120e3);
+      const j = await G(pagePath(cid, conv, p), p === 1 ? 15e3 : 120e3);
       const d = (j && j.data) || {}; pages = d.totalPages || 1; if (p === 1) twNote = d.creatorFanNote || null;
       (d.data || []).forEach(m => all.push(msg(m, fan)));
     }
-    const media = all.filter(m => !m.fromFan && m.type === "FILE" && m.medias.length).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+    if (fan) keepMedia(cid, conv, all);
+    let dep = depthOf(conv); setDepth(conv, Math.min(3, pages), pages); dep = depthOf(conv);
+    // « plus ancien » : 5 pages de plus ; la toute première fois : jusqu'à 10 pages, en tâche de fond
+    if (fan && req.query.more === "1" && dep.pages < pages && !FILLING.has(conv)) { FILLING.add(conv); try { await readOld(cid, conv, fan, dep.pages + 1, Math.min(dep.pages + 5, 60)); } finally { FILLING.delete(conv); } dep = depthOf(conv); }
+    else if (fan && dep.pages < Math.min(10, pages) && !FILLING.has(conv) && !db.prepare("SELECT 1 FROM twizz_media_hist WHERE conv_id = ? AND at < ? LIMIT 1").get(conv, all.reduce((m, x) => x.at && x.at < m ? x.at : m, "9"))) {
+      FILLING.add(conv); readOld(cid, conv, fan, dep.pages + 1, 10).catch(() => {}).finally(() => FILLING.delete(conv)); }
+    const rows = db.prepare("SELECT * FROM twizz_media_hist WHERE conv_id = ? ORDER BY at DESC").all(conv);
+    const media = rows.map(r => ({ id: r.msg_id, at: r.at, price: r.price, status: r.status, n: r.n, videos: r.videos, thumbs: JSON.parse(r.thumbs || "[]"), keys: JSON.parse(r.keys || "[]") }));
     const by = authors(media.map(m => m.id));
-    const items = media.map(m => ({ id: m.id, at: m.at, price: m.price, status: m.status, bought: m.status === "accepted" && m.price > 0, by: by[m.id] || null,
-      n: m.medias.length, videos: m.medias.filter(x => x.video).length, thumbs: m.medias.slice(0, 3).map(x => x.thumb), keys: [...new Set(m.medias.flatMap(x => x.keys))] }));
+    const items = media.map(m => ({ ...m, bought: m.status === "accepted" && m.price > 0, by: by[m.id] || null }));
     // fichiers envoyés depuis le site (même au-delà des 3 pages lues)
     const site = db.prepare("SELECT files FROM twizz_sent WHERE conv_id = ? AND files IS NOT NULL").all(conv).flatMap(r => { try { return JSON.parse(r.files) || []; } catch (e) { return []; } }).map(str);
     const team = {}; db.prepare("SELECT u.username name, COUNT(*) n FROM twizz_sent s JOIN users u ON u.id = s.user_id WHERE s.conv_id = ? GROUP BY s.user_id").all(conv).forEach(r => team[r.name] = { name: r.name, msgs: r.n, sold: 0, amount: 0 });
@@ -352,7 +376,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const paid = items.filter(i => i.bought); try { fact(cid, fan, { buys: paid.length, vids: paid.filter(i => i.videos).length }); } catch (e) {}
     if (pages <= 3) try { firstSeen(cid, fan, all); } catch (e) {}
     const tw = twNote && (twNote.note || twNote.text || twNote.content || (typeof twNote === "string" ? twNote : "")) || "";
-    return { items, siteFiles: site, team: Object.values(team).sort((a, b) => b.amount - a.amount || b.msgs - a.msgs), note, twizzNote: str(tw), partial: pages > 3 };
+    return { items, siteFiles: site, team: Object.values(team).sort((a, b) => b.amount - a.amount || b.msgs - a.msgs), note, twizzNote: str(tw), partial: dep.pages < pages, filling: FILLING.has(conv) };
   }));
   // note d'équipe sur un fan : enregistrée sur le site seulement (rien n'est écrit chez Twizz)
   app.post("/api/twizz/inbox/:cid/note/:fan", auth, inbox, wrap(async req => {

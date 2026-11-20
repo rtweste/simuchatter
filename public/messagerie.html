@@ -779,13 +779,11 @@
 <aside class="sidebar" id="sidebar"></aside>
 <main class="main-area mxm">
   <div class="mx" id="mx">
-    <div class="mx-topw"><div class="mx-top"><h1>Messagerie <em>Twizz</em></h1><span class="mx-badge">TEST</span><span id="gtabs" style="margin-left:6px"></span>
+    <div class="mx-topw"><div class="mx-top"><h1>Messagerie <em>Twizz</em></h1><span id="gtabs" style="margin-left:6px"></span>
       <div class="mx-cr" id="crs"></div>
       <div class="mx-tg"><span class="mx-live" id="live" title="Les nouveaux messages arrivent tout seuls"><i></i><span>CONNEXION…</span></span>
         <button class="tgi on" id="swBlur" title="Flouter les photos et vidéos (survole une image pour la voir)" aria-label="Flouter les médias"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/></svg></button>
-        <button class="tgi" id="teamB" hidden title="Qui a accès à la messagerie" aria-label="Accès de l'équipe"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6"/><path d="M16 5.2a3 3 0 0 1 0 5.6M18.5 19c-.3-1.9-1.2-3.2-2.5-3.9"/></svg></button>
-        <button class="tgs" id="swSend" title="Tant que c'est coupé, rien ne peut partir vers les fans"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span id="sendTx">Envoi OFF</span></button></div></div>
-      <div class="mx-warn" id="sendWarn"><i></i>Envoi activé : ce que tu envoies part vraiment aux fans</div></div>
+        <button class="tgi" id="teamB" hidden title="Qui a accès à la messagerie" aria-label="Accès de l'équipe"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6"/><path d="M16 5.2a3 3 0 0 1 0 5.6M18.5 19c-.3-1.9-1.2-3.2-2.5-3.9"/></svg></button></div></div></div>
     <div class="mx-body blur" id="body">
       <section class="mx-ls"><div class="mx-seg"><button data-ty="QUEUE">À traiter<span class="qn" id="qCount"></span></button><button data-ty="GENERAL">Général</button></div>
         <div class="qhd" id="qh" hidden><h2><span id="qN"></span><span id="qW">fans <em class="met">à traiter.</em></span></h2><div class="dsh" id="qD"></div><div class="inb" id="inb" hidden></div>
@@ -889,7 +887,7 @@ let AC = null;
 function chime() { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const t = AC.currentTime;
   [[880, 0], [1318.5, .09], [1760, .18]].forEach(([f, d]) => { const o = AC.createOscillator(), g = AC.createGain(); o.type = "sine"; o.frequency.value = f; g.gain.setValueAtTime(0, t + d); g.gain.linearRampToValueAtTime(.12, t + d + .015); g.gain.exponentialRampToValueAtTime(.0001, t + d + .5); o.connect(g).connect(AC.destination); o.start(t + d); o.stop(t + d + .55); }); } catch (e) {} }
 const CANSEND = () => !!(ST && ST.send && ST.canSend !== false);
-const offMsg = () => !ST.canSend ? "🔒 Lecture seule : tu peux tout lire, le fondateur ne t'a pas encore donné le droit d'envoyer." : ST.founder ? "🔒 Envoi coupé : tu peux tout lire sans rien changer côté Twizz. Active « Envoi activé » pour répondre." : "🔒 Envoi coupé pour le moment par le fondateur : tu peux tout lire.";
+const offMsg = () => !ST.canSend ? "🔒 Lecture seule : tu peux tout lire, le fondateur ne t'a pas encore donné le droit d'envoyer." : ST.founder ? "🔒 Envoi coupé : tu peux tout lire sans rien changer côté Twizz. Rallume l'envoi dans « Accès à la messagerie » (icône équipe en haut)." : "🔒 Envoi coupé pour le moment par le fondateur : tu peux tout lire.";
 const crLabel = () => ((ST && ST.creators.find(c => c.id === CID)) || {}).label || "";
 
 /* ================= haut de page ================= */
@@ -904,18 +902,16 @@ function top() {
   box.querySelectorAll("[data-cid]").forEach(b => { const id = b.dataset.cid, n = UNREAD[id] || 0, d = b.querySelector(".dot");
     b.classList.toggle("on", id === CID);
     if (n && !d) b.insertAdjacentHTML("beforeend", `<span class="dot">${n > 99 ? "99+" : n}</span>`); else if (n && d) d.textContent = n > 99 ? "99+" : n; else if (!n && d) d.remove(); });
-  $("swSend").classList.toggle("on", CANSEND()); $("swSend").classList.toggle("ro", !ST.founder);
-  $("sendTx").textContent = ST.founder ? (ST.send ? "Envoi ON" : "Envoi OFF") : !ST.canSend ? "Lecture seule" : ST.send ? "Envoi ON" : "Envoi coupé";
-  $("sendWarn").classList.toggle("on", CANSEND()); $("teamB").hidden = !ST.founder;
+  $("teamB").hidden = !ST.founder;
 }
 // non lus de chaque créatrice (pastille rouge sur les autres créatrices)
 let unT = null;
 async function unreads(only) { if (!ST) return; for (const c of ST.creators.filter(c => c.id && (!only || c.id === only))) {
   try { const r = await api(`/api/twizz/inbox/${enc(c.id)}/unread`); UNREAD[c.id] = +r.count || 0; } catch (e) {} } top(); }
 function liveUi() { $("live").classList.toggle("on", LIVE); $("live").lastElementChild.textContent = LIVE ? "EN DIRECT" : "ACTUALISATION AUTO"; }
-$("swSend").onclick = async () => { if (!ST.founder) return notify(!ST.canSend ? "Lecture seule" : ST.send ? "Envoi activé" : "Envoi coupé", !ST.canSend ? "Le fondateur ne t'a pas encore donné le droit d'envoyer" : ST.send ? "Ce que tu envoies part vraiment aux fans" : "Le fondateur a coupé l'envoi pour le moment", "info"); const on = !ST.send;
-  if (on && !confirm("Activer l'envoi ?\n\nTout ce que tu envoies d'ici part VRAIMENT au fan sur Twizz, au nom de la créatrice.")) return;
-  try { ST.send = (await api("/api/twizz/inbox/state", { body: { send: on } })).send; top(); if (CUR) thread(); notify(ST.send ? "Envoi activé" : "Envoi coupé", "", ST.send ? "ok" : "info"); } catch (e) { notify("Erreur", e.message, "err"); } };
+// interrupteur général d'envoi : dans « Accès à la messagerie » (fondateur)
+async function setSend(on) { if (on && !confirm("Activer l'envoi ?\n\nTout ce que vous envoyez d'ici part VRAIMENT au fan sur Twizz, au nom de la créatrice.")) return false;
+  try { ST.send = (await api("/api/twizz/inbox/state", { body: { send: on } })).send; top(); if (CUR) thread(); notify(ST.send ? "Envoi activé" : "Envoi coupé", ST.send ? "" : "Plus rien ne peut partir vers les fans", ST.send ? "ok" : "info"); return true; } catch (e) { notify("Erreur", e.message, "err"); return false; } }
 $("swBlur").onclick = () => { const on = !$("swBlur").classList.contains("on"); $("swBlur").classList.toggle("on", on); $("body").classList.toggle("blur", on); document.querySelectorAll(".mx-mod").forEach(m => m.classList.toggle("blur", on)); try { localStorage.setItem("mx:blur", on ? "1" : "0"); } catch (e) {} };
 function setType(t) { TYPE = t; if (t === "QUEUE" && Q) { Q = ""; $("q").value = ""; } try { localStorage.setItem("mx:ty", t); } catch (e) {} document.querySelectorAll(".mx-seg [data-ty]").forEach(x => x.classList.toggle("on", x.dataset.ty === t));
   $("qh").hidden = t !== "QUEUE"; $("seBox").style.display = t === "QUEUE" ? "none" : ""; $("cl").innerHTML = ""; loadList(); }
@@ -1201,7 +1197,7 @@ function thread(keep, noScroll) {
   const aiIntent = k => { if (!CUR) return; AIRES[CUR.id] = { loading: true }; openPanel("ai"); askAI(k); };
   document.querySelectorAll(".aur-sug [data-int]").forEach(b => b.onclick = () => aiIntent(b.dataset.int));
   sc.querySelectorAll("[data-rel]").forEach(b => b.onclick = e => { e.stopPropagation(); aiIntent("relance"); });
-  $("rd").onclick = async () => { if (!CANSEND()) return notify(ST.canSend ? "Envoi coupé" : "Lecture seule", ST.canSend ? (ST.founder ? "Active « Envoi activé » pour marquer comme lu sur Twizz" : "Le fondateur a coupé l'envoi pour le moment") : "Demande au fondateur le droit d'envoyer", "info");
+  $("rd").onclick = async () => { if (!CANSEND()) return notify(ST.canSend ? "Envoi coupé" : "Lecture seule", ST.canSend ? (ST.founder ? "Rallume l'envoi dans « Accès à la messagerie » (icône équipe en haut)" : "Le fondateur a coupé l'envoi pour le moment") : "Demande au fondateur le droit d'envoyer", "info");
     try { await api2("/read", { body: { conversationId: CUR.id } }); CUR.unread = 0; renderList(); notify("Marquée comme lue", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
   sc.querySelectorAll("[data-lb]").forEach(b => b.onclick = () => { const [mid, i] = b.dataset.lb.split(":"), m = T.items.find(x => x.id === mid), x = m && m.medias[+i]; if (x) lightbox(x); });
   sc.querySelectorAll("[data-retry]").forEach(b => b.onclick = () => { const m = T.items.find(x => x.id === b.dataset.retry); if (m) { T.items = T.items.filter(x => x !== m); thread(true); sendText(m.text); } });
@@ -1232,10 +1228,12 @@ async function teamBox() {
   const LV = [["0", "Aucun"], ["1", "Lecture"], ["2", "Envoi"]];
   const paint = () => { m.innerHTML = `<div class="ta-b"><div class="ta-h"><h2>Accès à la <em>messagerie</em></h2><button class="px" id="tmX" aria-label="Fermer">✕</button></div>
     <div class="ta-o"><div><b>Ouvrir aux chatters</b><small>${D.open ? "Les chatters ci-dessous voient la messagerie selon leur accès." : "Fermée aux chatters : seuls toi et les managers la voyez. Choisis les accès des chatters, puis ouvre."}</small></div><button type="button" class="ta-sw ${D.open ? "on" : ""}" id="tmO" aria-label="Ouvrir à l'équipe"><i></i></button></div>
-    <div class="ta-n">Un chatter ne voit que ses <b>créatrices habituelles</b> (fiche du chatter dans Équipe) et celle de son <b>shift en cours</b>. Un manager y a accès d'office et voit toutes les créatrices. « Envoi » ne marche que si l'interrupteur « Envoi activé » est allumé${D.send ? " (il l'est)" : " (il est coupé)"}.</div>
+    <div class="ta-n">Un chatter ne voit que ses <b>créatrices habituelles</b> (fiche du chatter dans Équipe) et celle de son <b>shift en cours</b>. Un manager y a accès d'office et voit toutes les créatrices. L'accès « Envoi » ne marche que si l'envoi vers les fans est allumé ci-dessous.</div>
+    <div class="ta-o"><div><b>Envoi vers les fans</b><small>${D.send ? "Allumé : ce qui est envoyé d'ici part vraiment aux fans sur Twizz." : "Coupé : tout le monde peut lire, rien ne peut partir vers les fans."}</small></div><button type="button" class="ta-sw ${D.send ? "on" : ""}" id="tmS" aria-label="Envoi vers les fans"><i></i></button></div>
     <div class="ta-l">${D.users.length ? D.users.map(u => `<div class="ta-r"><span class="ta-a">${esc((u.username[0] || "?").toUpperCase())}</span><div class="ta-u"><b>${esc(u.username)}${u.manager ? ` <em>manager</em>` : u.tl ? ` <em>team leader</em>` : ""}</b><small>${u.manager ? "Toutes les créatrices" : u.creators.length ? esc(u.creators.join(" · ")) + " + son shift" : "Seulement la créatrice de son shift"}</small></div>
       <div class="ta-sg" role="radiogroup" aria-label="Accès de ${esc(u.username)}">${LV.map(([v, l]) => `<button type="button" data-u="${u.id}" data-lv="${v}" class="${String(u.level) === v ? "on lv" + v : ""}">${l}</button>`).join("")}</div></div>`).join("") : `<div class="pempty">Personne dans l'équipe</div>`}</div></div>`;
     m.querySelector("#tmX").onclick = () => m.remove();
+    m.querySelector("#tmS").onclick = async () => { if (await setSend(!D.send)) { D.send = ST.send; paint(); } };
     m.querySelector("#tmO").onclick = async () => { if (!D.open && !confirm("Ouvrir la messagerie aux chatters ?\n\nChaque chatter verra les conversations selon l'accès que tu lui as donné.")) return;
       try { D = await api("/api/twizz/inbox/team", { body: { open: !D.open } }); paint(); notify(D.open ? "Messagerie ouverte aux chatters" : "Messagerie refermée aux chatters", "", D.open ? "ok" : "info"); } catch (e) { notify("Erreur", e.message, "err"); } };
     m.querySelectorAll("[data-lv]").forEach(b => b.onclick = async () => { try { D = await api("/api/twizz/inbox/team", { body: { user_id: +b.dataset.u, level: +b.dataset.lv } }); paint(); } catch (e) { notify("Erreur", e.message, "err"); } }); };
@@ -1274,7 +1272,7 @@ function lightbox(x) {
 /* ================= scripts et assistant IA (au-dessus de la barre d'envoi) ================= */
 let PANEL = null, SCRIPTS = null; const SQ = { q: "", cat: "", sel: 0, slash: false, form: null }, AIRES = {};
 const fillVars = t => String(t || "").replace(/\{pr[ée]nom\}/gi, ((CUR && CUR.fan.name) || "").split(" ")[0]).replace(/\{cr[ée]atrice\}/gi, crLabel());
-function putText(t) { const tx = $("tx"); if (!tx) return; if (tx.disabled) return notify(ST.canSend ? "Envoi coupé" : "Lecture seule", ST.canSend ? (ST.founder ? "Active « Envoi activé » pour l'utiliser" : "Le fondateur a coupé l'envoi pour le moment") : "Demande au fondateur le droit d'envoyer", "info");
+function putText(t) { const tx = $("tx"); if (!tx) return; if (tx.disabled) return notify(ST.canSend ? "Envoi coupé" : "Lecture seule", ST.canSend ? (ST.founder ? "Rallume l'envoi dans « Accès à la messagerie » (icône équipe en haut)" : "Le fondateur a coupé l'envoi pour le moment") : "Demande au fondateur le droit d'envoyer", "info");
   tx.value = t; tx.dispatchEvent(new Event("input")); tx.focus(); tx.setSelectionRange(t.length, t.length); }
 function openPanel(kind, opt) { PANEL = kind; SQ.slash = !!(opt && opt.slash); SQ.q = ""; SQ.sel = 0;
   if (kind === "scripts" && SCRIPTS && SCRIPTS.cid === CID) getScripts(true).then(() => PANEL === "scripts" && paintScripts()).catch(() => {});   // à jour si la page Scripts a changé
@@ -1463,9 +1461,12 @@ function tagPop() {
 }
 
 /* ================= historique d'un fan ================= */
-async function loadHist(fresh) { const c = CUR; if (!c) return;
-  try { const r = await api2(`/history/${enc(c.id)}?fan=${enc(c.fan.id)}${fresh ? "&fresh=1" : ""}`); r.items.forEach(i => i.thumbs = i.thumbs.map((t, k) => stable(i.id + ":" + k + ":t", t)));
-    HIST[c.id] = r; if (CUR === c) { if ($("crew")) $("crew").innerHTML = crewHtml(); fanCard(); } } catch (e) {} }
+// more : lire 5 pages plus anciennes ; pendant que le site lit les pages anciennes en fond, on redemande un peu plus tard
+let histT = null;
+async function loadHist(fresh, more, tries = 0) { const c = CUR; if (!c) return; clearTimeout(histT);
+  try { const r = await api2(`/history/${enc(c.id)}?fan=${enc(c.fan.id)}${fresh ? "&fresh=1" : ""}${more ? "&more=1" : ""}`); r.items.forEach(i => i.thumbs = i.thumbs.map((t, k) => stable(i.id + ":" + k + ":t", t)));
+    HIST[c.id] = r; if (CUR === c) { if ($("crew")) $("crew").innerHTML = crewHtml(); fanCard(); if (r.filling && tries < 4) histT = setTimeout(() => { if (CUR === c) loadHist(false, false, tries + 1); }, 7000); } }
+  catch (e) { if (more) notify("Historique", e.message, "err"); } }
 // ce que le fan a déjà reçu / acheté, reconnu par les repères des fichiers
 function sentMap(H) { const M = new Map(); if (!H) return M;
   H.items.slice().reverse().forEach(i => i.keys.forEach(k => { const o = M.get(k); if (!o || (i.bought && !o.bought)) M.set(k, i); }));
@@ -1631,15 +1632,16 @@ function paintHist(c, H) {
   const L = HTAB === 0 ? ok : HTAB === 1 ? no : all;
   const row = (i, k) => { const cls = i.bought ? "ok" : i.price > 0 ? "no" : "fr", p = i.by ? pal(i.by)[0] : "#9a9a9a", th = i.thumbs.slice(0, 3);
     return `<div class="hr ${cls}" style="animation-delay:${Math.min(k, 10) * .04}s"><span class="nd">${i.bought ? SV(IC.check, 10, 3.6) : ""}</span>
-      <span class="th ${th.length > 2 ? "s3" : th.length > 1 ? "s2" : ""}">${th.map((t, j) => `<span class="c">${t ? `<img src="${esc(t)}" alt="" loading="lazy">` : ""}${j === th.length - 1 && i.videos ? `<span class="pl">${SV(IC.play, 13)}</span>` : ""}</span>`).join("")}</span>
+      <span class="th ${th.length > 2 ? "s3" : th.length > 1 ? "s2" : ""}">${th.map((t, j) => `<span class="c">${t ? `<img src="${esc(t)}" alt="" loading="lazy" onerror="this.remove()">` : ""}${j === th.length - 1 && i.videos ? `<span class="pl">${SV(IC.play, 13)}</span>` : ""}</span>`).join("")}</span>
       <span class="tx"><b>${esc(mediaLabel(i.n, i.videos))} · ${i.price > 0 ? E(i.price) : "offert"}</b><small><i style="--c:${p}">${esc((i.by || "T")[0].toUpperCase())}</i>${esc(i.by || "Twizz")} · ${esc(day(i.at))}</small></span>
       <span class="st">${i.bought ? "Acheté" : i.price > 0 ? (i.status === "refused" ? "Refusé" : "Pas acheté") : "Offert"}<small>${i.bought ? "" : i.price > 0 ? "depuis " + since(i.at) : ""}</small></span></div>`; };
   const oi = $("fHs").querySelector(".ind"), from = oi && oi.style.width ? { w: oi.style.width, t: oi.style.transform } : null;
   $("fHs").innerHTML = `<div class="hs"><h4 class="ttl">Médias envoyés <em>à ${first1}</em></h4><span class="cap">${all.length ? Math.round((ok.length / Math.max(1, ok.length + no.length)) * 100) + " % achetés" : ""}</span></div>
     <div class="wtb hwt"><span class="ind"></span><button class="${HTAB === 0 ? "on" : ""}" data-h="0"><i class="i-ok"></i>Achetés<span class="cn">${ok.length}</span></button><button class="${HTAB === 1 ? "on" : ""}" data-h="1"><i class="i-no"></i>Pas achetés<span class="cn">${no.length}</span></button><button class="${HTAB === 2 ? "on" : ""}" data-h="2">Tout<span class="cn">${all.length}</span></button></div>
-    <div class="hl">${L.length ? L.map(row).join("") : `<div class="hnone">${HTAB === 0 ? "Aucun achat pour l'instant" : HTAB === 1 ? "Il a tout acheté" : "Aucun média envoyé"}</div>`}</div>${H.partial ? `<div class="hnone">Historique des dernières semaines seulement</div>` : ""}`;
+    <div class="hl">${L.length ? L.map(row).join("") : `<div class="hnone">${HTAB === 0 ? "Aucun achat pour l'instant" : HTAB === 1 ? "Il a tout acheté" : "Aucun média envoyé"}</div>`}</div>${H.filling ? `<div class="hnone">Recherche des envois plus anciens…</div>` : H.partial ? `<button class="mx-more" id="hOld" style="margin:12px auto 0">Voir les envois plus anciens</button>` : ""}`;
   const w = $("fHs").querySelector(".hwt"); if (from) slideInd(w, from); else requestAnimationFrame(() => slideInd(w, { w: "0px", t: "translateX(0)" }));
   $("fHs").querySelectorAll("[data-h]").forEach(b => b.onclick = () => { HTAB = +b.dataset.h; paintHist(c, HIST[c.id]); });
+  if ($("hOld")) $("hOld").onclick = async () => { const b = $("hOld"); b.disabled = true; b.textContent = "Chargement…"; await loadHist(false, true); };
 }
 
 /* ================= coffre intelligent ================= */
