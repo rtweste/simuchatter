@@ -171,7 +171,9 @@ const modsFor = me => { const L = MODULES.filter(m => m.roles.includes(me.role) 
   // messagerie ouverte à l'équipe : rangée juste après Ventes, avec le travail de tous les jours
   const i = L.findIndex(m => m.id === "messagerie");
   if (i >= 0 && RKOF(me) !== "founder") { L.splice(i, 1); const j = L.findIndex(m => m.id === "ventes");
-    L.splice(j >= 0 ? j + 1 : L.length, 0, { ...MODULES.find(m => m.id === "messagerie"), label: "Messagerie", section: j >= 0 ? L[j].section : "Organisation", desc: "Les conversations Twizz de tes créatrices, directement sur le site." }); }
+    L.splice(j >= 0 ? j + 1 : L.length, 0, { ...MODULES.find(m => m.id === "messagerie"), label: "Messagerie", section: j >= 0 ? L[j].section : "Organisation", desc: "Les conversations Twizz de tes créatrices, directement sur le site.", nodock: ["admin"] });
+    // téléphone : la Messagerie prend la place du Simu Chatter dans le dock des chatters (le simulateur reste dans le menu et sur l'accueil)
+    if (me.role === "chatter") { const k = L.findIndex(m => m.id === "simu"); if (k >= 0) L[k] = { ...L[k], nodock: [...(L[k].nodock || []), "chatter", "tl"] }; } }
   return L; };
 const eur = n => (n == null || isNaN(n)) ? "—" : Number(n).toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
 const hrs = h => { const m = Math.round((h || 0) * 60); return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}`; };
