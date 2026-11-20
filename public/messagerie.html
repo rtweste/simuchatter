@@ -1022,8 +1022,10 @@ function queueItems() {
   const now = Date.now(); let out = [];
   all.forEach(c => {
     const waitMin = c.last.fromFan && c.last.at ? Math.max(0, (now - Date.parse(c.last.at)) / 60e3) : 0;
-    const isReq = req.has(c.id), isNew = !c.last.at && !c.last.text, done = QDONE.has(c.id), pin = pinOf(c.fan.id);
-    if (!(done || isReq || c.last.fromFan || isNew || pin)) return;
+    const isReq = req.has(c.id), isNew = !c.last.at && !c.last.text, pin = pinOf(c.fan.id), done = false;
+    // fan à qui on vient de répondre : il sort de la file tout de suite (il revient s'il réécrit)
+    if (QDONE.has(c.id) && QDONE.get(c.id) === String(c.last.at || "") && !pin) return;
+    if (!(isReq || c.last.fromFan || isNew || pin)) return;
     const sp = SPEND[c.fan.id], total = sp ? sp.total : null, big = total != null && total >= 300;
     const score = Math.min(waitMin, 240) + (isReq ? 60 : 0) + (isNew ? 15 : 0) + (big ? 45 : total >= 100 ? 15 : 0) + (pin ? 1e4 : 0);
     out.push({ c, waitMin, isReq, isNew, big, total, done, score, pin, owner: ownerOf(c) });
@@ -1079,8 +1081,7 @@ function nextInQueue() {
 }
 function markDone(conv) {
   if (!conv) return; const was = (queueItems() || []).some(q => q.c.id === conv.id && !q.done); if (!was) return;
-  QDONE.set(conv.id, Date.now()); QTREATED++; renderQueue();
-  setTimeout(() => { QDONE.delete(conv.id); renderQueue(); }, 2600);
+  QDONE.set(conv.id, String(conv.last && conv.last.at || "")); QTREATED++; renderQueue();
 }
 
 /* ================= fil de discussion ================= */
