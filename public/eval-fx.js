@@ -30,7 +30,7 @@ const EVAL = (() => {
   function ensure() {
     if (A.ctx) { if (A.ctx.state !== "running") A.ctx.resume().catch(() => {}); return A.ctx; }
     const K = window.AudioContext || window.webkitAudioContext; if (!K) return null;
-    try { if (navigator.audioSession && navigator.audioSession.type !== "playback") navigator.audioSession.type = "playback"; } catch (e) {}
+    try { if (navigator.audioSession && navigator.audioSession.type !== "playback" && (!window.stCanPlayback || window.stCanPlayback())) navigator.audioSession.type = "playback"; } catch (e) {}
     const C = new K(); A.ctx = C;
     A.master = C.createGain(); A.master.gain.value = .5;
     const comp = C.createDynamicsCompressor(); comp.threshold.value = -20; comp.ratio.value = 4; comp.attack.value = .003; comp.release.value = .2;

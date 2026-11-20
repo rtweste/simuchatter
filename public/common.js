@@ -240,7 +240,7 @@ const VOICE_UI = (() => {
         bbar.querySelector("button").onclick = () => openVoice(); document.body.appendChild(bbar); } }
     else if (bbar) { bbar.remove(); bbar = null; }
   };
-  let bc = null; try { bc = new BroadcastChannel("stellads-voice"); bc.onmessage = e => { const d = e.data || {}; if (!("on" in d)) return; on = !!d.on; n = d.count || 0; blk = !!d.blocked; seen = Date.now(); paint(); }; } catch (e) {}
+  let bc = null; try { bc = new BroadcastChannel("stellads-voice"); bc.onmessage = e => { const d = e.data || {}; if (!("on" in d)) return; on = !!d.on; window.VOICE_LIVE = on; n = d.count || 0; blk = !!d.blocked; seen = Date.now(); paint(); }; } catch (e) {}
   try { bc && location.pathname !== "/vocal" && bc.postMessage({ cmd: "ping" }); } catch (e) {}   // la fenêtre vocale répond avec son état
   // push-to-talk : la touche choisie marche aussi quand une page du site est au premier plan
   if (bc && location.pathname !== "/vocal") {
@@ -251,7 +251,7 @@ const VOICE_UI = (() => {
     document.addEventListener("keyup", e => { const c = cfg(); if (c && e.code === c.code) rel(); });
     window.addEventListener("blur", rel); document.addEventListener("visibilitychange", () => document.hidden && rel());
   }
-  setInterval(() => { if (on && Date.now() - seen > 12e3) { on = false; paint(); } }, 4e3);
+  setInterval(() => { if (on && Date.now() - seen > 12e3) { on = false; window.VOICE_LIVE = false; paint(); } }, 4e3);
   async function check() { try { const r = await api("/api/voice/presence"); if (r.me) { on = true; seen = Date.now(); } n = r.count; } catch (e) {} paint(); }
   return { start(me) { need = !!me.voiceNeeded; if (me.viewAs) return; check(); setInterval(async () => { if (document.hidden) return;
     try { const m = await api("/api/me", { fresh: true }); need = !!m.voiceNeeded; } catch (e) {} check(); }, 30e3); } };
@@ -496,6 +496,8 @@ if ("serviceWorker" in navigator) addEventListener("load", () => navigator.servi
    Les navigateurs ne laissent démarrer le son qu'après un geste (clic, touche).
    Safari peut aussi mettre le son en pause (« interrupted ») après une veille ou un changement de sortie audio.
    À chaque geste, on relance tous les moteurs de son de la page. */
+// pendant un appel vocal (fenêtre ouverte dans ce navigateur), on ne touche pas à la session audio : Safari couperait le micro
+window.stCanPlayback = () => !(window.VOICE_LIVE || (() => { try { return Date.now() - (+localStorage.getItem("vc:live") || 0) < 12e4; } catch (e) { return false; } })());
 const stAudio = window.stAudio = (() => {
   const list = [];
   const wake = () => list.forEach(c => { try {
@@ -514,7 +516,7 @@ const SND = window.SND = (() => {
   function ac() {
     if (!on()) return null;
     try { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
-      try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
+      try { if (navigator.audioSession && location.pathname !== "/vocal" && window.stCanPlayback()) navigator.audioSession.type = "playback"; } catch (e) {}
       if (!ctx) { ctx = new C(); out = ctx.createGain(); out.gain.value = 0.16; out.connect(ctx.destination); stAudio.add(ctx); }
       if (ctx.state !== "running") ctx.resume().catch(() => {}); return ctx; } catch (e) { return null; }
   }

@@ -10,7 +10,7 @@ const FX = (() => {
     try {
       const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
       // iPhone : jouer le son même quand le téléphone est en mode silencieux
-      try { if (navigator.audioSession && navigator.audioSession.type !== "playback") navigator.audioSession.type = "playback"; } catch (e) {}
+      try { if (navigator.audioSession && navigator.audioSession.type !== "playback" && (!window.stCanPlayback || window.stCanPlayback())) navigator.audioSession.type = "playback"; } catch (e) {}
       if (!ctx) { ctx = new C(); out = ctx.createGain(); out.gain.value = 0.2; out.connect(ctx.destination); window.stAudio && stAudio.add(ctx); }
       if (ctx.state !== "running") ctx.resume().catch(() => {});
       return ctx;

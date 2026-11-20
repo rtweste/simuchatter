@@ -311,7 +311,11 @@ let SELF = {}, QUIT = false;
 // Safari et iPhone/iPad (tous les navigateurs y sont des Safari) : le micro et le son ne marchent qu'après un toucher dans la page
 const UA = navigator.userAgent, IOS = /iP(hone|ad|od)/.test(UA) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const WEBKIT = IOS || (/safari/i.test(UA) && !/chrome|chromium|crios|fxios|edg|android/i.test(UA));
-const getMic = id => navigator.mediaDevices.getUserMedia({ audio: { ...(id ? { deviceId: { exact: id } } : {}), echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+// Safari : si une page du site a mis la session audio en « lecture » (sons de l'interface), le micro est refusé
+// (InvalidStateError). On passe en « lecture et enregistrement » avant chaque demande de micro.
+const recSession = on => { try { if (navigator.audioSession) navigator.audioSession.type = on ? "play-and-record" : "auto"; } catch (e) {} try { localStorage.setItem("vc:live", on ? String(Date.now()) : "0"); } catch (e) {} };
+setInterval(() => { if (LOCAL) try { localStorage.setItem("vc:live", String(Date.now())); } catch (e) {} }, 30e3);
+const getMic = id => (recSession(true), navigator.mediaDevices.getUserMedia({ audio: { ...(id ? { deviceId: { exact: id } } : {}), echoCancellation: true, noiseSuppression: true, autoGainControl: true } }));
 // changer de micro en plein appel : on remplace la piste chez tout le monde, sans recouper
 async function switchMic(id) {
   let s; try { s = await getMic(id); } catch (e) { notify("Micro indisponible", "Impossible d'utiliser ce micro", "err"); return false; }
@@ -391,7 +395,7 @@ function leave(final) {
   LEFTME = true; clearTimeout(RT);
   if (ES) { try { ES.close(); } catch (e) {} ES = null; }
   [...PEERS.keys()].forEach(drop); if (SCREEN) shareStop();
-  if (LOCAL) LOCAL.getTracks().forEach(t => t.stop()); LOCAL = null; setLive(false); bcast();
+  if (LOCAL) LOCAL.getTracks().forEach(t => t.stop()); LOCAL = null; setLive(false); bcast(); recSession(false);
   if (final) { try { BC && BC.postMessage({ on: false }); } catch (e) {} QUIT = true; window.close(); setTimeout(() => gate("left"), 300); }
 }
 // micro refusé ou introuvable : les bonnes étapes selon l'appareil
@@ -399,6 +403,7 @@ function micHelp(err) {
   const n = err && err.name || "";
   if (n === "NotFoundError" || n === "OverconstrainedError") return ["Aucun micro trouvé", "Branche un micro ou un casque avec micro, puis réessaie."];
   if (n === "NotReadableError" || n === "AbortError") return ["Micro déjà utilisé", "Une autre application ou un autre onglet utilise ton micro (appel, visio…). Ferme-la, puis réessaie."];
+  if (n === "InvalidStateError") return ["Micro occupé par le son du site", "Ferme les autres onglets StellADS qui jouent du son, puis réessaie."];
   if (n === "NoMediaDevices") return ["Micro indisponible ici", IOS ? "Ouvre stellads.fr directement dans Safari (pas depuis une autre application), puis réessaie." : "Ce navigateur ne donne pas accès au micro. Essaie avec Chrome ou Safari à jour."];
   if (IOS) return ["Autorise le micro", "Safari a bloqué le micro pour stellads.fr.", `<ol><li>Touche <b>aA</b> (ou l'icône à gauche de l'adresse)</li><li><b>Réglages du site web</b> → <b>Micro</b> → <b>Autoriser</b></li><li>Reviens ici et touche <b>Réessayer</b></li></ol><small style="color:#777;font-size:12px">Toujours bloqué ? Réglages de l'iPhone → <b style="font-size:inherit;color:#aaa">Safari</b> → <b style="font-size:inherit;color:#aaa">Micro</b> → Autoriser.</small>`];
   if (WEBKIT) return ["Autorise le micro", "Safari a bloqué le micro pour stellads.fr.", `<ol><li>Menu <b>Safari</b> → <b>Réglages…</b> → <b>Sites web</b></li><li><b>Micro</b> → stellads.fr → <b>Autoriser</b></li><li>Reviens ici et clique sur <b>Réessayer</b></li></ol>`];
