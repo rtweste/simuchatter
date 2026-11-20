@@ -138,8 +138,11 @@ async function paintBody() {
         <small class="pvn" id="profNote"></small>
         <div class="pvh" style="margin-top:10px">Ajouté à chaque message <span>ce qu'on sait du fan et ce que l'IA peut vendre</span></div>
         <pre class="pvp" id="pLive">Chargement…</pre>
-        <div class="pvh">3 · Règles fixes 🔒 <span>toujours ajoutées à la fin</span></div>
-        <pre class="pvp lk" id="pLock"></pre>
+        <div class="pvh">3 · Règles fixes <span>toujours ajoutées à la fin · modifiable</span>
+          <button class="btn sm" id="lockedReset" style="float:right;margin-top:-6px">Rétablir par défaut</button>
+        </div>
+        <textarea class="inp mono" id="locked" maxlength="4000" spellcheck="false"></textarea>
+        <small class="pvn">{creatrice} et {mark} sont remplacés automatiquement.</small>
       </div>
     </div>
     <div>
