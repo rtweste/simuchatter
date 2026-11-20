@@ -142,6 +142,18 @@
 .vt-tabs{display:flex;gap:6px}
 .vt-tabs button{height:36px;border-radius:11px;border:1px solid #222;background:#141414;color:#8f8f8f;font-weight:800;font-size:12.5px;padding:0 13px;transition:background .25s,color .25s,border-color .25s}
 .vt-tabs button.on{background:#ededed;color:#0a0a0a;border-color:#ededed}
+.ck-n{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:5px;padding:0 5px;border-radius:9px;background:#f06272;color:#fff;font-size:10.5px;font-weight:900}
+.ck-set{margin-bottom:12px}.ck-rules{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:9px}.ck-rules label{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#cfcfcf}
+.ck-rules label i{width:7px;height:7px;border-radius:50%;flex:none}.ck-rules input{width:46px;height:28px;border-radius:8px;border:1px solid #2a2a2a;background:#151515;color:#fff;font:inherit;font-weight:800;text-align:center}
+.ck-it{margin-bottom:10px}.ck-hd{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.ck-am{font-size:24px;font-weight:900;letter-spacing:-.04em;min-width:64px}
+.ck-who{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.ck-who b{font-size:14px}
+.ck-acts{display:flex;gap:8px;margin-left:auto}.ck-acts button{height:36px;border-radius:11px;padding:0 13px;font-weight:800;font-size:12.5px;border:1px solid #262626;background:#161616;color:#cfcfcf;cursor:pointer}
+.ck-acts .ck-cut{border-color:rgba(240,181,74,.4);background:rgba(240,181,74,.08);color:#f0c46a}.ck-acts .ck-okb{background:#ededed;color:#0a0a0a;border-color:#ededed}
+.ck-why{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.ck-why span{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border-radius:10px;font-size:12px;font-weight:700;color:#e2e2e2;background:color-mix(in srgb,var(--c) 10%,#141414);border:1px solid color-mix(in srgb,var(--c) 35%,transparent)}
+.ck-why i{width:6px;height:6px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
+.vt-com.ck-c{margin-top:12px;display:flex;flex-direction:column;gap:9px}.vt-com.ck-c .sg{grid-template-columns:repeat(2,minmax(110px,auto));align-self:flex-start}.ck-c .pr{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#9a9a9a}.ck-c .pr input{width:90px;height:38px;border-radius:11px;border:1px solid #2a2a2a;background:#151515;color:#fff;font:inherit;font-weight:800;padding:0 10px}
+.ck-c .vt-val{align-self:flex-start}
+.ck-empty{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:34px 18px}.ck-ok{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;color:#5fd3a2;background:rgba(95,211,162,.1);border:1px solid rgba(95,211,162,.3)}
 
 /* ----- manager : file focus ----- */
 .vt-top{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
@@ -345,7 +357,7 @@
   <div id="adminView" class="hidden">
     <div class="vt-hdr">
       <div><div class="eyebrow">Manager</div><h1 class="vt-ttl">Ventes <em>à valider.</em></h1></div>
-      <div class="vt-tabs" role="tablist"><button data-t="queue" class="on" id="tabQueue">À valider</button><button data-t="hist" id="tabHist">Historique</button></div>
+      <div class="vt-tabs" role="tablist"><button data-t="queue" class="on" id="tabQueue">À valider</button><button data-t="ctrl" id="tabCtrl">À vérifier</button><button data-t="hist" id="tabHist">Historique</button></div>
     </div>
 
     <section id="t-queue">
@@ -390,6 +402,12 @@
         <div id="sNvBox"><small>Validées aujourd'hui</small><b id="sNv">0</b></div>
         <div id="sNrBox"><small>Refusées aujourd'hui</small><b id="sNr">0</b></div>
       </div>
+    </section>
+
+    <!-- ventes automatiques Twizz signalées : le manager garde la vente ou baisse la commission -->
+    <section id="t-ctrl" class="hidden">
+      <div class="vt-card ck-set" id="ckSet"></div>
+      <div id="ckList"></div>
     </section>
 
     <section id="t-hist" class="hidden">
@@ -1181,9 +1199,43 @@ async function loadHist() {
 ["hStatus", "hUser", "hCat", "hPeriod"].forEach(id => $(id).onchange = loadHist);
 document.querySelectorAll("#adminView .vt-tabs button[data-t]").forEach(b => b.onclick = () => {
   b.parentElement.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
-  $("t-queue").classList.toggle("hidden", b.dataset.t !== "queue"); $("t-hist").classList.toggle("hidden", b.dataset.t !== "hist");
-  if (b.dataset.t === "hist") loadHist(); else loadQueue();
+  $("t-queue").classList.toggle("hidden", b.dataset.t !== "queue"); $("t-hist").classList.toggle("hidden", b.dataset.t !== "hist"); $("t-ctrl").classList.toggle("hidden", b.dataset.t !== "ctrl");
+  if (b.dataset.t === "hist") loadHist(); else if (b.dataset.t === "ctrl") loadCtrl(); else loadQueue();
 });
+
+/* ---------- À vérifier : ventes automatiques Twizz qui sortent des clous ---------- */
+let CK = null;
+const ckTab = n => { $("tabCtrl").innerHTML = n ? `À vérifier <span class="ck-n">${n > 99 ? "99+" : n}</span>` : "À vérifier"; };
+async function ckCount() { try { const r = await api("/api/admin/controle/count"); ckTab(r.count); } catch (e) {} }
+async function loadCtrl() { if (!CK) $("ckList").innerHTML = `<div class="vt-load">Chargement…</div>`; try { CK = await api("/api/admin/controle"); paintCtrl(); } catch (e) { $("ckList").innerHTML = `<div class="vt-load">${esc(e.message)}</div>`; } }
+const CKI = { low: "#f06272", fan: "#f0b54a", promo: "#ff62f1", free: "#7db4ff" };
+function paintCtrl() { const D = CK; ckTab(D.count);
+  $("ckSet").innerHTML = `<div class="vt-lab">Ce qui est signalé</div><div class="ck-rules">
+    <label><i style="background:${CKI.low}"></i>PPV vendu sous <input id="ckMin" inputmode="numeric" value="${D.cfg.min}"> €</label>
+    <label><i style="background:${CKI.fan}"></i>Prix bien plus bas que ce que le fan paie d'habitude</label>
+    <label><i style="background:${CKI.promo}"></i>Promo de plus de <input id="ckDisc" inputmode="numeric" value="${D.cfg.disc}"> %</label>
+    <label><i style="background:${CKI.free}"></i>À partir de <input id="ckFree" inputmode="numeric" value="${D.cfg.free}"> médias offerts par jour (hors scripts)</label></div>
+    <div class="vt-mut" style="margin-top:8px">Rien n'est bloqué : tu gardes la vente ou tu baisses la commission du chatter (il verra la raison). Les 30 derniers jours.</div>`;
+  [["ckMin", "min"], ["ckDisc", "disc"], ["ckFree", "free"]].forEach(([id, k]) => $(id).onchange = async () => { try { CK = await api("/api/admin/controle/settings", { body: { [k]: $(id).value } }); paintCtrl(); notify("Réglage enregistré", "", "ok"); } catch (e) { notify("Erreur", e.message, "err"); } });
+  if (!D.items.length) { $("ckList").innerHTML = `<div class="vt-card ck-empty"><span class="ck-ok"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 10 17.5 19 7"/></svg></span><b>Rien à vérifier</b><span class="vt-mut">Les ventes automatiques de Twizz et les médias offerts depuis la messagerie passent ici au crible.</span></div>`; return; }
+  $("ckList").innerHTML = D.items.map((x, i) => { const S = x.sale, F = x.free;
+    return `<div class="vt-card ck-it" style="--d:${Math.min(i, 8) * .04}s" data-k="${esc(x.key)}"><div class="ck-hd">
+      ${S ? `<b class="ck-am">${E(S.amount)}</b><span class="ck-who"><b>${esc(S.user)}</b><span class="vt-mut">${esc(S.type)}${S.model ? " · " + esc(S.model) : ""}${S.fan ? " · " + esc(S.fan) : ""} · ${whenTxt(x.at)}</span></span>`
+          : `<b class="ck-am">${F.n}</b><span class="ck-who"><b>${esc(F.user)}</b><span class="vt-mut">médias offerts · ${esc(F.day.split("-").reverse().join("/"))}</span></span>`}
+      <span class="ck-acts">${S ? `<button class="ck-cut" data-cut="${i}">Baisser la commission</button>` : ""}<button class="ck-okb" data-ok="${i}">${S ? "C'est bon" : "Vu"}</button></span></div>
+      <div class="ck-why">${x.why.map(w => `<span style="--c:${CKI[w.k]}"><i></i>${esc(w.t)}</span>`).join("")}</div><div class="ck-form" id="ckF${i}"></div></div>`; }).join("");
+  document.querySelectorAll("[data-ok]").forEach(b => b.onclick = () => ckDone(D.items[+b.dataset.ok], "ok"));
+  document.querySelectorAll("[data-cut]").forEach(b => b.onclick = () => ckCut(+b.dataset.cut)); }
+async function ckDone(x, status) { try { CK = await api("/api/admin/controle/done", { body: { key: x.key, status } }); paintCtrl(); } catch (e) { notify("Erreur", e.message, "err"); } }
+function ckCut(i) { const x = CK.items[i], S = x.sale, F = $("ckF" + i); if (F.innerHTML) { F.innerHTML = ""; return; }
+  F.innerHTML = `<div class="vt-com ck-c"><div class="sg" role="radiogroup"><button data-c="part" class="on">Une partie</button><button data-c="none">Rien</button></div>
+    <div class="pr"><input id="ckA${i}" inputmode="decimal" autocomplete="off" value="${String(Math.round(S.amount / 2 * 100) / 100).replace(".", ",")}"><span>€ comptés au chatter, sur ${E(S.amount)}</span></div>
+    <input class="vt-fi" id="ckW${i}" maxlength="200" value="${esc(x.why[0].t)}" placeholder="Raison, le chatter la verra"><button class="vt-val" id="ckGo${i}">Baisser la commission</button></div>`;
+  let mode = "part"; F.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { mode = b.dataset.c; F.querySelectorAll("[data-c]").forEach(y => y.classList.toggle("on", y === b)); $("ckA" + i).closest(".pr").style.display = mode === "part" ? "" : "none"; });
+  $("ckGo" + i).onclick = async () => { const com = mode === "none" ? 0 : Number(String($("ckA" + i).value).replace(",", ".")), why = $("ckW" + i).value.trim();
+    if (!why) return notify("Indique la raison", "Le chatter la verra", "err"); if (mode === "part" && !(com >= 0 && com < S.amount)) return notify("Montant invalide", `Entre 0 et ${E(S.amount)}`, "err");
+    try { await api(`/api/admin/sales/${S.id}/review`, { body: { decision: "validated", com_amount: com, com_reason: why } }); notify("Commission baissée", `${S.user} : ${com > 0 ? E(com) + " comptés" : "hors commission"}`, "ok"); await ckDone(x, "adjusted"); }
+    catch (e) { notify("Erreur", e.message, "err"); } }; }
 
 /* ---------- Démarrage ---------- */
 let ME0 = null, MINE_ON = false;
@@ -1200,7 +1252,7 @@ function mineTabs() {
   $("tabMine").onclick = () => { VS.tick(); $("adminView").classList.add("hidden"); $("chatterView").classList.remove("hidden"); startMine(); };
   const h = document.querySelector("#chatterView .vt-hdr");
   h.querySelector(".eyebrow").textContent = "Manager";
-  h.insertAdjacentHTML("beforeend", '<div class="vt-tabs" role="tablist" style="margin-left:auto"><button data-back="queue">À valider</button><button data-back="hist">Historique</button><button class="on">Mes ventes</button></div>');
+  h.insertAdjacentHTML("beforeend", '<div class="vt-tabs" role="tablist" style="margin-left:auto"><button data-back="queue">À valider</button><button data-back="ctrl">À vérifier</button><button data-back="hist">Historique</button><button class="on">Mes ventes</button></div>');
   h.querySelectorAll("[data-back]").forEach(b => b.onclick = () => { VS.tick(); $("chatterView").classList.add("hidden"); $("adminView").classList.remove("hidden");
     document.querySelector(`#adminView .vt-tabs [data-t="${b.dataset.back}"]`).click(); });
 }
@@ -1217,6 +1269,7 @@ function mineTabs() {
     if (me.sells) { mineTabs(); if (new URLSearchParams(location.search).has("declarer")) { $("tabMine").click(); openSheetFor(); } }
     else if (me.rk === "founder" && new URLSearchParams(location.search).has("declarer")) openSheetFor();
     setInterval(() => { if (!document.hidden && !$("adminView").classList.contains("hidden") && !$("t-queue").classList.contains("hidden")) loadQueue().catch(() => {}); }, 20000);
+    ckCount(); setInterval(() => { if (!document.hidden) ckCount(); }, 120000);
   } else {
     $("chatterView").classList.remove("hidden");
     // ventes automatiques Twizz : plus de bouton « Déclarer »

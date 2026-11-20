@@ -8,6 +8,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   if (!db.prepare("PRAGMA table_info(twizz_sent)").all().some(x => x.name === "files")) db.exec("ALTER TABLE twizz_sent ADD COLUMN files TEXT");
   // promo envoyée depuis le site : type de remise (€ ou %) et valeur, pour l'afficher telle qu'elle a été choisie
   if (!db.prepare("PRAGMA table_info(twizz_sent)").all().some(x => x.name === "promo")) db.exec("ALTER TABLE twizz_sent ADD COLUMN promo TEXT");
+  // envoyé par un script ou à la main (les médias offerts par un script ne sont pas signalés au manager)
+  if (!db.prepare("PRAGMA table_info(twizz_sent)").all().some(x => x.name === "via")) db.exec("ALTER TABLE twizz_sent ADD COLUMN via TEXT");
   // scripts : messages tout prêts, pour toutes les créatrices (creator_id vide) ou une seule
   db.exec("CREATE TABLE IF NOT EXISTS twizz_scripts (id INTEGER PRIMARY KEY, creator_id TEXT, cat TEXT, title TEXT, body TEXT, uses INTEGER DEFAULT 0, user_id INTEGER, at INTEGER)");
   for (const [c, t] of [["updated_at", "INTEGER"], ["updated_by", "INTEGER"], ["source", "TEXT"], ["ext_id", "TEXT"], ["pinned", "INTEGER DEFAULT 0"], ["media", "TEXT"], ["price", "REAL"], ["steps", "TEXT"]])
@@ -730,7 +732,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const j = await call("POST", "/mediapush/conversation", f, true);
     const d = (j && j.data) || j || {}, nm = d.newMessage || null;
     if (!nm && d.message) throw bad("Twizz a refusé l'envoi : " + d.message);
-    db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at, files, promo) VALUES (?,?,?,?,?,?,?,?,?)").run(str(nm && nm._id), conversationId, fan, cid, req.user.id, nm && nm.mediaPushPrice && isFinite(+nm.mediaPushPrice.resultPrice) ? +nm.mediaPushPrice.resultPrice : promo ? promo.final : price, Date.now(), JSON.stringify(files), promo ? JSON.stringify({ type: promo.discountType === "PERCENTAGE" ? "pct" : "eur", value: promo.discount, time: str(pr.time) }) : null);
+    db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at, files, promo, via) VALUES (?,?,?,?,?,?,?,?,?,?)").run(str(nm && nm._id), conversationId, fan, cid, req.user.id, nm && nm.mediaPushPrice && isFinite(+nm.mediaPushPrice.resultPrice) ? +nm.mediaPushPrice.resultPrice : promo ? promo.final : price, Date.now(), JSON.stringify(files), promo ? JSON.stringify({ type: promo.discountType === "PERCENTAGE" ? "pct" : "eur", value: promo.discount, time: str(pr.time) }) : null, b.via === "script" ? "script" : null);
     if (b.acceptId) await call("PATCH", "/messages/update-message-status", { messageId: str(b.acceptId), action: "accepted", creatorId: cid, userType: "creator" }, true).catch(() => {});
     drop(conversationId, `/conversations/user/${enc(cid)}`);
     const om = nm ? msg(nm, fan) : null; if (om && om.promo && promo && !om.promo.kind) Object.assign(om.promo, { kind: promo.discountType === "PERCENTAGE" ? "pct" : "eur", value: promo.discount });
