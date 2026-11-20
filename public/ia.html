@@ -146,8 +146,11 @@ async function paintBody() {
         <small class="pvn" id="profNote"></small>
         <div class="pvh" style="margin-top:10px">Ajouté à chaque message <span>ce qu'on sait du fan et ce que l'IA peut vendre</span></div>
         <pre class="pvp" id="pLive">Chargement…</pre>
-        <div class="pvh">3 · Règles fixes 🔒 <span>toujours ajoutées à la fin</span></div>
-        <pre class="pvp lk" id="pLock"></pre>
+        <div class="pvh">3 · Règles fixes <span>toujours ajoutées à la fin · modifiable</span>
+  <button class="btn sm" id="lockedReset" style="float:right;margin-top:-6px">Rétablir par défaut</button>
+</div>
+<textarea class="inp mono" id="locked" maxlength="4000" spellcheck="false"></textarea>
+<small class="pvn">{creatrice} et {mark} sont remplacés automatiquement.</small>
       </div>
     </div>
     <div>
@@ -184,6 +187,8 @@ async function paintBody() {
     if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { [k]: v })) { if (k === "promo") return paintBody(); b.classList.toggle("on", v); paintCrs(); paintRun(); loadInfo(true); } });
   document.querySelectorAll("[data-n]").forEach(i => i.onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { [i.dataset.n]: +i.value })) { notify("Enregistré", "", "ok"); loadInfo(true); } });
   $("base").onchange = async () => { if (await save("/api/twizz/ai/cfg", { base: $("base").value })) { notify("Instructions enregistrées", "Elles valent pour toutes les créatrices", "ok"); INFO = {}; loadInfo(true); } };
+    $("locked").onchange = async () => { if (await save("/api/twizz/ai/cfg", { locked: $("locked").value })) { notify("Règles fixes enregistrées", "Elles valent pour toutes les créatrices", "ok"); INFO = {}; loadInfo(true); } };
+  $("lockedReset").onclick = async () => { if (!confirm("Remettre les règles fixes par défaut ?")) return; if (await save("/api/twizz/ai/cfg", { locked: "" })) { notify("Règles par défaut remises", "", "ok"); INFO = {}; loadInfo(true); } };
   $("prof").onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { profile: $("prof").value })) { notify("Texte enregistré", `Utilisé pour ${cur().label} à la place de la fiche`, "ok"); loadInfo(true); } };
   $("profReset").onclick = async () => { if (!confirm(`Revenir à la fiche de ${cur().label} ?\n\nLe texte écrit à la main sera effacé.`)) return; if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { profile: "" })) { notify("Fiche reprise", "", "ok"); loadInfo(true); } };
   $("baseReset").onclick = async () => { if (!confirm("Remettre les instructions de base par défaut ?")) return; if (await save("/api/twizz/ai/cfg", { base: "" })) { notify("Instructions par défaut remises", "", "ok"); INFO = {}; loadInfo(true); } };
@@ -226,11 +231,14 @@ async function scanPoll() { clearTimeout(scT); try { D = await api("/api/twizz/a
 async function loadInfo(fresh) {
   const cid = CID; if (fresh || !INFO[cid]) { try { INFO[cid] = await api(`/api/twizz/ai/info/${enc(cid)}`, { fresh: true }); } catch (e) { INFO[cid] = { albums: [], tags: [], base: "", profile: "", live: e.message, locked: "" }; } }
   if (cid !== CID || !$("albs")) return; const I = INFO[cid], M = cur().cfg;
-  if (document.activeElement !== $("base")) $("base").value = I.base || ""; $("pLive").textContent = I.live || ""; $("pLock").textContent = I.locked || "";
+  if (document.activeElement !== $("base")) $("base").value = I.base || "";
+  if (document.activeElement !== $("locked")) $("locked").value = I.locked || "";
+  $("pLive").textContent = I.live || "";
   if (document.activeElement !== $("prof")) $("prof").value = I.profile || "";
   $("profReset").hidden = !I.profileCustom; $("profTag").textContent = I.profileCustom ? "écrit à la main · la fiche n'est plus utilisée par l'IA" : "tiré de sa fiche · modifiable";
   $("profNote").textContent = I.profileCustom ? "Ce texte remplace la fiche, les consignes et le catalogue pour l'IA (la fiche elle-même ne change pas). « Revenir à la fiche » pour reprendre la fiche à jour." : "Si tu modifies ce texte, il remplacera la fiche pour l'IA de cette créatrice (la fiche elle-même ne change pas).";
   $("baseReset").disabled = !I.custom;
+    $("lockedReset").disabled = !I.customLocked;
   const chips = (box, L, sel, key, empty) => { $(box).innerHTML = L.length ? L.map(x => `<button data-v="${esc(String(x.id))}" class="${sel.includes(key === "albums" ? x.id : x.id) ? "on" : ""}">${esc(x.name)}${x.count != null ? ` · ${x.count}` : ""}</button>`).join("") : `<span class="hint">${empty}</span>`;
     $(box).querySelectorAll("[data-v]").forEach(b => b.onclick = async () => { const v = key === "albums" ? b.dataset.v : +b.dataset.v, cur0 = cur().cfg[key], nx = cur0.includes(v) ? cur0.filter(x => x !== v) : cur0.concat([v]);
       if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { [key]: nx })) { b.classList.toggle("on", nx.includes(v)); loadInfo(true); } }); };
