@@ -1941,7 +1941,7 @@ async function vault(acceptId, preset) {
         <div id="vS"></div><div id="vW"></div><div class="vgrid" id="vG"></div></div></div>
     <div class="vf tk"><div class="vdock"><span class="dkst" id="vDk"><span class="dkemp"></span></span><span class="dt"><b id="vDt">Rien de choisi</b><small id="vDs">Clique sur les médias</small></span><span class="hint" id="vH" hidden><i></i>Les prix que ${first1} achète le plus souvent</span></div>
       <div class="tk-pc"><span class="cap">Prix</span><div class="tk-big"><b id="vBig">—</b><span class="tk-step"><button type="button" data-st="5" aria-label="Plus 5 €">+</button><button type="button" data-st="-5" aria-label="Moins 5 €">−</button></span></div>
-        <div class="tk-ch" id="vP">${[0, 5, 10, 15, 20, 30, 50].map(p => `<button type="button" data-p="${p}">${p ? p + " €" : "Gratuit"}</button>`).join("")}<input id="vPrice" type="number" min="0" max="500" step="1" placeholder="Autre"></div></div>
+        <div class="tk-ch" id="vP">${[0, 5, 10, 15, 20, 30, 50].map(p => `<button type="button" data-p="${p}">${p ? p + " €" : "Gratuit"}</button>`).join("")}<input id="vPrice" type="text" inputmode="decimal" maxlength="6" placeholder="Autre" aria-label="Autre prix, centimes possibles (9,99)"></div></div>
       <div class="tk-cp" id="vCp"><div class="tk-row"><span class="ptg">PROMO</span><span class="tk-lb" id="vPrL">Remise sur ce média</span><button type="button" class="tk-sw" id="vPrT" disabled aria-label="Ajouter une promo"><i></i></button></div>
         <div class="tk-body" id="vPrB" hidden><div class="tk-row"><span class="tk-off">−<input id="vPrV" type="number" min="1" step="1" placeholder="0"><small id="vPrU">€</small></span><span class="tk-seg"><button type="button" data-pt="eur" class="on">€</button><button type="button" data-pt="pct">%</button></span><span class="tk-res" id="vPrRes"></span></div>
           <div class="tk-du">${PROMO_T.map(([k, l]) => `<button type="button" data-pd="${k}">${k === "u" ? "∞" : l.replace(" jours", " j")}</button>`).join("")}</div>
@@ -1953,7 +1953,7 @@ async function vault(acceptId, preset) {
   const SEL = [], FILES = new Map(); let price = null, filter = 0, files = [], album = null, warnId = null;
   if (preset) { preset.files.forEach(f => { if (f.id && !SEL.includes(f.id)) { SEL.push(f.id); FILES.set(f.id, f); } }); price = preset.price == null ? null : +preset.price;
     $("vTxt").value = fillVars(preset.text || "");
-    if (price !== null) { const b = m.querySelector(`#vP [data-p="${price}"]`); if (b) b.classList.add("on"); else $("vPrice").value = price; }
+    if (price !== null) { const b = m.querySelector(`#vP [data-p="${price}"]`); if (b) b.classList.add("on"); else $("vPrice").value = String(price).replace(".", ","); }
     $("vS").innerHTML = `<div class="vsc">${SV(IC.doc, 16)}<span>Script${preset.title ? ` <b>« ${esc(preset.title)} »</b>` : ""} : ${SEL.length} média${SEL.length > 1 ? "s" : ""} ${price === null ? "prêts, <b>choisis le prix</b>" : `et le prix (${price ? E(price) : "gratuit"}) prêts`}. Vérifie, puis envoie.</span></div>`; }
   // le fan a déjà acheté un média du script : on prévient avant l'envoi
   function presetCheck() { if (!preset || !H() || $("vS").dataset.chk) return; $("vS").dataset.chk = "1";
@@ -1984,13 +1984,13 @@ async function vault(acceptId, preset) {
     m.querySelectorAll("#vP [data-p]").forEach(b => b.classList.toggle("hb", fav.includes(+b.dataset.p))); $("vH").hidden = !fav.length; }
   // promo Twizz : remise en € ou en %, pour une durée (comme dans l'appli Twizz)
   const PR = { on: false, type: "eur", value: null, time: null };
-  const promoPrice = () => !PR.on || !PR.value ? price : PR.type === "eur" ? price - PR.value : Math.round(price * (100 - PR.value)) / 100;
+  const promoPrice = () => !PR.on || !PR.value ? price : Math.round((PR.type === "eur" ? price - PR.value : price * (100 - PR.value) / 100) * 100) / 100;
   const promoWhy = () => !PR.on ? "" : !PR.value ? "Choisis la remise" : PR.value % 1 ? "Remise sans centimes" : PR.type === "eur" ? (PR.value >= price ? "Remise plus grande que le prix" : "") : PR.value > 99 ? "Remise de 99 % au plus" : "";
-  // mêmes règles que Twizz : prix rond, 3 € minimum (ou gratuit), 500 € maximum, et un texte
-  const pWhy = () => price === null || !price ? "" : price % 1 ? "Prix sans centimes" : price < 3 ? "3 € minimum sur Twizz" : price > 500 ? "500 € maximum sur Twizz" : promoWhy() || (PR.on && !PR.time ? "Choisis la durée de la promo" : "");
+  // mêmes règles que Twizz : 3 € minimum (ou gratuit), 500 € maximum, et un texte ; centimes acceptés (9,99 €)
+  const pWhy = () => price === null || !price ? "" : price < 3 ? "3 € minimum sur Twizz" : price > 500 ? "500 € maximum sur Twizz" : promoWhy() || (PR.on && !PR.time ? "Choisis la durée de la promo" : "");
   const promoUi = () => { const ok = !!price && price > 0; if (!ok && PR.on) PR.on = false; $("vPrT").disabled = !ok; $("vPrT").classList.toggle("on", PR.on); $("vCp").classList.toggle("on", PR.on); $("vPrB").hidden = !PR.on;
     $("vPr0").hidden = PR.on; $("vPr0").textContent = ok ? "Active la promo pour une remise en € ou en %, pendant une durée. Le compte à rebours part à l'envoi." : "Choisis un prix pour pouvoir ajouter une promo.";
-    $("vBig").innerHTML = price === null ? "—" : price ? `${price}<small>€</small>` : "Gratuit"; $("vPrU").textContent = PR.type === "eur" ? "€" : "%";
+    $("vBig").innerHTML = price === null ? "—" : price ? `${E(price).slice(0, -2)}<small>€</small>` : "Gratuit"; $("vPrU").textContent = PR.type === "eur" ? "€" : "%";
     m.querySelectorAll("[data-pt]").forEach(b => b.classList.toggle("on", b.dataset.pt === PR.type)); m.querySelectorAll("[data-pd]").forEach(b => b.classList.toggle("on", b.dataset.pd === PR.time));
     $("vPrRes").innerHTML = PR.on && PR.value && !promoWhy() ? `<b>${E(promoPrice())}</b><s>${E(price)}</s>` : "";
     const tl = PR.time && PROMO_T.find(x => x[0] === PR.time);
@@ -2008,12 +2008,12 @@ async function vault(acceptId, preset) {
   $("vTxt").addEventListener("input", () => upd());
   $("vPrT").onclick = () => { if (!price) return; PR.on = !PR.on; upd(); if (PR.on) $("vPrV").focus(); };
   // + / − : 5 € de plus ou de moins (de 0 à 500 €)
-  m.querySelectorAll("[data-st]").forEach(b => b.onclick = () => { const d = +b.dataset.st, v = Math.max(0, Math.min(500, (price || 0) + d)); price = v > 0 && v < 3 ? (d > 0 ? 3 : 0) : v;
-    m.querySelectorAll("#vP [data-p]").forEach(x => x.classList.toggle("on", +x.dataset.p === price)); $("vPrice").value = m.querySelector(`#vP [data-p="${price}"]`) ? "" : price; upd(); });
+  m.querySelectorAll("[data-st]").forEach(b => b.onclick = () => { const d = +b.dataset.st, v = Math.max(0, Math.min(500, Math.round(((price || 0) + d) * 100) / 100)); price = v > 0 && v < 3 ? (d > 0 ? 3 : 0) : v;
+    m.querySelectorAll("#vP [data-p]").forEach(x => x.classList.toggle("on", +x.dataset.p === price)); $("vPrice").value = m.querySelector(`#vP [data-p="${price}"]`) ? "" : String(price).replace(".", ","); upd(); });
   $("vPrV").oninput = () => { PR.value = $("vPrV").value === "" ? null : Math.max(0, +$("vPrV").value); upd(); };
   m.querySelectorAll("[data-pt]").forEach(b => b.onclick = () => { PR.type = b.dataset.pt; upd(); });
   m.querySelectorAll("[data-pd]").forEach(b => b.onclick = () => { PR.time = b.dataset.pd; upd(); });
-  $("vPrice").oninput = () => { price = $("vPrice").value === "" ? null : Math.max(0, +$("vPrice").value); m.querySelectorAll("#vP [data-p]").forEach(x => x.classList.remove("on")); upd(); };
+  $("vPrice").oninput = () => { const v = parseFloat($("vPrice").value.replace(",", ".")); price = isFinite(v) ? Math.max(0, Math.round(v * 100) / 100) : null; m.querySelectorAll("#vP [data-p]").forEach(x => x.classList.remove("on")); upd(); };
   m.querySelectorAll("#vF [data-f]").forEach(b => b.onclick = () => { filter = +b.dataset.f; m.querySelectorAll("#vF [data-f]").forEach(x => x.classList.toggle("on", x === b)); slideInd($("vF")); grid(); });
   requestAnimationFrame(() => slideInd($("vF")));
   function comp() { const st = files.map(stateOf), c = [files.length, st.filter(s => s.st === "new").length, st.filter(s => s.st === "sent").length, st.filter(s => s.st === "bought").length];

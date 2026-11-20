@@ -730,11 +730,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   // média du coffre envoyé dans la conversation, payant ou gratuit
   app.post("/api/twizz/inbox/:cid/send-media", auth, inbox, wrap(async req => {
     mustSend(req); const cid = creatorOk(req.params.cid), b = req.body || {};
-    const conversationId = str(b.conversationId), fan = str(b.fan), files = (b.files || []).map(str).filter(Boolean).slice(0, 20), price = Math.max(0, +b.price || 0), text = String(b.text || "").trim().slice(0, 2000);
+    const conversationId = str(b.conversationId), fan = str(b.fan), files = (b.files || []).map(str).filter(Boolean).slice(0, 20), price = Math.round(Math.max(0, parseFloat(String(b.price ?? "").replace(",", ".")) || 0) * 100) / 100, text = String(b.text || "").trim().slice(0, 2000);
     if (!conversationId || !fan || !files.length) throw bad("Choisis au moins un média");
-    // mêmes règles que l'appli Twizz : un texte, un prix rond, 3 € minimum (ou gratuit), 500 € maximum
+    // mêmes règles que l'appli Twizz : un texte, 3 € minimum (ou gratuit), 500 € maximum ; centimes acceptés (9,99 €)
     if (!text) throw bad("Écris un message avec le média : Twizz ne l'envoie pas sans texte");
-    if (price % 1) throw bad("Twizz n'accepte que des prix ronds, sans centimes");
     if (price > 0 && price < 3) throw bad("Le prix minimum sur Twizz est 3 € (ou gratuit)");
     if (price > 500) throw bad("Le prix maximum sur Twizz est 500 €");
     // promo Twizz : remise en € ou en %, pendant une durée (mêmes choix que l'appli Twizz)
@@ -745,7 +744,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
       if (!v || v < 1 || v % 1) throw bad("Remise : un nombre rond, 1 au minimum");
       if (pct ? v > 99 : v >= price) throw bad(pct ? "Remise de 99 % au plus" : "La remise doit être plus petite que le prix");
       if (!t) throw bad("Choisis la durée de la promo");
-      promo = { discount: v, discountType: pct ? "PERCENTAGE" : "CURRENCY", expireTime: t[1], expireTimeType: t[0], final: pct ? Math.round(price * (100 - v)) / 100 : price - v }; }
+      promo = { discount: v, discountType: pct ? "PERCENTAGE" : "CURRENCY", expireTime: t[1], expireTimeType: t[0], final: Math.round((pct ? price * (100 - v) / 100 : price - v) * 100) / 100 }; }
     // même formulaire que celui de l'appli Twizz (pas de durée de validité sans promo)
     const f = new FormData();
     f.set("promo", promo ? "true" : "false"); f.set("price", String(price)); f.set("text", text);
