@@ -651,12 +651,12 @@
 .vwv{display:flex;align-items:center;gap:3px;height:22px;width:62%}.vwv i{flex:1;border-radius:2px;background:linear-gradient(#5fd3a2,#3fae80);opacity:.55}
 .vpg{width:62%;height:3px;border-radius:2px;background:#262626;overflow:hidden}.vpg i{display:block;height:100%;width:calc(var(--ap,0) * 100%);background:#5fd3a2;transition:width .25s linear}
 .vt.aupl .vwv i{animation:vwvP .9s ease-in-out infinite alternate}.vt.aupl .vwv i:nth-child(3n){animation-delay:-.3s}.vt.aupl .vwv i:nth-child(3n+1){animation-delay:-.6s}@keyframes vwvP{to{transform:scaleY(.45);opacity:.9}}
-.tph small.vdu{font:700 10.5px Inter;color:#8fd9b8;min-height:13px}
+.vph small.vdu{font:700 10.5px Inter;color:#8fd9b8;min-height:13px}
 .vply{position:relative;z-index:6;flex:none;margin-bottom:4px;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#5fd3a2;color:#06140e;box-shadow:0 8px 22px -6px rgba(95,211,162,.7);cursor:pointer;transition:transform .3s cubic-bezier(.3,1.6,.5,1)}
 .vply:hover{transform:scale(1.08)}.vply:active{transform:scale(.92)}.vply svg{margin-left:2px;color:#06140e;stroke:#06140e;opacity:1}.vply svg.vps{display:none;margin-left:0}
 .vt.aupl .vply svg{display:none}.vt.aupl .vply svg.vps{display:block}.vt.aupl .vply{box-shadow:0 0 0 6px rgba(95,211,162,.18),0 8px 22px -6px rgba(95,211,162,.7)}
-.tph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:radial-gradient(circle at 50% 40%,#1e1e1e,#121212);color:#5a5a5a}.tph b{font:800 9.5px Inter;letter-spacing:.12em;color:#7a7a7a}.tph.au{color:#5fd3a2}
-.dk .tph,.wth .tph{border-radius:inherit}.dk,.wth{position:relative}
+.vph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:radial-gradient(circle at 50% 40%,#1e1e1e,#121212);color:#5a5a5a}.vph b{font:800 9.5px Inter;letter-spacing:.12em;color:#7a7a7a}.vph.au{color:#5fd3a2}
+.dk .vph,.wth .vph{border-radius:inherit}.dk,.wth{position:relative}
 .vt img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .7s cubic-bezier(.2,.8,.2,1),filter .4s,opacity .4s}
 .vt:hover{transform:translateY(-5px) rotateX(7deg) rotateY(-7deg);box-shadow:0 26px 40px -18px #000}
 .vt:hover img{transform:scale(1.08)}
@@ -1786,8 +1786,8 @@ function paintHist(c, H) {
 /* ================= coffre intelligent ================= */
 // vignette d'un média du coffre : image, sinon repli sur le fichier, sinon un pictogramme (vidéo sans aperçu, vocal)
 const MIC = '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>';
-window.thumbErr = img => { const u = img.dataset.f; if (u && img.getAttribute("src") !== u) { img.dataset.f = ""; img.src = u; return; } const s = document.createElement("span"); s.className = "tph"; s.innerHTML = SV(IC.img, 24); img.replaceWith(s); };
-const thumbHtml = (f, lazy = true) => f.kind === "audio" ? `<span class="tph au">${SV(MIC, 24)}<b>VOCAL</b></span>` : f.thumb ? `<img src="${esc(f.thumb)}" alt=""${lazy ? ' loading="lazy"' : ""} data-f="${f.kind === "image" && f.url !== f.thumb ? esc(f.url) : ""}" onerror="thumbErr(this)">` : `<span class="tph">${SV(f.kind === "video" ? IC.play : IC.img, 24)}</span>`;
+window.thumbErr = img => { const u = img.dataset.f; if (u && img.getAttribute("src") !== u) { img.dataset.f = ""; img.src = u; return; } const s = document.createElement("span"); s.className = "vph"; s.innerHTML = SV(IC.img, 24); img.replaceWith(s); };
+const thumbHtml = (f, lazy = true) => f.kind === "audio" ? `<span class="vph au">${SV(MIC, 24)}<b>VOCAL</b></span>` : f.thumb ? `<img src="${esc(f.thumb)}" alt=""${lazy ? ' loading="lazy"' : ""} data-f="${f.kind === "image" && f.url !== f.thumb ? esc(f.url) : ""}" onerror="thumbErr(this)">` : `<span class="vph">${SV(f.kind === "video" ? IC.play : IC.img, 24)}</span>`;
 
 const PROMO_T = [["u", "Illimitée"], ["h6", "6 h"], ["h12", "12 h"], ["h24", "24 h"], ["d2", "2 jours"], ["d7", "7 jours"]];
 async function vault(acceptId, preset) {
@@ -1884,7 +1884,7 @@ async function vault(acceptId, preset) {
     const G = $("vG"); if (!files.length) { G.innerHTML = `<div class="mx-empty" style="grid-column:1/-1">Album vide</div>`; return; }
     const L = files.map(f => ({ f, s: stateOf(f) })).filter(x => [null, "new", "sent", "bought"][filter] ? x.s.st === [null, "new", "sent", "bought"][filter] : true);
     G.innerHTML = L.length ? L.map(({ f, s }, i) => { const vid = /video/i.test(f.type) || isVid(f.url);
-      return `<button class="vt ${s.st}" data-id="${esc(f.id)}" style="animation-delay:${Math.min(i, 14) * .035}s" aria-label="${vid ? "Vidéo" : "Photo"}${s.st === "bought" ? ", déjà achetée" : s.st === "sent" ? ", envoyée mais pas achetée" : ", jamais envoyée"}"><span class="cl">${f.kind === "audio" ? `<span class="tph au"><span class="vply" role="button" tabindex="0" data-au="${esc(f.id)}" aria-label="Écouter le vocal">${SV(IC.play, 16, 2.6)}${SV('<path d="M8.5 5.5v13M15.5 5.5v13"/>', 16, 3.6).replace("<svg ", '<svg class="vps" ')}</span><span class="vwv">${Array.from({ length: 18 }, (_, k) => `<i style="height:${18 + Math.round(Math.abs(Math.sin(k * 1.7 + f.id.length)) * 70)}%"></i>`).join("")}</span><span class="vpg"><i></i></span><b>${esc(f.title || "VOCAL")}</b><small class="vdu"></small></span>` : thumbHtml(f)}</span><span class="gloss"></span><span class="num"></span>
+      return `<button class="vt ${s.st}" data-id="${esc(f.id)}" style="animation-delay:${Math.min(i, 14) * .035}s" aria-label="${vid ? "Vidéo" : "Photo"}${s.st === "bought" ? ", déjà achetée" : s.st === "sent" ? ", envoyée mais pas achetée" : ", jamais envoyée"}"><span class="cl">${f.kind === "audio" ? `<span class="vph au"><span class="vply" role="button" tabindex="0" data-au="${esc(f.id)}" aria-label="Écouter le vocal">${SV(IC.play, 16, 2.6)}${SV('<path d="M8.5 5.5v13M15.5 5.5v13"/>', 16, 3.6).replace("<svg ", '<svg class="vps" ')}</span><span class="vwv">${Array.from({ length: 18 }, (_, k) => `<i style="height:${18 + Math.round(Math.abs(Math.sin(k * 1.7 + f.id.length)) * 70)}%"></i>`).join("")}</span><span class="vpg"><i></i></span><b>${esc(f.title || "VOCAL")}</b><small class="vdu"></small></span>` : thumbHtml(f)}</span><span class="gloss"></span><span class="num"></span>
         ${vid ? '<span class="ty">VIDÉO</span>' : ""}${s.st === "new" ? `<span class="dnew"></span><span class="lnew">Jamais envoyé à ${first1}</span>` : ""}
         ${s.st === "sent" ? `<span class="rib"><b><i></i>Pas acheté${s.i.price ? " · " + E(s.i.price) : ""}</b><small>${s.i.at ? "envoyé il y a " + since(s.i.at) : "déjà envoyé"}${s.i.by ? " · " + esc(s.i.by) : ""}</small></span>` : ""}
         ${s.st === "bought" ? `<span class="vstamp">DÉJÀ ACHETÉ</span><span class="bdate">${E(s.i.price)} · le ${esc(day(s.i.at))}</span>` : ""}</button>`; }).join("") : `<div class="mx-empty" style="grid-column:1/-1">${["", "Il a déjà reçu tout cet album", "Rien en attente d'achat", "Il n'a rien acheté dans cet album"][filter]}</div>`;
