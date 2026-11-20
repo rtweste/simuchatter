@@ -671,7 +671,7 @@ const INTRO = window.INTRO = (() => {
   function close() { if (!box) return; const b = box; b.querySelector("video").pause(); b.classList.remove("on"); setTimeout(() => b.remove(), 500); box = null; document.body.style.overflow = ""; document.removeEventListener("keydown", key); }
   // manager ou fondateur : la vidéo « côté manager », une seule fois, à la première connexion
   const mgr = me => fetch("/video/manager.mp4", { method: "HEAD" }).then(r => { if (r.ok) show(me, { src: "/video/manager.mp4", seen: "/api/me/mgr-intro-seen", eb: "CÔTÉ MANAGER",
-    title: "Tout piloter <em>de A à Z.</em>", sub: "Deux minutes pour voir comment gérer l'équipe, du recrutement jusqu'à la paie.", endSub: "Tout est là. À toi de piloter." }); }).catch(() => {});
+    title: "Tout piloter <em>de A à Z.</em>", sub: "Moins de trois minutes pour voir comment gérer l'équipe, du recrutement jusqu'à la paie.", endSub: "Tout est là. À toi de piloter." }); }).catch(() => {});
   return { show, check: me => { if (!INTRO_ON || !me) return; if ((me.role === "trainee" || me.role === "chatter") && !me.introSeen) show(me, me.role === "chatter" ? { skip: true } : {});
     else if (me.role === "admin" && ["founder", "manager"].includes(me.rk) && !me.mgrIntroSeen) mgr(me); } };
 })();

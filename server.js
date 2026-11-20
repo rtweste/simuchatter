@@ -277,6 +277,8 @@ app.post("/api/logout", (req, res) => {
 // vidéo de présentation : vue une fois par chaque chatter (les comptes existants la voient aussi une fois)
 if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "intro_seen")) db.exec("ALTER TABLE users ADD COLUMN intro_seen INTEGER NOT NULL DEFAULT 0");
 if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "mgr_intro_seen")) db.exec("ALTER TABLE users ADD COLUMN mgr_intro_seen INTEGER NOT NULL DEFAULT 0");
+// numéro de la vidéo manager : quand il augmente, tous les managers doivent regarder la nouvelle, même s'ils ont vu l'ancienne
+const MGR_INTRO_V = 2;
 // manager qui chatte aussi : peut déclarer ses propres ventes (option dans Gestion)
 if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "sells")) db.exec("ALTER TABLE users ADD COLUMN sells INTEGER NOT NULL DEFAULT 0");
 if (!db.prepare("PRAGMA table_info(users)").all().some(c => c.name === "push_exempt")) db.exec("ALTER TABLE users ADD COLUMN push_exempt INTEGER NOT NULL DEFAULT 0");
@@ -309,7 +311,7 @@ app.get("/api/me", auth, (req, res) => {
   const tl = req.user.team_lead ? db.prepare("SELECT id, username FROM users WHERE id = ? AND active = 1 AND grade = 'tl'").get(req.user.team_lead) : null;
   const ob = db.prepare("SELECT onboarded_at, sells FROM users WHERE id = ?").get(req.user.id);
   res.json({ id: req.user.id, username: req.user.username, role: req.user.role, grade: req.user.grade || null, rk: req.user.rk, roleLabel: PERM.LABEL[req.user.rk], onboarded: !!(ob && ob.onboarded_at),
-    teamLead: tl ? { id: tl.id, username: tl.username } : null, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro, ...profBits(req.user.id), simuIntroSeen: iu.simu_intro_seen ? 1 : 0, mgrIntroSeen: iu.mgr_intro_seen ? 1 : 0, deadline,
+    teamLead: tl ? { id: tl.id, username: tl.username } : null, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro, ...profBits(req.user.id), simuIntroSeen: iu.simu_intro_seen ? 1 : 0, mgrIntroSeen: iu.mgr_intro_seen === MGR_INTRO_V ? 1 : 0, deadline,
     sells: req.user.role === "admin" && !!(ob && ob.sells), pushNeeded: !req.viewAs && pushNeeded(req.user),
     viewAs: req.viewAs ? { username: req.user.username, real: req.realUser.username } : null,
     celebrate: !req.viewAs && COMM ? COMM.celebrate(req.user.id) : null,
@@ -322,7 +324,7 @@ setTimeout(() => { try { const k = db.prepare("SELECT value FROM settings WHERE 
 // vidéo de présentation à la première connexion des comptes chatter : les chatters déjà là sont considérés comme l'ayant vue
 setTimeout(() => { try { if (!db.prepare("SELECT 1 FROM settings WHERE key = 'intro_chatters'").get()) { db.prepare("UPDATE users SET intro_seen = 1 WHERE role = 'chatter'").run(); db.prepare("INSERT INTO settings (key, value) VALUES ('intro_chatters', '1')").run(); } } catch (e) { console.error("intro chatters", e.message); } }, 800);
 app.get("/api/ping", auth, (req, res) => res.json({ ok: 1 }));
-app.post("/api/me/mgr-intro-seen", auth, (req, res) => { db.prepare("UPDATE users SET mgr_intro_seen = 1 WHERE id = ?").run(req.user.id); res.json({ ok: true }); });
+app.post("/api/me/mgr-intro-seen", auth, (req, res) => { db.prepare("UPDATE users SET mgr_intro_seen = ? WHERE id = ?").run(MGR_INTRO_V, req.user.id); res.json({ ok: true }); });
 app.post("/api/me/simu-intro-seen", auth, (req, res) => { db.prepare("UPDATE users SET simu_intro_seen = 1 WHERE id = ?").run(req.user.id); res.json({ ok: true }); });
 app.post("/api/me/intro-seen", auth, (req, res) => { db.prepare("UPDATE users SET intro_seen = 1 WHERE id = ?").run(req.user.id); res.json({ ok: true }); });
 
