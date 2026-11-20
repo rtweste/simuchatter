@@ -30,7 +30,7 @@
 .pn h3{margin:0;font:900 17px Inter;letter-spacing:-.02em}.pn h3 em{font-style:italic;color:#9a9a9a}
 .ph{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}.ph .r{margin-left:auto;display:flex;gap:8px;align-items:center}
 .btn{height:38px;padding:0 14px;border-radius:12px;border:1px solid #262626;background:#151515;color:#e8e8e8;font:800 12.5px Inter;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;text-decoration:none}
-.btn:hover{background:#1c1c1c}.btn.w{background:#f2f2f2;color:#0a0a0a;border-color:#f2f2f2}.btn.r{color:#ff8a8a;border-color:rgba(255,120,120,.35)}.btn:disabled{opacity:.45;cursor:not-allowed}.btn.sm{height:32px;padding:0 11px;font-size:12px;border-radius:10px}
+.btn[hidden]{display:none}.btn:hover{background:#1c1c1c}.btn.w{background:#f2f2f2;color:#0a0a0a;border-color:#f2f2f2}.btn.r{color:#ff8a8a;border-color:rgba(255,120,120,.35)}.btn:disabled{opacity:.45;cursor:not-allowed}.btn.sm{height:32px;padding:0 11px;font-size:12px;border-radius:10px}
 .row{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid #181818}.row:first-of-type{border-top:0}
 .row .t{flex:1;min-width:0}.row .t b{display:block;font:800 13.5px Inter;color:#eee}.row .t small{display:block;font:500 12px/1.45 Inter;color:#808080;margin-top:2px}
 .inp{height:34px;border-radius:10px;border:1px solid #2a2a2a;background:#141414;color:#eee;font:700 13px Inter;padding:0 10px;color-scheme:dark;box-sizing:border-box}
@@ -133,8 +133,11 @@ async function paintBody() {
         <div class="pvh">1 · Instructions de base <span>pour toutes les créatrices · modifiable</span></div>
         <textarea class="inp mono" id="base" maxlength="8000" spellcheck="false"></textarea>
         <small class="pvn">{creatrice} est remplacé par son nom. Pour une seule créatrice, utilise plutôt « Consignes en plus » au-dessus.</small>
-        <div class="pvh">2 · Rempli automatiquement <span>fiche, consignes, catalogue et coffre de ${esc(c.label)}</span></div>
-        <pre class="pvp" id="pAuto">Chargement…</pre>
+        <div class="pvh">2 · ${esc(c.label)} <span id="profTag">tiré de sa fiche · modifiable</span><button class="btn sm" id="profReset" style="float:right;margin-top:-6px">Revenir à la fiche</button></div>
+        <textarea class="inp mono" id="prof" maxlength="10000" spellcheck="false"></textarea>
+        <small class="pvn" id="profNote"></small>
+        <div class="pvh" style="margin-top:10px">Ajouté à chaque message <span>ce qu'on sait du fan et ce que l'IA peut vendre</span></div>
+        <pre class="pvp" id="pLive">Chargement…</pre>
         <div class="pvh">3 · Règles fixes 🔒 <span>toujours ajoutées à la fin</span></div>
         <pre class="pvp lk" id="pLock"></pre>
       </div>
@@ -166,6 +169,8 @@ async function paintBody() {
     if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { [k]: v })) { b.classList.toggle("on", v); paintCrs(); paintRun(); loadInfo(true); } });
   document.querySelectorAll("[data-n]").forEach(i => i.onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { [i.dataset.n]: +i.value })) { notify("Enregistré", "", "ok"); loadInfo(true); } });
   $("base").onchange = async () => { if (await save("/api/twizz/ai/cfg", { base: $("base").value })) { notify("Instructions enregistrées", "Elles valent pour toutes les créatrices", "ok"); INFO = {}; loadInfo(true); } };
+  $("prof").onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { profile: $("prof").value })) { notify("Texte enregistré", `Utilisé pour ${cur().label} à la place de la fiche`, "ok"); loadInfo(true); } };
+  $("profReset").onclick = async () => { if (!confirm(`Revenir à la fiche de ${cur().label} ?\n\nLe texte écrit à la main sera effacé.`)) return; if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { profile: "" })) { notify("Fiche reprise", "", "ok"); loadInfo(true); } };
   $("baseReset").onclick = async () => { if (!confirm("Remettre les instructions de base par défaut ?")) return; if (await save("/api/twizz/ai/cfg", { base: "" })) { notify("Instructions par défaut remises", "", "ok"); INFO = {}; loadInfo(true); } };
   $("extra").onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { extra: $("extra").value })) { notify("Consignes enregistrées", "", "ok"); loadInfo(true); } };
   // réglages pour toutes
@@ -181,9 +186,12 @@ async function paintBody() {
   loadInfo();
 }
 async function loadInfo(fresh) {
-  const cid = CID; if (fresh || !INFO[cid]) { try { INFO[cid] = await api(`/api/twizz/ai/info/${enc(cid)}`, { fresh: true }); } catch (e) { INFO[cid] = { albums: [], tags: [], base: "", auto: e.message, locked: "" }; } }
+  const cid = CID; if (fresh || !INFO[cid]) { try { INFO[cid] = await api(`/api/twizz/ai/info/${enc(cid)}`, { fresh: true }); } catch (e) { INFO[cid] = { albums: [], tags: [], base: "", profile: "", live: e.message, locked: "" }; } }
   if (cid !== CID || !$("albs")) return; const I = INFO[cid], M = cur().cfg;
-  if (document.activeElement !== $("base")) $("base").value = I.base || ""; $("pAuto").textContent = I.auto || ""; $("pLock").textContent = I.locked || "";
+  if (document.activeElement !== $("base")) $("base").value = I.base || ""; $("pLive").textContent = I.live || ""; $("pLock").textContent = I.locked || "";
+  if (document.activeElement !== $("prof")) $("prof").value = I.profile || "";
+  $("profReset").hidden = !I.profileCustom; $("profTag").textContent = I.profileCustom ? "écrit à la main · la fiche n'est plus utilisée par l'IA" : "tiré de sa fiche · modifiable";
+  $("profNote").textContent = I.profileCustom ? "Ce texte remplace la fiche, les consignes et le catalogue pour l'IA (la fiche elle-même ne change pas). « Revenir à la fiche » pour reprendre la fiche à jour." : "Si tu modifies ce texte, il remplacera la fiche pour l'IA de cette créatrice (la fiche elle-même ne change pas).";
   $("baseReset").disabled = !I.custom;
   const chips = (box, L, sel, key, empty) => { $(box).innerHTML = L.length ? L.map(x => `<button data-v="${esc(String(x.id))}" class="${sel.includes(key === "albums" ? x.id : x.id) ? "on" : ""}">${esc(x.name)}${x.count != null ? ` · ${x.count}` : ""}</button>`).join("") : `<span class="hint">${empty}</span>`;
     $(box).querySelectorAll("[data-v]").forEach(b => b.onclick = async () => { const v = key === "albums" ? b.dataset.v : +b.dataset.v, cur0 = cur().cfg[key], nx = cur0.includes(v) ? cur0.filter(x => x !== v) : cur0.concat([v]);
