@@ -276,7 +276,7 @@
 .rnchip{flex:none;order:3;display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:999px;font:800 11px Inter;white-space:nowrap;border:1px solid transparent}
 .rnchip.ok{color:#bff3dc;background:rgba(95,211,162,.12);border-color:rgba(95,211,162,.35)}
 .rnchip.rl{color:#f6d79a;background:rgba(240,181,74,.12);border-color:rgba(240,181,74,.45);cursor:pointer;animation:rnP 2.2s ease-in-out infinite}
-.srow .si b .ct.st{color:#9cc6ff;background:rgba(125,180,255,.12)}.srow .si b .ct.ps{color:#f0b54a;background:rgba(240,181,74,.12)}
+.srow .si b .ct.st{color:#9cc6ff;background:rgba(125,180,255,.12)}.srow .si b .ct.rc{color:#5fd3a2;background:rgba(95,211,162,.12);text-transform:none;letter-spacing:.01em;font-size:10.5px}.srow .si b .ct.ps{color:#f0b54a;background:rgba(240,181,74,.12)}
 .ask-b{width:min(460px,92vw);padding:22px 22px 18px;border-radius:22px;background:#121212;border:1px solid #262626;box-shadow:0 40px 100px -30px #000;animation:dcIn .45s cubic-bezier(.3,1.3,.5,1) both}
 .ask-b h3{margin:0 0 8px;font:900 17px Inter;letter-spacing:-.02em;color:#f2f2f2}.ask-b p{margin:0 0 18px;font:500 13px/1.55 Inter;color:#9a9a9a}
 .ask-a{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.ask-a button{height:38px;padding:0 14px;border-radius:12px;border:1px solid #2a2a2a;background:#181818;color:#cfcfcf;font:800 12.5px Inter;cursor:pointer}
@@ -1520,7 +1520,7 @@ async function sendText(again) {
   const T = THREADS[CUR.id] || (THREADS[CUR.id] = { items: [], page: 1, totalPages: 1 }), conv = CUR;
   const m = { id: "tmp" + Date.now(), tmp: true, fromFan: false, text: t, medias: [], at: new Date().toISOString(), sentAt: Date.now(), type: "TEXT" };
   T.items.push(m); thread();   // le message s'affiche tout de suite
-  try { await api2("/send", { body: { conversationId: conv.id, text: t, fan: conv.fan.id } }); markDone(conv); runAfterSend(conv, "text"); delete AIRES[conv.id]; if (CUR === conv) { T.items = T.items.filter(x => x !== m); await loadMsgs(true); thread(true); loadHist(true); } loadList(true); }
+  try { const sr = await api2("/send", { body: { conversationId: conv.id, text: t, fan: conv.fan.id } }); markDone(conv); runAfterSend(conv, "text", sr && sr.message && sr.message.id); delete AIRES[conv.id]; if (CUR === conv) { T.items = T.items.filter(x => x !== m); await loadMsgs(true); thread(true); loadHist(true); } loadList(true); }
   catch (e) { m.failed = true; if (CUR === conv) thread(true); notify("Message non envoyé", e.message, "err"); }
 }
 function lightbox(x) {
@@ -1559,7 +1559,7 @@ function paintScripts() {
   const keepQ = $("psQ") && document.activeElement === $("psQ");
   pn.innerHTML = `<div class="ph"><span class="pt">${SV(IC.doc, 16)}Scripts</span>${SQ.slash ? `<span class="kh" style="flex:1">Tape pour chercher · <span class="kbd">↵</span> insérer · <span class="kbd">↑</span><span class="kbd">↓</span></span>` : `<input id="psQ" placeholder="Chercher un script…" value="${esc(SQ.q)}">`}<button class="mx-ib" id="psN">+ Nouveau</button><button class="px" id="pX">✕</button></div>
     ${cats.length ? `<div class="pcats"><button class="${SQ.cat ? "" : "on"}" data-cat="">Tous</button>${cats.map(c => `<button class="${SQ.cat === c ? "on" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("")}</div>` : ""}
-    <div class="plst">${L.length ? L.map((x, i) => `<div class="srow ${i === SQ.sel && SQ.slash ? "sel" : ""}" style="animation-delay:${Math.min(i, 8) * .03}s"><button class="si" data-i="${i}"><b>${esc(x.title || ((x.steps[0] || {}).text || "").slice(0, 40) || "Script")}${x.steps.length > 1 ? `<span class="ct st">${x.steps.length} étapes</span>` : ""}${pausedFor(x.id) ? `<span class="ct ps">En pause · étape ${pausedFor(x.id).step + 1}</span>` : ""}${x.cat ? `<span class="ct">${esc(x.cat)}</span>` : ""}${x.creator ? `<span class="sc">${esc(crLabel())}</span>` : ""}${scriptMedia(x) ? `<span class="smd">${SV(IC.lock, 10, 2.6)}${esc(scriptMedia(x))}</span>` : ""}</b><small>${hl((x.steps[0] || {}).text || "")}</small></button><span class="sa"><button data-e="${i}" title="Modifier">${SV(IC.edit, 13)}</button><button class="dl" data-d="${i}" title="Supprimer">${SV(IC.trash, 13)}</button></span></div>`).join("")
+    <div class="plst">${L.length ? L.map((x, i) => `<div class="srow ${i === SQ.sel && SQ.slash ? "sel" : ""}" style="animation-delay:${Math.min(i, 8) * .03}s"><button class="si" data-i="${i}"><b>${esc(x.title || ((x.steps[0] || {}).text || "").slice(0, 40) || "Script")}${x.steps.length > 1 ? `<span class="ct st">${x.steps.length} étapes</span>` : ""}${pausedFor(x.id) ? `<span class="ct ps">En pause · étape ${pausedFor(x.id).step + 1}</span>` : ""}${gotHtml(x)}${x.cat ? `<span class="ct">${esc(x.cat)}</span>` : ""}${x.creator ? `<span class="sc">${esc(crLabel())}</span>` : ""}${scriptMedia(x) ? `<span class="smd">${SV(IC.lock, 10, 2.6)}${esc(scriptMedia(x))}</span>` : ""}</b><small>${hl((x.steps[0] || {}).text || "")}</small></button><span class="sa"><button data-e="${i}" title="Modifier">${SV(IC.edit, 13)}</button><button class="dl" data-d="${i}" title="Supprimer">${SV(IC.trash, 13)}</button></span></div>`).join("")
       : SCRIPTS.items.length ? `<div class="pempty">Aucun script ne correspond</div>` : `<div class="pempty"><b>Aucun script pour l'instant</b>Crée tes messages tout prêts (accroches, relances, ventes) et insère-les en un clic.<br>Tape <span class="kbd">/</span> dans la barre d'envoi pour les retrouver.</div>`}</div>`;
   $("pX").onclick = () => openPanel(null); $("psN").onclick = () => window.open(`/scripts?new=1&cr=${enc(CID)}`, "_blank");
   if ($("psQ")) { $("psQ").oninput = () => { SQ.q = $("psQ").value; SQ.sel = 0; paintScripts(); }; if (keepQ) { $("psQ").focus(); $("psQ").setSelectionRange(SQ.q.length, SQ.q.length); } }
@@ -1581,11 +1581,21 @@ function useScript(x) { if (!x || !CUR) return;
   if (x.steps.length > 1) return startScript(x);
   // un script d'une seule étape : directement dans la barre d'envoi, ou dans le coffre s'il a des médias
   openPanel(null); const st = x.steps[0] || { text: "" };
-  if (st.media && st.media.length) vault(null, { files: st.media, price: st.price, text: st.text, title: x.title || "" }); else putText(fillVars(st.text));
+  const med = !!(st.media && st.media.length); PEND = { conv: CUR.id, k: 0, single: x.id, media: med };
+  if (med) vault(null, { files: st.media, price: st.price, text: st.text, title: x.title || "", single: x.id }); else putText(fillVars(st.text));
   api(`/api/twizz/scripts/${x.id}/use`, { body: {} }).then(() => { x.uses++; }).catch(() => {}); }
 
 /* ================= déroulé d'un script sur le fan : une étape à la fois, envoyée par le chatter ================= */
-const RUNS = {}, PAUSED = {}; let PEND = null, RUN_SIG = "";
+const RUNS = {}, PAUSED = {}, GOT = {}; let PEND = null, RUN_SIG = "";
+// scripts déjà reçus par le fan ouvert : « reçu il y a … », et vu ou pas d'après la conversation (lu sur Twizz, ou il a répondu depuis)
+function seenOf(r) { const T = CUR && THREADS[CUR.id]; if (!T || !r) return null; const m = r.msg && T.items.find(x => x.id === r.msg);
+  if ((m && m.read) || T.items.some(x => x.fromFan && Date.parse(x.at) > r.at)) return true; return m ? false : null; }
+function gotHtml(x) { const R = (GOT[runKey()] || []).filter(r => r.scriptId === x.id); if (!R.length) return "";
+  const last = R.reduce((a, r) => r.at > a.at ? r : a), n = Math.min(x.steps.length, new Set(R.map(r => r.step)).size), v = seenOf(last), multi = x.steps.length > 1;
+  const t = `${multi ? `Reçu ${n}/${x.steps.length} étapes` : "Déjà reçu"} · il y a ${since(last.at)}${v === true ? " · vu" : v === false ? " · pas encore vu" : ""}`;
+  return `<span class="ct rc" title="${esc(`${t}${last.by ? " · envoyé par " + last.by : ""}`)}">✓ ${esc(t)}</span>`; }
+function markGot(conv, script, step, msgId) { const k = CID + "|" + conv.fan.id;
+  api2(`/script-sent/${enc(conv.fan.id)}`, { body: { script, step, msg: msgId || null } }).then(r => { GOT[k] = r.sent || []; }).catch(() => {}); }
 // petite fenêtre de choix dans le site (au lieu des fenêtres du navigateur)
 function askBox(title, text, buttons) { return new Promise(res => { const m = document.createElement("div"); m.className = "mx-mod ask-m";
   m.innerHTML = `<div class="ask-b" role="dialog" aria-modal="true"><h3>${title}</h3><p>${text}</p><div class="ask-a">${buttons.map((b, i) => `<button type="button" class="${b.kind || ""}" data-k="${i}">${b.label}</button>`).join("")}</div></div>`;
@@ -1595,7 +1605,7 @@ function askBox(title, text, buttons) { return new Promise(res => { const m = do
   m.querySelectorAll("[data-k]").forEach(b => b.onclick = () => done(buttons[+b.dataset.k].value)); const p = m.querySelector(".pri"); if (p) p.focus(); }); }
 const runKey = () => CUR ? CID + "|" + CUR.fan.id : "";
 async function loadRun(force) { const c = CUR; if (!c) return; const k = runKey(); if (RUNS[k] !== undefined && !force) return paintRun();
-  try { const r = await api2(`/run/${enc(c.fan.id)}`); RUNS[k] = r.run; PAUSED[k] = r.paused || []; if (r.run || PAUSED[k].length) await getScripts().catch(() => {}); } catch (e) { RUNS[k] = null; }
+  try { const r = await api2(`/run/${enc(c.fan.id)}`); RUNS[k] = r.run; PAUSED[k] = r.paused || []; GOT[k] = r.sent || []; if (r.run || PAUSED[k].length) await getScripts().catch(() => {}); } catch (e) { RUNS[k] = null; }
   if (CUR === c) paintRun(); }
 function runNow() { const R = RUNS[runKey()]; if (!R) return null; const s = (SCRIPTS && SCRIPTS.cid === CID ? SCRIPTS.items : []).find(x => x.id === R.scriptId); return s ? { R, s } : null; }
 async function saveRun(body) { const c = CUR, k = runKey(); if (!c) return;
@@ -1622,8 +1632,11 @@ function prepStep() { const X = runNow(); if (!X || !CUR) return; const { R, s }
 function prepRelance() { const X = runNow(); if (!X || !CUR) return; const st = X.s.steps[X.R.ppvStep]; if (!st || !st.relance) return; PEND = { conv: CUR.id, relance: true }; putText(fillVars(st.relance)); paintRun(); }
 // après un envoi réussi : l'étape préparée est faite, on passe à la suivante
 function runAfterSend(conv, kind, msgId) {
-  if (!PEND || PEND.conv !== conv.id || CUR !== conv) return; const X = runNow(); if (!X) { PEND = null; return; }
+  if (!PEND || PEND.conv !== conv.id || CUR !== conv) return;
+  if (PEND.single) { const p = PEND; if ((kind === "media") !== p.media) return; PEND = null; return markGot(conv, p.single, 0, msgId); }
+  const X = runNow(); if (!X) { PEND = null; return; }
   const p = PEND; if ((kind === "media") !== !!p.media && !p.relance) return; PEND = null;
+  if (!p.relance) markGot(conv, X.s.id, p.k, msgId);
   if (p.relance) return saveRun({ script: X.s.id, step: X.R.step, relanced: true });
   const st = X.s.steps[p.k], paid = st && st.media && st.media.length && st.price !== 0 && msgId;
   saveRun(Object.assign({ script: X.s.id, step: p.k + 1 }, paid ? { ppvMsg: msgId, ppvStep: p.k, relanced: false } : {}));
@@ -2065,8 +2078,8 @@ async function vault(acceptId, preset) {
     if (!(await hereOk())) return;
     const promo = PR.on && price ? { type: PR.type, value: PR.value, time: PR.time } : null;
     go.disabled = true; $("vGl").textContent = "Envoi…";
-    try { const sr = await api2("/send-media", { body: { conversationId: conv.id, fan: conv.fan.id, files: SEL.slice(), price, promo, text: $("vTxt").value, acceptId: acceptId || null, via: preset && preset.run ? "script" : "" } });
-      if (preset && preset.run) runAfterSend(conv, "media", sr && sr.message && sr.message.id);
+    try { const sr = await api2("/send-media", { body: { conversationId: conv.id, fan: conv.fan.id, files: SEL.slice(), price, promo, text: $("vTxt").value, acceptId: acceptId || null, via: preset && (preset.run || preset.single) ? "script" : "" } });
+      if (preset && (preset.run || preset.single)) runAfterSend(conv, "media", sr && sr.message && sr.message.id);
       const n = SEL.length; m.querySelector(".vbox").insertAdjacentHTML("beforeend", `<div class="done"><div class="dc"><span class="rip"></span><span class="rip" style="animation-delay:.9s"></span>${[["left:30px;top:30px", .75, 14], ["right:34px;top:22px", .9, 11], ["right:24px;bottom:40px", 1, 12], ["left:22px;bottom:50px", .85, 9]].map(([p, d, s]) => `<span class="spk" style="${p};animation-delay:${d}s;width:${s}px;height:${s}px">${SPARK}</span>`).join("")}<svg class="ok" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="#5fd3a2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="36" cy="36" r="31" pathLength="1"/><path d="M23 37l9 9 18-19" pathLength="1"/></svg><b>${n} média${n > 1 ? "s" : ""} envoyé${n > 1 ? "s" : ""} à ${esc(conv.fan.name.split(" ")[0])}</b><small>${price ? E(promoPrice()) + (PR.on ? " en promo" : "") : "Gratuit"} · signé à ton nom dans la conversation</small></div></div>`);
       markDone(conv); setTimeout(close, 1700); await loadMsgs(true); loadList(true); loadHist(true); }
     catch (e) { upd(); notify("Média non envoyé", e.message, "err"); }
