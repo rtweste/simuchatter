@@ -184,7 +184,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const sc = M.scripts ? scriptsOf(c.id) : [], notes = M.albumNotes || {};
     const promo = M.promo && M.sell ? (opt.requirePromo ? `Il n'a pas acheté le dernier média payant : tu peux lui en proposer un autre seulement avec une remise (champ remise obligatoire, entre 5 et ${M.maxDiscount} %, valable ${M.promoHours} h). Dis-lui que c'est un petit prix rien que pour lui.`
       : `Si le fan hésite sur un prix ou n'a pas acheté le dernier média, tu peux faire une remise (champ remise, entre 5 et ${M.maxDiscount} %, valable ${M.promoHours} h), jamais à la première proposition.`) : "";
-    const alb = a => `- ${a.id} : ${a.name} (${a.count})${notes[a.id] ? " — " + notes[a.id] : ""}${(a.items || []).length ? "\n" + a.items.map(x => `    · m:${x.id} — ${x.descr}`).join("\n") : ""}`;
+    const alb = a => `- ${a.id} : ${a.name}${a.count != null ? ` (${a.count})` : ""}${notes[a.id] ? " — " + notes[a.id] : ""}${(a.items || []).length ? "\n" + a.items.map(x => `    · m:${x.id} — ${x.descr}`).join("\n") : ""}`;
     const live = [`Il est ${new Date().toLocaleString("fr-FR", { weekday: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })} à Paris.`,
       fanInfo ? `Ce qu'on sait du fan : ${fanInfo}` : "",
       sc.length ? `Messages de l'agence qui marchent bien (inspire-toi de l'idée et du ton, ne les recopie pas mot pour mot) :\n${sc.join("\n")}` : "",
@@ -229,10 +229,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     : m.text || (m.medias.length ? (m.fromFan ? "[le fan envoie un média]" : "[média]") : "");
 
   /* ---------- coffre ---------- */
-  async function albumsOf(cid) {
-    const j = await G(`/quick-files/albums?creatorId=${enc(cid)}`, 300e3).catch(() => null);
-    return arr(j).map(a => ({ id: str(a._id || a.id), name: str(a.name || a.title || "Album").slice(0, 60), count: +(a.filesCount ?? a.count ?? (a.files || []).length ?? 0) || 0,
-      audio: str(a.type) === "audio" || (!a.type && /vocal|audio|voix/i.test(str(a.name))) })).filter(a => a.id && !a.audio && a.count > 0).slice(0, 40);
+  // albums photo et vidéo du coffre ; un album dont Twizz ne donne pas le nombre de médias est gardé (il sera lu pour de vrai)
+  async function albumsOf(cid, strict) {
+    const j = await G(`/quick-files/albums?creatorId=${enc(cid)}`, 300e3).catch(e => { if (strict) throw fail("Lecture du coffre impossible : " + e.message); return null; });
+    const n = a => { const v = a.filesCount ?? a.count ?? a.totalFiles ?? a.nbFiles ?? (Array.isArray(a.files) ? a.files.length : null); return v == null || v === "" ? null : +v || 0; };
+    return arr(j).map(a => ({ id: str(a._id || a.id), name: str(a.name || a.title || "Album").slice(0, 60), count: n(a),
+      audio: /^audios?$|vocal/i.test(str(a.type)) || (!a.type && /vocal|audio|voix/i.test(str(a.name))) })).filter(a => a.id && !a.audio && a.count !== 0).slice(0, 40);
   }
   // un média de l'album que ce fan n'a pas encore reçu (médias vus dans la conversation, historique gardé sur le site, envois du site)
   const filesOf = async (cid, albumId) => { const j = await G(`/quick-files/album/${enc(albumId)}?creatorId=${enc(cid)}`, 300e3);
@@ -377,10 +379,15 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   async function scan(cid, by) {
     const c = crOf(cid), M = mcfg(cid); if (!c) throw fail("Créatrice inconnue"); if (!XAI()) throw fail("Clé Grok manquante");
     if (SCAN[cid] && SCAN[cid].running) throw fail("Analyse déjà en cours");
-    let A = await albumsOf(cid); if (M.albums.length) A = A.filter(a => M.albums.includes(a.id));
-    const todo = [];   // une vidéo sans vignette n'a rien à regarder : elle est sautée
-    for (const a of A) { const F = await filesOf(cid, a.id), D = descrOf(cid, F.map(f => f.id)); F.filter(f => !D.has(f.id) && (f.thumb || (f.kind === "image" && f.url))).forEach(f => todo.push({ f, a })); }
-    const S2 = SCAN[cid] = { running: true, done: 0, total: Math.min(todo.length, 300), errors: 0, at: now() };
+    let A = await albumsOf(cid, true), all = A.length; if (M.albums.length) A = A.filter(a => M.albums.includes(a.id));
+    const todo = [], st = { albums: A.length, files: 0, already: 0, noImg: 0 };   // une vidéo sans vignette n'a rien à regarder : elle est sautée
+    for (const a of A) { let F = []; try { F = await filesOf(cid, a.id); } catch (e) { st.readErr = "Lecture d'un album impossible : " + e.message; }
+      const D = descrOf(cid, F.map(f => f.id)); st.files += F.length;
+      F.forEach(f => { if (D.has(f.id)) st.already++; else if (!(f.thumb || (f.kind === "image" && f.url))) st.noImg++; else todo.push({ f, a }); }); }
+    const note = todo.length ? "" : !all ? "aucun album photo ou vidéo trouvé dans le coffre" : !A.length ? "aucun des albums autorisés n'existe encore dans le coffre" : st.readErr ? st.readErr
+      : !st.files ? "les albums sont vides ou Twizz n'a renvoyé aucun média" : st.already === st.files ? "tous les médias sont déjà décrits" : "aucun média n'a de vignette à regarder";
+    console.log("IA de secours, analyse du coffre", c.label, JSON.stringify({ ...st, todo: todo.length }));
+    const S2 = SCAN[cid] = { running: true, done: 0, total: Math.min(todo.length, 300), errors: 0, at: now(), ...st, note };
     (async () => {
       for (const { f, a } of todo.slice(0, 300)) {
         try { const img = await toImage(f.thumb || f.url);
