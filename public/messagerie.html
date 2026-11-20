@@ -642,6 +642,13 @@
 .vt{position:relative;aspect-ratio:1;border-radius:16px;border:0;padding:0;background:#1a1a1a;cursor:pointer;transform-style:preserve-3d;transition:transform .5s cubic-bezier(.2,.9,.3,1.2),box-shadow .4s;animation:tlIn .7s cubic-bezier(.16,1,.3,1) both}
 @keyframes tlIn{from{opacity:0;transform:translateY(18px) rotateX(-18deg) scale(.94)}}
 .vt .cl{position:absolute;inset:0;border-radius:inherit;overflow:hidden}
+.vwv{display:flex;align-items:center;gap:3px;height:22px;width:62%}.vwv i{flex:1;border-radius:2px;background:linear-gradient(#5fd3a2,#3fae80);opacity:.55}
+.vpg{width:62%;height:3px;border-radius:2px;background:#262626;overflow:hidden}.vpg i{display:block;height:100%;width:calc(var(--ap,0) * 100%);background:#5fd3a2;transition:width .25s linear}
+.vt.aupl .vwv i{animation:vwvP .9s ease-in-out infinite alternate}.vt.aupl .vwv i:nth-child(3n){animation-delay:-.3s}.vt.aupl .vwv i:nth-child(3n+1){animation-delay:-.6s}@keyframes vwvP{to{transform:scaleY(.45);opacity:.9}}
+.tph small.vdu{font:700 10.5px Inter;color:#8fd9b8;min-height:13px}
+.vply{position:relative;z-index:6;flex:none;margin-bottom:4px;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#5fd3a2;color:#06140e;box-shadow:0 8px 22px -6px rgba(95,211,162,.7);cursor:pointer;transition:transform .3s cubic-bezier(.3,1.6,.5,1)}
+.vply:hover{transform:scale(1.08)}.vply:active{transform:scale(.92)}.vply svg{margin-left:2px;color:#06140e;stroke:#06140e;opacity:1}.vply svg.vps{display:none;margin-left:0}
+.vt.aupl .vply svg{display:none}.vt.aupl .vply svg.vps{display:block}.vt.aupl .vply{box-shadow:0 0 0 6px rgba(95,211,162,.18),0 8px 22px -6px rgba(95,211,162,.7)}
 .tph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:radial-gradient(circle at 50% 40%,#1e1e1e,#121212);color:#5a5a5a}.tph b{font:800 9.5px Inter;letter-spacing:.12em;color:#7a7a7a}.tph.au{color:#5fd3a2}
 .dk .tph,.wth .tph{border-radius:inherit}.dk,.wth{position:relative}
 .vt img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .7s cubic-bezier(.2,.8,.2,1),filter .4s,opacity .4s}
@@ -688,7 +695,7 @@
 .vpr-t{display:inline-flex;align-items:center;gap:9px;align-self:flex-start;height:30px;padding:0 4px;border:0;background:none;color:#bdbdbd;font:700 12.5px Inter;cursor:pointer}.vpr-t:disabled{opacity:.4;cursor:not-allowed}
 .vpr-t .sw{position:relative;width:30px;height:18px;border-radius:999px;background:#262626;transition:background .25s}.vpr-t .sw i{position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#8a8a8a;transition:transform .3s cubic-bezier(.3,1.5,.5,1),background .25s}
 .vpr-t.on{color:#f0b54a}.vpr-t.on .sw{background:rgba(240,181,74,.35)}.vpr-t.on .sw i{transform:translateX(12px);background:#f0b54a}
-.vpr-b{display:flex;flex-direction:column;gap:7px;padding:10px;border-radius:12px;border:1px solid rgba(240,181,74,.25);background:rgba(240,181,74,.05);animation:vprIn .35s cubic-bezier(.3,1.4,.5,1)}@keyframes vprIn{from{opacity:0;transform:translateY(-6px)}}
+.vpr-b[hidden]{display:none!important}.vpr-b{display:flex;flex-direction:column;gap:7px;padding:10px;border-radius:12px;border:1px solid rgba(240,181,74,.25);background:rgba(240,181,74,.05);animation:vprIn .35s cubic-bezier(.3,1.4,.5,1)}@keyframes vprIn{from{opacity:0;transform:translateY(-6px)}}
 .vpr-r{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.vpr-r input{height:32px;width:74px;border-radius:9px;border:1px solid #2a2a2a;background:#151515;color:#eee;font:700 13px Inter;padding:0 10px}
 .vpr-seg{display:inline-flex;padding:2px;border-radius:9px;background:#151515;border:1px solid #2a2a2a}.vpr-seg button{height:26px;min-width:32px;border:0;border-radius:7px;background:none;color:#8a8a8a;font:800 12px Inter;cursor:pointer}.vpr-seg button.on{background:#f0b54a;color:#1a1204}
 .vpr-res{font:700 12px Inter;color:#cfcfcf}.vpr-res s{color:#6a6a6a;margin-left:5px;font-weight:600}
@@ -771,6 +778,11 @@
 .aur-spk{position:absolute;color:#fff;width:12px;height:12px;pointer-events:none;z-index:4;filter:drop-shadow(0 0 4px #fff) drop-shadow(0 0 9px #5fd3a2);animation:aurSpk 2.4s ease-in-out infinite}
 .aur-spk svg{display:block;width:100%;height:100%}
 @keyframes aurSpk{0%,100%{opacity:0;transform:scale(.4) rotate(0)}50%{opacity:1;transform:scale(1) rotate(45deg)}}
+.aur-pm{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 14px 10px;padding:8px 10px;border-radius:13px;background:linear-gradient(90deg,rgba(255,98,241,.1),rgba(240,181,74,.08));border:1px solid rgba(255,98,241,.28);font:700 11.5px Inter;color:#e7d3e4}
+.aur-pm .tg{font:900 9px Inter;letter-spacing:.14em;padding:3px 6px;border-radius:6px;background:linear-gradient(90deg,#ff62f1,#f0b54a);color:#1a0716}.aur-pm b{font-weight:900;color:#fff}
+.aur-pm .tm{margin-left:auto;display:inline-flex;align-items:center;gap:6px;color:#f0b54a}.aur-pm .tm.live:before{content:"";width:6px;height:6px;border-radius:50%;background:#f0b54a;box-shadow:0 0 8px #f0b54a;animation:aurBl 1.6s ease-in-out infinite}.aur-pm .tm.end{color:#7a7a7a}.aur-pm .tm.end:before{display:none}
+@keyframes aurBl{50%{opacity:.25}}.aur-pm.end{background:#141414;border-color:#262626;color:#8a8a8a}.aur-pm.end .tg{background:#2a2a2a;color:#8a8a8a}.aur-pm.done{background:rgba(95,211,162,.07);border-color:rgba(95,211,162,.25);color:#bfe9d6}
+.ppv .bar .pr s.was{margin-left:7px;font:700 12px Inter;color:#6a6a6a;text-decoration-thickness:1.5px}
 .aur-rl{display:flex;align-items:center;gap:8px;margin:0 14px 13px;padding:8px 8px 8px 12px;border-radius:13px;background:rgba(240,181,74,.07);border:1px solid rgba(240,181,74,.22);font:700 11.5px Inter;color:#e9c987}
 .aur-rl button{margin-left:auto;height:28px;padding:0 12px;border-radius:9px;border:0;background:linear-gradient(135deg,#ffd27a,#f0a64a);color:#2a1a00;font:800 11.5px Inter;cursor:pointer;box-shadow:0 6px 16px -6px rgba(240,166,74,.7)}
 .aur-rl button[disabled]{opacity:.4;cursor:not-allowed}
@@ -1147,13 +1159,22 @@ function mediaGrid(m) {
     : `<button data-lb="${esc(m.id)}:${i}">${x.thumb ? `<img src="${esc(x.thumb)}" alt="" loading="lazy">` : ""}${x.video || isVid(x.url) ? `<span class="pl">${SV(IC.play, 34)}</span>` : ""}</button>`).join("")}</div>`;
 }
 const mediaLabel = (n, v) => { const p = n - v; return [v ? (v > 1 ? v + " vidéos" : "Vidéo") : "", p ? (p > 1 ? p + " photos" : "Photo") : ""].filter(Boolean).join(" + ") || "Média"; };
+// promo Twizz sur un média : temps restant (mis à jour toutes les 30 s)
+const pleft = iso => { const ms = Date.parse(iso) - Date.now(); if (!(ms > 0)) return "promo terminée"; const mn = Math.ceil(ms / 60e3), h = Math.floor(mn / 60), d = Math.floor(h / 24);
+  return d >= 1 ? `encore ${d} j${h % 24 ? " " + (h % 24) + " h" : ""}` : h >= 1 ? `encore ${h} h${mn % 60 ? " " + String(mn % 60).padStart(2, "0") : ""}` : `encore ${mn} min`; };
+setInterval(() => document.querySelectorAll("[data-pend]").forEach(el => { el.textContent = pleft(el.dataset.pend); el.classList.toggle("end", !(Date.parse(el.dataset.pend) > Date.now())); }), 30e3);
+function promoHtml(m, ok) { const P = m.promo; if (!P || !(P.full > 0)) return "";
+  const off = P.full - m.price, pct = Math.round(off / P.full * 100);
+  if (ok) return `<div class="aur-pm done"><span class="tg">PROMO</span>Acheté en promo, au lieu de ${E(P.full)}</div>`;
+  if (!P.active) return `<div class="aur-pm end"><span class="tg">PROMO</span>Promo terminée : retour à ${E(P.full)}</div>`;
+  return `<div class="aur-pm"><span class="tg">PROMO</span><b>-${pct} %</b> au lieu de ${E(P.full)}<span class="tm ${P.unlimited ? "" : "live"}" ${P.end ? `data-pend="${esc(P.end)}"` : ""}>${P.unlimited ? "sans limite de temps" : pleft(P.end)}</span></div>`; }
 function ppvHtml(m) {
   const v = m.medias.filter(x => x.video || isVid(x.url)).length, paid = m.price > 0, st = m.status, ok = paid && st === "accepted";
   const status = !paid ? `<span class="ok">Offert</span>` : ok ? `<span class="ok"><span class="ck">${SV(IC.check, 11, 3.4)}</span>Acheté</span>` : st === "refused" ? `<span class="ko"><i></i>Refusé</span>` : `<span class="wt"><i></i>Pas encore acheté</span>`;
   // style Aurore : acheté = bordure lumineuse verte et étincelles ; pas encore acheté = bordure orange plus lente et « Relancer »
   const pend = paid && !ok && st !== "refused", pr = paid ? String(Math.round(m.price * 100) / 100).replace(".", ",") : "";
   return `<div class="pw"><div class="ppv ${ok ? "ok" : ""}" data-ppv="${esc(m.id)}">${ok ? '<span class="aur-tr"></span>' : pend ? '<span class="aur-tr" style="--tc:#f0b54a;--ts:6s"></span>' : ""}<div class="mdw">${mediaGrid(m)}${paid ? `<span class="gl tl">${SV(ok ? IC.unlock : IC.lock, 12, 2.4)}${E(m.price)}</span>` : ""}${v ? `<span class="gl tr">${v > 1 ? v + " VIDÉOS" : "VIDÉO"}</span>` : ""}</div>
-    <div class="bar"><span class="pr">${paid ? `${pr}<small>€</small>` : "Gratuit"}</span><span>${mediaLabel(m.medias.length, v)}</span><span class="pst">${status}</span></div>${pend && !m.fromFan ? `<div class="aur-rl">Envoyé il y a ${since(m.at)}<button type="button" data-rel="1" ${CANSEND() ? "" : "disabled"}>Relancer</button></div>` : ""}</div>
+    <div class="bar"><span class="pr">${paid ? `${pr}<small>€</small>${m.promo && (m.promo.active || ok) && m.promo.full > m.price ? `<s class="was">${E(m.promo.full)}</s>` : ""}` : "Gratuit"}</span><span>${mediaLabel(m.medias.length, v)}</span><span class="pst">${status}</span></div>${paid ? promoHtml(m, ok) : ""}${pend && !m.fromFan ? `<div class="aur-rl">Envoyé il y a ${since(m.at)}<button type="button" data-rel="1" ${CANSEND() ? "" : "disabled"}>Relancer</button></div>` : ""}</div>
     ${ok ? `<span class="aur-spk" style="top:-6px;right:28px">${SPK1}</span><span class="aur-spk" style="top:44px;right:-6px;animation-delay:-1.2s">${SPK1}</span>` : ""}</div>`;
 }
 function groupHtml(G) {
@@ -1697,7 +1718,18 @@ async function vault(acceptId, preset) {
     $("psK").onclick = () => $("psK").closest(".vsc").remove();
     $("psR").onclick = () => { bo.forEach(f => { const k = SEL.indexOf(f.id); if (k >= 0) SEL.splice(k, 1); }); $("psR").closest(".vsc").remove(); upd(); }; }
   const onKey = e => { if (e.key === "Escape") close(); else if (e.key === "Enter" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && !$("vGo").disabled) { e.preventDefault(); $("vGo").click(); } };
-  const close = () => { m.remove(); document.removeEventListener("keydown", onKey); };
+  // vocaux du coffre : on peut les écouter avant de les envoyer (un seul à la fois)
+  let AU = null, AUID = null;
+  const fmtT = t => isFinite(t) ? Math.floor(t / 60) + ":" + String(Math.floor(t % 60)).padStart(2, "0") : "";
+  function playAu(id) { const f = FILES.get(id); if (!f || !f.url) return;
+    if (AU && AUID === id) { if (AU.paused) AU.play().catch(() => {}); else AU.pause(); return; }
+    if (AU) AU.pause(); const A = new Audio(f.url); AU = A; AUID = id;
+    const paint = () => { if (AU !== A) return; m.querySelectorAll(".vt.aup").forEach(t => { if (t.dataset.id !== id) { t.classList.remove("aup", "aupl"); t.style.removeProperty("--ap"); } });
+      const t = m.querySelector(`.vt[data-id="${CSS.escape(id)}"]`); if (!t) return; t.classList.add("aup"); t.classList.toggle("aupl", !A.paused && !A.ended);
+      t.style.setProperty("--ap", A.duration ? (A.currentTime / A.duration).toFixed(3) : 0); const du = t.querySelector(".vdu"); if (du) du.textContent = A.duration ? fmtT(A.currentTime) + " / " + fmtT(A.duration) : "…"; };
+    ["play", "pause", "timeupdate", "ended", "loadedmetadata"].forEach(ev => A.addEventListener(ev, paint));
+    A.play().then(paint).catch(() => notify("Vocal", "Impossible de lire ce vocal", "err")); paint(); }
+  const close = () => { if (AU) AU.pause(); m.remove(); document.removeEventListener("keydown", onKey); };
   document.addEventListener("keydown", onKey); $("vX").onclick = close; m.onclick = e => { if (e.target === m) close(); };
   const H = () => HIST[conv.id], S = () => sentMap(H());
   const stateOf = f => { const M = S(); let best = null; for (const k of f.keys || []) { const o = M.get(k); if (o && (!best || (o.bought && !best.bought))) best = o; } return !best ? { st: "new" } : best.bought ? { st: "bought", i: best } : { st: "sent", i: best }; };
@@ -1739,11 +1771,13 @@ async function vault(acceptId, preset) {
     const G = $("vG"); if (!files.length) { G.innerHTML = `<div class="mx-empty" style="grid-column:1/-1">Album vide</div>`; return; }
     const L = files.map(f => ({ f, s: stateOf(f) })).filter(x => [null, "new", "sent", "bought"][filter] ? x.s.st === [null, "new", "sent", "bought"][filter] : true);
     G.innerHTML = L.length ? L.map(({ f, s }, i) => { const vid = /video/i.test(f.type) || isVid(f.url);
-      return `<button class="vt ${s.st}" data-id="${esc(f.id)}" style="animation-delay:${Math.min(i, 14) * .035}s" aria-label="${vid ? "Vidéo" : "Photo"}${s.st === "bought" ? ", déjà achetée" : s.st === "sent" ? ", envoyée mais pas achetée" : ", jamais envoyée"}"><span class="cl">${thumbHtml(f)}</span><span class="gloss"></span><span class="num"></span>
+      return `<button class="vt ${s.st}" data-id="${esc(f.id)}" style="animation-delay:${Math.min(i, 14) * .035}s" aria-label="${vid ? "Vidéo" : "Photo"}${s.st === "bought" ? ", déjà achetée" : s.st === "sent" ? ", envoyée mais pas achetée" : ", jamais envoyée"}"><span class="cl">${f.kind === "audio" ? `<span class="tph au"><span class="vply" role="button" tabindex="0" data-au="${esc(f.id)}" aria-label="Écouter le vocal">${SV(IC.play, 16, 2.6)}${SV('<path d="M8.5 5.5v13M15.5 5.5v13"/>', 16, 3.6).replace("<svg ", '<svg class="vps" ')}</span><span class="vwv">${Array.from({ length: 18 }, (_, k) => `<i style="height:${18 + Math.round(Math.abs(Math.sin(k * 1.7 + f.id.length)) * 70)}%"></i>`).join("")}</span><span class="vpg"><i></i></span><b>${esc(f.title || "VOCAL")}</b><small class="vdu"></small></span>` : thumbHtml(f)}</span><span class="gloss"></span><span class="num"></span>
         ${vid ? '<span class="ty">VIDÉO</span>' : ""}${s.st === "new" ? `<span class="dnew"></span><span class="lnew">Jamais envoyé à ${first1}</span>` : ""}
         ${s.st === "sent" ? `<span class="rib"><b><i></i>Pas acheté${s.i.price ? " · " + E(s.i.price) : ""}</b><small>${s.i.at ? "envoyé il y a " + since(s.i.at) : "déjà envoyé"}${s.i.by ? " · " + esc(s.i.by) : ""}</small></span>` : ""}
         ${s.st === "bought" ? `<span class="vstamp">DÉJÀ ACHETÉ</span><span class="bdate">${E(s.i.price)} · le ${esc(day(s.i.at))}</span>` : ""}</button>`; }).join("") : `<div class="mx-empty" style="grid-column:1/-1">${["", "Il a déjà reçu tout cet album", "Rien en attente d'achat", "Il n'a rien acheté dans cet album"][filter]}</div>`;
     G.querySelectorAll(".vt").forEach(t => t.onclick = () => pick(t));
+    G.querySelectorAll("[data-au]").forEach(b => { b.onclick = e => { e.stopPropagation(); playAu(b.dataset.au); }; b.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); playAu(b.dataset.au); } }; });
+    if (AUID) { const t = G.querySelector(`.vt[data-id="${CSS.escape(AUID)}"]`); if (t && AU) { t.classList.add("aup"); t.classList.toggle("aupl", !AU.paused); } }
     upd();
   }
   function pick(t) {

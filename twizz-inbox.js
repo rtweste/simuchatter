@@ -166,14 +166,16 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
       unread: unreadOf(c, cid, fan.id, last), type: str(c.type || ""), since: c.createdAt || null, online: c.isOnline === true, subscribed: typeof c.isFanSubscribed === "boolean" ? c.isFanSubscribed : null, tags: (c.tags || []).map(t => str(t.name || t.label || t)).filter(Boolean) };
   }
   function msg(m, fanId) {
-    const p = m.mediaPushPrice || {};
+    // promo Twizz : active si elle n'a pas de fin ou si sa fin n'est pas passée (sinon le prix redevient le prix normal), comme dans l'appli Twizz
+    const p = m.mediaPushPrice || {}, exp = Date.parse(p.expiresOn) || 0, unl = str(p.expireTimeType) === "UNLIMITED", act = !!p.promo && (unl || exp > Date.now());
+    const full = p.price ?? p.resultPrice ?? null, price = full == null ? null : act || (p.promo && str(m.status) === "accepted") ? +(p.resultPrice ?? full) : +full;
     return { id: str(m._id), fromFan: !!fanId && str(m.senderId) === fanId, sender: str(m.senderId), type: str(m.type), text: str(m.text), status: str(m.status), at: m.createdAt,
-      read: !!m.isRead, price: p.resultPrice ?? p.price ?? null, mediaPushId: str(m.mediaPushId || ""),
+      read: !!m.isRead, price, promo: p.promo && full != null ? { active: act, full: +full, end: exp && !unl ? new Date(exp).toISOString() : null, unlimited: unl } : null, mediaPushId: str(m.mediaPushId || ""),
       medias: (m.medias || []).map(x => ({ url: str(x.url), thumb: thumbOf(x), audio: !!x.isAudio, private: !!x.isPrivate, video: /video/i.test(str(x.type || x.mimeType)) || /\.(mp4|mov|webm|m3u8)$/i.test(pathOf(str(x.url))), keys: keysOf(x) })) };
   }
   const file = f => { const kind = kindOf(f), url = str(f.url || f.Location || f.path || "");
     return { id: str(f._id || f.id || f.fileId), url, kind, thumb: thumbOf(f) || (kind === "image" ? okUrl(str(f.absolutePath || url)) : ""),
-      type: str(f.type || f.mimeType || f.fileType || ""), name: str(f.originalFileName || f.name || f.filename || ""), keys: keysOf(f) }; };
+      type: str(f.type || f.mimeType || f.fileType || ""), name: str(f.originalFileName || f.name || f.filename || ""), title: kind === "audio" ? str(f.title || "").slice(0, 40) : "", keys: keysOf(f) }; };
 
   /* ---------- temps réel : socket Twizz -> flux vers la page ---------- */
   const SUBS = new Set(); let sock = null, live = false, idleT = null;
