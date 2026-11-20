@@ -9,6 +9,8 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     // date de désactivation : notée la première fois qu'on voit le compte désactivé, effacée s'il est réactivé
     db.prepare("UPDATE users SET deactivated_at = ? WHERE active = 0 AND deactivated_at IS NULL AND deleted_at IS NULL").run(now);
     db.prepare("UPDATE users SET deactivated_at = NULL WHERE active = 1 AND deactivated_at IS NOT NULL").run();
+    // comptes désactivés par un autre chemin : leurs shifts à venir quittent aussi le planning
+    if (app.locals.dropFutureShifts) db.prepare("SELECT DISTINCT s.user_id FROM shifts s JOIN users u ON u.id = s.user_id WHERE u.active = 0 AND s.date >= ?").all(new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" })).forEach(r => app.locals.dropFutureShifts(r.user_id));
     const due = db.prepare("SELECT id, username, role FROM users WHERE active = 0 AND deleted_at IS NULL AND role <> 'admin' AND deactivated_at <= ?").all(now - DELAY);
     due.forEach(u => {
       const label = u.role === "trainee" ? "ancien-eleve" : "ancien-chatter";

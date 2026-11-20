@@ -477,6 +477,13 @@ app.post("/api/admin/users", auth, admin, (req, res) => {
     res.json({ ok: true, id: uid });
   } catch (e) { res.status(400).json({ error: "Cet identifiant existe déjà" }); }
 });
+// membre retiré de l'équipe : ses shifts à venir disparaissent du planning (ceux déjà passés ou en cours restent dans l'historique)
+function dropFutureShifts(uid) { try {
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" }), nowHM = new Date().toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" });
+  const ids = db.prepare("SELECT id FROM shifts WHERE user_id = ? AND (date > ? OR (date = ? AND start > ?))").all(uid, today, today, nowHM).map(r => r.id); if (!ids.length) return 0;
+  const del = db.prepare("DELETE FROM shifts WHERE id = ?"), sw = db.prepare("DELETE FROM shift_swaps WHERE shift_id = ? AND status IN ('open','requested')");
+  ids.forEach(id => { try { sw.run(id); } catch (e) {} del.run(id); }); return ids.length; } catch (e) { console.error("shifts d'un membre retiré", e.message); return 0; } }
+app.locals.dropFutureShifts = dropFutureShifts;
 app.patch("/api/admin/users/:id", auth, admin, (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (req.body?.password !== undefined) {
@@ -487,7 +494,7 @@ app.patch("/api/admin/users/:id", auth, admin, (req, res) => {
   if (req.body?.active !== undefined) {
     if (id === req.user.id) return res.status(400).json({ error: "Vous ne pouvez pas désactiver votre propre compte" });
     db.prepare("UPDATE users SET active = ? WHERE id = ?").run(req.body.active ? 1 : 0, id);
-    if (!req.body.active) db.prepare("DELETE FROM tokens WHERE user_id = ?").run(id);
+    if (!req.body.active) { db.prepare("DELETE FROM tokens WHERE user_id = ?").run(id); res.locals.shifts = dropFutureShifts(id); }
     else try { db.prepare("UPDATE trainee_deadline SET rejected_at = NULL, met_at = NULL, deadline_at = ? WHERE user_id = ? AND rejected_at IS NOT NULL").run(Date.now() + 24 * 3600e3, id); } catch (e) {}
   }
   if (req.body?.sells !== undefined) db.prepare("UPDATE users SET sells = ? WHERE id = ?").run(req.body.sells ? 1 : 0, id);
@@ -498,7 +505,7 @@ app.patch("/api/admin/users/:id", auth, admin, (req, res) => {
     db.prepare("UPDATE users SET role = ?, grade = NULL, team_lead = CASE WHEN ? = 'admin' THEN NULL ELSE team_lead END WHERE id = ?").run(req.body.role, req.body.role, id);
     db.prepare("DELETE FROM tokens WHERE user_id = ?").run(id);
   }
-  res.json({ ok: true });
+  res.json({ ok: true, shifts: res.locals.shifts || 0 });
 });
 
 app.get("/api/admin/sims", auth, admin, (req, res) => {

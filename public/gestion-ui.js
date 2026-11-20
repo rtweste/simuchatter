@@ -167,7 +167,7 @@ async function fiche(id) {
       if (a === "role") { if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = c.role === "admin" ? "Confirmer : chatter" : "Confirmer : manager"; return; }
         const r = c.role === "admin" ? "chatter" : "admin"; await api("/api/admin/users/" + c.id, { method: "PATCH", body: { role: r } }); toast(`${esc(c.username)} est maintenant ${r === "admin" ? "manager" : "chatter"}`, true); S.ok(); close(); loadTeam(true); }
       if (a === "off") { if (!b.dataset.sure && c.active) { b.dataset.sure = 1; b.textContent = "Confirmer · suppression dans 24 h"; return; }
-        await api("/api/admin/users/" + c.id, { method: "PATCH", body: { active: !c.active } }); toast(c.active ? `Compte de ${esc(c.username)} désactivé · supprimé dans 24 h si tu ne le réactives pas` : `Compte de ${esc(c.username)} réactivé`, !c.active); close(); loadTeam(true); }
+        const r = await api("/api/admin/users/" + c.id, { method: "PATCH", body: { active: !c.active } }) || {}; toast(c.active ? `Compte de ${esc(c.username)} désactivé · supprimé dans 24 h si tu ne le réactives pas${(r.shifts ? ` · ${r.shifts} shift${r.shifts > 1 ? "s" : ""} à venir retiré${r.shifts > 1 ? "s" : ""} du planning` : "")}` : `Compte de ${esc(c.username)} réactivé`, !c.active); close(); loadTeam(true); }
       if (a === "unsusp") { await api("/api/admin/suspensions/" + c.id, { method: "DELETE" }); b.closest(".susp").remove(); toast("Suspension levée", true); dirtyTeam = true; LOADED.sanc = false; }
       if (a === "note") { const inp = dr.querySelector(".nin input"), t = inp.value.trim(); if (!t) return inp.focus(); const k = dr.querySelector(".nchips button.on").textContent;
         await api(`/api/admin/team/${c.id}/notes`, { body: { kind: k, text: t } }); dr.querySelector("[data-none]")?.remove();
@@ -252,7 +252,7 @@ function tfiche(c) {
       if (a === "pwset") { const p = pw.querySelector("code").textContent; await api("/api/admin/users/" + c.id, { method: "PATCH", body: { password: p } }); await copy(`Site : stellads.fr\nIdentifiant : ${c.username}\nMot de passe : ${p}`); pw.classList.remove("on"); toast(`Nouveau mot de passe de ${esc(c.username)} enregistré et copié`, true); }
       if (a === "copy") { await copy(c.username); toast(`Identifiant « ${esc(c.username)} » copié`, true); }
       if (a === "off") { if (!b.dataset.sure && c.active) { b.dataset.sure = 1; b.textContent = "Confirmer · suppression dans 24 h"; return; }
-        await api("/api/admin/users/" + c.id, { method: "PATCH", body: { active: !c.active } }); toast(c.active ? `Compte de ${esc(c.username)} désactivé` : `Compte de ${esc(c.username)} réactivé`, !c.active); close(); loadTeam(true); }
+        const r = await api("/api/admin/users/" + c.id, { method: "PATCH", body: { active: !c.active } }) || {}; toast(c.active ? `Compte de ${esc(c.username)} désactivé${(r.shifts ? ` · ${r.shifts} shift${r.shifts > 1 ? "s" : ""} à venir retiré${r.shifts > 1 ? "s" : ""} du planning` : "")}` : `Compte de ${esc(c.username)} réactivé`, !c.active); close(); loadTeam(true); }
       if (a === "note") { const inp = dr.querySelector(".nin input"), t = inp.value.trim(); if (!t) return inp.focus();
         await api(`/api/admin/team/${c.id}/notes`, { body: { kind: dr.querySelector(".nchips button.on").textContent, text: t } });
         const f = await api("/api/admin/team/" + c.id); dr.querySelector("[data-notes]").innerHTML = f.notes.map(notes).join(""); inp.value = ""; toast("Note ajoutée", true); }
