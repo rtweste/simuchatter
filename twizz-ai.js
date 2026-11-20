@@ -185,10 +185,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
         : `Pas de média à proposer maintenant${sellNote ? " : " + sellNote : ""}. Discute seulement.`,
       opt.relance ? `RELANCE : le fan ne répond plus depuis ${opt.relance.since}${opt.relance.unbought ? ` et n'a pas acheté le média à ${opt.relance.unbought} €` : ""}. Écris une relance courte et naturelle, comme si tu pensais à lui, sans reproche. Si une relance n'a pas de sens ici, laisse bulles et message vides.` : ""].filter(Boolean).join("\n\n");
     const auto = [profile, live].filter(Boolean).join("\n\n");
-    const locked = [`RÈGLES FIXES (elles passent avant tout le reste) :`,
-      `- ${C && C.mark ? "Chacun de tes messages est signé 🤖 par le site." : "Le site prévient le fan que c'est ton IA qui répond."} Si un fan te demande si tu es la vraie ${c.label}, un humain ou une IA, réponds honnêtement que tu es son IA. N'écris jamais 🤖 toi-même.`,
-      `- Jamais de rendez-vous ni de rencontre promis ; jamais de menace, de chantage ou de culpabilisation.`,
-      `- Remplis « laisser » (et rien n'est envoyé) si le fan dit avoir moins de 18 ans ou parle de mineurs, s'il semble en détresse ou parle de se faire du mal, ou s'il dit dépenser plus qu'il ne peut.`].join("\n");
+        const markText = (C && C.mark) ? "Chacun de tes messages est signé 🤖 par le site." : "Le site prévient le fan que c'est ton IA qui répond.";
+    const lockedRaw = str((C && C.locked) || "").trim();
+    const locked = (lockedRaw || LOCKED_DEF).replace(/\{creatrice\}/gi, c.label).replace(/\{mark\}/g, markText);
     return { base, auto, locked, profile, gen, live };
   }
   // scripts de la bibliothèque (épinglés et les plus utilisés d'abord) : des exemples de messages qui marchent
@@ -467,7 +466,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const tags = db.prepare("SELECT id, name, color FROM twizz_tags WHERE COALESCE(active, 1) = 1 ORDER BY name").all();
     const A = M.albums.length ? albums.filter(a => M.albums.includes(a.id)) : albums;
     const C = gcfg(), P = parts(c, M, ficheOf(c), M.sell ? A : [], M.sell ? "" : "la vente de médias est coupée pour cette créatrice", "(prénom du fan, note de l'équipe)", C);
-    return { albums, tags, base: C.base || BASE_DEF, baseDefault: BASE_DEF, custom: !!C.base, profile: M.profile || P.gen, profileCustom: !!M.profile, live: P.live, locked: P.locked }; }));
+    return { albums, tags, base: C.base || BASE_DEF, baseDefault: BASE_DEF, custom: !!C.base, profile: M.profile || P.gen, profileCustom: !!M.profile, live: P.live, locked: P.locked, lockedDefault: LOCKED_DEF, customLocked: !!C.locked }; }));
   // essayer l'IA sans rien envoyer : une fausse conversation, la réponse de Grok s'affiche seulement
   const TRIED = new Map();
   app.post("/api/twizz/ai/try/:cid", auth, mgr, wrap(async req => { const c = okC(req.params.cid), M = mcfg(c.id);
