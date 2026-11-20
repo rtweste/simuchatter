@@ -52,7 +52,7 @@
         ${top}${kinds}
         ${on ? `<div class="pf-row"><button type="button" class="pf-b" id="test">Envoyer une notification test</button></div>` : ""}
       </section>
-      ${ME.role === "chatter" ? `<section class="pf-sec"><div class="pf-sh"><span class="ic">${SV("M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM10 8.5v7l5.5-3.5z")}</span><div><h3>Présentation du site</h3><small>Tout StellADS expliqué en 2 minutes 30</small></div></div>
+      ${ME.role === "chatter" ? `<section class="pf-sec"><div class="pf-sh"><span class="ic">${SV("M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM10 8.5v7l5.5-3.5z")}</span><div><h3>Présentation du site</h3><small>Tout StellADS expliqué en 3 minutes</small></div></div>
         <div class="pf-row"><button type="button" class="pf-b w" id="replay">Revoir la présentation</button></div></section>` : ""}
       <section class="pf-sec"><div class="pf-sh"><span class="ic">${SV(IC.phone)}</span><div><h3>Appareils reliés</h3><small>${DEV.length} appareil${DEV.length > 1 ? "s" : ""} reçoi${DEV.length > 1 ? "vent" : "t"} tes notifications</small></div></div>
         <div class="pf-expl"><span class="ic">${SV(IC.info)}</span><span>Chaque téléphone ou ordinateur où tu as activé les notifications apparaît ici. C'est là que tes alertes arrivent : messages privés, rappels de shift, renforts… <b>Si tu as changé de téléphone ou utilisé un ordinateur qui n'est pas le tien, retire-le</b> pour qu'il ne reçoive plus rien.</span></div>
