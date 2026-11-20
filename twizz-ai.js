@@ -143,7 +143,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     message: { type: "string", description: "Ta réponse en une seule bulle, si tu ne remplis pas bulles." },
     album: { type: "string", description: "Facultatif : identifiant d'un album du coffre (liste fournie) pour joindre un média payant à ton message." },
     media: { type: "string", description: "Facultatif : identifiant précis du média choisi dans la liste de l'album (m:…), si l'album en liste." },
-    teaser: { type: "boolean", description: "Mets true quand ton message fait envie d'un média précis sans l'envoyer (tu l'annonces, tu le décris, tu le fais désirer). Obligatoire avant de pouvoir envoyer un média." },
+    teaser: { type: "boolean", description: "Mets true quand ton message fait envie d'un média précis sans l'envoyer (tu l'annonces, tu le décris, tu le fais désirer). Obligatoire avant de pouvoir envoyer un média. C'est un champ technique : n'écris jamais « teaser » dans le texte de tes messages." },
     remise: { type: "integer", description: "Facultatif : remise en % sur ce média, seulement dans les cas permis par les consignes." },
     prix: { type: "integer", description: "Prix du média en euros, nombre rond (obligatoire si album est rempli)." },
     laisser: { type: "string", description: "Facultatif : remplis-le seulement si l'équipe doit reprendre ce fan elle-même (raison courte). Rien n'est alors envoyé au fan." }
@@ -280,7 +280,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (M.tease && !skip && !(tease && tease.answered && now() - tease.at < M.teaseWindow * 60e3)) {
       const what = await peek();
       return { albums: [], teaseNow: true, note: tease && !tease.answered ? "tu viens de lui teaser un média : attends sa réponse, continue de le chauffer sans rien envoyer"
-        : `avant tout média, tu dois d'abord le teaser : fais-lui envie de ce que tu pourrais lui montrer (sans l'envoyer, sans prix), fais monter la tension, et mets teaser=true. Tu pourras l'envoyer seulement après sa réponse${what ? `. Ce que tu peux teaser : ${what}` : ""}` }; }
+        : `avant tout média, tu dois d'abord le teaser : fais-lui envie de ce que tu pourrais lui montrer (sans l'envoyer, sans prix), fais monter la tension. Un seul teasing, court, comme un vrai message. Coche le champ teaser de l'outil (ne l'écris jamais dans ton message). Tu pourras l'envoyer seulement après sa réponse${what ? `. Ce que tu peux teaser : ${what}` : ""}` }; }
     const paid = L.filter(m => !m.fromFan && m.type === "FILE" && m.price > 0), last = paid[paid.length - 1], open = last && last.status !== "accepted";
     let requirePromo = false;
     if (M.pile && open) { if (M.promo && !last.promo) requirePromo = true;   // une deuxième chance, seulement avec une remise
@@ -319,6 +319,19 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     return !row.notified;
   }
   const noticeOf = (cr, C) => str(C.noticeText).replace(/\{creatrice\}/gi, cr.label);
+  // Grok écrit parfois les champs de l'outil dans le texte (« teaser=true: … ») : on les retire, et on ne garde qu'un seul teasing
+  const TEASE_TAG = /\[?\b(?:teaser|teasing)\s*[=:]\s*(?:true|vrai|oui|1)\b\]?\s*:?/i;
+  const untag = t => str(t).split(new RegExp(TEASE_TAG.source, "gi")).join(" ").replace(/\s{2,}/g, " ").trim();
+  function unleak(out) {
+    if (!out) return out; let seen = false;
+    const fix = x => { const P = str(x).split(new RegExp(TEASE_TAG.source, "i")); let t = P[0];
+      if (P.length > 1) { if (!seen) t += " " + P[1]; seen = true; }
+      return t.replace(/\b(?:album|media|prix|remise|laisser|bulles)\s*=\s*\S+/gi, "").replace(/\s{2,}/g, " ").trim(); };
+    if (Array.isArray(out.bulles)) out.bulles = out.bulles.map(fix).filter(Boolean);
+    if (out.message != null) out.message = fix(out.message);
+    if (seen) out.teaser = true;
+    return out;
+  }
   const bubbles = out => (Array.isArray(out.bulles) && out.bulles.length ? out.bulles : [out.message]).map(x => str(x).replace(/🤖/g, "").trim().slice(0, 1200)).filter(Boolean).slice(0, 3);
 
   /* ---------- une conversation ---------- */
@@ -338,11 +351,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     // la dernière photo envoyée par le fan : Grok la regarde (les autres restent en texte)
     const lastPic = [...L].reverse().find(m => m.fromFan && m.medias.some(isImg)); let picUrl = null;
     if (lastPic) { const x = lastPic.medias.find(isImg); try { picUrl = await toImage(x.thumb || x.url); } catch (e) { picUrl = null; } }
-    L.forEach(m => { const t = lineOf(m); if (!t) return;
+    L.forEach(m => { const t = m.fromFan ? lineOf(m) : untag(lineOf(m)); if (!t) return;
       const pic = m === lastPic && picUrl;
       msgs.push({ role: m.fromFan ? "user" : "assistant", content: pic ? [{ type: "text", text: m.text || "[le fan t'envoie cette photo]" }, { type: "image_url", image_url: { url: pic } }] : t }); });
     let out; try { out = await grok(msgs); }
     catch (e) { if (!picUrl) throw e; msgs.forEach(m => { if (Array.isArray(m.content)) m.content = m.content[0].text; }); out = await grok(msgs); }   // image refusée : sans la photo
+    unleak(out);
     const mark = (patch) => db.prepare(`INSERT INTO twizz_ai_convs (run_id, conv_id, fan_id, fan_name, notified, replies, last_fan_msg, blocked, at, relances, relance_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(run_id, conv_id) DO UPDATE SET notified = excluded.notified, replies = excluded.replies, last_fan_msg = excluded.last_fan_msg, blocked = excluded.blocked, at = excluded.at, relances = excluded.relances, relance_at = excluded.relance_at`)
       .run(r.id, c.id, c.fan.id, c.fan.name, patch.notified ?? row.notified ?? 0, patch.replies ?? row.replies ?? 0, relance ? row.last_fan_msg || null : last.id, patch.blocked ?? row.blocked ?? null, now(),
@@ -530,7 +544,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     let sell = { albums: [], note: "" }; try { sell = await sellable(c, M, LL, null, tz); } catch (e) {} const albums = sell.albums;
     const FANS = { new: "pseudo : Thomas ; n'a encore jamais rien acheté", reg: "pseudo : Thomas ; prénom : Thomas ; ville : Lyon ; a déjà dépensé 150 € avec elle en 8 achats ; tags de l'équipe : Vidéos",
       big: "pseudo : Thomas ; prénom : Thomas ; métier : chef d'entreprise ; a déjà dépensé 850 € avec elle en 30 achats ; tags de l'équipe : Spender ; résumé de l'équipe : achète vite quand on le chauffe, aime qu'on se souvienne de lui" };
-    const out = await grok([{ role: "system", content: system(c, M, ficheOf(c), albums, sell.note, FANS[req.body && req.body.fan] || "", gcfg()) }, ...L]);
+    const out = unleak(await grok([{ role: "system", content: system(c, M, ficheOf(c), albums, sell.note, FANS[req.body && req.body.fan] || "", gcfg()) }, ...L.map(m => m.role === "user" ? m : { ...m, content: untag(m.content) })]));
     const al = out.album ? albums.find(a => a.id === str(out.album)) : null, it = al && (al.items || []).find(x => x.id === str(out.media).replace(/^m:/, ""));
     const pct = Math.round(+out.remise || 0);
     return { bulles: bubbles(out), album: al ? al.name : null, media: it ? it.descr : null, prix: al ? Math.min(Math.round(+out.prix || 0), M.maxPrice) : null,
