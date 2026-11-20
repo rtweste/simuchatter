@@ -5,7 +5,7 @@
 // Elle s'arrête toute seule dès qu'un chatter pointe sur cette créatrice ou ouvre sa messagerie. Interrupteur général : le fondateur.
 module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, gest }) {
   const { call, S } = twizz;
-  const { conv, msg, arr, file, hereOf, G, drop, mapped, sendOn } = inbox;
+  const { conv, msg, arr, file, hereOf, G, drop, mapped, sendOn, unreadConvs } = inbox;
   const str = v => (v == null ? "" : String(v)), now = () => Date.now(), enc = encodeURIComponent;
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const log = (...a) => { try { gest.log(...a); } catch (e) {} };
@@ -432,7 +432,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
         const tagged = db.prepare("SELECT tag_id FROM twizz_fan_tags WHERE creator_id = ? AND fan_id = ?");
         const spend = db.prepare("SELECT spend FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?");
         const L = [], RL = [];
-        for (const c of arr(j).map(x => conv(x, cr.id))) {
+        // 1re page du fil + toutes les conversations non lues (filtre « Non lus » de Twizz) : aucun fan qui attend n'est oublié
+        let unread = []; try { unread = unreadConvs ? await unreadConvs(cr.id) : []; } catch (e) {}
+        const ids = new Set(), all = arr(j).map(x => conv(x, cr.id)).concat(unread).filter(c => c.id && !ids.has(c.id) && ids.add(c.id));
+        for (const c of all) {
           const t = Date.parse(c.last.at) || 0, age = now() - t, row = db.prepare("SELECT blocked, replies, last_fan_msg, relances, relance_at FROM twizz_ai_convs WHERE run_id = ? AND conv_id = ?").get(r.id, c.id) || {};
           if (!c.fan.id || row.blocked || age > C.fanWindow * 3600e3 || hereOf(c.id, -1).length || (C.teamPause && human.get(c.id, now() - C.teamPause * 60e3))) continue;
           if (skip.size) { const tg = tagged.all(cr.id, c.fan.id).find(x => skip.has(x.tag_id));
