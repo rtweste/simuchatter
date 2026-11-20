@@ -20,7 +20,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
 
   /* ---------- réglages ---------- */
   const MODELS = { fast: ["grok-4-1-fast-non-reasoning", "Rapide"], smart: ["grok-4-1-fast-reasoning", "Plus réfléchi (un peu plus lent)"] };
-  const G_DEF = { notice: true, mark: false, noticeText: "Petite précision : c'est l'IA de {creatrice} qui te répond en ce moment 😊", noticeFreq: "run", noticeDays: 30,
+  const G_DEF = { notice: true, mark: false, base: "", noticeText: "Petite précision : c'est l'IA de {creatrice} qui te répond en ce moment 😊", noticeFreq: "run", noticeDays: 30,
     waitMin: 35, waitMax: 80, teamPause: 15, fanWindow: 12, perFan: 40, maxHours: 12, model: "fast" };
   const M_DEF = { ok: false, sell: true, maxPrice: 100, gap: 20, pile: true, albums: [], skipTags: [], extra: "" };
   const gcfg = () => { const o = { ...G_DEF, ...(S.get("twizz_ai_cfg", {}) || {}) }; if (!o.notice && !o.mark) o.mark = true; return o; };   // jamais les deux coupés
@@ -42,6 +42,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (b.perFan != null) o.perFan = int(b.perFan, 1, 300, "Réponses maximum par fan");
     if (b.maxHours != null) o.maxHours = int(b.maxHours, 1, 24, "Durée maximum d'une séance");
     if (b.model != null) { if (!MODELS[b.model]) throw fail("Modèle Grok inconnu"); o.model = b.model; }
+    if (b.base != null) { const t = str(b.base).trim().slice(0, 8000); o.base = t && t !== BASE_DEF ? t : ""; }   // vide : instructions par défaut
     S.set("twizz_ai_cfg", o); return o;
   }
   function setM(cid, b) {
@@ -133,20 +134,26 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       L("samples").length && `Exemples de ses vrais messages (imite ce style) :\n${L("samples").map(x => "« " + x + " »").join("\n")}`].filter(Boolean);
     return { text: parts.join("\n"), prices: cat.length ? cat.join(" · ") : str(m.prices) };
   }
-  function system(c, M, fiche, albums, sellNote, fanInfo, C) {
-    return [`Tu es l'IA de ${c.label}, créatrice de contenus sur Twizz (plateforme de contenus payants réservée aux adultes). Tu réponds à ses fans à sa place pendant que son équipe est absente, en écrivant comme elle.`,
-      `${C && C.mark ? "Chacun de tes messages est signé 🤖 par le site." : "Le site prévient le fan que c'est ton IA qui répond."} Si un fan te demande si tu es la vraie ${c.label}, un humain ou une IA, réponds honnêtement que tu es son IA. N'écris jamais 🤖 toi-même.`,
-      fiche.text ? `FICHE DE ${c.label.toUpperCase()}\n${fiche.text}` : "",
-      c.note ? `Ses consignes sur Twizz, à respecter absolument : ${c.note}` : "", M.extra ? `Consignes du manager pour toi, à respecter absolument : ${M.extra}` : "",
+  // consignes envoyées à Grok : instructions de base (modifiables, pour toutes), puis ce qui vient de la fiche et du coffre, puis les règles fixes
+  const BASE_DEF = [`Tu es l'IA de {creatrice}, créatrice de contenus sur Twizz (plateforme de contenus payants réservée aux adultes). Tu réponds à ses fans à sa place pendant que son équipe est absente, en écrivant comme elle.`,
+    `Ton but : garder le fan content et attaché, créer du lien, et lui proposer de temps en temps un média payant quand le moment s'y prête (jamais de pression).`,
+    `Écris comme un vrai texto, dans la langue du fan (français familier par défaut).`,
+    `Ne parle jamais de l'équipe ou d'une agence. Pas de numéro, pas de réseaux perso, pas de fausse exclusivité.`,
+    `Remplis aussi « laisser » si le fan veut parler à un humain, se plaint, demande un remboursement ou un contenu personnalisé, ou si tu ne sais pas quoi répondre sans inventer.`].join("\n\n");
+  function parts(c, M, fiche, albums, sellNote, fanInfo, C) {
+    const base = str((C && C.base) || BASE_DEF).replace(/\{creatrice\}/gi, c.label);
+    const auto = [fiche.text ? `FICHE DE ${c.label.toUpperCase()}\n${fiche.text}` : "",
+      c.note ? `Ses consignes sur Twizz, à respecter absolument : ${c.note}` : "", M.extra ? `Consignes du manager pour ${c.label}, à respecter absolument : ${M.extra}` : "",
       fiche.prices ? `Son catalogue et ses prix : ${fiche.prices}` : "", fanInfo ? `Ce qu'on sait du fan : ${fanInfo}` : "",
-      `Ton but : garder le fan content et attaché, créer du lien, et lui proposer de temps en temps un média payant quand le moment s'y prête (jamais de pression).`,
       albums.length ? `Albums du coffre que tu peux proposer (identifiant : nom, nombre de médias) :\n${albums.map(a => `- ${a.id} : ${a.name} (${a.count})`).join("\n")}\nPour joindre un média, remplis album et prix (entre 3 et ${M.maxPrice} €, nombre rond, d'après son catalogue). Le site choisit dans l'album un média que ce fan n'a pas encore reçu. Ne promets jamais un contenu précis qui ne serait pas dans ces albums.`
-        : `Pas de média à proposer maintenant${sellNote ? " : " + sellNote : ""}. Discute seulement.`,
-      `Écris comme un vrai texto, dans la langue du fan (français familier par défaut).`,
-      `Interdits : rendez-vous, rencontre, appel, numéro, réseaux perso, fausse exclusivité, fausses promesses, parler de l'équipe ou d'une agence, menacer ou culpabiliser.`,
-      `Remplis « laisser » (et rien n'est envoyé) si : le fan dit avoir moins de 18 ans ou parle de mineurs ; il semble en détresse ou parle de se faire du mal ; il dit dépenser plus qu'il ne peut ; il veut parler à un humain, se plaint, demande un remboursement ou un contenu personnalisé ; tu ne sais pas quoi répondre sans inventer.`
-    ].filter(Boolean).join("\n\n");
+        : `Pas de média à proposer maintenant${sellNote ? " : " + sellNote : ""}. Discute seulement.`].filter(Boolean).join("\n\n");
+    const locked = [`RÈGLES FIXES (elles passent avant tout le reste) :`,
+      `- ${C && C.mark ? "Chacun de tes messages est signé 🤖 par le site." : "Le site prévient le fan que c'est ton IA qui répond."} Si un fan te demande si tu es la vraie ${c.label}, un humain ou une IA, réponds honnêtement que tu es son IA. N'écris jamais 🤖 toi-même.`,
+      `- Jamais de rendez-vous ni de rencontre promis ; jamais de menace, de chantage ou de culpabilisation.`,
+      `- Remplis « laisser » (et rien n'est envoyé) si le fan dit avoir moins de 18 ans ou parle de mineurs, s'il semble en détresse ou parle de se faire du mal, ou s'il dit dépenser plus qu'il ne peut.`].join("\n");
+    return { base, auto, locked };
   }
+  const system = (...a) => { const p = parts(...a); return [p.base, p.auto, p.locked].filter(Boolean).join("\n\n"); };
   const lineOf = m => m.type === "FILE" && !m.fromFan ? `[média envoyé${m.price > 0 ? ` à ${m.price} € — ${m.status === "accepted" ? "acheté" : "pas encore acheté"}` : " gratuit"}]${m.text ? " " + m.text : ""}`
     : m.text || (m.medias.length ? (m.fromFan ? "[le fan envoie un média]" : "[média]") : "");
 
@@ -305,7 +312,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     let albums = []; try { albums = await albumsOf(c.id); } catch (e) {}
     const tags = db.prepare("SELECT id, name, color FROM twizz_tags WHERE COALESCE(active, 1) = 1 ORDER BY name").all();
     const A = M.albums.length ? albums.filter(a => M.albums.includes(a.id)) : albums;
-    return { albums, tags, prompt: system(c, M, ficheOf(c), M.sell ? A : [], M.sell ? "" : "la vente de médias est coupée pour cette créatrice", "(prénom du fan, note de l'équipe)", gcfg()) }; }));
+    const C = gcfg(), P = parts(c, M, ficheOf(c), M.sell ? A : [], M.sell ? "" : "la vente de médias est coupée pour cette créatrice", "(prénom du fan, note de l'équipe)", C);
+    return { albums, tags, base: C.base || BASE_DEF, baseDefault: BASE_DEF, custom: !!C.base, auto: P.auto, locked: P.locked }; }));
   // essayer l'IA sans rien envoyer : une fausse conversation, la réponse de Grok s'affiche seulement
   const TRIED = new Map();
   app.post("/api/twizz/ai/try/:cid", auth, mgr, wrap(async req => { const c = okC(req.params.cid), M = mcfg(c.id);

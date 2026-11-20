@@ -45,6 +45,9 @@ textarea.inp{width:100%;min-height:70px;height:auto;padding:9px 11px;font:500 13
 .lv{margin-top:8px;padding:8px 11px;border-radius:11px;background:rgba(255,160,110,.07);border:1px solid rgba(255,160,110,.25);font:600 12px/1.45 Inter;color:#ffbf98}.lv b{color:#ffe1cf}
 .fiche{display:flex;align-items:center;gap:12px}.fiche .g{flex:1;height:7px;border-radius:5px;background:#1f1f1f;overflow:hidden}.fiche .g i{display:block;height:100%;background:linear-gradient(90deg,#3ddc97,#9ff0cc);border-radius:5px}
 .fiche b{font:800 13px Inter;white-space:nowrap}
+.pvh{margin:14px 0 6px;font:800 12.5px Inter;color:#e6e6e6}.pvh span{font-weight:600;color:#7a7a7a;margin-left:6px}
+textarea.mono{font:500 12.5px/1.6 ui-monospace,Menlo,monospace;min-height:260px;color:#e6e6e6}.pvn{display:block;font:500 11.5px Inter;color:#6f6f6f;margin-top:5px}
+.pvp{white-space:pre-wrap;margin:0;padding:12px;border-radius:12px;background:#0b0b0b;border:1px solid #1f1f1f;font:500 12px/1.55 ui-monospace,Menlo,monospace;color:#9d9d9d;max-height:360px;overflow:auto}.pvp.lk{color:#c9b98a;border-color:#2a2618;background:#0e0d09}
 details.pv{margin-top:10px}details.pv summary{cursor:pointer;font:700 12.5px Inter;color:#9a9a9a}details.pv pre{white-space:pre-wrap;margin:8px 0 0;padding:12px;border-radius:12px;background:#0b0b0b;border:1px solid #1f1f1f;font:500 12px/1.55 ui-monospace,Menlo,monospace;color:#bdbdbd;max-height:420px;overflow:auto}
 .chat{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto;padding:4px 2px 8px}
 .bb{max-width:85%;padding:8px 12px;border-radius:15px;font:500 13.5px/1.45 Inter;white-space:pre-wrap;word-break:break-word}
@@ -124,7 +127,16 @@ async function paintBody() {
         <p class="lead" style="margin:8px 0 10px">L'IA écrit d'après la fiche de ${esc(c.label)} : sa façon d'écrire, sa personnalité, son histoire, ce qu'elle fait et ne fait jamais, son catalogue, ses exemples de messages et ses curseurs de style. Plus la fiche est remplie, plus l'IA lui ressemble.</p>
         <div class="t" style="margin-bottom:6px"><b style="font:800 13.5px Inter">Consignes en plus pour l'IA</b></div>
         <textarea class="inp" id="extra" maxlength="2000" placeholder="Ex. : toujours finir par une question, vouvoyer les nouveaux, ne jamais parler de ses voyages…">${esc(M.extra || "")}</textarea>
-        <details class="pv" id="pv"><summary>Voir tout ce que l'IA reçoit pour ${esc(c.label)}</summary><pre id="prompt">Chargement…</pre></details>
+      </div>
+      <div class="pn up" style="animation-delay:.08s"><div class="ph"><h3>Ce que l'IA <em>reçoit</em></h3><div class="r"><button class="btn sm" id="baseReset">Rétablir par défaut</button></div></div>
+        <p class="lead" style="margin:0 0 8px">Ce texte est envoyé à Grok avant chaque réponse, dans cet ordre.</p>
+        <div class="pvh">1 · Instructions de base <span>pour toutes les créatrices · modifiable</span></div>
+        <textarea class="inp mono" id="base" maxlength="8000" spellcheck="false"></textarea>
+        <small class="pvn">{creatrice} est remplacé par son nom. Pour une seule créatrice, utilise plutôt « Consignes en plus » au-dessus.</small>
+        <div class="pvh">2 · Rempli automatiquement <span>fiche, consignes, catalogue et coffre de ${esc(c.label)}</span></div>
+        <pre class="pvp" id="pAuto">Chargement…</pre>
+        <div class="pvh">3 · Règles fixes 🔒 <span>toujours ajoutées à la fin</span></div>
+        <pre class="pvp lk" id="pLock"></pre>
       </div>
     </div>
     <div>
@@ -153,6 +165,8 @@ async function paintBody() {
     if (k === "ok" && !v && cur().run && !confirm(`Retirer l'accord de ${cur().label} ?\n\nL'IA qui tourne sur elle va s'arrêter.`)) return;
     if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { [k]: v })) { b.classList.toggle("on", v); paintCrs(); paintRun(); loadInfo(true); } });
   document.querySelectorAll("[data-n]").forEach(i => i.onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { [i.dataset.n]: +i.value })) { notify("Enregistré", "", "ok"); loadInfo(true); } });
+  $("base").onchange = async () => { if (await save("/api/twizz/ai/cfg", { base: $("base").value })) { notify("Instructions enregistrées", "Elles valent pour toutes les créatrices", "ok"); INFO = {}; loadInfo(true); } };
+  $("baseReset").onclick = async () => { if (!confirm("Remettre les instructions de base par défaut ?")) return; if (await save("/api/twizz/ai/cfg", { base: "" })) { notify("Instructions par défaut remises", "", "ok"); INFO = {}; loadInfo(true); } };
   $("extra").onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { extra: $("extra").value })) { notify("Consignes enregistrées", "", "ok"); loadInfo(true); } };
   // réglages pour toutes
   if (F) $("gNotice").onclick = async () => { if (await save("/api/twizz/ai/cfg", { notice: !D.cfg.notice })) { notify(D.cfg.notice ? "Message IA rallumé" : "Message IA coupé", D.cfg.notice ? "" : "Le 🤖 reste à la fin de chaque message", "info"); paintBody(); } };
@@ -167,9 +181,10 @@ async function paintBody() {
   loadInfo();
 }
 async function loadInfo(fresh) {
-  const cid = CID; if (fresh || !INFO[cid]) { try { INFO[cid] = await api(`/api/twizz/ai/info/${enc(cid)}`, { fresh: true }); } catch (e) { INFO[cid] = { albums: [], tags: [], prompt: e.message }; } }
+  const cid = CID; if (fresh || !INFO[cid]) { try { INFO[cid] = await api(`/api/twizz/ai/info/${enc(cid)}`, { fresh: true }); } catch (e) { INFO[cid] = { albums: [], tags: [], base: "", auto: e.message, locked: "" }; } }
   if (cid !== CID || !$("albs")) return; const I = INFO[cid], M = cur().cfg;
-  $("prompt").textContent = I.prompt || "";
+  if (document.activeElement !== $("base")) $("base").value = I.base || ""; $("pAuto").textContent = I.auto || ""; $("pLock").textContent = I.locked || "";
+  $("baseReset").disabled = !I.custom;
   const chips = (box, L, sel, key, empty) => { $(box).innerHTML = L.length ? L.map(x => `<button data-v="${esc(String(x.id))}" class="${sel.includes(key === "albums" ? x.id : x.id) ? "on" : ""}">${esc(x.name)}${x.count != null ? ` · ${x.count}` : ""}</button>`).join("") : `<span class="hint">${empty}</span>`;
     $(box).querySelectorAll("[data-v]").forEach(b => b.onclick = async () => { const v = key === "albums" ? b.dataset.v : +b.dataset.v, cur0 = cur().cfg[key], nx = cur0.includes(v) ? cur0.filter(x => x !== v) : cur0.concat([v]);
       if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { [key]: nx })) { b.classList.toggle("on", nx.includes(v)); loadInfo(true); } }); };
