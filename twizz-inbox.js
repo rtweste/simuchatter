@@ -114,10 +114,15 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     for (const k of ["conversations", "items", "results", "albums", "files", "list"]) if (d && Array.isArray(d[k])) return d[k]; return []; };
   const str = v => (v == null ? "" : String(v));
   // miniatures Twizz : liste [{ type: "BLURRED" | "CLEAR", absolutePath }] (adresses signées), ou anciens formats
-  const thumbOf = x => { const t = x && x.thumbnails;
-    if (Array.isArray(t) && t.length) { const c = t.find(y => y && y.type === "CLEAR") || t[0]; return str((c && (c.absolutePath || c.url || c.path)) || ""); }
-    if (t && typeof t === "object") return str(t.small || t.medium || t.large || "");
-    return str((x && (x.thumbnail || x.thumbUrl)) || ""); };
+  // vignette d'un média : comme l'appli Twizz (thumbnailUrl d'abord), et seulement une vraie adresse (pas un chemin interne)
+  const okUrl = u => /^(https?:\/\/|data:image\/)/i.test(u) ? u : "";
+  const thumbOf = x => { if (!x) return ""; if (okUrl(str(x.thumbnailUrl))) return str(x.thumbnailUrl); const t = x.thumbnails;
+    if (Array.isArray(t) && t.length) { const u = y => y && okUrl(str(y.absolutePath || y.url)), c = t.find(y => y && y.type === "CLEAR" && u(y)) || t.find(y => y && y.type === "CLEAR_MEDIUM" && u(y)) || t.find(u); if (c) return u(c); }
+    if (t && typeof t === "object" && !Array.isArray(t)) { const v = [t.small, t.medium, t.large].map(str).find(okUrl); if (v) return v; }
+    return [x.thumbnail, x.thumbUrl].map(str).find(okUrl) || ""; };
+  // photo, vidéo ou vocal (les vocaux n'ont pas d'image)
+  const kindOf = f => { const ty = str(f.mimeType || f.type || f.fileType || ""), u = str(f.url || f.Location || "").split("?")[0];
+    return /video/i.test(ty) || /\.(mp4|mov|webm|m3u8)$/i.test(u) ? "video" : /audio/i.test(ty) || f.isAudio || /\.(mp3|m4a|wav|ogg|aac)$/i.test(u) ? "audio" : "image"; };
   // un même fichier n'a pas toujours le même identifiant côté coffre et côté message : on garde tous ses repères
   const pathOf = u => { try { const x = new URL(u); return /^https?:$/.test(x.protocol) && x.pathname.length > 8 ? x.pathname : ""; } catch (e) { return ""; } };
   const keysOf = x => [x && x.fileId, x && x._id, x && x.id, x && x.quickFileId, pathOf(str(x && x.url))].map(str).filter(k => k && k !== "/");
@@ -162,8 +167,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
       read: !!m.isRead, price: p.resultPrice ?? p.price ?? null, mediaPushId: str(m.mediaPushId || ""),
       medias: (m.medias || []).map(x => ({ url: str(x.url), thumb: thumbOf(x), audio: !!x.isAudio, private: !!x.isPrivate, video: /video/i.test(str(x.type || x.mimeType)) || /\.(mp4|mov|webm|m3u8)$/i.test(pathOf(str(x.url))), keys: keysOf(x) })) };
   }
-  const file = f => ({ id: str(f._id || f.id || f.fileId), url: str(f.url || f.Location || f.path || ""), thumb: thumbOf(f) || str(f.absolutePath || f.url || ""),
-    type: str(f.type || f.mimeType || f.fileType || ""), name: str(f.originalFileName || f.name || f.filename || ""), keys: keysOf(f) });
+  const file = f => { const kind = kindOf(f), url = str(f.url || f.Location || f.path || "");
+    return { id: str(f._id || f.id || f.fileId), url, kind, thumb: thumbOf(f) || (kind === "image" ? okUrl(str(f.absolutePath || url)) : ""),
+      type: str(f.type || f.mimeType || f.fileType || ""), name: str(f.originalFileName || f.name || f.filename || ""), keys: keysOf(f) }; };
 
   /* ---------- temps réel : socket Twizz -> flux vers la page ---------- */
   const SUBS = new Set(); let sock = null, live = false, idleT = null;

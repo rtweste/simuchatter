@@ -642,6 +642,8 @@
 .vt{position:relative;aspect-ratio:1;border-radius:16px;border:0;padding:0;background:#1a1a1a;cursor:pointer;transform-style:preserve-3d;transition:transform .5s cubic-bezier(.2,.9,.3,1.2),box-shadow .4s;animation:tlIn .7s cubic-bezier(.16,1,.3,1) both}
 @keyframes tlIn{from{opacity:0;transform:translateY(18px) rotateX(-18deg) scale(.94)}}
 .vt .cl{position:absolute;inset:0;border-radius:inherit;overflow:hidden}
+.tph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:radial-gradient(circle at 50% 40%,#1e1e1e,#121212);color:#5a5a5a}.tph b{font:800 9.5px Inter;letter-spacing:.12em;color:#7a7a7a}.tph.au{color:#5fd3a2}
+.dk .tph,.wth .tph{border-radius:inherit}.dk,.wth{position:relative}
 .vt img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .7s cubic-bezier(.2,.8,.2,1),filter .4s,opacity .4s}
 .vt:hover{transform:translateY(-5px) rotateX(7deg) rotateY(-7deg);box-shadow:0 26px 40px -18px #000}
 .vt:hover img{transform:scale(1.08)}
@@ -1659,6 +1661,11 @@ function paintHist(c, H) {
 }
 
 /* ================= coffre intelligent ================= */
+// vignette d'un média du coffre : image, sinon repli sur le fichier, sinon un pictogramme (vidéo sans aperçu, vocal)
+const MIC = '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>';
+window.thumbErr = img => { const u = img.dataset.f; if (u && img.getAttribute("src") !== u) { img.dataset.f = ""; img.src = u; return; } const s = document.createElement("span"); s.className = "tph"; s.innerHTML = SV(IC.img, 24); img.replaceWith(s); };
+const thumbHtml = (f, lazy = true) => f.kind === "audio" ? `<span class="tph au">${SV(MIC, 24)}<b>VOCAL</b></span>` : f.thumb ? `<img src="${esc(f.thumb)}" alt=""${lazy ? ' loading="lazy"' : ""} data-f="${f.kind === "image" && f.url !== f.thumb ? esc(f.url) : ""}" onerror="thumbErr(this)">` : `<span class="tph">${SV(f.kind === "video" ? IC.play : IC.img, 24)}</span>`;
+
 const PROMO_T = [["u", "Illimitée"], ["h6", "6 h"], ["h12", "12 h"], ["h24", "24 h"], ["d2", "2 jours"], ["d7", "7 jours"]];
 async function vault(acceptId, preset) {
   const conv = CUR; if (!conv) return; if (!HIST[conv.id]) loadHist();
@@ -1710,7 +1717,7 @@ async function vault(acceptId, preset) {
   const upd = () => { promoUi(); const go = $("vGo"), n = SEL.length, pw = pWhy(), tx = !!$("vTxt").value.trim(); go.disabled = !n || price === null || !!pw || !tx;
     $("vGl").textContent = !n ? "Choisis un média" : price === null ? "Choisis un prix" : pw ? pw : !tx ? "Écris un message avec le média" : `Envoyer à ${conv.fan.name.split(" ")[0]} · ${price ? E(promoPrice()) + (PR.on ? " en promo" : "") : "gratuit"}`;
     const ch = SEL.map(id => FILES.get(id)).filter(Boolean), nv = ch.filter(f => /video/i.test(f.type) || isVid(f.url)).length, np = ch.length - nv, pl = (k, a, b) => k + " " + (k > 1 ? b : a);
-    $("vDk").innerHTML = ch.length ? ch.slice(0, 5).map(f => `<span class="dk"><img src="${esc(f.thumb)}" alt=""></span>`).join("") : `<span class="dkemp"></span>`;
+    $("vDk").innerHTML = ch.length ? ch.slice(0, 5).map(f => `<span class="dk">${thumbHtml(f, false)}</span>`).join("") : `<span class="dkemp"></span>`;
     $("vDt").textContent = n ? pl(n, "média choisi", "médias choisis") : "Rien de choisi"; $("vDs").textContent = n ? [nv ? pl(nv, "vidéo", "vidéos") : "", np ? pl(np, "photo", "photos") : ""].filter(Boolean).join(" · ") : "Clique sur les médias";
     $("vG").querySelectorAll(".vt").forEach(t => { const k = SEL.indexOf(t.dataset.id); t.classList.toggle("on", k >= 0); t.querySelector(".num").textContent = k >= 0 ? k + 1 : "";
       const tr = t.querySelector(".trace"); if (k >= 0 && !tr) t.insertAdjacentHTML("beforeend", '<span class="trace"></span>'); if (k < 0 && tr) tr.remove(); }); };
@@ -1731,7 +1738,7 @@ async function vault(acceptId, preset) {
     const G = $("vG"); if (!files.length) { G.innerHTML = `<div class="mx-empty" style="grid-column:1/-1">Album vide</div>`; return; }
     const L = files.map(f => ({ f, s: stateOf(f) })).filter(x => [null, "new", "sent", "bought"][filter] ? x.s.st === [null, "new", "sent", "bought"][filter] : true);
     G.innerHTML = L.length ? L.map(({ f, s }, i) => { const vid = /video/i.test(f.type) || isVid(f.url);
-      return `<button class="vt ${s.st}" data-id="${esc(f.id)}" style="animation-delay:${Math.min(i, 14) * .035}s" aria-label="${vid ? "Vidéo" : "Photo"}${s.st === "bought" ? ", déjà achetée" : s.st === "sent" ? ", envoyée mais pas achetée" : ", jamais envoyée"}"><span class="cl"><img src="${esc(f.thumb)}" alt="" loading="lazy"></span><span class="gloss"></span><span class="num"></span>
+      return `<button class="vt ${s.st}" data-id="${esc(f.id)}" style="animation-delay:${Math.min(i, 14) * .035}s" aria-label="${vid ? "Vidéo" : "Photo"}${s.st === "bought" ? ", déjà achetée" : s.st === "sent" ? ", envoyée mais pas achetée" : ", jamais envoyée"}"><span class="cl">${thumbHtml(f)}</span><span class="gloss"></span><span class="num"></span>
         ${vid ? '<span class="ty">VIDÉO</span>' : ""}${s.st === "new" ? `<span class="dnew"></span><span class="lnew">Jamais envoyé à ${first1}</span>` : ""}
         ${s.st === "sent" ? `<span class="rib"><b><i></i>Pas acheté${s.i.price ? " · " + E(s.i.price) : ""}</b><small>${s.i.at ? "envoyé il y a " + since(s.i.at) : "déjà envoyé"}${s.i.by ? " · " + esc(s.i.by) : ""}</small></span>` : ""}
         ${s.st === "bought" ? `<span class="vstamp">DÉJÀ ACHETÉ</span><span class="bdate">${E(s.i.price)} · le ${esc(day(s.i.at))}</span>` : ""}</button>`; }).join("") : `<div class="mx-empty" style="grid-column:1/-1">${["", "Il a déjà reçu tout cet album", "Rien en attente d'achat", "Il n'a rien acheté dans cet album"][filter]}</div>`;
@@ -1741,7 +1748,7 @@ async function vault(acceptId, preset) {
   function pick(t) {
     const id = t.dataset.id, k = SEL.indexOf(id), f = FILES.get(id), s = stateOf(f);
     if (k < 0 && s.st === "bought" && warnId !== id) { warnId = id; t.classList.remove("sh"); void t.offsetWidth; t.classList.add("sh");
-      $("vW").innerHTML = `<div class="warn"><span class="wth"><img src="${esc(f.thumb)}" alt=""></span><span><span class="wt2">Déjà acheté par ${first1}</span>Il l'a payé <b>${E(s.i.price)} le ${esc(day(s.i.at))}</b>. Le renvoyer risque de l'agacer.</span><span class="wb"><button id="wN">Annuler</button><button class="k" id="wY">L'ajouter quand même</button></span></div>`;
+      $("vW").innerHTML = `<div class="warn"><span class="wth">${thumbHtml(f, false)}</span><span><span class="wt2">Déjà acheté par ${first1}</span>Il l'a payé <b>${E(s.i.price)} le ${esc(day(s.i.at))}</b>. Le renvoyer risque de l'agacer.</span><span class="wb"><button id="wN">Annuler</button><button class="k" id="wY">L'ajouter quand même</button></span></div>`;
       $("wN").onclick = () => { warnId = null; $("vW").innerHTML = ""; }; $("wY").onclick = () => { SEL.push(id); warnId = null; $("vW").innerHTML = ""; upd(); }; return; }
     if (k >= 0) SEL.splice(k, 1); else SEL.push(id); warnId = null; $("vW").innerHTML = ""; upd();
   }
