@@ -143,7 +143,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   const mapped = () => db.prepare("SELECT t.twizz_id id, t.label, t.note, t.model_id, m.name model FROM twizz_creators t LEFT JOIN models m ON m.id = t.model_id ORDER BY t.label").all();
   // qui a envoyé chaque message depuis le site (les messages envoyés directement sur Twizz n'ont pas d'auteur connu)
   const authors = ids => { const out = {}; const L = ids.filter(Boolean); if (!L.length) return out;
-    db.prepare(`SELECT s.msg_id, u.username FROM twizz_sent s JOIN users u ON u.id = s.user_id WHERE s.msg_id IN (${L.map(() => "?").join(",")})`).all(...L).forEach(r => out[r.msg_id] = r.username); return out; };
+    db.prepare(`SELECT s.msg_id, u.username, s.via FROM twizz_sent s LEFT JOIN users u ON u.id = s.user_id WHERE s.msg_id IN (${L.map(() => "?").join(",")})`).all(...L).forEach(r => { const n = r.via === "ia" ? "🤖 IA" : r.username; if (n) out[r.msg_id] = n; }); return out; };
   const creatorOk = cid => { if (!db.prepare("SELECT 1 FROM twizz_creators WHERE twizz_id = ?").get(cid)) throw bad("Créatrice inconnue : teste d'abord la connexion Twizz"); return cid; };
   const sendOn = () => !!S.get("twizz_inbox_send", false);
   const mustSend = req => { if (!sendOn()) throw bad(req && req.acc && !req.acc.founder ? "L'envoi est coupé pour le moment par le fondateur" : "L'envoi est coupé : active « Envoi activé » en haut de la messagerie");
@@ -311,6 +311,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   app.get("/api/twizz/inbox/:cid/conversations", auth, inbox, wrap(async req => {
     const cid = creatorOk(req.params.cid), type = ["GENERAL", "TO_DELIVER"].includes(req.query.type) ? req.query.type : "GENERAL", page = Math.max(1, +req.query.page || 1);
     const q = String(req.query.q || "").trim().slice(0, 60);
+    let aiStopped = false; try { aiStopped = !!(app.locals.aiHuman && app.locals.aiHuman(cid, req.user)); } catch (e) {}   // un chatter reprend : l'IA de secours s'arrête
     const fresh = req.query.fresh === "1"; if (fresh) drop(`/conversations/user/${enc(cid)}?page=${page}&type=${type}`);
     const P = p => `/conversations/user/${enc(cid)}?page=${p}&type=${type}&creatorId=${enc(cid)}`;
     let j = q ? await G(`/conversations/user/${enc(cid)}/search?search=${enc(q)}`, 10e3) : await G(P(page), 20e3), d = j && j.data, raw = arr(j), outPage = page;
@@ -327,7 +328,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     try { items.forEach(c => c.fan.id && fact(cid, c.fan.id, { name: c.fan.name, first_at: ts(c.since), [c.last.fromFan ? "fan_at" : "team_at"]: ts(c.last.at) })); } catch (e) {}
     try { snapSave(cid, items); } catch (e) {}
     items.forEach(c => { const h = hereOf(c.id, req.user.id); if (h.length) c.here = h.map(x => x.name); });
-    return { items, page: outPage, more: !!(d && (d.totalPages ? outPage < d.totalPages : raw.length >= 10)), sample: req.query.debug ? arr(j)[0] : undefined };
+    return { items, page: outPage, more: !!(d && (d.totalPages ? outPage < d.totalPages : raw.length >= 10)), aiStopped, sample: req.query.debug ? arr(j)[0] : undefined };
   }));
   app.get("/api/twizz/inbox/:cid/messages/:conv", auth, inbox, wrap(async req => {
     const cid = creatorOk(req.params.cid), page = Math.max(1, +req.query.page || 1), fanId = str(req.query.fan);
@@ -757,4 +758,6 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     mustSend(req); const cid = creatorOk(req.params.cid);
     await call("PATCH", "/messages/read-all-messages", { conversationId: str(req.body?.conversationId), creatorId: cid }, true); drop(str(req.body?.conversationId), `/conversations/user/${enc(cid)}`); return { ok: true };
   }));
+  // pour l'IA de secours : mêmes lectures et mêmes formats que la messagerie
+  return { conv, msg, arr, file, hereOf, G, drop, mapped, sendOn };
 };

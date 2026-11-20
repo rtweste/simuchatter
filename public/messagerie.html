@@ -587,7 +587,18 @@
 .hr-row{display:inline-flex;align-items:center;gap:3px;height:17px;padding:0 6px;margin-right:6px;border-radius:999px;background:rgba(255,190,90,.12);color:#ffc46b;font:800 9.5px Inter;letter-spacing:.01em;vertical-align:middle;max-width:90px;overflow:hidden;white-space:nowrap}
 .hr-hd{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;margin-left:8px;border-radius:999px;background:rgba(255,190,90,.1);border:1px solid rgba(255,190,90,.3);color:#ffc46b;font:700 11px Inter;white-space:nowrap;animation:vchIn .5s cubic-bezier(.3,1.4,.5,1) both}
 .hr-hd i{width:6px;height:6px;border-radius:50%;background:#ffc46b;box-shadow:0 0 8px #ffc46b}.hr-hd.ty i{animation:hrP 1s infinite}@keyframes hrP{50%{opacity:.25}}
-.tgs.ro{cursor:help}#teamB[hidden]{display:none!important}
+.tgs.ro{cursor:help}#teamB[hidden],#aiB[hidden]{display:none!important}
+#aiB.run{color:#5fd3a2;box-shadow:0 0 0 1px rgba(95,211,162,.45),0 0 16px -4px rgba(95,211,162,.6)}
+.ai-bar{display:flex;align-items:center;gap:10px;margin:2px 16px 8px;padding:9px 10px 9px 14px;border-radius:16px;background:rgba(95,211,162,.08);border:1px solid rgba(95,211,162,.3);color:#cfeee0;font:600 12.5px Inter;animation:vchIn .5s cubic-bezier(.3,1.4,.5,1) both}
+.ai-bar[hidden]{display:none}@media(max-width:900px){.mx.open .ai-bar{display:none}.ai-bar{margin:2px 10px 8px}}.ai-bar b{color:#fff;font-weight:800}.ai-bar .t{flex:1;min-width:0}.ai-bar .t small{display:block;color:#8fbfaa;font:500 11.5px Inter;margin-top:1px}
+.ai-bar i{flex:none;width:8px;height:8px;border-radius:50%;background:#5fd3a2;box-shadow:0 0 10px #5fd3a2;animation:hrP 1.6s infinite}
+.ai-bar button,.ai-r button{flex:none;height:30px;padding:0 13px;border-radius:10px;border:1px solid #2a2a2a;background:#151515;color:#eee;font:800 12px Inter;cursor:pointer}.ai-bar button:hover,.ai-r button:hover{background:#1e1e1e}
+.ai-r button.go{background:#f2f2f2;color:#0a0a0a;border-color:#f2f2f2}.ai-r button.st{color:#ff9a9a;border-color:rgba(255,120,120,.35)}.ai-r button:disabled{opacity:.4;cursor:not-allowed}
+.mx-cr .aib{position:absolute;bottom:-2px;left:22px;font-size:11px;line-height:1;filter:drop-shadow(0 0 4px rgba(95,211,162,.8))}
+.ai-w{margin:10px 20px 0;padding:10px 13px;border-radius:13px;background:rgba(255,180,80,.08);border:1px solid rgba(255,180,80,.3);color:#ffc77a;font:600 12px/1.45 Inter}
+.ai-r{display:flex;align-items:center;gap:11px;padding:11px 8px;border-bottom:1px solid #181818}.ai-r:last-child{border-bottom:0}.ai-r .ta-u small{white-space:normal}
+.ai-r .lv{display:block;margin-top:4px;font:600 11px Inter;color:#ffb48a}.ai-mp{display:flex;align-items:center;gap:8px;margin-top:8px;font:600 12px Inter;color:#aaa}.ai-mp input{width:70px;height:30px;border-radius:9px;border:1px solid #2a2a2a;background:#141414;color:#fff;font:700 13px Inter;padding:0 8px}
+.ai-h{margin:14px 20px 0;font:800 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:#6a6a6a}
 .ta-b{width:min(620px,100%);max-height:min(760px,100%);display:flex;flex-direction:column;background:#0d0d0d;border:1px solid #262626;border-radius:24px;overflow:hidden;box-shadow:0 50px 120px -30px #000;animation:vUp .6s cubic-bezier(.16,1,.3,1) both}
 .ta-h{display:flex;align-items:center;gap:12px;padding:18px 20px 14px;border-bottom:1px solid #1c1c1c}.ta-h h2{margin:0;flex:1;font:900 21px Inter;letter-spacing:-.04em}.ta-h h2 em{font-family:"Instrument Serif",serif;font-style:italic;font-weight:400}
 .ta-o{display:flex;align-items:center;gap:14px;margin:14px 20px 0;padding:13px 15px;border-radius:15px;background:#121212;border:1px solid #232323}.ta-o>div{flex:1;min-width:0}.ta-o b{font:800 13.5px Inter;color:#fff}.ta-o small{display:block;margin-top:2px;font:500 11.5px/1.45 Inter;color:#888}
@@ -908,7 +919,9 @@
       <div class="mx-cr" id="crs"></div>
       <div class="mx-tg"><span class="mx-live" id="live" title="Les nouveaux messages arrivent tout seuls"><i></i><span>CONNEXION…</span></span>
         <button class="tgi on" id="swBlur" title="Flouter les photos et vidéos (survole une image pour la voir)" aria-label="Flouter les médias"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/></svg></button>
+        <button class="tgi" id="aiB" hidden title="IA de secours" aria-label="IA de secours"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4.5V8"/><circle cx="12" cy="3.5" r="1"/><path d="M9 14h.01M15 14h.01"/></svg></button>
         <button class="tgi" id="teamB" hidden title="Qui a accès à la messagerie" aria-label="Accès de l'équipe"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6"/><path d="M16 5.2a3 3 0 0 1 0 5.6M18.5 19c-.3-1.9-1.2-3.2-2.5-3.9"/></svg></button></div></div></div>
+    <div class="ai-bar" id="aiBar" hidden></div>
     <div class="mx-body blur" id="body">
       <section class="mx-ls"><div class="mx-seg"><button data-ty="QUEUE">À traiter<span class="qn" id="qCount"></span></button><button data-ty="GENERAL">Général</button></div>
         <div class="qhd" id="qh" hidden><h2><span id="qN"></span><span id="qW">fans <em class="met">à traiter.</em></span></h2><div class="dsh" id="qD"></div><div class="inb" id="inb" hidden></div>
@@ -1040,6 +1053,7 @@ function top() {
     b.classList.toggle("on", id === CID);
     if (n && !d) b.insertAdjacentHTML("beforeend", `<span class="dot">${n > 99 ? "99+" : n}</span>`); else if (n && d) d.textContent = n > 99 ? "99+" : n; else if (!n && d) d.remove(); });
   $("teamB").hidden = !(ST.founder || ST.manager);
+  $("aiB").hidden = !(ST.founder || ST.manager); paintAi();
 }
 // non lus de chaque créatrice (pastille rouge sur les autres créatrices)
 let unT = null;
@@ -1059,6 +1073,7 @@ let qT = null; $("q").oninput = () => { clearTimeout(qT); qT = setTimeout(() => 
 async function fetchList(t, fresh, more) {
   const k = lkey(t), L = LISTS[k], page = more && L ? L.page + 1 : 1, q = t === "QUEUE" ? "" : Q;
   const r = await api2(`/conversations?type=${t}&page=${page}${q ? "&q=" + enc(q) : ""}${fresh ? "&fresh=1" : ""}`);
+  if (r.aiStopped) notify("L'IA de secours s'arrête", `Tu reprends ${crLabel()} : elle ne répond plus aux fans`, "info");
   r.items.forEach(c => fixFan(c.fan));
   const ins = (list, add) => { const out = list.slice(); add.forEach(c => { const t0 = Date.parse(c.last.at) || 0, i = out.findIndex(x => (Date.parse(x.last.at) || Infinity) < t0); i < 0 ? out.push(c) : out.splice(i, 0, c); }); return out; };
   // rafraîchissement de la 1re page : on garde en attendant les pages suivantes déjà chargées tout seul (relues juste après par deepen)
@@ -1436,6 +1451,51 @@ async function teamBox() {
   paint(); m.onclick = e => { if (e.target === m) m.remove(); };
 }
 $("teamB").onclick = teamBox;
+
+/* ---- IA de secours (managers ; interrupteur : fondateur) ---- */
+let AIS = null, aiT = null;
+const aiRun = cid => AIS && (AIS.creators.find(c => c.id === cid) || {}).run;
+const hmA = t => new Date(t).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+const aiLine = r => `${r.replies} réponse${r.replies > 1 ? "s" : ""}${r.medias ? ` · ${r.medias} média${r.medias > 1 ? "s" : ""} envoyé${r.medias > 1 ? "s" : ""}` : ""}${r.sales && r.sales.n ? ` · ${String(r.sales.net.toFixed(2)).replace(".", ",")} € vendus` : ""}`;
+async function aiLoad() { clearTimeout(aiT); if (!ST || !(ST.founder || ST.manager)) return;
+  try { AIS = await api("/api/twizz/ai"); } catch (e) { AIS = null; } paintAi(); aiT = setTimeout(aiLoad, 30e3); }
+function paintAi() {
+  if (!ST || !$("aiB")) return; const any = AIS && AIS.creators.some(c => c.run);
+  $("aiB").classList.toggle("run", !!any);
+  document.querySelectorAll("#crs [data-cid]").forEach(b => { const on = !!aiRun(b.dataset.cid), x = b.querySelector(".aib");
+    if (on && !x) b.insertAdjacentHTML("beforeend", `<span class="aib" title="L'IA de secours répond pour cette créatrice">🤖</span>`); else if (!on && x) x.remove(); });
+  const r = aiRun(CID), bar = $("aiBar");
+  if (!r) { bar.hidden = true; return; }
+  bar.hidden = false;
+  bar.innerHTML = `<i></i><span class="t"><b>🤖 L'IA de secours répond pour ${esc(crLabel())}</b> depuis ${hmA(r.started_at)}<small>${aiLine(r)}${r.error ? " · dernier souci : " + esc(r.error) : ""}${r.left.length ? ` · ${r.left.length} fan${r.left.length > 1 ? "s" : ""} laissé${r.left.length > 1 ? "s" : ""} à l'équipe` : ""}</small></span><button id="aiStop">Arrêter</button>`;
+  $("aiStop").onclick = () => aiStop(CID);
+}
+async function aiStop(cid) { try { AIS = await api("/api/twizz/ai/stop", { body: { cid } }); notify("IA de secours arrêtée", "", "info"); } catch (e) { notify("Impossible", e.message, "err"); } paintAi(); }
+async function aiBox() {
+  try { AIS = await api("/api/twizz/ai"); } catch (e) { return notify("IA de secours", e.message, "err"); }
+  const m = document.createElement("div"); m.className = "mx-mod"; document.body.appendChild(m);
+  const paint = () => { const D = AIS, ok = D.on && D.key && D.send;
+    m.innerHTML = `<div class="ta-b"><div class="ta-h"><h2>IA de <em>secours</em></h2><button class="px" id="aiX" aria-label="Fermer">✕</button></div>
+      <div class="ta-o"><div><b>IA de secours</b><small>${D.on ? "Allumée : les managers peuvent la lancer sur une créatrice quand un chatter manque." : D.founder ? "Coupée : personne ne peut la lancer." : "Coupée par le fondateur : personne ne peut la lancer."}</small>
+        ${D.founder ? `<label class="ai-mp">Prix maximum d'un média vendu par l'IA <input type="number" min="3" max="200" id="aiMp" value="${D.maxPrice}"> €</label>` : ""}</div>${D.founder ? `<button type="button" class="ta-sw ${D.on ? "on" : ""}" id="aiSw" aria-label="Allumer l'IA de secours"><i></i></button>` : ""}</div>
+      ${!D.key ? `<div class="ai-w">Clé Grok manquante : ajoute la variable <b>XAI_API_KEY</b> dans Railway.</div>` : ""}${!D.send ? `<div class="ai-w">L'envoi vers les fans est coupé : l'IA ne pourrait rien envoyer.</div>` : ""}
+      <div class="ta-n">Elle écrit avec <b>Grok</b>, dans le style et selon les consignes de la créatrice, et peut vendre des médias du coffre. Son premier message dit au fan que c'est <b>l'IA de la créatrice</b>, puis chaque message finit par 🤖. Elle <b>s'arrête toute seule</b> dès qu'un chatter pointe sur la créatrice ou ouvre sa messagerie (12 h au plus). Elle laisse à l'équipe les fans qu'elle ne doit pas gérer.</div>
+      <div class="ta-l">${D.creators.map(c => { const r = c.run;
+        return `<div class="ai-r" data-c="${esc(c.id)}"><span class="ta-a">${esc((c.label[0] || "?").toUpperCase())}</span><div class="ta-u"><b>${esc(c.label)}${r ? " <em>🤖 en cours</em>" : ""}</b>
+          <small>${r ? `Depuis ${hmA(r.started_at)}${r.by ? " · lancée par " + esc(r.by) : ""} · ${aiLine(r)}${r.error ? " · dernier souci : " + esc(r.error) : ""}` : c.model_id ? "Ne tourne pas" : "Pas reliée à une fiche créatrice"}</small>
+          ${r && r.left.length ? r.left.map(x => `<span class="lv">À reprendre : ${esc(x.fan_name || "un fan")} — ${esc(x.blocked)}</span>`).join("") : ""}</div>
+          ${r ? `<button class="st" data-stop>Arrêter</button>` : `<button class="go" data-go ${ok ? "" : "disabled"}>Lancer</button>`}</div>`; }).join("")}
+      ${D.recent.length ? `<div class="ai-h">Dernières séances</div>` + D.recent.map(r => `<div class="ai-r"><div class="ta-u"><b>${esc(r.label)}</b><small>${new Date(r.started_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} ${hmA(r.started_at)} → ${hmA(r.ended_at)} · ${aiLine(r)} · ${esc(r.end_reason || "")}</small>${r.left.length ? r.left.map(x => `<span class="lv">À reprendre : ${esc(x.fan_name || "un fan")} — ${esc(x.blocked)}</span>`).join("") : ""}</div></div>`).join("") : ""}</div></div>`;
+    m.querySelector("#aiX").onclick = () => m.remove();
+    const sw = m.querySelector("#aiSw"); if (sw) sw.onclick = async () => { if (!AIS.on && !confirm("Allumer l'IA de secours ?\n\nLes managers pourront la lancer sur une créatrice : elle répondra vraiment aux fans sur Twizz, avec Grok, en disant que c'est l'IA de la créatrice.")) return;
+      try { AIS = await api("/api/twizz/ai/switch", { body: { on: !AIS.on } }); paint(); paintAi(); } catch (e) { notify("Erreur", e.message, "err"); } };
+    const mp = m.querySelector("#aiMp"); if (mp) mp.onchange = async () => { try { AIS = await api("/api/twizz/ai/switch", { body: { maxPrice: +mp.value } }); notify("Prix maximum enregistré", "", "ok"); } catch (e) { notify("Erreur", e.message, "err"); mp.value = AIS.maxPrice; } };
+    m.querySelectorAll("[data-go]").forEach(b => b.onclick = async () => { b.disabled = true; b.textContent = "…";
+      try { AIS = await api("/api/twizz/ai/start", { body: { cid: b.closest(".ai-r").dataset.c, reason: "lancée depuis la messagerie" } }); notify("IA de secours lancée", "Elle s'arrête dès qu'un chatter reprend", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } paint(); paintAi(); });
+    m.querySelectorAll("[data-stop]").forEach(b => b.onclick = async () => { b.disabled = true; await aiStop(b.closest(".ai-r").dataset.c); paint(); }); };
+  paint(); m.onclick = e => { if (e.target === m) m.remove(); };
+}
+$("aiB").onclick = aiBox;
 // le moment où le fan achète : bordure qui fait le tour, ondes, étincelles, montant qui monte, notification
 function celebrate(m) {
   chime();
@@ -2038,7 +2098,7 @@ document.addEventListener("keydown", e => { if (e.key !== "ArrowDown" || e.metaK
   // lien direct vers une conversation (depuis « À vérifier » dans Ventes) : la créatrice, le fan, et la vente à montrer
   const Q0 = new URLSearchParams(location.search), dl = Q0.get("conv") && Q0.get("fan") && ST.creators.some(c => c.id === Q0.get("cr")) ? { cr: Q0.get("cr"), conv: Q0.get("conv"), fan: Q0.get("fan"), name: Q0.get("name") || "Fan", msg: Q0.get("msg") || "", amt: +Q0.get("amt") || 0, at: +Q0.get("at") || 0 } : null;
   if (dl) { CID = dl.cr; ty = "GENERAL"; history.replaceState(null, "", location.pathname); }
-  top(); unreads(); setInterval(() => { if (!document.hidden) unreads(); }, 120e3); liveUi(); thread(); fanCard(); setType(["QUEUE", "GENERAL"].includes(ty) ? ty : "QUEUE"); if (CID) stream();
+  top(); unreads(); aiLoad(); setInterval(() => { if (!document.hidden) unreads(); }, 120e3); liveUi(); thread(); fanCard(); setType(["QUEUE", "GENERAL"].includes(ty) ? ty : "QUEUE"); if (CID) stream();
   if (dl) { DEEP = dl; const L = LISTS[lkey("GENERAL")], c = L && L.items.find(x => x.id === dl.conv);
     openConv(c || { id: dl.conv, fan: fixFan({ id: dl.fan, name: dl.name, avatar: "" }), last: { at: null, text: "", fromFan: false, type: "" }, unread: 0, online: false }); }
 })();

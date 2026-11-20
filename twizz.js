@@ -24,6 +24,7 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     CREATE TABLE IF NOT EXISTS twizz_sent (id INTEGER PRIMARY KEY, msg_id TEXT, conv_id TEXT, fan_id TEXT, creator_id TEXT, user_id INTEGER, price REAL, at INTEGER);
     CREATE INDEX IF NOT EXISTS twizz_sent_conv ON twizz_sent(conv_id, at);`);
   if (!db.prepare("PRAGMA table_info(twizz_creators)").all().some(x => x.name === "note")) db.exec("ALTER TABLE twizz_creators ADD COLUMN note TEXT");
+  if (!db.prepare("PRAGMA table_info(twizz_tx)").all().some(x => x.name === "ai")) db.exec("ALTER TABLE twizz_tx ADD COLUMN ai INTEGER NOT NULL DEFAULT 0");   // vendu par l'IA de secours
   if (!db.prepare("PRAGMA table_info(twizz_creators)").all().some(x => x.name === "username")) db.exec("ALTER TABLE twizz_creators ADD COLUMN username TEXT");   // pseudo Twizz (connexion au compte de la créatrice)
   for (const [c, t] of [["source", "TEXT"], ["twizz_id", "TEXT"]])
     if (!db.prepare("PRAGMA table_info(sales)").all().some(x => x.name === c)) db.exec(`ALTER TABLE sales ADD COLUMN ${c} ${t}`);
@@ -178,7 +179,11 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     else if (C.types.includes(t.type)) state = "pending";
     db.prepare(`INSERT INTO twizz_tx (id, tx_id, creator_id, model_id, type, net, at, refund, validated, fan_id, fan_name, conv_id, state, seen_at)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(t.id, t.tx_id, t.creator_id, t.model_id, t.type, t.net, t.at, t.refund, t.validated, t.fan_id, t.fan_name, t.conv_id, state, now());
-    if (state === "pending") {
+    // vendu par l'IA de secours : le dernier média payant de la conversation vient d'elle (CA de l'agence, aucune commission)
+    const byAi = !refund && net > 0 && !!t.conv_id && (db.prepare("SELECT via FROM twizz_sent WHERE conv_id = ? AND price IS NOT NULL AND at <= ? AND at > ? ORDER BY at DESC LIMIT 1").get(t.conv_id, at + 60e3, at - 7 * 864e5) || {}).via === "ia";
+    if (byAi) db.prepare("UPDATE twizz_tx SET ai = 1 WHERE id = ?").run(id);
+    if (state === "pending" && byAi) db.prepare("UPDATE twizz_tx SET state = 'ca_only' WHERE id = ?").run(id);
+    else if (state === "pending") {
       let uid = null;
       if (t.conv_id) { const s = (db.prepare("SELECT user_id FROM twizz_sent WHERE conv_id = ? AND price IS NOT NULL AND at <= ? AND at > ? ORDER BY at DESC LIMIT 1").get(t.conv_id, at + 60e3, at - 7 * 864e5) || db.prepare("SELECT user_id FROM twizz_sent WHERE conv_id = ? AND at <= ? AND at > ? ORDER BY at DESC LIMIT 1").get(t.conv_id, at + 60e3, at - 7 * 864e5)); if (s) uid = s.user_id; }
       if (!uid && modelId) uid = whoSold(modelId, at);

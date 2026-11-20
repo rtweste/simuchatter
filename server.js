@@ -563,7 +563,8 @@ require("./purge")(app, db, auth, admin, { gest: GEST });
 const NOTIFY = require("./notify")(app, db, auth, admin, { bcrypt, PROD, gest: GEST, planning: PLAN });
 require("./backups")(app, db, auth, admin, { dbPath: DB_PATH, notify: NOTIFY, gest: GEST });   // sauvegardes de nuit + téléchargement fondateur
 const TWIZZ = require("./twizz")(app, db, auth, admin, { gest: GEST });   // CRM Twizz : ventes automatiques (lecture seule)
-require("./twizz-inbox")(app, db, auth, admin, { twizz: TWIZZ, ai });   // messagerie Twizz (fondateur, puis l'équipe qu'il ouvre)
+const INBOX = require("./twizz-inbox")(app, db, auth, admin, { twizz: TWIZZ, ai });   // messagerie Twizz (fondateur, puis l'équipe qu'il ouvre)
+require("./twizz-ai")(app, db, auth, admin, { twizz: TWIZZ, inbox: INBOX, notify: NOTIFY, gest: GEST });   // IA de secours (Grok) quand un chatter manque
 require("./twizz-creator")(app, db, auth, admin, { gest: GEST, notify: NOTIFY, dataDir: path.dirname(DB_PATH) });   // publications et vidéos de présentation (compte de chaque créatrice)
 require("./controle")(app, db, auth, admin);   // « À vérifier » : ventes automatiques et médias offerts qui sortent des clous
 require("./profile")(app, db, auth, { bcrypt, PERM });   // Mon profil, Paramètres, carte de profil dans le chat   // notifications sur le téléphone, invitations, premier lancement
