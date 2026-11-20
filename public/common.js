@@ -230,13 +230,13 @@ const VOICE_UI = (() => {
       p.innerHTML = on ? `<i style="width:7px;height:7px;border-radius:50%;background:#5fd3a2;box-shadow:0 0 8px #5fd3a2"></i>${n}` : ""; });
     if (need && !on) { if (!bar) { bar = document.createElement("div"); bar.className = "vo-bar";
         bar.style.cssText = "position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:2147481000;display:flex;align-items:center;gap:12px;padding:8px 8px 8px 16px;border-radius:999px;background:rgba(15,30,24,.92);border:1px solid rgba(95,211,162,.5);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#cdeedd;font:600 13px Inter,system-ui,sans-serif;box-shadow:0 20px 50px -10px rgba(0,0,0,.8);max-width:calc(100vw - 20px)";
-        bar.innerHTML = `<span>🎙 Le vocal est obligatoire pendant ton shift</span><button type="button" style="height:32px;border-radius:999px;border:0;background:#5fd3a2;color:#05261a;font:800 12.5px Inter,sans-serif;padding:0 14px;cursor:pointer;flex-shrink:0">Rejoindre</button>`;
+        bar.innerHTML = `<span>${innerWidth < 600 ? "🎙 Vocal obligatoire en shift" : "🎙 Le vocal est obligatoire pendant ton shift"}</span><button type="button" style="height:32px;border-radius:999px;border:0;background:#5fd3a2;color:#05261a;font:800 12.5px Inter,sans-serif;padding:0 14px;cursor:pointer;flex-shrink:0">Rejoindre</button>`;
         bar.querySelector("button").onclick = () => openVoice("equipe"); document.body.appendChild(bar); } }
     else if (bar) { bar.remove(); bar = null; }
     // la fenêtre du vocal n'a pas le droit de jouer le son tant qu'on n'a pas cliqué dedans
     if (on && blk && location.pathname !== "/vocal") { if (!bbar) { bbar = document.createElement("div"); bbar.className = "vo-bar vo-blkd";
         bbar.style.cssText = "position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:2147481000;display:flex;align-items:center;gap:12px;white-space:nowrap;max-width:calc(100vw - 24px);padding:8px 8px 8px 16px;border-radius:999px;background:rgba(58,42,6,.95);border:1px solid #f0b54a;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);font:700 13px Inter,sans-serif;color:#ffe2a8;box-shadow:0 12px 40px rgba(0,0,0,.5)";
-        bbar.innerHTML = `<span>🔇 Tu n'entends pas le salon : clique dans la fenêtre du vocal</span><button type="button" style="height:32px;border-radius:999px;border:0;background:#f0b54a;color:#2a1c00;font:800 12.5px Inter,sans-serif;padding:0 14px;cursor:pointer;flex-shrink:0">Ouvrir la fenêtre</button>`;
+        bbar.innerHTML = `<span>${innerWidth < 600 ? "🔇 Son du vocal bloqué" : "🔇 Tu n'entends pas le salon : clique dans la fenêtre du vocal"}</span><button type="button" style="height:32px;border-radius:999px;border:0;background:#f0b54a;color:#2a1c00;font:800 12.5px Inter,sans-serif;padding:0 14px;cursor:pointer;flex-shrink:0">${innerWidth < 600 ? "Ouvrir" : "Ouvrir la fenêtre"}</button>`;
         bbar.querySelector("button").onclick = () => openVoice(); document.body.appendChild(bbar); } }
     else if (bbar) { bbar.remove(); bbar = null; }
   };

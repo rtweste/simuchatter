@@ -163,6 +163,8 @@ ul{padding-left:18px;line-height:1.6;margin:6px 0}
   .sidebar{view-transition-name:topbar}
 }
 @media(max-width:360px){.dock .di{padding:0 10px;min-width:40px}.dock .di.on{padding:0 12px}}
+/* bandeaux du vocal sur téléphone : une ligne, sous la barre du haut */
+@media(max-width:860px){.vo-bar{top:auto!important;bottom:calc(max(16px, env(safe-area-inset-bottom)) + 70px)!important;white-space:nowrap;font-size:12.5px!important;gap:8px!important;padding:5px 5px 5px 13px!important}.vo-bar button{height:30px!important;padding:0 12px!important}body:has(.mx.open) .vo-bar{display:none!important}}
 @keyframes dockIn{from{opacity:0;transform:translate(-50%,24px) scale(.96)}to{opacity:1;transform:translate(-50%,0)}}
 /* Pas de dock pendant une conversation du simulateur (il cacherait la zone de saisie) */
 body:has(#chatScreen:not(.hidden)) .dock{display:none}

@@ -836,6 +836,65 @@
 .mx-cp{background:rgba(18,18,18,.7);border-color:rgba(255,255,255,.09);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
 .mx-cp .md{background:rgba(255,255,255,.05)}
 .mx-cp .go{background:#ededed;color:#0a0a0a;box-shadow:0 6px 20px -6px rgba(255,255,255,.35)}
+/* ===== Téléphone : liste puis conversation en plein écran (chatters et managers) ===== */
+.fan-x{display:none}
+@media(max-width:860px){
+  /* liste : en-tête compact, créatrices sur une ligne qui défile */
+  .mx-topw{padding:6px 8px 0}
+  .mx-top{gap:6px;padding:6px 6px 6px 12px;border-radius:16px}
+  .mx-top h1{font-size:15px}
+  .mx-cr{gap:5px;padding:2px 0}
+  .mx-cr button{height:38px;padding:3px;font-size:12px}
+  .mx-cr button.on{padding-right:13px}.mx-cr button.on .nm{margin-left:8px}
+  .mx-seg{margin:8px 8px 4px}
+  .qhd h2{font-size:22px}
+  .kh2{display:none}
+  /* conversation : plein écran, sans la barre du site ni le dock, et qui suit le clavier */
+  body:has(.mx.open){overflow:hidden}
+  body:has(.mx.open) .sidebar,body:has(.mx.open) .dock,body:has(.mx.open) .as-fab,body:has(.mx.open) #gtabs{display:none!important}
+  .mx.open{position:fixed;left:0;right:0;top:var(--vvt,0px);height:var(--vvh,100dvh);z-index:60}
+  .mx.open .mx-topw{display:none}
+  .mx-hd{gap:8px;padding:calc(6px + env(safe-area-inset-top)) 8px 6px 6px;min-height:56px}
+  .mx-hd .av{width:34px;height:34px;font-size:13px}.mx-hd b{font-size:15px}
+  .mx-hd .htg,.mx-hd .crew,.mx-hd .kbd{display:none}
+  .mx-hd .sp{gap:4px}
+  .mx-hd .mx-ib{width:38px;height:38px;padding:0;justify-content:center;border-radius:12px}
+  .mx-hd .mx-ib.pnb.on{color:#5fd3a2;border-color:rgba(95,211,162,.4)}
+  .mx-hd>div{cursor:pointer}
+  .mx-sc{padding:10px 10px 8px}
+  .mx-g{max-width:88%}
+  .mx-cpw{padding:4px 8px calc(6px + env(safe-area-inset-bottom))}
+  body.kb .mx-cpw{padding-bottom:6px}
+  .mx-cp{border-radius:18px;padding:4px;gap:4px}
+  .mx-cp .tools{gap:2px}
+  .mx-cp .tools .md{width:38px;height:38px}
+  .mx-cp textarea{font-size:16px;padding:9px 4px}
+  .aur-sug{margin-bottom:6px}
+  .pnl{left:6px;right:6px;max-height:min(420px,52dvh)}
+  /* fiche du fan : plein écran par-dessus la conversation, avec un retour */
+  .mx-fan{width:auto;left:0;padding-top:64px}
+  .fan-x{position:absolute;left:0;right:0;top:0;z-index:35;align-items:center;gap:10px;height:56px;padding:0 12px;background:rgba(10,10,10,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid #1c1c1c;font:800 14px Inter;color:#eee}
+  .mx:has(.mx-fan.show) .fan-x{display:flex}
+  .fan-x button{height:38px;padding:0 12px 0 8px;border-radius:12px;border:1px solid #262626;background:#121212;color:#ddd;font:800 13px Inter;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+  /* coffre et fenêtres : plein écran */
+  .mx-mod{padding:0;place-items:stretch}
+  .vbox{width:100%;height:100%;border-radius:0;border:0;padding-top:env(safe-area-inset-top)}
+  .vh{padding:10px 12px;gap:8px;flex-wrap:nowrap}
+  .vh h2{font-size:18px;overflow:hidden;text-overflow:ellipsis;min-width:0}.vh .to{display:none}.vh .intel,.vh .kbd{display:none}
+  .vh .x{flex:none}
+  /* coffre : une seule colonne qui défile, albums en bandeau, médias en grille, bouton d'envoi toujours visible */
+  .vbox{overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .vb2{flex:none;min-height:auto;display:block}
+  .vh{position:sticky;top:0;z-index:7;background:rgba(13,13,13,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  .rail{padding:8px 10px;gap:6px;max-height:none}
+  .rail .cap{display:none}
+  .vm{padding:10px 10px 0}
+  .vm .ah{flex-wrap:wrap;gap:8px}
+  .vgrid{overflow:visible;flex:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px 0 14px}
+  .vf.tk{grid-template-columns:1fr;gap:10px;padding:12px 10px calc(12px + env(safe-area-inset-bottom))}
+  .tk-rt{position:sticky;bottom:0;z-index:6;background:linear-gradient(180deg,rgba(10,10,10,0),#0a0a0a 18px);padding-top:14px;margin-top:-4px}
+  .go2{min-width:0;width:100%}.go2 .kbd{display:none}
+}
 </style>
 </head>
 <body>
@@ -857,6 +916,7 @@
         <div class="mx-cl" id="cl"></div></section>
       <section class="mx-th" id="th"></section>
       <aside class="mx-fan" id="fan"></aside>
+      <div class="fan-x" id="fanX"><button type="button" id="fanXb"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Conversation</button><span>Fiche du fan</span></div>
     </div>
   </div>
 </main>
@@ -865,6 +925,17 @@
 <script>
 (() => {
 const $ = id => document.getElementById(id);
+// téléphone : la conversation suit la partie visible de l'écran (le clavier la réduit), retour depuis la fiche du fan
+(() => { const vv = window.visualViewport, R = document.documentElement;
+  const set = () => { if (!vv) return; R.style.setProperty("--vvh", vv.height + "px"); R.style.setProperty("--vvt", vv.offsetTop + "px"); document.body.classList.toggle("kb", innerHeight - vv.height > 120); };
+  if (vv) { vv.addEventListener("resize", set); vv.addEventListener("scroll", set); set(); }
+  document.addEventListener("click", e => { if (e.target.closest && e.target.closest("#fanXb")) closeFan(); });
+})();
+function closeConv() { $("mx").classList.remove("open"); $("fan").classList.remove("show"); hereLeave(); CUR = null; renderList(); }
+function openFan() { if ($("fan").classList.contains("show")) return; $("fan").classList.add("show"); if (innerWidth <= 860) try { history.pushState({ mxf: 1 }, ""); } catch (e) {} }
+function closeFan() { if (!$("fan").classList.contains("show")) return; if (history.state && history.state.mxf) history.back(); else $("fan").classList.remove("show"); }
+// bouton retour du téléphone (ou glisser depuis le bord) : fiche du fan -> conversation -> liste, sans quitter la page
+addEventListener("popstate", () => { if ($("fan").classList.contains("show")) { $("fan").classList.remove("show"); return; } if ($("mx").classList.contains("open")) closeConv(); });
 const IC = { pin: '<path d="M9 3h6l-1 6 3.5 3.5h-11L10 9z"/><path d="M12 12.5V21"/>', x: '<path d="M7 7l10 10M17 7L7 17"/>', search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>', tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/>', bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>', img: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>', send: '<path d="M5 12h14M13 6l6 6-6 6"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/>',
   play: '<path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/>', back: '<path d="M15 18l-6-6 6-6"/>',
@@ -1170,7 +1241,7 @@ function markSeen(c) { if (!c || !c.unread || document.hidden) return; c.unread 
   if (UNREAD[k]) { UNREAD[k] = Math.max(0, UNREAD[k] - 1); top(); }
   api2(`/seen/${enc(c.id)}`, { body: { last_at: c.last && c.last.at } }).catch(() => {}); renderList(); }
 async function openConv(c) {
-  if (!c) return; markSeen(c); if (!CUR || CUR.id !== c.id) { PANEL = null; hereLeave(); } CUR = c; HEREO = []; hereBeat(); $("mx").classList.add("open"); renderList(); thread(); loadMsgs(); loadHist(); loadRun(); setTimeout(fanCard, 150);
+  if (!c) return; markSeen(c); if (!CUR || CUR.id !== c.id) { PANEL = null; hereLeave(); } CUR = c; HEREO = []; hereBeat(); if (innerWidth <= 860 && !$("mx").classList.contains("open")) try { history.pushState({ mxc: 1 }, ""); } catch (e) {} $("mx").classList.add("open"); renderList(); thread(); loadMsgs(); loadHist(); loadRun(); setTimeout(fanCard, 150);
 }
 const isPPV = m => !m.fromFan && m.type === "FILE" && m.price != null && m.medias.length;
 // vente à montrer après un lien direct : le PPV envoyé (ou celui au bon prix juste avant l'achat) est mis en avant
@@ -1288,7 +1359,7 @@ function thread(keep, noScroll) {
       <span class="sp"><span class="crew" id="crew">${crewHtml()}</span>${TYPE === "QUEUE" ? `<button class="mx-ib" id="nxB" title="Fan suivant de la file">${SV(IC.down, 14, 2.4)}<span class="lb">Fan suivant</span><span class="kbd">↓</span></button>` : ""}<button class="mx-ib pnb ${pinOf(CUR.fan.id) ? "on" : ""}" id="pinB">${SV(IC.pin, 15, 2.2)}<span class="lb">${pinOf(CUR.fan.id) ? "Épinglé" : "Épingler"}</span></button><button class="mx-ib" id="rd" title="Marque la conversation comme lue sur Twizz">${SV(IC.eye, 15)}<span class="lb">Marquer lu</span></button><button class="mx-ib mx-fb" id="fanB">${SV(IC.user, 15)}<span class="lb">Fiche</span></button></span></div>
     <div class="mx-sc" id="sc">${body}</div>
     <div class="mx-cpw"><div id="rnw"></div>${CANSEND() ? `<div class="aur-sug">${[["relance", "Relance douce"], ["question", "Question perso"], ["teaser", "Teaser"]].map(([k, l]) => `<button type="button" data-int="${k}">${SV(SPK1.replace(/<\/?svg[^>]*>/g, ""), 12, 0)}${l}</button>`).join("")}</div>` : `<div class="mx-off">${offMsg()}</div>`}
-      <div class="mx-cp"><span class="tools"><button class="md" id="mdB" title="Envoyer un média du coffre" ${CANSEND() ? "" : "disabled"}>${SV(IC.img, 19)}</button><button class="md tl2 ${PANEL === "scripts" ? "act" : ""}" id="scB" title="Scripts (touche /)">${SV(IC.doc, 19)}</button><button class="md tl2 ai ${PANEL === "ai" ? "act" : ""}" id="aiB" title="Assistant IA (⌘J)">${SV(IC.spark, 19, 2)}</button></span><textarea id="tx" rows="1" placeholder="${CANSEND() ? (innerWidth > 860 ? "Écris ton message… ( / pour les scripts )" : "Écris ton message…") : ST.canSend ? "Envoi coupé" : "Lecture seule"}" ${CANSEND() ? "" : "disabled"}></textarea><button class="go" id="goB" title="Envoyer" ${CANSEND() ? "" : "disabled"}>${SV(IC.send, 19, 2.6)}</button></div>
+      <div class="mx-cp"><span class="tools"><button class="md" id="mdB" title="Envoyer un média du coffre" ${CANSEND() ? "" : "disabled"}>${SV(IC.img, 19)}</button><button class="md tl2 ${PANEL === "scripts" ? "act" : ""}" id="scB" title="Scripts (touche /)">${SV(IC.doc, 19)}</button><button class="md tl2 ai ${PANEL === "ai" ? "act" : ""}" id="aiB" title="Assistant IA (⌘J)">${SV(IC.spark, 19, 2)}</button></span><textarea id="tx" rows="1" enterkeyhint="send" placeholder="${CANSEND() ? (innerWidth > 860 ? "Écris ton message… ( / pour les scripts )" : "Écris ton message…") : ST.canSend ? "Envoi coupé" : "Lecture seule"}" ${CANSEND() ? "" : "disabled"}></textarea><button class="go" id="goB" title="Envoyer" ${CANSEND() ? "" : "disabled"}>${SV(IC.send, 19, 2.6)}</button></div>
       <div class="hintbar"><span class="kh"><span class="kbd">↵</span>envoyer</span><span class="kh"><span class="kbd">/</span>scripts</span><span class="kh"><span class="kbd">⌘</span><span class="kbd">J</span>assistant IA</span><span class="kh"><span class="kbd">↓</span>fan suivant</span></div></div>`;
   // en bas : on y reste, même quand les images finissent de charger ; sinon on garde l'endroit où on lisait
   const sc = $("sc"), toBottom = () => { sc._prog = Date.now(); sc.scrollTop = sc.scrollHeight; };
@@ -1312,8 +1383,9 @@ function thread(keep, noScroll) {
   if (PANEL) paintPanel();
   paintRun();
   if ($("nxB")) $("nxB").onclick = nextInQueue;
-  $("bk").onclick = () => { $("mx").classList.remove("open"); hereLeave(); CUR = null; renderList(); };
-  $("fanB").onclick = () => $("fan").classList.toggle("show");
+  $("bk").onclick = () => { if (history.state && history.state.mxc) history.back(); else closeConv(); };
+  $("fanB").onclick = () => $("fan").classList.contains("show") ? closeFan() : openFan();
+  { const who = document.querySelector(".mx-hd>div"); if (who) who.onclick = () => { if (innerWidth <= 860) openFan(); }; }
   $("pinB").onclick = () => togglePin(CUR); paintPinB();
   // idées de l'IA dans un sens précis (relance, question, teaser) ; « Relancer » sur un PPV pas acheté
   const aiIntent = k => { if (!CUR) return; AIRES[CUR.id] = { loading: true }; openPanel("ai"); askAI(k); };
