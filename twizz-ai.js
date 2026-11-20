@@ -30,6 +30,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       last_fan_msg TEXT, blocked TEXT, at INTEGER, PRIMARY KEY (run_id, conv_id));
     CREATE TABLE IF NOT EXISTS twizz_ai_told (creator_id TEXT NOT NULL, fan_id TEXT NOT NULL, at INTEGER, PRIMARY KEY (creator_id, fan_id));
     CREATE TABLE IF NOT EXISTS twizz_ai_media (creator_id TEXT NOT NULL, file_id TEXT NOT NULL, album_id TEXT, kind TEXT, descr TEXT, err TEXT, at INTEGER, PRIMARY KEY (creator_id, file_id));`);
+  // teasing : l'IA a annoncé un média sans l'envoyer ; elle ne peut l'envoyer qu'après une réponse du fan
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_tease (creator_id TEXT NOT NULL, conv_id TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (creator_id, conv_id))");
   for (const [k, t] of [["relances", "INTEGER NOT NULL DEFAULT 0"], ["relance_at", "INTEGER"], ["mem_at", "INTEGER"]])
     if (!db.prepare("PRAGMA table_info(twizz_ai_convs)").all().some(x => x.name === k)) db.exec(`ALTER TABLE twizz_ai_convs ADD COLUMN ${k} ${t}`);
 
@@ -38,7 +40,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const G_DEF = { notice: true, mark: false, base: "", locked: "", noticeText: "Petite précision : c'est l'IA de {creatrice} qui te répond en ce moment 😊", noticeFreq: "run", noticeDays: 30,
     waitMin: 35, waitMax: 80, teamPause: 15, fanWindow: 12, perFan: 40, maxHours: 12, model: "fast",
     relance: true, relanceAfter: 45, relanceMax: 1, quietFrom: 1, quietTo: 9, memory: true };
-  const M_DEF = { ok: false, sell: true, maxPrice: 100, gap: 20, pile: true, albums: [], albumNotes: {}, skipTags: [], extra: "", profile: "", scripts: true, promo: true, maxDiscount: 30, promoHours: 24, vision: true };
+  const M_DEF = { ok: false, sell: true, maxPrice: 100, gap: 20, pile: true, albums: [], albumNotes: {}, skipTags: [], extra: "", profile: "", scripts: true, promo: true, maxDiscount: 30, promoHours: 24, vision: true,
+    minMsgs: 8, tease: true, teaseWindow: 90, askSkip: false };
   const gcfg = () => { const o = { ...G_DEF, ...(S.get("twizz_ai_cfg", {}) || {}) }; if (!o.notice && !o.mark) o.mark = true; return o; };   // jamais les deux coupés
   const mcfg = cid => ({ ...M_DEF, ...(S.get("twizz_ai_m:" + cid, {}) || {}) });
   const int = (v, a, b, name) => { const n = parseInt(v, 10); if (!Number.isFinite(n) || n < a || n > b) throw fail(`${name} : entre ${a} et ${b}`); return n; };
@@ -76,6 +79,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (typeof b.scripts === "boolean") o.scripts = b.scripts;
     if (typeof b.promo === "boolean") o.promo = b.promo;
     if (typeof b.vision === "boolean") o.vision = b.vision;
+    if (typeof b.tease === "boolean") o.tease = b.tease;
+    if (typeof b.askSkip === "boolean") o.askSkip = b.askSkip;
+    if (b.minMsgs != null) o.minMsgs = int(b.minMsgs, 0, 40, "Messages avant un média");
+    if (b.teaseWindow != null) o.teaseWindow = int(b.teaseWindow, 10, 720, "Délai pour envoyer après le teasing");
     if (b.maxDiscount != null) o.maxDiscount = int(b.maxDiscount, 5, 90, "Remise maximum");
     if (b.promoHours != null) { const h = parseInt(b.promoHours, 10); if (![6, 12, 24, 48].includes(h)) throw fail("Durée de promo : 6, 12, 24 ou 48 h"); o.promoHours = h; }
     if (b.albumNotes && typeof b.albumNotes === "object") o.albumNotes = Object.fromEntries(Object.entries(b.albumNotes).slice(0, 80).map(([k, v]) => [str(k).slice(0, 60), str(v).trim().slice(0, 240)]).filter(([k, v]) => k && v));
@@ -137,6 +144,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     message: { type: "string", description: "Ta réponse en une seule bulle, si tu ne remplis pas bulles." },
     album: { type: "string", description: "Facultatif : identifiant d'un album du coffre (liste fournie) pour joindre un média payant à ton message." },
     media: { type: "string", description: "Facultatif : identifiant précis du média choisi dans la liste de l'album (m:…), si l'album en liste." },
+    teaser: { type: "boolean", description: "Mets true quand ton message fait envie d'un média précis sans l'envoyer (tu l'annonces, tu le décris, tu le fais désirer). Obligatoire avant de pouvoir envoyer un média." },
     remise: { type: "integer", description: "Facultatif : remise en % sur ce média, seulement dans les cas permis par les consignes." },
     prix: { type: "integer", description: "Prix du média en euros, nombre rond (obligatoire si album est rempli)." },
     laisser: { type: "string", description: "Facultatif : remplis-le seulement si l'équipe doit reprendre ce fan elle-même (raison courte). Rien n'est alors envoyé au fan." }
@@ -256,8 +264,27 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const descrOf = (cid, ids) => { const m = new Map(); if (!ids.length) return m;
     db.prepare(`SELECT file_id, descr FROM twizz_ai_media WHERE creator_id = ? AND descr IS NOT NULL AND file_id IN (${ids.map(() => "?").join(",")})`).all(cid, ...ids).forEach(r => m.set(r.file_id, r.descr)); return m; };
   // ce que l'IA peut vendre à ce fan maintenant (réglages de la créatrice + ce qu'il a déjà reçu)
-  async function sellable(cr, M, L, convId) {
+  // le fan réclame lui-même un média (seulement si le réglage le permet)
+  const asks = t => /\b(envoie|envoi|montre|fais (moi )?voir|je (veux|voudrais) (voir|une?)|t'as (une?|des)|tu as (une?|des)|photo|vid[ée]o|pic|nude)\b/i.test(str(t));
+  // où en est le teasing de cette conversation : annoncé quand, et le fan a-t-il répondu depuis ?
+  function teaseOf(cr, convId, L) {
+    const t = convId ? db.prepare("SELECT at FROM twizz_ai_tease WHERE creator_id = ? AND conv_id = ?").get(cr.id, convId) : null; if (!t) return null;
+    return { at: t.at, answered: L.some(m => m.fromFan && (Date.parse(m.at) || 0) > t.at) };
+  }
+  async function sellable(cr, M, L, convId, tz) {
     if (!M.sell) return { albums: [], note: "la vente de médias est coupée pour cette créatrice" };
+    // 1. échauffement : pas de média tant que la conversation n'a pas assez de messages
+    const n = L.filter(m => m.text || m.medias.length).length;
+    const peek = async () => { let A = []; try { A = await albumsOf(cr.id); } catch (e) {} if (M.albums.length) A = A.filter(a => M.albums.includes(a.id)); const N = M.albumNotes || {};
+      return A.slice(0, 8).map(a => a.name + (N[a.id] ? ` (${N[a.id]})` : "")).join(", "); };
+    if (M.minMsgs && n < M.minMsgs) return { albums: [], note: `la conversation vient de commencer (${n} message${n > 1 ? "s" : ""} sur les ${M.minMsgs} nécessaires avant tout média) : apprends à le connaître, crée du lien, fais-le parler de lui. Ne propose aucun média, n'en parle même pas encore` };
+    // 2. teasing obligatoire : annoncer et faire désirer d'abord, envoyer seulement après sa réponse
+    const lastFan = [...L].reverse().find(m => m.fromFan), tease = tz !== undefined ? tz : teaseOf(cr, convId, L);
+    const skip = M.askSkip && lastFan && asks(lastFan.text);
+    if (M.tease && !skip && !(tease && tease.answered && now() - tease.at < M.teaseWindow * 60e3)) {
+      const what = await peek();
+      return { albums: [], teaseNow: true, note: tease && !tease.answered ? "tu viens de lui teaser un média : attends sa réponse, continue de le chauffer sans rien envoyer"
+        : `avant tout média, tu dois d'abord le teaser : fais-lui envie de ce que tu pourrais lui montrer (sans l'envoyer, sans prix), fais monter la tension, et mets teaser=true. Tu pourras l'envoyer seulement après sa réponse${what ? `. Ce que tu peux teaser : ${what}` : ""}` }; }
     const paid = L.filter(m => !m.fromFan && m.type === "FILE" && m.price > 0), last = paid[paid.length - 1], open = last && last.status !== "accepted";
     let requirePromo = false;
     if (M.pile && open) { if (M.promo && !last.promo) requirePromo = true;   // une deuxième chance, seulement avec une remise
@@ -268,6 +295,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       a.items = left.filter(f => D.has(f.id)).sort(() => Math.random() - .5).slice(0, 6).map(f => ({ id: f.id, descr: D.get(f.id) })); } catch (e) { a.items = []; } }
     return { albums: A, note: A.length ? "" : "aucun album autorisé dans le coffre", requirePromo, open: open ? last : null };
   }
+  const teaseSet = (cr, c) => db.prepare("INSERT INTO twizz_ai_tease (creator_id, conv_id, at) VALUES (?,?,?) ON CONFLICT(creator_id, conv_id) DO UPDATE SET at = excluded.at").run(cr.id, c.id, now());
+  const teaseClear = (cr, c) => db.prepare("DELETE FROM twizz_ai_tease WHERE creator_id = ? AND conv_id = ?").run(cr.id, c.id);
 
   /* ---------- envoi (mêmes requêtes que la messagerie) ---------- */
   async function sendText(cid, c, text) {
@@ -346,6 +375,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       else await sendText(cr.id, c, body);
     }
     if (tell) db.prepare("INSERT INTO twizz_ai_told (creator_id, fan_id, at) VALUES (?,?,?) ON CONFLICT(creator_id, fan_id) DO UPDATE SET at = excluded.at").run(cr.id, c.fan.id, now());
+    if (f) teaseClear(cr, c); else if (out.teaser && (sell.teaseNow || sell.albums.length)) teaseSet(cr, c);   // un média envoyé : il faudra re-teaser pour le suivant
     db.prepare("UPDATE twizz_ai_runs SET replies = replies + 1, last_at = ?, last_error = NULL WHERE id = ?").run(now(), r.id);
     mark({ notified: tell || row.notified ? 1 : 0, replies: (row.replies || 0) + 1 });
     drop(c.id, `/conversations/user/${enc(cr.id)}`);
@@ -498,14 +528,18 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (now() - (TRIED.get(req.user.id) || 0) < 3000) throw fail("Doucement : attends quelques secondes"); TRIED.set(req.user.id, now());
     const L = (Array.isArray(req.body && req.body.messages) ? req.body.messages : []).slice(-20).map(m => ({ role: m && m.fan ? "user" : "assistant", content: str(m && m.text).slice(0, 1000) })).filter(m => m.content);
     if (!L.length || L[L.length - 1].role !== "user") throw fail("Écris un message de fan pour essayer");
-    let sell = { albums: [], note: "" }; try { sell = await sellable(c, M, [], null); } catch (e) {} const albums = sell.albums;
+    // même porte de vente qu'en vrai : messages échangés dans l'essai, teasing repéré sur les réponses de l'IA
+    const raw = (req.body.messages || []).slice(-30), LL = raw.map((m, i) => ({ fromFan: !!(m && m.fan), text: str(m && m.text), medias: [], type: "TEXT", at: new Date(now() - (raw.length - i) * 60e3).toISOString(), teaser: !!(m && m.teaser) }));
+    const ti = LL.map(m => !m.fromFan && m.teaser).lastIndexOf(true), tz = ti < 0 ? null : { at: Date.parse(LL[ti].at), answered: LL.slice(ti + 1).some(m => m.fromFan) };
+    let sell = { albums: [], note: "" }; try { sell = await sellable(c, M, LL, null, tz); } catch (e) {} const albums = sell.albums;
     const FANS = { new: "pseudo : Thomas ; n'a encore jamais rien acheté", reg: "pseudo : Thomas ; prénom : Thomas ; ville : Lyon ; a déjà dépensé 150 € avec elle en 8 achats ; tags de l'équipe : Vidéos",
       big: "pseudo : Thomas ; prénom : Thomas ; métier : chef d'entreprise ; a déjà dépensé 850 € avec elle en 30 achats ; tags de l'équipe : Spender ; résumé de l'équipe : achète vite quand on le chauffe, aime qu'on se souvienne de lui" };
     const out = await grok([{ role: "system", content: system(c, M, ficheOf(c), albums, sell.note, FANS[req.body && req.body.fan] || "", gcfg()) }, ...L]);
     const al = out.album ? albums.find(a => a.id === str(out.album)) : null, it = al && (al.items || []).find(x => x.id === str(out.media).replace(/^m:/, ""));
     const pct = Math.round(+out.remise || 0);
     return { bulles: bubbles(out), album: al ? al.name : null, media: it ? it.descr : null, prix: al ? Math.min(Math.round(+out.prix || 0), M.maxPrice) : null,
-      remise: al && M.promo && pct >= 5 ? Math.min(pct, M.maxDiscount) : null, laisser: str(out.laisser).trim() || null };
+      remise: al && M.promo && pct >= 5 ? Math.min(pct, M.maxDiscount) : null, laisser: str(out.laisser).trim() || null,
+      teaser: !al && !!out.teaser && !!(sell.teaseNow || albums.length), gate: albums.length ? "" : sell.note };
   }));
   app.post("/api/twizz/ai/scan/:cid", auth, mgr, wrap(async req => { await scan(okC(req.params.cid).id, req.user.id); return state(req); }));
   // IA contre chatters sur une créatrice : heures couvertes, médias payants envoyés, ventes en conversation, € par heure (estimations)
