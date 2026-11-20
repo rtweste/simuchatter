@@ -37,6 +37,7 @@
 .tm button{width:22px;height:22px;border-radius:7px;border:0;background:#262626;color:#bbb;cursor:pointer;font:900 12px Inter}
 .inp{width:auto;max-width:130px;flex:none;height:32px;border-radius:10px;border:1px solid #2a2a2a;background:#141414;color:#eee;font:700 13px Inter;padding:0 10px;color-scheme:dark}
 .nx{font:600 12.5px Inter;color:#8a8a8a;margin-top:10px}.nx b{color:#5fd3a2}
+.sub{font:800 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:#6a6a6a;margin:14px 0 8px}.meta .ok{color:#5fd3a2;font-weight:800}.meta .nxt{color:#f0b54a;font-weight:800}.meta .ko{color:#ff8a8a;font-weight:800}
 .rc{margin-top:12px;padding:10px 12px;border-radius:14px;background:#141414;border:1px solid #222}.rc .mini{align-items:flex-start;gap:10px}.rc .mini .sw{margin-top:2px}.rc b{display:block;font:800 13px Inter;color:#eee}.rc small{display:block;font:600 12px/1.45 Inter;color:#8a8a8a;margin-top:2px}
 .it{display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:12px;align-items:start;padding:10px;border-radius:16px;background:#121212;border:1px solid #1f1f1f;margin-top:8px}
 .it.fail{border-color:rgba(255,107,107,.45);background:#1a1010}
@@ -195,33 +196,42 @@ async function vault(c) {
 /* ---------------- vidéos de présentation ---------------- */
 async function paintPres(stats) {
   const c = cur(); let P; try { P = await api(`/api/pub/${enc(c.id)}/pres${stats ? "?stats=" + stats : ""}`, { fresh: true }); } catch (e) { $("tab").innerHTML = `<div class="pn emp">${esc(e.message)}</div>`; return; }
-  const R = c.presRule, last = P.sent[0];
+  const R = c.presRule, day = t => new Date(t).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  const todo = P.queue.some(v => v.status === "queued") || P.nextId;
   $("tab").innerHTML = `
     <div class="pn"><div class="ph"><h3>Renouvellement <em>automatique</em></h3><div class="r"><label class="mini"><span>${R.on ? "Activé" : "Désactivé"}</span><button class="sw ${R.on ? "on" : ""}" id="pOn" aria-label="Renouveler automatiquement"><i></i></button></label></div></div>
-      <div class="times">Mettre en ligne la vidéo suivante de la file tous les <input class="inp" type="number" min="1" max="60" id="pDays" value="${R.days}" style="width:70px"> jours</div>
-      <div class="nx">${!D.auto ? "La publication automatique est coupée par le fondateur : les vidéos ne partent qu'à la main." : !R.on ? "Renouvellement désactivé pour cette créatrice." : last ? `Prochaine vidéo vers le <b>${new Date(last.sent_at + R.days * 864e5).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</b>` : "La première vidéo de la file partira au prochain passage."} Twizz vérifie chaque vidéo avant de la mettre en avant.</div></div>
-    <div class="pn"><div class="ph"><h3>Vidéos <em>à mettre en ligne</em></h3><div class="r"><label class="btn w" style="cursor:pointer">${SV(I.video)}Ajouter une vidéo<input type="file" id="pf" accept="video/*" hidden></label></div></div><div id="pup"></div><div id="pq"></div></div>
+      <div class="rc" style="margin-top:0"><b>Une nouvelle vidéo tous les ${P.days} jours</b><small>Au plus ${P.max} vidéos sur le profil : au-delà, la plus ancienne est supprimée de Twizz. Quand toutes les vidéos de la banque sont passées, elles repartent depuis la plus ancienne.</small></div>
+      <div class="nx">${!D.auto ? "La publication automatique est coupée par le fondateur : les vidéos ne partent qu'à la main." : !R.on ? "Renouvellement désactivé pour cette créatrice." : !todo ? "<span style='color:#f0b54a'>Rien à mettre en ligne : ajoute des vidéos à la banque.</span>" : P.nextAt > Date.now() ? `Prochaine vidéo le <b>${day(P.nextAt)}</b>.` : "La prochaine vidéo part dès qu'une vidéo de la banque est disponible."} Twizz vérifie chaque vidéo avant de la mettre en avant.</div></div>
+    <div class="pn"><div class="ph"><h3>Banque de <em>vidéos</em></h3><div class="r"><label class="btn w" style="cursor:pointer">${SV(I.video)}Ajouter une vidéo<input type="file" id="pf" accept="video/*" hidden></label></div></div><div id="pup"></div>
+      <div class="sub">Jamais postées</div><div id="pq"></div><div class="sub">Déjà postées</div><div id="pd"></div></div>
     <div class="pn"><div class="ph"><h3>Statistiques <em>Twizz</em></h3><div class="r"><button class="btn sm" id="pst">${SV(I.refresh, 13)}${P.stats ? "Actualiser" : "Charger"}</button></div></div><div id="ps"></div></div>`;
   $("pq").innerHTML = P.queue.length ? P.queue.map((v, i) => `<div class="it ${v.status === "failed" ? "fail" : ""}" data-id="${v.id}">
       <div class="th"><video src="/api/pub/pres/${v.id}/file" muted playsinline preload="metadata"></video></div>
       <div><b style="font:800 13.5px Inter;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v.name || "Vidéo")}</b><div class="meta">${mb(v.size || 0)} · ${v.status === "sending" ? "Envoi à Twizz en cours…" : v.status === "uploading" ? "Envoi en cours…" : `N° ${i + 1} dans la file`}${v.by_name ? " · ajoutée par " + esc(v.by_name) : ""}</div>
         ${v.status === "failed" ? `<div class="er">Échec : ${esc(v.error || "")}</div>` : ""}</div>
       <div class="ac">${v.status === "failed" ? `<button class="btn sm g" data-retry>Remettre dans la file</button>` : ""}<button class="btn sm w" data-send ${v.status !== "queued" && v.status !== "failed" ? "disabled" : ""}>${SV(I.send, 13)}Mettre en ligne</button><button class="btn sm r" data-rm aria-label="Retirer">${SV(I.trash, 13)}</button></div></div>`).join("")
-    : `<div class="emp">Aucune vidéo en attente. Ajoute une vidéo de présentation (moins d'une minute, verticale de préférence).</div>`;
+    : `<div class="emp">Aucune nouvelle vidéo. Ajoute une vidéo de présentation (moins d'une minute, verticale de préférence).</div>`;
+  $("pd").innerHTML = P.sent.length ? P.sent.map(v => `<div class="it" data-id="${v.id}">
+      <div class="th">${v.file ? `<video src="/api/pub/pres/${v.id}/file" muted playsinline preload="metadata"></video>` : ""}</div>
+      <div><b style="font:800 13.5px Inter;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v.name || "Vidéo")}</b>
+        <div class="meta">${v.status === "sending" ? "Envoi à Twizz en cours…" : v.rejected ? "<span class='ko'>Refusée par Twizz, elle ne repartira pas toute seule</span>" : v.id === P.nextId ? "<span class='nxt'>Prochaine</span>" : v.discover_id ? "<span class='ok'>Sur le profil</span>" : "En attente de son tour"} · postée le ${new Date(v.sent_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}${v.cycles ? ` · republiée ${v.cycles} fois` : ""}${v.file ? "" : " · fichier plus sur le serveur, elle ne repartira pas"}</div>
+        ${v.error ? `<div class="er">Dernier essai : ${esc(v.error)}</div>` : ""}</div>
+      <div class="ac"><button class="btn sm" data-send ${!v.file || v.status === "sending" ? "disabled" : ""}>${SV(I.refresh, 13)}Remettre en ligne</button><button class="btn sm r" data-rm aria-label="Retirer de la banque">${SV(I.trash, 13)}</button></div></div>`).join("")
+    : `<div class="emp">Les vidéos déjà mises en ligne restent ici et repartent à leur tour.</div>`;
   $("ps").innerHTML = P.statsError ? `<div class="emp" style="color:#ff8a8a">${esc(P.statsError)}</div>` : !P.stats ? `<div class="emp">Les vues, clics et conversion de chaque vidéo, lus sur Twizz. Clique sur « Charger ».</div>`
-    : P.stats.length ? P.stats.map(s => `<div class="st"><div class="th" style="width:52px;height:52px;border-radius:10px;background-image:url('${esc(s.thumb)}')"></div><div><span class="badge ${esc(s.status)}">${{ ACTIVE: "EN COURS", PENDING: "EN VÉRIFICATION", REJECTED: "REFUSÉE", EXPIRED: "TERMINÉE" }[s.status] || esc(s.status)}</span><div style="font:600 11.5px Inter;color:#7a7a7a;margin-top:4px">${s.from ? new Date(s.from).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}${s.to ? " → " + new Date(s.to).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}</div></div>
+    : P.stats.length ? P.stats.map(s => `<div class="st"><div class="th" style="width:52px;height:52px;border-radius:10px;background-image:url('${esc(s.thumb)}')"></div><div><span class="badge ${esc(s.status === "APPROVED" ? "ACTIVE" : s.status)}">${{ ACTIVE: "EN COURS", APPROVED: "EN COURS", PENDING: "EN VÉRIFICATION", REJECTED: "REFUSÉE", EXPIRED: "TERMINÉE" }[s.status] || esc(s.status)}</span><div style="font:600 11.5px Inter;color:#7a7a7a;margin-top:4px">${s.from ? new Date(s.from).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}${s.to ? " → " + new Date(s.to).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}</div></div>
         <div class="n">${s.views.toLocaleString("fr-FR")}<small>vues</small></div><div class="n">${s.clicks.toLocaleString("fr-FR")}<small>clics</small></div><div class="n ${s.conv < 20 ? "lo" : ""}">${s.conv} %<small>conversion</small></div></div>`).join("") : `<div class="emp">Aucune vidéo de présentation sur Twizz.</div>`;
   const rule = async b => { try { await api(`/api/pub/${enc(c.id)}/pres-rule`, { body: b }); await load(); } catch (e) { notify("Erreur", e.message, "err"); } };
-  $("pOn").onclick = () => rule({ on: !R.on }); $("pDays").onchange = () => rule({ days: +$("pDays").value });
+  $("pOn").onclick = () => rule({ on: !R.on });
   $("pst").onclick = () => paintPres(P.stats ? "fresh" : "1");
   $("pf").onchange = () => { const f = $("pf").files[0]; if (f) uploadPres(c, f); };
-  $("pq").querySelectorAll(".it").forEach(el => { const id = el.dataset.id;
+  ["pq", "pd"].forEach(box => $(box).querySelectorAll(".it").forEach(el => { const id = el.dataset.id, done = box === "pd";
     const rt = el.querySelector("[data-retry]"); if (rt) rt.onclick = async () => { await api(`/api/pub/pres/${id}`, { body: { retry: true } }).catch(e => notify("Erreur", e.message, "err")); paintPres(); };
-    el.querySelector("[data-rm]").onclick = async () => { if (!confirm("Retirer cette vidéo de la file ?")) return; await api(`/api/pub/pres/${id}`, { body: { remove: true } }).catch(e => notify("Erreur", e.message, "err")); await load(); };
+    el.querySelector("[data-rm]").onclick = async () => { if (!confirm(done ? "Retirer cette vidéo de la banque ? Si elle est sur le profil Twizz, elle y reste." : "Retirer cette vidéo de la file ?")) return; await api(`/api/pub/pres/${id}`, { body: { remove: true } }).catch(e => notify("Erreur", e.message, "err")); await load(); };
     el.querySelector("[data-send]").onclick = async b => {
       const bt = b.currentTarget; bt.disabled = true; bt.textContent = "Envoi à Twizz…";
       try { await api(`/api/pub/pres/${id}/send`, { body: {} }); notify("Vidéo envoyée à Twizz", "Elle sera en ligne après leur vérification", "ok"); } catch (e) { notify("Envoi impossible", e.message, "err"); } await load(); };
-  });
+  }));
 }
 function uploadPres(c, f) {
   if (!/^video\//.test(f.type)) return notify("Choisis une vidéo", "", "err");
@@ -229,7 +239,7 @@ function uploadPres(c, f) {
   const box = $("pup"); box.innerHTML = `<div class="it"><div class="th"></div><div><b style="font:800 13.5px Inter">${esc(f.name)}</b><div class="meta">Envoi au site… <span id="pp">0 %</span></div><div class="bar"><i id="pb"></i></div></div></div>`;
   const x = new XMLHttpRequest(); x.open("POST", `/api/pub/${enc(c.id)}/pres/upload`); x.setRequestHeader("Content-Type", f.type); x.setRequestHeader("X-File-Name", encodeURIComponent(f.name));
   x.upload.onprogress = e => { if (e.lengthComputable) { const p = Math.round(e.loaded / e.total * 100); $("pb").style.width = p + "%"; $("pp").textContent = p + " %"; } };
-  x.onload = async () => { let r = {}; try { r = JSON.parse(x.responseText); } catch (e) {} if (x.status >= 400) { notify("Envoi impossible", r.error || "Erreur", "err"); box.innerHTML = ""; return; } notify("Vidéo ajoutée à la file", f.name, "ok"); await load(); };
+  x.onload = async () => { let r = {}; try { r = JSON.parse(x.responseText); } catch (e) {} if (x.status >= 400) { notify("Envoi impossible", r.error || "Erreur", "err"); box.innerHTML = ""; return; } notify("Vidéo ajoutée à la banque", f.name, "ok"); await load(); };
   x.onerror = () => { notify("Envoi interrompu", "Vérifie ta connexion", "err"); box.innerHTML = ""; };
   x.send(f);
 }

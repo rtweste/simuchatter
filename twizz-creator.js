@@ -24,6 +24,9 @@ module.exports = function mount(app, db, auth, admin, { gest, notify, dataDir })
     CREATE TABLE IF NOT EXISTS twizz_pres (id INTEGER PRIMARY KEY, creator_id TEXT NOT NULL, name TEXT, type TEXT, size INTEGER, pos REAL NOT NULL, status TEXT NOT NULL DEFAULT 'queued',
       discover_id TEXT, error TEXT, via TEXT, created_by INTEGER, created_at INTEGER NOT NULL, sent_at INTEGER, sent_by INTEGER);`);
   if (!db.prepare("PRAGMA table_info(twizz_posts)").all().some(x => x.name === "cycles")) db.exec("ALTER TABLE twizz_posts ADD COLUMN cycles INTEGER NOT NULL DEFAULT 0");
+  if (!db.prepare("PRAGMA table_info(twizz_pres)").all().some(x => x.name === "cycles")) db.exec("ALTER TABLE twizz_pres ADD COLUMN cycles INTEGER NOT NULL DEFAULT 0");
+  if (!db.prepare("PRAGMA table_info(twizz_pres)").all().some(x => x.name === "rejected")) db.exec("ALTER TABLE twizz_pres ADD COLUMN rejected INTEGER NOT NULL DEFAULT 0");
+  const PRES_DAYS = 5, PRES_MAX = 5;   // Twizz : 5 jours au moins entre deux vidéos, 5 vidéos au plus sur le profil
 
   /* ---------- créatrices et mots de passe (variables Railway) ---------- */
   const varName = u => "TWIZZ_PW_" + str(u).toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
@@ -116,7 +119,7 @@ module.exports = function mount(app, db, auth, admin, { gest, notify, dataDir })
   const okC = cid => { const c = creatorOf(cid); if (!c) throw fail("Créatrice inconnue"); return c; };
   const autoOn = () => !!S.get("twizz_pub_auto", false);
   const ruleOf = cid => ({ on: false, times: ["19:00"], recycle: false, ...(S.get("twizz_pub_rule:" + cid, {}) || {}) });
-  const presRuleOf = cid => ({ on: false, days: 7, ...(S.get("twizz_pres_rule:" + cid, {}) || {}) });
+  const presRuleOf = cid => ({ on: false, ...(S.get("twizz_pres_rule:" + cid, {}) || {}), days: PRES_DAYS });
 
   /* ---------- heures de Paris ---------- */
   const parisParts = ms => { const p = new Intl.DateTimeFormat("en-US", { timeZone: TZ, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).formatToParts(new Date(ms)).reduce((o, x) => (o[x.type] = x.value, o), {}); return p; };
@@ -167,23 +170,33 @@ module.exports = function mount(app, db, auth, admin, { gest, notify, dataDir })
 
   /* ---------- vidéos de présentation ---------- */
   const presFile = r => path.join(PRES_DIR, `${r.id}${path.extname(r.name || "") || ".mp4"}`);
-  async function sendPres(id, by, via) {
+  const DEAD = ["REJECTED", "EXPIRED", "DELETED"];
+  async function sendPres(id, by, via, L0) {
     const v = db.prepare("SELECT * FROM twizz_pres WHERE id = ?").get(id); if (!v) throw fail("Vidéo introuvable");
-    if (v.status === "sent") throw fail("Déjà mise en ligne");
     if (busy.has("p" + id) || v.status === "sending") throw fail("Envoi déjà en cours");
-    const fp = presFile(v); if (!fs.existsSync(fp)) throw fail("Fichier de la vidéo introuvable sur le serveur : renvoie-la");
-    busy.add("p" + id); db.prepare("UPDATE twizz_pres SET status = 'sending', error = NULL WHERE id = ?").run(id);
+    const fp = presFile(v); if (!fs.existsSync(fp)) throw fail("Fichier de la vidéo plus sur le serveur : ajoute-la de nouveau");
+    const prev = v.status; busy.add("p" + id); db.prepare("UPDATE twizz_pres SET status = 'sending', error = NULL WHERE id = ?").run(id);
     try {
+      const L = L0 || await presStats(v.creator_id, true);   // vidéos présentes sur le profil Twizz
+      const own = v.discover_id ? L.find(x => x.id === v.discover_id) : null;   // son ancienne mise en ligne, encore sur le profil
+      if (own && !DEAD.includes(own.status)) throw fail("Cette vidéo tourne déjà sur le profil Twizz");
       const up = await upload(v.creator_id, { path: fp, name: v.name || "presentation.mp4", type: v.type || "video/mp4" }, "discover");
-      const j = await call(v.creator_id, "POST", "/discover", { videoFiles: [up] }, { "x-idempotency-key": "pres-" + v.id });
+      // on retire son ancienne copie terminée ; sinon, profil plein : d'abord une refusée ou terminée, puis la plus ancienne
+      const old = own || (L.length >= PRES_MAX ? [...L].sort((a, b) => (DEAD.includes(b.status) - DEAD.includes(a.status)) || (Date.parse(a.from || 0) - Date.parse(b.from || 0)))[0] : null);
+      if (old) {
+        try { await call(v.creator_id, "DELETE", `/discover/${encodeURIComponent(old.id)}`); }
+        catch (e) { if (!/code 404|not found|introuvable/i.test(e.message)) throw fail("Suppression de la plus ancienne vidéo impossible : " + e.message); }
+        db.prepare("UPDATE twizz_pres SET discover_id = NULL WHERE creator_id = ? AND discover_id = ?").run(v.creator_id, old.id);
+      }
+      const j = await call(v.creator_id, "POST", "/discover", { videoFiles: [up] }, { "x-idempotency-key": crypto.randomUUID() });
       const d = dataOf(j) || {}, did = str(d._id || d.id || (Array.isArray(d) && d[0] && d[0]._id) || "");
-      db.prepare("UPDATE twizz_pres SET status = 'sent', discover_id = ?, sent_at = ?, sent_by = ?, via = ?, error = NULL WHERE id = ?").run(did || null, now(), by || null, via, id);
-      try { fs.unlinkSync(fp); } catch (e) {}
+      db.prepare("UPDATE twizz_pres SET status = 'sent', discover_id = ?, sent_at = ?, sent_by = ?, via = ?, error = NULL, rejected = 0, cycles = cycles + ? WHERE id = ?").run(did || null, now(), by || null, via, v.sent_at ? 1 : 0, id);
       PSTATS.delete(v.creator_id); setStat(v.creator_id, { ok: true, error: null });
       log(by || 0, "a", `Nouvelle vidéo de présentation pour **${(creatorOf(v.creator_id) || {}).label || "?"}**${via === "auto" ? " (automatique)" : ""}`, "");
       return { ok: true };
     } catch (e) {
-      db.prepare("UPDATE twizz_pres SET status = 'failed', error = ? WHERE id = ?").run(str(e.message).slice(0, 300), id);
+      if (prev === "sent") db.prepare("UPDATE twizz_pres SET status = 'sent', error = ? WHERE id = ?").run(str(e.message).slice(0, 300), id);   // reste dans la banque
+      else db.prepare("UPDATE twizz_pres SET status = 'failed', error = ? WHERE id = ?").run(str(e.message).slice(0, 300), id);
       setStat(v.creator_id, { ok: false, error: str(e.message).slice(0, 300) }); throw e;
     } finally { busy.delete("p" + id); }
   }
@@ -197,6 +210,12 @@ module.exports = function mount(app, db, auth, admin, { gest, notify, dataDir })
     const list = L.map(x => { const st = x.stats || {}, views = +st.views || 0, clicks = +st.clicks || 0;
       return { id: str(x._id || x.id), status: str(x.status || "ACTIVE").toUpperCase(), from: x.createdAt || null, to: x.updatedAt || null, views, clicks, conv: views ? Math.round(clicks / views * 1000) / 10 : 0, thumb: thumb(x.file), url: str(x.file && x.file.url) }; })
       .sort((a, b) => Date.parse(b.from || 0) - Date.parse(a.from || 0));
+    const newest = Math.max(0, ...list.map(x => Date.parse(x.from || 0) || 0)); if (newest > (+S.get("twizz_pres_seen:" + cid, 0) || 0)) S.set("twizz_pres_seen:" + cid, newest);
+    const on = new Set(list.map(x => x.id));   // vidéos retirées du profil (à la main sur Twizz) : elles reprennent leur tour dans la banque
+    const st = new Map(list.map(x => [x.id, x.status]));   // et les vidéos refusées ne repartent plus toutes seules
+    db.prepare("SELECT id, discover_id FROM twizz_pres WHERE creator_id = ? AND discover_id IS NOT NULL AND status != 'sending'").all(cid).forEach(v => {
+      if (!on.has(v.discover_id)) db.prepare("UPDATE twizz_pres SET discover_id = NULL WHERE id = ?").run(v.id);
+      else if (st.get(v.discover_id) === "REJECTED") db.prepare("UPDATE twizz_pres SET rejected = 1 WHERE id = ?").run(v.id); });
     PSTATS.set(cid, { at: now(), list }); return list;
   }
 
@@ -217,17 +236,32 @@ module.exports = function mount(app, db, auth, admin, { gest, notify, dataDir })
         else if (old) await recycle(old.id, null, "auto").catch(e => console.error("Republication automatique", c.label, e.message));
         else log(0, "a", `File de publications vide pour **${c.label}** : rien n'a été publié à ${hm}`, "");
       }
-      const P = presRuleOf(c.id);
-      if (P.on && P.days > 0) {
-        const last = db.prepare("SELECT MAX(sent_at) t FROM twizz_pres WHERE creator_id = ? AND status = 'sent'").get(c.id).t || 0;
-        if (t - last >= P.days * 864e5) {
-          const v = db.prepare("SELECT id FROM twizz_pres WHERE creator_id = ? AND status = 'queued' ORDER BY pos LIMIT 1").get(c.id);
-          const key = "twizz_pres_try:" + c.id; if (v && t - (+S.get(key, 0) || 0) > 6 * 3600e3) { S.set(key, t); await sendPres(v.id, null, "auto").catch(e => console.error("Vidéo de présentation automatique", c.label, e.message)); }
-        }
+      if (presRuleOf(c.id).on && t >= presNext(c.id)) {
+        const key = "twizz_pres_try:" + c.id; if (t - (+S.get(key, 0) || 0) > 6 * 3600e3) { S.set(key, t); await autoPres(c).catch(e => console.error("Vidéo de présentation automatique", c.label, e.message)); }
       }
     }
   }
   setInterval(() => { tick().catch(e => console.error("Publications automatiques", e.message)); }, 60e3);
+  // vidéos de présentation : 5 jours après la dernière (site ou Twizz) ; d'abord les jamais postées, puis la banque repart de la plus ancienne
+  function presNext(cid) {
+    const local = db.prepare("SELECT MAX(sent_at) t FROM twizz_pres WHERE creator_id = ?").get(cid).t || 0;
+    return Math.max(local, +S.get("twizz_pres_seen:" + cid, 0) || 0) + PRES_DAYS * 864e5;
+  }
+  // la suivante : une jamais postée, sinon la plus ancienne de la banque qui n'est plus sur le profil ou dont la mise en ligne est terminée
+  function presCandidate(cid, L) {
+    const q = db.prepare("SELECT id FROM twizz_pres WHERE creator_id = ? AND status = 'queued' ORDER BY pos LIMIT 1").get(cid); if (q) return q.id;
+    const on = new Map((L || []).map(x => [x.id, x.status]));
+    const r = db.prepare("SELECT * FROM twizz_pres WHERE creator_id = ? AND status = 'sent' AND rejected = 0 ORDER BY sent_at").all(cid)
+      .find(v => fs.existsSync(presFile(v)) && (!L || !v.discover_id || !on.has(v.discover_id) || DEAD.includes(on.get(v.discover_id))));
+    return r ? r.id : null;
+  }
+  async function autoPres(c) {
+    if (!presCandidate(c.id, null)) return;   // banque vide : aucune requête
+    const L = await presStats(c.id, true);
+    if (now() < presNext(c.id)) return;   // une vidéo a été mise directement sur Twizz il y a moins de 5 jours
+    const id = presCandidate(c.id, L); if (!id) return;
+    return sendPres(id, null, "auto", L);
+  }
 
   /* ---------- API ---------- */
   const summary = c => {
@@ -250,7 +284,7 @@ module.exports = function mount(app, db, auth, admin, { gest, notify, dataDir })
   app.post("/api/pub/:cid/rule", auth, mgr, wrap(async req => { const c = okC(req.params.cid), b = req.body || {}, R = ruleOf(c.id);
     const n = { on: typeof b.on === "boolean" ? b.on : R.on, times: b.times ? cleanTimes(b.times) : R.times, recycle: typeof b.recycle === "boolean" ? b.recycle : !!R.recycle }; S.set("twizz_pub_rule:" + c.id, n); return summary({ ...c, ...creators().find(x => x.id === c.id) }); }));
   app.post("/api/pub/:cid/pres-rule", auth, mgr, wrap(async req => { const c = okC(req.params.cid), b = req.body || {}, R = presRuleOf(c.id);
-    const days = b.days != null ? Math.max(1, Math.min(60, parseInt(b.days, 10) || 7)) : R.days; S.set("twizz_pres_rule:" + c.id, { on: typeof b.on === "boolean" ? b.on : R.on, days }); return summary({ ...c, ...creators().find(x => x.id === c.id) }); }));
+    S.set("twizz_pres_rule:" + c.id, { on: typeof b.on === "boolean" ? b.on : R.on }); return summary({ ...c, ...creators().find(x => x.id === c.id) }); }));
 
   // file de publications
   app.get("/api/pub/:cid/posts", auth, mgr, wrap(async req => { const c = okC(req.params.cid);
@@ -298,13 +332,15 @@ module.exports = function mount(app, db, auth, admin, { gest, notify, dataDir })
   app.get("/api/pub/pres/:id/file", auth, mgr, (req, res) => { const v = db.prepare("SELECT * FROM twizz_pres WHERE id = ?").get(parseInt(req.params.id, 10));
     if (!v || !fs.existsSync(presFile(v))) return res.status(404).end(); res.type(v.type || "video/mp4"); res.sendFile(presFile(v)); });
   app.get("/api/pub/:cid/pres", auth, mgr, wrap(async req => { const c = okC(req.params.cid);
-    const queue = db.prepare("SELECT v.*, u.username by_name FROM twizz_pres v LEFT JOIN users u ON u.id = v.created_by WHERE v.creator_id = ? AND v.status IN ('queued','sending','failed','uploading') ORDER BY CASE v.status WHEN 'failed' THEN 0 ELSE 1 END, v.pos").all(c.id);
-    const sent = db.prepare("SELECT v.*, u.username by_name FROM twizz_pres v LEFT JOIN users u ON u.id = COALESCE(v.sent_by, v.created_by) WHERE v.creator_id = ? AND v.status = 'sent' ORDER BY v.sent_at DESC LIMIT 20").all(c.id);
+    const queue = db.prepare("SELECT v.*, u.username by_name FROM twizz_pres v LEFT JOIN users u ON u.id = v.created_by WHERE v.creator_id = ? AND v.status IN ('queued','sending','failed','uploading') AND NOT (v.status = 'sending' AND v.sent_at IS NOT NULL) ORDER BY CASE v.status WHEN 'failed' THEN 0 ELSE 1 END, v.pos").all(c.id);
+    const sent = db.prepare("SELECT v.*, u.username by_name FROM twizz_pres v LEFT JOIN users u ON u.id = COALESCE(v.sent_by, v.created_by) WHERE v.creator_id = ? AND v.status IN ('sent','sending') AND v.sent_at IS NOT NULL ORDER BY v.sent_at DESC LIMIT 200").all(c.id)
+      .map(v => ({ ...v, file: fs.existsSync(presFile(v)) }));
     let stats = null, statsError = null;
     if (req.query.stats) { try { stats = await presStats(c.id, req.query.stats === "fresh"); } catch (e) { statsError = e.message; } }
-    return { queue, sent, stats, statsError, summary: summary({ ...c, ...creators().find(x => x.id === c.id) }) }; }));
+    const nextId = queue.some(v => v.status === "queued") ? null : (sent.filter(v => v.file && !v.rejected && v.status === "sent").sort((a, b) => a.sent_at - b.sent_at)[0] || {}).id || null;
+    return { queue, sent, nextId, nextAt: presNext(c.id), max: PRES_MAX, days: PRES_DAYS, stats, statsError, summary: summary({ ...c, ...creators().find(x => x.id === c.id) }) }; }));
   app.post("/api/pub/pres/:id", auth, mgr, wrap(async req => { const id = parseInt(req.params.id, 10), v = db.prepare("SELECT * FROM twizz_pres WHERE id = ?").get(id), b = req.body || {};
-    if (!v) throw fail("Vidéo introuvable"); if (v.status === "sent" || v.status === "sending") throw fail("Cette vidéo est déjà partie");
+    if (!v) throw fail("Vidéo introuvable"); if (v.status === "sending" || busy.has("p" + id)) throw fail("Envoi en cours, réessaie dans un instant");
     if (b.remove) { try { fs.unlinkSync(presFile(v)); } catch (e) {} db.prepare("DELETE FROM twizz_pres WHERE id = ?").run(id); return { ok: true }; }
     if (b.retry && v.status === "failed") db.prepare("UPDATE twizz_pres SET status = 'queued', error = NULL WHERE id = ?").run(id);
     return { ok: true }; }));
