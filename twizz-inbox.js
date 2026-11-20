@@ -76,6 +76,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const cur = db.prepare("SELECT first_at FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, fan);
     fact(cid, fan, { first_at: cur && cur.first_at ? Math.min(cur.first_at, t) : t }); }
   const founder = (req, res, next) => req.user.rk === "founder" && !req.viewAs ? next() : res.status(403).json({ error: "Messagerie en test : réservée au fondateur" });
+  // accès des chatters : le fondateur et les managers (un manager ne touche ni aux managers ni à l'envoi vers les fans)
+  const teamAdm = (req, res, next) => !req.viewAs && (req.user.rk === "founder" || (req.user.rk === "manager" && levelOf(req.user.id, "manager") > 0)) ? next() : res.status(403).json({ error: "Réservé au fondateur et aux managers" });
   // ouverture à l'équipe : niveau 1 = lecture, 2 = lecture + envoi (posé par le fondateur, personne par personne)
   db.exec("CREATE TABLE IF NOT EXISTS twizz_inbox_access (user_id INTEGER PRIMARY KEY, level INTEGER NOT NULL DEFAULT 0, by INTEGER, at INTEGER)");
   const openOn = () => !!S.get("twizz_inbox_open", false);
@@ -95,7 +97,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     return { all: u.rk === "manager", cids: u.rk === "manager" ? null : scopeOf(u.id), send: lv >= 2 && !req.viewAs, founder: false, manager: u.rk === "manager" };
   }
   const inbox = (req, res, next) => { const a = accessOf(req);
-    if (!a) return res.status(403).json({ error: openOn() ? "Tu n'as pas encore accès à la messagerie : demande au fondateur" : "Messagerie en test : réservée au fondateur" });
+    if (!a) return res.status(403).json({ error: openOn() ? `Tu n'as pas encore accès à la messagerie : demande ${req.user.rk === "manager" ? "au fondateur" : "à ton manager"}` : "Messagerie en test : réservée au fondateur" });
     if (req.params.cid && !a.all && !a.cids.has(req.params.cid)) return res.status(403).json({ error: "Cette créatrice ne fait pas partie des tiennes" });
     req.acc = a; next(); };
   // coffre et scripts : les managers y ont toujours accès (page Scripts), les autres selon leur accès à la messagerie
@@ -145,7 +147,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   const creatorOk = cid => { if (!db.prepare("SELECT 1 FROM twizz_creators WHERE twizz_id = ?").get(cid)) throw bad("Créatrice inconnue : teste d'abord la connexion Twizz"); return cid; };
   const sendOn = () => !!S.get("twizz_inbox_send", false);
   const mustSend = req => { if (!sendOn()) throw bad(req && req.acc && !req.acc.founder ? "L'envoi est coupé pour le moment par le fondateur" : "L'envoi est coupé : active « Envoi activé » en haut de la messagerie");
-    if (req && req.acc && !req.acc.send) throw bad("Tu peux lire la messagerie, mais pas encore envoyer : demande au fondateur"); };
+    if (req && req.acc && !req.acc.send) throw bad(`Tu peux lire la messagerie, mais pas encore envoyer : demande ${req.acc.manager ? "au fondateur" : "à ton manager"}`); };
 
   /* ---------- mise en forme (tolérante : le format Twizz n'est pas documenté) ---------- */
   const person = p => { p = p || {}; const full = [p.firstName, p.lastName].filter(Boolean).join(" ").trim();
@@ -277,12 +279,13 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
       .map(u => ({ id: u.id, username: u.username, manager: u.role === "admin", tl: u.grade === "tl", level: lv[u.id] ?? (u.role === "admin" ? 2 : 0),
         creators: u.role === "admin" ? M.map(c => c.label) : M.filter(c => (um[u.id] || []).includes(c.model_id)).map(c => c.label) }));
     return { open: openOn(), send: sendOn(), users }; };
-  app.get("/api/twizz/inbox/team", auth, founder, (req, res) => res.json(teamOut()));
-  app.post("/api/twizz/inbox/team", auth, founder, (req, res) => { const b = req.body || {};
-    if (typeof b.open === "boolean") S.set("twizz_inbox_open", b.open);
+  app.get("/api/twizz/inbox/team", auth, teamAdm, (req, res) => res.json({ ...teamOut(), founder: req.user.rk === "founder" }));
+  app.post("/api/twizz/inbox/team", auth, teamAdm, (req, res) => { const b = req.body || {}, fd = req.user.rk === "founder";
     const uid = parseInt(b.user_id, 10);
+    if (uid && !fd) { const t = db.prepare("SELECT role FROM users WHERE id = ?").get(uid); if (!t || t.role !== "chatter") return res.status(403).json({ error: "Seul le fondateur règle l'accès des managers" }); }
+    if (typeof b.open === "boolean") S.set("twizz_inbox_open", b.open);
     if (uid && [0, 1, 2].includes(+b.level)) db.prepare("INSERT INTO twizz_inbox_access (user_id, level, by, at) VALUES (?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET level = excluded.level, by = excluded.by, at = excluded.at").run(uid, +b.level, req.user.id, Date.now());
-    res.json(teamOut()); });
+    res.json({ ...teamOut(), founder: fd }); });
   // présence sur une conversation : la page le signale toutes les 20 s (et quand on écrit) ; renvoie qui d'autre est dessus
   app.post("/api/twizz/inbox/:cid/here/:conv", auth, inbox, (req, res) => { const conv = str(req.params.conv).slice(0, 64), me = req.user.id;
     if (req.body?.leave) { const L = HERE.get(conv); if (L) { L.delete(me); if (!L.size) HERE.delete(conv); } return res.json({ others: [] }); }

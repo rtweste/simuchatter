@@ -597,6 +597,7 @@
 .ta-u small{display:block;margin-top:2px;font:500 11px Inter;color:#777;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ta-sg{flex:none;display:flex;padding:3px;border-radius:11px;background:#141414;border:1px solid #222}.ta-sg button{height:26px;padding:0 10px;border:0;border-radius:8px;background:none;color:#8a8a8a;font:700 11.5px Inter;cursor:pointer}
 .ta-sg button.on{color:#0a0a0a;background:#e8e8e8}.ta-sg button.on.lv1{background:#7db4ff}.ta-sg button.on.lv2{background:#3ddc97}.ta-sg button.on.lv0{background:#3a3a3a;color:#ddd}
+.ta-sg.ro{opacity:.55;cursor:help}.ta-sg.ro button{cursor:help}.ta-fd{flex:none;font:700 11.5px Inter;color:#777}
 @media (max-width:560px){.ta-r{flex-wrap:wrap}.ta-sg{margin-left:43px}}
 .mx-mod{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.74);backdrop-filter:blur(3px);display:grid;place-items:center;padding:18px;animation:mxF .3s both}
 .vbox{width:min(1240px,100%);height:min(880px,100%);display:flex;flex-direction:column;background:#0d0d0d;border:1px solid #262626;border-radius:24px;overflow:hidden;box-shadow:0 50px 120px -30px #000;animation:vUp .6s cubic-bezier(.16,1,.3,1) both;position:relative}
@@ -950,7 +951,7 @@ let AC = null;
 function chime() { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const t = AC.currentTime;
   [[880, 0], [1318.5, .09], [1760, .18]].forEach(([f, d]) => { const o = AC.createOscillator(), g = AC.createGain(); o.type = "sine"; o.frequency.value = f; g.gain.setValueAtTime(0, t + d); g.gain.linearRampToValueAtTime(.12, t + d + .015); g.gain.exponentialRampToValueAtTime(.0001, t + d + .5); o.connect(g).connect(AC.destination); o.start(t + d); o.stop(t + d + .55); }); } catch (e) {} }
 const CANSEND = () => !!(ST && ST.send && ST.canSend !== false);
-const offMsg = () => !ST.canSend ? "🔒 Lecture seule : tu peux tout lire, le fondateur ne t'a pas encore donné le droit d'envoyer." : ST.founder ? "🔒 Envoi coupé : tu peux tout lire sans rien changer côté Twizz. Rallume l'envoi dans « Accès à la messagerie » (icône équipe en haut)." : "🔒 Envoi coupé pour le moment par le fondateur : tu peux tout lire.";
+const offMsg = () => !ST.canSend ? (ST.manager ? "🔒 Lecture seule : tu peux tout lire, le fondateur ne t'a pas encore donné le droit d'envoyer." : "🔒 Lecture seule : tu peux tout lire, ton manager ne t'a pas encore donné le droit d'envoyer.") : ST.founder ? "🔒 Envoi coupé : tu peux tout lire sans rien changer côté Twizz. Rallume l'envoi dans « Accès à la messagerie » (icône équipe en haut)." : "🔒 Envoi coupé pour le moment par le fondateur : tu peux tout lire.";
 const crLabel = () => ((ST && ST.creators.find(c => c.id === CID)) || {}).label || "";
 
 /* ================= haut de page ================= */
@@ -965,7 +966,7 @@ function top() {
   box.querySelectorAll("[data-cid]").forEach(b => { const id = b.dataset.cid, n = UNREAD[id] || 0, d = b.querySelector(".dot");
     b.classList.toggle("on", id === CID);
     if (n && !d) b.insertAdjacentHTML("beforeend", `<span class="dot">${n > 99 ? "99+" : n}</span>`); else if (n && d) d.textContent = n > 99 ? "99+" : n; else if (!n && d) d.remove(); });
-  $("teamB").hidden = !ST.founder;
+  $("teamB").hidden = !(ST.founder || ST.manager);
 }
 // non lus de chaque créatrice (pastille rouge sur les autres créatrices)
 let unT = null;
@@ -1342,19 +1343,19 @@ async function hereOk() { const c = CUR; if (!c) return false; if (!hereNeed()) 
   return confirm(`${HEREO.map(x => x.name).join(", ")} ${HEREO.length > 1 ? "sont" : "est"} aussi sur cette conversation${HEREO.some(x => x.typing) ? " et écrit en ce moment" : ""}.\n\nEnvoyer quand même ?`); }
 addEventListener("pagehide", () => { const c = CUR; if (c && CID) try { navigator.sendBeacon(`/api/twizz/inbox/${enc(CID)}/here/${enc(c.id)}`, new Blob([JSON.stringify({ leave: true })], { type: "application/json" })); } catch (e) {} });
 
-/* ---- accès de l'équipe (fondateur) ---- */
+/* ---- accès de l'équipe (fondateur et managers) ---- */
 async function teamBox() {
   let D; try { D = await api("/api/twizz/inbox/team"); } catch (e) { return notify("Équipe", e.message, "err"); }
   const m = document.createElement("div"); m.className = "mx-mod"; document.body.appendChild(m);
   const LV = [["0", "Aucun"], ["1", "Lecture"], ["2", "Envoi"]];
   const paint = () => { m.innerHTML = `<div class="ta-b"><div class="ta-h"><h2>Accès à la <em>messagerie</em></h2><button class="px" id="tmX" aria-label="Fermer">✕</button></div>
-    <div class="ta-o"><div><b>Ouvrir aux chatters</b><small>${D.open ? "Les chatters ci-dessous voient la messagerie selon leur accès." : "Fermée aux chatters : seuls toi et les managers la voyez. Choisis les accès des chatters, puis ouvre."}</small></div><button type="button" class="ta-sw ${D.open ? "on" : ""}" id="tmO" aria-label="Ouvrir à l'équipe"><i></i></button></div>
+    <div class="ta-o"><div><b>Ouvrir aux chatters</b><small>${D.open ? "Les chatters ci-dessous voient la messagerie selon leur accès." : (D.founder ? "Fermée aux chatters : seuls toi et les managers la voyez. Choisis les accès des chatters, puis ouvre." : "Fermée aux chatters : seuls le fondateur et les managers la voient. Choisis les accès des chatters, puis ouvre.")}</small></div><button type="button" class="ta-sw ${D.open ? "on" : ""}" id="tmO" aria-label="Ouvrir à l'équipe"><i></i></button></div>
     <div class="ta-n">Un chatter ne voit que ses <b>créatrices habituelles</b> (fiche du chatter dans Équipe) et celle de son <b>shift en cours</b>. Un manager y a accès d'office et voit toutes les créatrices. L'accès « Envoi » ne marche que si l'envoi vers les fans est allumé ci-dessous.</div>
-    <div class="ta-o"><div><b>Envoi vers les fans</b><small>${D.send ? "Allumé : ce qui est envoyé d'ici part vraiment aux fans sur Twizz." : "Coupé : tout le monde peut lire, rien ne peut partir vers les fans."}</small></div><button type="button" class="ta-sw ${D.send ? "on" : ""}" id="tmS" aria-label="Envoi vers les fans"><i></i></button></div>
+    <div class="ta-o"><div><b>Envoi vers les fans</b><small>${D.send ? "Allumé : ce qui est envoyé d'ici part vraiment aux fans sur Twizz." : "Coupé : tout le monde peut lire, rien ne peut partir vers les fans."}</small></div>${D.founder ? `<button type="button" class="ta-sw ${D.send ? "on" : ""}" id="tmS" aria-label="Envoi vers les fans"><i></i></button>` : `<span class="ta-fd">Réglé par le fondateur</span>`}</div>
     <div class="ta-l">${D.users.length ? D.users.map(u => `<div class="ta-r"><span class="ta-a">${esc((u.username[0] || "?").toUpperCase())}</span><div class="ta-u"><b>${esc(u.username)}${u.manager ? ` <em>manager</em>` : u.tl ? ` <em>team leader</em>` : ""}</b><small>${u.manager ? "Toutes les créatrices" : u.creators.length ? esc(u.creators.join(" · ")) + " + son shift" : "Seulement la créatrice de son shift"}</small></div>
-      <div class="ta-sg" role="radiogroup" aria-label="Accès de ${esc(u.username)}">${LV.map(([v, l]) => `<button type="button" data-u="${u.id}" data-lv="${v}" class="${String(u.level) === v ? "on lv" + v : ""}">${l}</button>`).join("")}</div></div>`).join("") : `<div class="pempty">Personne dans l'équipe</div>`}</div></div>`;
+      <div class="ta-sg${u.manager && !D.founder ? " ro" : ""}" role="radiogroup" aria-label="Accès de ${esc(u.username)}"${u.manager && !D.founder ? ' title="Seul le fondateur règle l\'accès des managers"' : ""}>${LV.map(([v, l]) => `<button type="button" ${u.manager && !D.founder ? "disabled" : `data-u="${u.id}" data-lv="${v}"`} class="${String(u.level) === v ? "on lv" + v : ""}">${l}</button>`).join("")}</div></div>`).join("") : `<div class="pempty">Personne dans l'équipe</div>`}</div></div>`;
     m.querySelector("#tmX").onclick = () => m.remove();
-    m.querySelector("#tmS").onclick = async () => { if (await setSend(!D.send)) { D.send = ST.send; paint(); } };
+    if (D.founder) m.querySelector("#tmS").onclick = async () => { if (await setSend(!D.send)) { D.send = ST.send; paint(); } };
     m.querySelector("#tmO").onclick = async () => { if (!D.open && !confirm("Ouvrir la messagerie aux chatters ?\n\nChaque chatter verra les conversations selon l'accès que tu lui as donné.")) return;
       try { D = await api("/api/twizz/inbox/team", { body: { open: !D.open } }); paint(); notify(D.open ? "Messagerie ouverte aux chatters" : "Messagerie refermée aux chatters", "", D.open ? "ok" : "info"); } catch (e) { notify("Erreur", e.message, "err"); } };
     m.querySelectorAll("[data-lv]").forEach(b => b.onclick = async () => { try { D = await api("/api/twizz/inbox/team", { body: { user_id: +b.dataset.u, level: +b.dataset.lv } }); paint(); } catch (e) { notify("Erreur", e.message, "err"); } }); };
@@ -1955,7 +1956,7 @@ document.addEventListener("keydown", e => { if (e.key !== "ArrowDown" || e.metaK
 (async () => {
   const me = await api("/api/me"); renderShell("messagerie", me);
   const sb = $("sidebar"); if (sb && !sb.classList.contains("mini")) { sb.classList.add("mini"); document.documentElement.classList.add("sb-mini"); }
-  if (!(me.rk === "founder" && !me.viewAs) && !me.inbox) { $("mx").innerHTML = `<div class="mx-empty">La messagerie n'est pas encore ouverte pour toi : demande au fondateur.</div>`; return; }
+  if (!(me.rk === "founder" && !me.viewAs) && !me.inbox) { $("mx").innerHTML = `<div class="mx-empty">La messagerie n'est pas encore ouverte pour toi : demande ${me.rk === "manager" ? "au fondateur" : "à ton manager"}.</div>`; return; }
   try { if (localStorage.getItem("mx:blur") === "0") $("swBlur").click(); } catch (e) {}
   try { ST = await api("/api/twizz/inbox/state"); } catch (e) { $("mx").innerHTML = `<div class="mx-empty">${esc(e.message)}</div>`; return; }
   let saved = null, ty = null; try { saved = localStorage.getItem("mx:cid"); ty = localStorage.getItem("mx:ty"); } catch (e) {}
