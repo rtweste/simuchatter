@@ -6,12 +6,16 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   const { call, S } = twizz;
   db.exec("CREATE TABLE IF NOT EXISTS twizz_fan_notes (creator_id TEXT, fan_id TEXT, text TEXT, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id))");
   if (!db.prepare("PRAGMA table_info(twizz_sent)").all().some(x => x.name === "files")) db.exec("ALTER TABLE twizz_sent ADD COLUMN files TEXT");
+  // promo envoyée depuis le site : type de remise (€ ou %) et valeur, pour l'afficher telle qu'elle a été choisie
+  if (!db.prepare("PRAGMA table_info(twizz_sent)").all().some(x => x.name === "promo")) db.exec("ALTER TABLE twizz_sent ADD COLUMN promo TEXT");
   // scripts : messages tout prêts, pour toutes les créatrices (creator_id vide) ou une seule
   db.exec("CREATE TABLE IF NOT EXISTS twizz_scripts (id INTEGER PRIMARY KEY, creator_id TEXT, cat TEXT, title TEXT, body TEXT, uses INTEGER DEFAULT 0, user_id INTEGER, at INTEGER)");
   for (const [c, t] of [["updated_at", "INTEGER"], ["updated_by", "INTEGER"], ["source", "TEXT"], ["ext_id", "TEXT"], ["pinned", "INTEGER DEFAULT 0"], ["media", "TEXT"], ["price", "REAL"], ["steps", "TEXT"]])
     if (!db.prepare("PRAGMA table_info(twizz_scripts)").all().some(x => x.name === c)) db.exec(`ALTER TABLE twizz_scripts ADD COLUMN ${c} ${t}`);
   db.exec("CREATE TABLE IF NOT EXISTS twizz_script_uses (script_id INTEGER, user_id INTEGER, at INTEGER)");
   // où en est chaque fan dans le script qu'on lui déroule (une étape à la fois, envoyée par le chatter)
+  // scripts mis en pause : on garde l'étape pour reprendre plus tard au même endroit (un par script et par fan)
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_script_paused (creator_id TEXT, fan_id TEXT, script_id INTEGER, step INTEGER, ppv_msg TEXT, ppv_step INTEGER, relanced INTEGER DEFAULT 0, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id, script_id))");
   db.exec("CREATE TABLE IF NOT EXISTS twizz_script_runs (creator_id TEXT, fan_id TEXT, script_id INTEGER, step INTEGER, ppv_msg TEXT, ppv_step INTEGER, relanced INTEGER DEFAULT 0, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id))");
   // fiche du fan : infos perso (posées par l'équipe ou repérées par l'IA), résumé de l'IA, étape corrigée à la main
   db.exec("CREATE TABLE IF NOT EXISTS twizz_fan_profile (creator_id TEXT, fan_id TEXT, field TEXT, value TEXT, source TEXT, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id, field))");
@@ -170,7 +174,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const p = m.mediaPushPrice || {}, exp = Date.parse(p.expiresOn) || 0, unl = str(p.expireTimeType) === "UNLIMITED", act = !!p.promo && (unl || exp > Date.now());
     const full = p.price ?? p.resultPrice ?? null, price = full == null ? null : act || (p.promo && str(m.status) === "accepted") ? +(p.resultPrice ?? full) : +full;
     return { id: str(m._id), fromFan: !!fanId && str(m.senderId) === fanId, sender: str(m.senderId), type: str(m.type), text: str(m.text), status: str(m.status), at: m.createdAt,
-      read: !!m.isRead, price, promo: p.promo && full != null ? { active: act, full: +full, end: exp && !unl ? new Date(exp).toISOString() : null, unlimited: unl } : null, mediaPushId: str(m.mediaPushId || ""),
+      read: !!m.isRead, price, promo: p.promo && full != null ? { active: act, full: +full, end: exp && !unl ? new Date(exp).toISOString() : null, unlimited: unl, kind: p.discountType === "PERCENTAGE" ? "pct" : p.discountType === "CURRENCY" ? "eur" : null, value: isFinite(+p.discount) && +p.discount > 0 ? +p.discount : null } : null, mediaPushId: str(m.mediaPushId || ""),
       medias: (m.medias || []).map(x => ({ url: str(x.url), thumb: thumbOf(x), audio: !!x.isAudio, private: !!x.isPrivate, video: /video/i.test(str(x.type || x.mimeType)) || /\.(mp4|mov|webm|m3u8)$/i.test(pathOf(str(x.url))), keys: keysOf(x) })) };
   }
   const file = f => { const kind = kindOf(f), url = str(f.url || f.Location || f.path || "");
@@ -322,6 +326,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const j = await G(path, 15e3);
     const d = (j && j.data) || {}, L = (d.data || []).map(m => msg(m, fanId)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
     const by = authors(L.filter(m => !m.fromFan).map(m => m.id)); L.forEach(m => { if (!m.fromFan) m.by = by[m.id] || null; });
+    const PS = L.filter(m => m.promo && !m.promo.kind); if (PS.length) { const q = db.prepare("SELECT promo FROM twizz_sent WHERE msg_id = ? AND promo IS NOT NULL");
+      PS.forEach(m => { const r = q.get(m.id); try { const x = r && JSON.parse(r.promo); if (x) Object.assign(m.promo, { kind: x.type === "pct" ? "pct" : "eur", value: +x.value || null }); } catch (e) {} }); }
     if (fanId) try { keepMedia(cid, str(req.params.conv), L); setDepth(str(req.params.conv), page, d.totalPages || 1); } catch (e) {}
     if (page >= (d.totalPages || 1)) try { firstSeen(cid, fanId, L); } catch (e) {}
     return { items: L, page, totalPages: d.totalPages || 1, note: d.creatorFanNote || null, sample: req.query.debug ? (d.data || [])[0] : undefined };
@@ -597,19 +603,39 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   // déroulé d'un script sur un fan : l'étape suivante à envoyer, le dernier PPV envoyé (pour proposer la relance s'il n'achète pas)
   const runOut = r => r ? { scriptId: r.script_id, step: r.step, ppvMsg: r.ppv_msg || null, ppvStep: r.ppv_step == null ? null : r.ppv_step, relanced: !!r.relanced, at: r.at, by: r.by || null } : null;
   const runGet = (cid, fan) => runOut(db.prepare("SELECT r.*, u.username by FROM twizz_script_runs r LEFT JOIN users u ON u.id = r.user_id WHERE r.creator_id = ? AND r.fan_id = ?").get(cid, fan));
-  app.get("/api/twizz/inbox/:cid/run/:fan", auth, inbox, wrap(async req => ({ run: runGet(creatorOk(req.params.cid), str(req.params.fan)) })));
+  const pausedOf = (cid, fan) => db.prepare("SELECT p.script_id, p.step, p.at, u.username by FROM twizz_script_paused p LEFT JOIN users u ON u.id = p.user_id WHERE p.creator_id = ? AND p.fan_id = ? ORDER BY p.at DESC").all(cid, fan).map(r => ({ scriptId: r.script_id, step: r.step, at: r.at, by: r.by || null }));
+  // met en pause le déroulé en cours s'il n'est pas fini (au moins une étape envoyée)
+  const pauseRun = (cid, fan, uid) => { const cur = db.prepare("SELECT * FROM twizz_script_runs WHERE creator_id = ? AND fan_id = ?").get(cid, fan); if (!cur) return false;
+    const sc = db.prepare("SELECT * FROM twizz_scripts WHERE id = ?").get(cur.script_id); if (!sc || cur.step <= 0 || cur.step >= stepsOf(sc).length) return false;
+    db.prepare("INSERT INTO twizz_script_paused (creator_id, fan_id, script_id, step, ppv_msg, ppv_step, relanced, user_id, at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(creator_id, fan_id, script_id) DO UPDATE SET step = excluded.step, ppv_msg = excluded.ppv_msg, ppv_step = excluded.ppv_step, relanced = excluded.relanced, user_id = excluded.user_id, at = excluded.at")
+      .run(cid, fan, cur.script_id, cur.step, cur.ppv_msg, cur.ppv_step, cur.relanced, uid, Date.now()); return true; };
+  app.get("/api/twizz/inbox/:cid/run/:fan", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid), fan = str(req.params.fan); return { run: runGet(cid, fan), paused: pausedOf(cid, fan) }; }));
   app.post("/api/twizz/inbox/:cid/run/:fan", auth, inbox, wrap(async req => {
     const cid = creatorOk(req.params.cid), fan = str(req.params.fan), b = req.body || {}, sc = db.prepare("SELECT * FROM twizz_scripts WHERE id = ?").get(+b.script);
     if (!fan || !sc) throw bad("Script introuvable"); const n = stepsOf(sc).length, step = Math.max(0, Math.min(n, Math.round(+b.step || 0)));
-    const cur = db.prepare("SELECT * FROM twizz_script_runs WHERE creator_id = ? AND fan_id = ?").get(cid, fan), same = cur && cur.script_id === sc.id;
+    let cur = db.prepare("SELECT * FROM twizz_script_runs WHERE creator_id = ? AND fan_id = ?").get(cid, fan), same = cur && cur.script_id === sc.id;
+    if (cur && !same) pauseRun(cid, fan, req.user.id);   // on lance un autre script : celui en cours est mis en pause, pas perdu
+    // reprise d'un script en pause : on repart à son étape ; « recommencer » oublie la pause
+    const pz = db.prepare("SELECT * FROM twizz_script_paused WHERE creator_id = ? AND fan_id = ? AND script_id = ?").get(cid, fan, sc.id);
+    if (b.resume && pz) { db.prepare("DELETE FROM twizz_script_paused WHERE creator_id = ? AND fan_id = ? AND script_id = ?").run(cid, fan, sc.id);
+      db.prepare("INSERT INTO twizz_script_runs (creator_id, fan_id, script_id, step, ppv_msg, ppv_step, relanced, user_id, at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(creator_id, fan_id) DO UPDATE SET script_id = excluded.script_id, step = excluded.step, ppv_msg = excluded.ppv_msg, ppv_step = excluded.ppv_step, relanced = excluded.relanced, user_id = excluded.user_id, at = excluded.at")
+        .run(cid, fan, sc.id, Math.min(pz.step, n), pz.ppv_msg, pz.ppv_step, pz.relanced, req.user.id, Date.now());
+      return { run: runGet(cid, fan), paused: pausedOf(cid, fan) }; }
+    if (pz && !same) db.prepare("DELETE FROM twizz_script_paused WHERE creator_id = ? AND fan_id = ? AND script_id = ?").run(cid, fan, sc.id);
     if (!same) { db.prepare("UPDATE twizz_scripts SET uses = uses + 1 WHERE id = ?").run(sc.id); db.prepare("INSERT INTO twizz_script_uses (script_id, user_id, at) VALUES (?,?,?)").run(sc.id, req.user.id, Date.now()); }
     const ppvMsg = b.ppvMsg !== undefined ? (b.ppvMsg ? str(b.ppvMsg) : null) : same ? cur.ppv_msg : null, ppvStep = b.ppvStep !== undefined ? (b.ppvStep == null ? null : +b.ppvStep) : same ? cur.ppv_step : null;
     const relanced = b.relanced !== undefined ? (b.relanced ? 1 : 0) : same && ppvMsg === cur.ppv_msg ? cur.relanced : 0;
     db.prepare("INSERT INTO twizz_script_runs (creator_id, fan_id, script_id, step, ppv_msg, ppv_step, relanced, user_id, at) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(creator_id, fan_id) DO UPDATE SET script_id = excluded.script_id, step = excluded.step, ppv_msg = excluded.ppv_msg, ppv_step = excluded.ppv_step, relanced = excluded.relanced, user_id = excluded.user_id, at = excluded.at")
       .run(cid, fan, sc.id, step, ppvMsg, ppvStep, relanced, req.user.id, Date.now());
-    return { run: runGet(cid, fan) };
+    return { run: runGet(cid, fan), paused: pausedOf(cid, fan) };
   }));
-  app.delete("/api/twizz/inbox/:cid/run/:fan", auth, inbox, wrap(async req => { db.prepare("DELETE FROM twizz_script_runs WHERE creator_id = ? AND fan_id = ?").run(creatorOk(req.params.cid), str(req.params.fan)); return { run: null }; }));
+  // arrêter : ?pause=1 garde l'étape pour reprendre plus tard ; sinon le script est oublié pour ce fan
+  app.delete("/api/twizz/inbox/:cid/run/:fan", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid), fan = str(req.params.fan);
+    const cur = db.prepare("SELECT script_id FROM twizz_script_runs WHERE creator_id = ? AND fan_id = ?").get(cid, fan);
+    if (req.query.pause === "1") pauseRun(cid, fan, req.user.id); else if (cur) db.prepare("DELETE FROM twizz_script_paused WHERE creator_id = ? AND fan_id = ? AND script_id = ?").run(cid, fan, cur.script_id);
+    db.prepare("DELETE FROM twizz_script_runs WHERE creator_id = ? AND fan_id = ?").run(cid, fan); return { run: null, paused: pausedOf(cid, fan) }; }));
+  app.delete("/api/twizz/inbox/:cid/paused/:fan/:script", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid), fan = str(req.params.fan);
+    db.prepare("DELETE FROM twizz_script_paused WHERE creator_id = ? AND fan_id = ? AND script_id = ?").run(cid, fan, +req.params.script); return { paused: pausedOf(cid, fan) }; }));
   app.delete("/api/twizz/scripts/:id", auth, mgr, (req, res) => { db.prepare("DELETE FROM twizz_scripts WHERE id = ?").run(+req.params.id); db.prepare("DELETE FROM twizz_script_uses WHERE script_id = ?").run(+req.params.id); db.prepare("DELETE FROM twizz_script_runs WHERE script_id = ?").run(+req.params.id); res.json({ ok: true }); });
   // import depuis Twizz : l'adresse des scripts n'est pas connue, on essaie quelques adresses possibles (une seule fois, à la demande)
   const SCRIPT_PATHS = ["/scripts?creatorId=%c", "/scripts/creator/%c", "/business/scripts?creatorId=%c", "/chat-scripts?creatorId=%c", "/message-scripts?creatorId=%c", "/messages/scripts?creatorId=%c",
@@ -704,10 +730,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const j = await call("POST", "/mediapush/conversation", f, true);
     const d = (j && j.data) || j || {}, nm = d.newMessage || null;
     if (!nm && d.message) throw bad("Twizz a refusé l'envoi : " + d.message);
-    db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at, files) VALUES (?,?,?,?,?,?,?,?)").run(str(nm && nm._id), conversationId, fan, cid, req.user.id, nm && nm.mediaPushPrice && isFinite(+nm.mediaPushPrice.resultPrice) ? +nm.mediaPushPrice.resultPrice : promo ? promo.final : price, Date.now(), JSON.stringify(files));
+    db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at, files, promo) VALUES (?,?,?,?,?,?,?,?,?)").run(str(nm && nm._id), conversationId, fan, cid, req.user.id, nm && nm.mediaPushPrice && isFinite(+nm.mediaPushPrice.resultPrice) ? +nm.mediaPushPrice.resultPrice : promo ? promo.final : price, Date.now(), JSON.stringify(files), promo ? JSON.stringify({ type: promo.discountType === "PERCENTAGE" ? "pct" : "eur", value: promo.discount, time: str(pr.time) }) : null);
     if (b.acceptId) await call("PATCH", "/messages/update-message-status", { messageId: str(b.acceptId), action: "accepted", creatorId: cid, userType: "creator" }, true).catch(() => {});
     drop(conversationId, `/conversations/user/${enc(cid)}`);
-    return { ok: true, message: nm ? msg(nm, fan) : null };
+    const om = nm ? msg(nm, fan) : null; if (om && om.promo && promo && !om.promo.kind) Object.assign(om.promo, { kind: promo.discountType === "PERCENTAGE" ? "pct" : "eur", value: promo.discount });
+    return { ok: true, message: om };
   }));
   // demande d'un fan : accepter (après envoi du contenu) ou refuser
   app.post("/api/twizz/inbox/:cid/request", auth, inbox, wrap(async req => {
