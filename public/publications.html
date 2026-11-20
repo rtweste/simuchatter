@@ -160,7 +160,6 @@ async function paintFeed() {
     const rt = el.querySelector("[data-retry]"); if (rt) rt.onclick = async () => { await post({ retry: true }).catch(e => notify("Erreur", e.message, "err")); paintFeed(); };
     el.querySelector(".ac [data-rm]").onclick = async () => { if (!confirm("Retirer cette publication de la file ?")) return; await post({ remove: true }).catch(e => notify("Erreur", e.message, "err")); await load(); };
     el.querySelector("[data-pub]").onclick = async b => { if (tx.value !== t0) { try { await post({ text: tx.value }); t0 = tx.value; } catch (e) {} }
-      if (!confirm(`Publier maintenant sur le feed de ${c.label} ?\n\nLa publication sera visible tout de suite sur Twizz.`)) return;
       const bt = b.currentTarget; bt.disabled = true; bt.textContent = "Publication…";
       try { await api(`/api/pub/posts/${id}/publish`, { body: {} }); notify("Publié sur Twizz", `Sur le feed de ${c.label}`, "ok"); } catch (e) { notify("Publication impossible", e.message, "err"); } await load(); };
   });
@@ -215,7 +214,7 @@ async function paintPres(stats) {
   $("pq").querySelectorAll(".it").forEach(el => { const id = el.dataset.id;
     const rt = el.querySelector("[data-retry]"); if (rt) rt.onclick = async () => { await api(`/api/pub/pres/${id}`, { body: { retry: true } }).catch(e => notify("Erreur", e.message, "err")); paintPres(); };
     el.querySelector("[data-rm]").onclick = async () => { if (!confirm("Retirer cette vidéo de la file ?")) return; await api(`/api/pub/pres/${id}`, { body: { remove: true } }).catch(e => notify("Erreur", e.message, "err")); await load(); };
-    el.querySelector("[data-send]").onclick = async b => { if (!confirm(`Mettre cette vidéo en ligne comme vidéo de présentation de ${c.label} ?\n\nTwizz la vérifiera avant de la mettre en avant.`)) return;
+    el.querySelector("[data-send]").onclick = async b => {
       const bt = b.currentTarget; bt.disabled = true; bt.textContent = "Envoi à Twizz…";
       try { await api(`/api/pub/pres/${id}/send`, { body: {} }); notify("Vidéo envoyée à Twizz", "Elle sera en ligne après leur vérification", "ok"); } catch (e) { notify("Envoi impossible", e.message, "err"); } await load(); };
   });
