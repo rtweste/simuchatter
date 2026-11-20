@@ -1174,11 +1174,28 @@ async function openConv(c) {
 const isPPV = m => !m.fromFan && m.type === "FILE" && m.price != null && m.medias.length;
 // vente à montrer après un lien direct : le PPV envoyé (ou celui au bon prix juste avant l'achat) est mis en avant
 let DEEP = null;
-function showDeep() { const d = DEEP; if (!d || !CUR || CUR.id !== d.conv) return; const T = THREADS[CUR.id]; if (!T) return;
-  const ppv = T.items.filter(m => isPPV(m) && !m.fromFan); let m = d.msg && ppv.find(x => x.id === d.msg);
-  if (!m && d.amt) m = ppv.filter(x => Math.abs((x.price || 0) - d.amt) < .6 && (!d.at || Date.parse(x.at) <= d.at + 60e3)).sort((a, b) => Date.parse(b.at) - Date.parse(a.at))[0];
-  DEEP = null; if (!m) return notify("Vente plus haut dans la conversation", "Remonte le fil pour retrouver le média vendu", "info");
-  const el = document.querySelector(`[data-ppv="${CSS.escape(m.id)}"]`); if (!el) return; el.scrollIntoView({ block: "center", behavior: "smooth" }); el.classList.add("deep"); setTimeout(() => el.classList.remove("deep"), 4200); }
+async function showDeep() { const d = DEEP; if (!d || d.busy || !CUR || CUR.id !== d.conv || !THREADS[CUR.id]) return; d.busy = true;
+  const desc = (a, b) => Date.parse(b.at) - Date.parse(a.at);
+  const find = () => { const T = THREADS[CUR.id]; if (!T) return null; const ppv = T.items.filter(m => isPPV(m) && !m.fromFan);
+    let m = d.msg && ppv.find(x => x.id === d.msg);
+    if (!m && d.amt) { const C = ppv.filter(x => (!d.at || Date.parse(x.at) <= d.at + 60e3) && [x.price, x.promo && x.promo.full].some(v => v != null && Math.abs(v - d.amt) < .6));
+      m = C.filter(x => x.status === "accepted").sort(desc)[0] || C.sort(desc)[0]; }
+    return m; };
+  // la vente n'est pas dans les derniers messages : on remonte la conversation tout seul jusqu'à elle (12 pages au plus, pas plus d'une semaine avant l'achat)
+  let m = find(), T = THREADS[CUR.id];
+  for (let i = 0; !m && i < 12 && T && T.page < T.totalPages && CUR && CUR.id === d.conv; i++) {
+    const oldest = T.items.reduce((o, x) => x.at && Date.parse(x.at) < o ? Date.parse(x.at) : o, Infinity); if (d.at && oldest < d.at - 7 * 864e5) break;
+    if ($("old")) $("old").textContent = "Recherche de la vente…"; await loadOlder(); T = THREADS[CUR.id]; m = find(); }
+  DEEP = null; if (!CUR || CUR.id !== d.conv) return;
+  if (!m) return notify("Vente introuvable dans la conversation", "Le média vendu est peut-être très ancien", "info");
+  await new Promise(r => requestAnimationFrame(r));
+  DEEPPIN = { id: m.id, until: Date.now() + 6000 }; pinDeep(); [300, 900, 1800].forEach(t => setTimeout(pinDeep, t));
+  const el = document.querySelector(`[data-ppv="${CSS.escape(m.id)}"]`); if (el) { el.classList.add("deep"); setTimeout(() => el.classList.remove("deep"), 4200); } }
+// la vente reste au centre quelques secondes, même si des images finissent de charger ou que le fil se redessine (sauf si tu fais défiler toi-même)
+let DEEPPIN = null;
+const deepOn = () => DEEPPIN && Date.now() < DEEPPIN.until;
+function pinDeep() { if (!deepOn()) return; const sc = $("sc"), el = sc && sc.querySelector(`[data-ppv="${CSS.escape(DEEPPIN.id)}"]`); if (!el) return;
+  sc._prog = Date.now(); sc.dataset.stick = ""; el.scrollIntoView({ block: "center" }); }
 async function loadMsgs(fresh) {
   if (!CUR) return; const id = CUR.id, T = THREADS[id];
   try { const r = await api2(`/messages/${enc(id)}?fan=${enc(CUR.fan.id)}${fresh ? "&fresh=1" : ""}`); if (!CUR || CUR.id !== id) return;
@@ -1274,10 +1291,10 @@ function thread(keep, noScroll) {
       <div class="hintbar"><span class="kh"><span class="kbd">↵</span>envoyer</span><span class="kh"><span class="kbd">/</span>scripts</span><span class="kh"><span class="kbd">⌘</span><span class="kbd">J</span>assistant IA</span><span class="kh"><span class="kbd">↓</span>fan suivant</span></div></div>`;
   // en bas : on y reste, même quand les images finissent de charger ; sinon on garde l'endroit où on lisait
   const sc = $("sc"), toBottom = () => { sc._prog = Date.now(); sc.scrollTop = sc.scrollHeight; };
-  if (!noScroll && (!keep || atBottom)) { toBottom(); sc.dataset.stick = "1"; } else if (!noScroll) { sc._prog = Date.now(); sc.scrollTop = prevTop; }
+  if (deepOn()) pinDeep(); else if (!noScroll && (!keep || atBottom)) { toBottom(); sc.dataset.stick = "1"; } else if (!noScroll) { sc._prog = Date.now(); sc.scrollTop = prevTop; }
   // les anciens messages ne se chargent que quand c'est toi qui remontes (pas quand la page se replace toute seule)
-  sc.onscroll = () => { const prog = Date.now() - (sc._prog || 0) < 400; if (!prog) sc.dataset.stick = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 90 ? "1" : ""; if (!prog && sc.scrollTop < 60) loadOlder(); };
-  sc.querySelectorAll("img").forEach(im => { if (!im.complete) im.addEventListener("load", () => { if (sc.dataset.stick === "1") toBottom(); }, { once: true }); });
+  sc.onscroll = () => { const prog = Date.now() - (sc._prog || 0) < 400; if (!prog) { DEEPPIN = null; sc.dataset.stick = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 90 ? "1" : ""; } if (!prog && sc.scrollTop < 60) loadOlder(); };
+  sc.querySelectorAll("img").forEach(im => { if (!im.complete) im.addEventListener("load", () => { if (deepOn()) pinDeep(); else if (sc.dataset.stick === "1") toBottom(); }, { once: true }); });
   const tx = $("tx"); if (draft) tx.value = draft; if (focus) tx.focus();
   const fit = () => { tx.style.height = "auto"; tx.style.height = Math.min(170, tx.scrollHeight) + "px"; }; tx.oninput = fit; fit();
   tx.onkeydown = e => {

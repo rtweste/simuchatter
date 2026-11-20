@@ -260,6 +260,10 @@ module.exports = function mount(app, db, auth, admin, dataDir) {
     if (req.query.user) { where.push("s.user_id = ?"); args.push(parseInt(req.query.user, 10)); }
     let rows = db.prepare(`${SELECT} ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY ${req.query.status === "pending" ? "s.created_at ASC" : "s.sold_at DESC"} LIMIT 500`).all(...args).map(pub);
     if (/^\d{4}-\d{2}-[AB]$/.test(req.query.period || "")) rows = rows.filter(r => r.period === req.query.period);
+    // ventes Twizz : de quoi ouvrir la conversation du fan sur la vente (créatrice, conversation, fan, PPV envoyé depuis le site)
+    try { const tq = db.prepare("SELECT creator_id, conv_id, fan_id, fan_name, at FROM twizz_tx WHERE sale_id = ?"), sq = db.prepare("SELECT msg_id FROM twizz_sent WHERE conv_id = ? AND price > 0 AND at <= ? AND at > ? ORDER BY at DESC LIMIT 1");
+      rows.forEach(r => { const t = tq.get(r.id); if (!t || !t.conv_id || !t.fan_id) return; let m = null; try { m = sq.get(t.conv_id, t.at + 60e3, t.at - 7 * 864e5); } catch (e) {}
+        r.tw = { cr: t.creator_id, conv: t.conv_id, fan: t.fan_id, name: t.fan_name || "", at: t.at, msg: (m && m.msg_id) || "" }; }); } catch (e) {}
     res.json({ sales: rows, pending: db.prepare("SELECT COUNT(*) n FROM sales WHERE status = 'pending'").get().n,
       people: db.prepare("SELECT id, username FROM users ORDER BY username").all() });
   });

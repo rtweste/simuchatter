@@ -297,9 +297,14 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   app.post("/api/twizz/inbox/:cid/seen/:conv", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid), conv = str(req.params.conv).slice(0, 64), t = ts(req.body?.last_at) || Date.now();
     db.prepare("INSERT INTO twizz_seen (creator_id, conv_id, last_at, user_id, at) VALUES (?,?,?,?,?) ON CONFLICT(creator_id, conv_id) DO UPDATE SET last_at = MAX(last_at, excluded.last_at), user_id = excluded.user_id, at = excluded.at").run(cid, conv, t, req.user.id, Date.now());
     return { ok: true }; }));
+  // pastille de la créatrice : quand la 1re page est pleine de non lus, on compte aussi les suivantes
+  // (mêmes pages que le fil, gardées à part 90 s ; 6 pages au plus) : plus de plafond à 15
   app.get("/api/twizz/inbox/:cid/unread", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid);
-    const j = await G(`/conversations/user/${enc(cid)}?page=1&type=GENERAL&creatorId=${enc(cid)}`, 60e3);
-    return { count: applySeen(cid, arr(j).map(c => conv(c, cid))).filter(c => c.unread > 0).length }; }));
+    const P = p => `/conversations/user/${enc(cid)}?page=${p}&type=GENERAL&creatorId=${enc(cid)}`;
+    const j = await G(P(1), 60e3); let d = j && j.data, L = arr(j).map(c => conv(c, cid)), all = L.slice(), p = 1;
+    while (p < 6 && d && d.totalPages > p && L.length && L.filter(c => c.unread > 0).length >= Math.max(2, Math.ceil(L.length / 3))) {
+      p++; const jj = await GD(P(p), 90e3); d = jj && jj.data; L = arr(jj).map(c => conv(c, cid)); all = all.concat(L.filter(c => !all.some(x => x.id === c.id))); }
+    return { count: applySeen(cid, all).filter(c => c.unread > 0).length }; }));
   app.get("/api/twizz/inbox/:cid/conversations", auth, inbox, wrap(async req => {
     const cid = creatorOk(req.params.cid), type = ["GENERAL", "TO_DELIVER"].includes(req.query.type) ? req.query.type : "GENERAL", page = Math.max(1, +req.query.page || 1);
     const q = String(req.query.q || "").trim().slice(0, 60);
