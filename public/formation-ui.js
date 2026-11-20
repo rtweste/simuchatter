@@ -23,13 +23,13 @@ const TRAINEE = window.TRAINEE = (() => {
   const fmt = s => { s = Math.max(0, Math.round(s || 0)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
   function courseCard(C, simDone, simTotal) {
     if (!C || !C.total) return "";
-    if (!C.unlocked) return `<section class="tr-card co-card co-lock" style="--d:.08s"><div class="co-lk">${LOCK}</div><div><div class="tr-eb">ÉTAPE SUIVANTE</div><h3>Formation <em>Twizz</em></h3>
+    if (!C.unlocked) return `<section class="tr-card co-card co-lock" style="--d:.08s"><div class="co-lk">${LOCK}</div><div><div class="tr-eb">ÉTAPE SUIVANTE</div><h3>Formation <em>messagerie</em></h3>
       <div class="tr-mut" style="margin-top:4px">${C.total} vidéos pour maîtriser la plateforme. Elles se débloquent quand tes critères du simulateur sont verts (${simDone} / ${simTotal}).</div></div></section>`;
     const pct = Math.round(C.done / C.total * 100);
     const list = C.videos.map(v => `<button class="co-v${v.done ? " ok" : ""}${v.locked ? " lk" : ""}${C.next && C.next.id === v.id ? " nx" : ""}" data-v="${v.id}" ${v.locked ? "disabled" : ""}>
       <span class="co-n">${v.done ? CHECK : v.locked ? LOCK : v.n}</span><span class="co-t"><b>${esc(v.title)}</b><small>${v.done ? "Vue jusqu'au bout · revoir" : v.locked ? "Termine la vidéo précédente" : v.pos > 3 ? `Reprendre à ${fmt(v.pos)}` : "À regarder"}</small></span>
       <span class="co-pl">${v.locked ? "" : PLAY}</span></button>`).join("");
-    return `<section class="tr-card co-card" style="--d:.08s"><div class="tr-ch"><h3>Formation <em>Twizz</em></h3><span class="tr-tag${C.complete ? " g" : ""}">${C.complete ? "Terminée ✓" : `${C.done} / ${C.total} vidéos`}</span></div>
+    return `<section class="tr-card co-card" style="--d:.08s"><div class="tr-ch"><h3>Formation <em>messagerie</em></h3><span class="tr-tag${C.complete ? " g" : ""}">${C.complete ? "Terminée ✓" : `${C.done} / ${C.total} vidéos`}</span></div>
       <div class="co-bar"><i style="width:${pct}%"></i></div>
       <div class="tr-mut" style="margin:8px 0 4px">${C.complete ? "Bravo : toutes les vidéos sont vues. Ton manager peut valider ta formation." : "Regarde chaque vidéo jusqu'au bout pour débloquer la suivante. Pas d'avance rapide."}</div>
       <div class="co-list">${list}</div></section>`;
@@ -38,11 +38,11 @@ const TRAINEE = window.TRAINEE = (() => {
   function player(C, id, onClose) {
     const idx = C.videos.findIndex(v => v.id === id), v0 = C.videos[idx]; if (!v0 || v0.locked) return;
     const replay = v0.done, ov = document.createElement("div"); ov.className = "co-ov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-label", v0.title);
-    ov.innerHTML = `<div class="co-w"><div class="co-hd"><div><div class="tr-eb">FORMATION TWIZZ · VIDÉO ${v0.n} / ${C.total}</div><div class="co-ti">${esc(v0.title)}</div></div><button class="co-x" aria-label="Fermer">✕</button></div>
+    ov.innerHTML = `<div class="co-w"><div class="co-hd"><div><div class="tr-eb">FORMATION MESSAGERIE · VIDÉO ${v0.n} / ${C.total}</div><div class="co-ti">${esc(v0.title)}</div></div><button class="co-x" aria-label="Fermer">✕</button></div>
       <div class="co-vd"><video playsinline preload="auto" src="${v0.src}"></video>
         <div class="co-ps"><svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></div>
         <div class="co-cv" data-start><button class="co-play" aria-label="Lancer la vidéo">${PLAY}</button><b>${v0.pos > 3 ? `Reprendre à ${fmt(v0.pos)}` : "Lancer la vidéo"}</b><small>Monte le son 🔊</small></div>
-        <div class="co-cv off" data-end><div class="co-ok">${CHECK}</div><b style="font-size:22px">${idx + 1 < C.total ? "Vidéo terminée" : "Formation Twizz terminée"}</b><small>${idx + 1 < C.total ? `La vidéo ${idx + 2} est débloquée.` : "Ton manager va être prévenu."}</small>
+        <div class="co-cv off" data-end><div class="co-ok">${CHECK}</div><b style="font-size:22px">${idx + 1 < C.total ? "Vidéo terminée" : "Formation messagerie terminée"}</b><small>${idx + 1 < C.total ? `La vidéo ${idx + 2} est débloquée.` : "Ton manager va être prévenu."}</small>
           <div style="display:flex;gap:10px;margin-top:6px"><button class="co-gh" data-close>Fermer</button>${idx + 1 < C.total ? `<button class="co-go" data-next>Vidéo suivante →</button>` : ""}</div></div>
         <div class="co-cv off" data-err><b>La vidéo ne se charge pas</b><small>Vérifie ta connexion et réessaie.</small><button class="co-gh" data-close>Fermer</button></div></div>
       <div class="co-ft"><span class="co-tb"><i></i></span><span class="co-tm">—</span></div>${replay ? "" : `<div class="co-note">${LOCK}Pas d'avance rapide : regarde jusqu'au bout pour débloquer la suite.</div>`}</div>`;

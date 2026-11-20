@@ -26,7 +26,7 @@ const ENTRETIEN = window.ENTRETIEN = (() => {
       const r = 15, C = 2 * Math.PI * r;
       root.innerHTML = `<div class="iv-scrim"></div><div class="iv-box"><span class="iv-handle"></span><canvas class="iv-fx"></canvas>
         <header class="iv-top"><span class="iv-av" data-in style="--d:0">${esc(user.username[0].toUpperCase())}</span>
-          <div data-in style="--d:1"><h3>Entretien avec <em>${name}</em></h3><small>${t.done ?? "?"} / ${t.total ?? "?"} critères · score moyen ${st.avg5 ?? "—"} · ${t.course && t.course.complete ? "formation Twizz terminée" : "formation Twizz en cours"}</small></div>
+          <div data-in style="--d:1"><h3>Entretien avec <em>${name}</em></h3><small>${t.done ?? "?"} / ${t.total ?? "?"} critères · score moyen ${st.avg5 ?? "—"} · ${t.course && t.course.complete ? "formation messagerie terminée" : "formation messagerie en cours"}</small></div>
           <div class="iv-prog" data-in style="--d:2"><span class="iv-save"><i></i><span>Enregistré</span></span>
             <span class="iv-cnt"><span class="roll"><span>${Array.from({ length: N() + 1 }, (_, i) => `<span>${i}</span>`).join("")}</span></span><small>/ ${N()}</small></span>
             <svg class="iv-ring" viewBox="0 0 38 38"><circle class="bg" cx="19" cy="19" r="${r}"/><circle class="fg" cx="19" cy="19" r="${r}" stroke-dasharray="${C}" stroke-dashoffset="${C}"/></svg>

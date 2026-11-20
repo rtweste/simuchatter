@@ -5,7 +5,7 @@ const periodOfDate = d => { const [y, m, day] = d.split("-"); return `${y}-${m}-
 const dShort = ms => new Date(ms).toLocaleDateString("fr-FR", { timeZone: TZ, day: "numeric", month: "short" });
 const hm = ms => new Date(ms).toLocaleTimeString("fr-FR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
 const E = n => (Math.round(n * 100) / 100).toLocaleString("fr-FR", { maximumFractionDigits: 2 }) + " €";
-// Formation Twizz : vidéos à regarder dans l'ordre, débloquées quand les critères du simulateur sont verts
+// Formation messagerie : vidéos à regarder dans l'ordre, débloquées quand les critères du simulateur sont verts
 const COURSE = [
   { id: "tw1", title: "Ouvrir la messagerie", file: "messagerie-01-ouvrir.mp4" },
   { id: "tw2", title: "Envoyer un média payant", file: "messagerie-02-media-payant.mp4" },
@@ -280,7 +280,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const byp = db.prepare("SELECT level FROM training_bypass WHERE user_id = ?").get(uid);
     const simCrit = all.filter(x => c[x.key].on).map(x => ({ ...x, pct: Math.max(0, Math.min(1, x.pct)) })).map(x => byp && !x.ok ? { ...x, ok: true, pct: 1, test: true } : x);
     const simReady = simCrit.every(x => x.ok), co = course(uid, simReady);
-    const criteria = co.total ? [...simCrit, { key: "course", label: "Formation Twizz terminée", sub: simReady ? `${co.total} vidéos à regarder jusqu'au bout` : "se débloque quand les critères du simulateur sont verts", value: `${co.done} / ${co.total}`, ok: co.complete, pct: co.done / co.total }] : simCrit;
+    const criteria = co.total ? [...simCrit, { key: "course", label: "Formation messagerie terminée", sub: simReady ? `${co.total} vidéos à regarder jusqu'au bout` : "se débloque quand les critères du simulateur sont verts", value: `${co.done} / ${co.total}`, ok: co.complete, pct: co.done / co.total }] : simCrit;
     const done = criteria.filter(x => x.ok).length, total = criteria.length, ready = total > 0 && done === total;
     const fans = PERS.map(p => ({ id: p.id, name: p.name, label: p.label, ok: fansOk.has(p.id) }));
     const miss = simCrit.find(x => !x.ok) || criteria.find(x => !x.ok), notFan = fans.find(f => !f.ok);
@@ -291,7 +291,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       miss.key === "fans" ? `Essaie un nouveau profil${notFan ? ` : <b>${notFan.label}</b>` : ""}. Il te faut ${c.fans.v} profils réussis.` :
       miss.key === "speed" ? (sp == null ? `Fais le <b>test de connexion</b> : il prend moins d'une minute.` : `Ta connexion est à ${Math.round(sp)} Mb/s : refais le test depuis un meilleur réseau (wifi proche de la box, ou câble).`) :
       miss.key === "typing" ? (ty == null ? `Fais le <b>test de frappe</b> : 60 secondes pour mesurer ta vitesse d'écriture.` : `Ta meilleure frappe est à ${Math.round(ty)} mots/min : vise ${c.typing.v} ou plus, entraîne-toi et retente.`) :
-      miss.key === "course" ? `Ton simulateur est validé : la <b>formation Twizz</b> est débloquée. Regarde ${co.next ? `la vidéo <b>${co.next.n}</b>` : "les vidéos"} jusqu'au bout.` :
+      miss.key === "course" ? `Ton simulateur est validé : la <b>formation messagerie</b> est débloquée. Regarde ${co.next ? `la vidéo <b>${co.next.n}</b>` : "les vidéos"} jusqu'au bout.` :
       `Réponds plus vite : ta moyenne est de ${rt} s, l'objectif est sous ${c.rt.v} s.`;
     const u = db.prepare("SELECT username, role, created_at FROM users WHERE id = ?").get(uid);
     if (u && u.role === "trainee" && ready && c.notify && !db.prepare("SELECT 1 FROM training_ready WHERE user_id = ?").get(uid)) {
@@ -423,7 +423,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const done = max >= dur - 1.5;
     db.prepare("INSERT INTO course_progress (user_id, video_id, max_pos, dur, upd, done_at) VALUES (?,?,?,?,?,?) ON CONFLICT(user_id, video_id) DO UPDATE SET max_pos = excluded.max_pos, dur = excluded.dur, upd = excluded.upd, done_at = COALESCE(course_progress.done_at, excluded.done_at)")
       .run(uid, v.id, max, dur, now, done ? now : null);
-    if (done) { const u = db.prepare("SELECT username FROM users WHERE id = ?").get(uid); log(uid, "a", `**${u ? u.username : "?"}** a terminé la vidéo ${v.n} de la formation Twizz`, v.title); }
+    if (done) { const u = db.prepare("SELECT username FROM users WHERE id = ?").get(uid); log(uid, "a", `**${u ? u.username : "?"}** a terminé la vidéo ${v.n} de la formation messagerie`, v.title); }
     res.json({ ok: true, done, max, training: done ? training(uid) : undefined });
   });
   app.post("/api/admin/users/:id/promote", auth, admin, (req, res) => {
