@@ -81,8 +81,6 @@ const MODULES = [
     desc: "Vos ventes, vos paliers et votre commission de la quinzaine." },
   { id: "chat", label: "Chat d'équipe", short: "Chat", href: "/chat", icon: "bubbles", section: "Organisation", roles: ["admin", "chatter", "trainee"],
     desc: "Le chat de toute l'équipe : salons, messages privés, annonces, sondages." },
-  { id: "vocal", label: "Salon vocal", short: "Vocal", href: "/vocal", icon: "mic", section: "Organisation", roles: ["admin", "chatter", "trainee"], nodock: ["admin", "chatter", "tl", "trainee"],
-    desc: "Les salons vocaux de l'équipe, avec partage d'écran pour les managers." },
   { id: "creatrices", label: "Créatrices", short: "Créas", href: "/creatrices", icon: "spark", section: "Organisation", roles: ["admin", "chatter"], nodock: ["admin", "tl"],
     desc: "Les fiches des créatrices : personnalité, façon d'écrire, catalogue, à faire et à éviter." },
   { id: "parrainage", label: "Parrainage", href: "/parrainage", icon: "gift", section: "Organisation", roles: ["admin", "chatter"], nodock: ["admin", "chatter"], hide: ["assistant"],
@@ -126,7 +124,7 @@ const MGR_GROUPS = {
   "g-reg": { label: "Réglages agence", short: "Réglages", icon: "crown", nodock: 1, tabs: [["admin#reg", "Agence"], ["fondateur", "Fondateur"]] }
 };
 const MGR_MENU = [[null, "home"], ["Au quotidien", "planning", "g-ventes", "g-msg", "studio"], ["Équipe", "admin", "g-crea", "g-form", "g-motiv"],
-  ["Communication", "chat", "vocal"], ["Réglages", "g-reg", "profil", "parametres"]];
+  ["Communication", "chat"], ["Réglages", "g-reg", "profil", "parametres"]];
 const MGR_HASH = ["crea", "reg", "stel"];   // onglets de Gestion rangés ailleurs dans le menu
 const mgrKey = active => active === "admin" && MGR_HASH.includes(location.hash.slice(1)) ? "admin#" + location.hash.slice(1) : active;
 function mgrMods(me, base) {
