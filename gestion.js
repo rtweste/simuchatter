@@ -7,12 +7,12 @@ const hm = ms => new Date(ms).toLocaleTimeString("fr-FR", { timeZone: TZ, hour: 
 const E = n => (Math.round(n * 100) / 100).toLocaleString("fr-FR", { maximumFractionDigits: 2 }) + " €";
 // Formation Twizz : vidéos à regarder dans l'ordre, débloquées quand les critères du simulateur sont verts
 const COURSE = [
-  { id: "tw1", title: "Créer ton compte et rejoindre l'agence", file: "twizz-01-compte.mp4" },
-  { id: "tw2", title: "Envoyer un média payant", file: "twizz-02-media-payant.mp4" },
-  { id: "tw3", title: "Les prix et la négo", file: "twizz-03-prix-nego.mp4" },
-  { id: "tw4", title: "Connaître son fan", file: "twizz-04-connaitre-son-fan.mp4" },
-  { id: "tw5", title: "Les outils pour répondre vite", file: "twizz-05-outils.mp4" },
-  { id: "tw6", title: "S'organiser pendant le shift", file: "twizz-06-shift.mp4" }];
+  { id: "tw1", title: "Ouvrir la messagerie", file: "messagerie-01-ouvrir.mp4" },
+  { id: "tw2", title: "Envoyer un média payant", file: "messagerie-02-media-payant.mp4" },
+  { id: "tw3", title: "Prix et négo", file: "messagerie-03-prix-nego.mp4" },
+  { id: "tw4", title: "Connaître son fan", file: "messagerie-04-connaitre-son-fan.mp4" },
+  { id: "tw5", title: "Répondre vite", file: "messagerie-05-repondre-vite.mp4" },
+  { id: "tw6", title: "Le shift", file: "messagerie-06-shift.mp4" }];
 const COURSE_DIR = require("path").join(__dirname, "public", "video", "twizz");
 const courseList = () => COURSE.filter(v => { try { return require("fs").existsSync(require("path").join(COURSE_DIR, v.file)); } catch (e) { return false; } });
 const SRC_LBL = { abo: "Abonnements", live: "Live", coll: "Collections", push: "Média push" };
