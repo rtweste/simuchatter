@@ -682,6 +682,15 @@
 .prow button.hb:after{content:"";position:absolute;left:50%;top:-4px;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--ac);box-shadow:0 0 8px rgba(95,211,162,.9)}
 .prow input{height:36px;width:100px;border-radius:10px;border:1px solid #262626;background:#151515;color:#eee;font:600 13px Inter;padding:0 11px}
 .pz .hint{display:flex;align-items:center;gap:7px;font:600 11px Inter;color:#6a6a6a}.pz .hint i{width:6px;height:6px;border-radius:50%;background:var(--ac);box-shadow:0 0 8px rgba(95,211,162,.9)}
+.vpr{display:flex;flex-direction:column;gap:7px}
+.vpr-t{display:inline-flex;align-items:center;gap:9px;align-self:flex-start;height:30px;padding:0 4px;border:0;background:none;color:#bdbdbd;font:700 12.5px Inter;cursor:pointer}.vpr-t:disabled{opacity:.4;cursor:not-allowed}
+.vpr-t .sw{position:relative;width:30px;height:18px;border-radius:999px;background:#262626;transition:background .25s}.vpr-t .sw i{position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#8a8a8a;transition:transform .3s cubic-bezier(.3,1.5,.5,1),background .25s}
+.vpr-t.on{color:#f0b54a}.vpr-t.on .sw{background:rgba(240,181,74,.35)}.vpr-t.on .sw i{transform:translateX(12px);background:#f0b54a}
+.vpr-b{display:flex;flex-direction:column;gap:7px;padding:10px;border-radius:12px;border:1px solid rgba(240,181,74,.25);background:rgba(240,181,74,.05);animation:vprIn .35s cubic-bezier(.3,1.4,.5,1)}@keyframes vprIn{from{opacity:0;transform:translateY(-6px)}}
+.vpr-r{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.vpr-r input{height:32px;width:74px;border-radius:9px;border:1px solid #2a2a2a;background:#151515;color:#eee;font:700 13px Inter;padding:0 10px}
+.vpr-seg{display:inline-flex;padding:2px;border-radius:9px;background:#151515;border:1px solid #2a2a2a}.vpr-seg button{height:26px;min-width:32px;border:0;border-radius:7px;background:none;color:#8a8a8a;font:800 12px Inter;cursor:pointer}.vpr-seg button.on{background:#f0b54a;color:#1a1204}
+.vpr-res{font:700 12px Inter;color:#cfcfcf}.vpr-res s{color:#6a6a6a;margin-left:5px;font-weight:600}
+.vpr-d{display:flex;gap:5px;flex-wrap:wrap}.vpr-d button{height:28px;padding:0 10px;border-radius:8px;border:1px solid #2a2a2a;background:#151515;color:#bbb;font:700 11.5px Inter;cursor:pointer}.vpr-d button.on{background:#f5f5f5;color:#0a0a0a;border-color:#f5f5f5}
 .pz .tx{height:34px;border-radius:10px;border:1px solid #232323;background:#121212;color:#eee;font:500 13px Inter;padding:0 11px}
 .go2{position:relative;height:52px;min-width:280px;padding:0 22px;border-radius:14px;border:0;background:#5fd3a2;color:#05261a;font:900 15px Inter;display:inline-flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;box-shadow:0 14px 34px -12px rgba(95,211,162,.75),inset 0 1px 0 rgba(255,255,255,.35);transition:transform .35s cubic-bezier(.3,1.6,.5,1),opacity .25s,box-shadow .3s;overflow:hidden}
 .go2:after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.4) 50%,transparent 65%);background-size:250% 100%;animation:gsh 3.2s ease-in-out infinite;pointer-events:none}
@@ -921,9 +930,14 @@ let qT = null; $("q").oninput = () => { clearTimeout(qT); qT = setTimeout(() => 
 /* ================= conversations ================= */
 async function fetchList(t, fresh, more) {
   const k = lkey(t), L = LISTS[k], page = more && L ? L.page + 1 : 1, q = t === "QUEUE" ? "" : Q;
+  // fil « Général » : on ajoute tous les fans « à répondre » de Twizz, même ceux des pages suivantes (plus besoin de « Charger plus »)
+  const ua = t === "GENERAL" && !q && page === 1 ? api2(`/unanswered${fresh ? "?fresh=1" : ""}`).catch(() => null) : null;
   const r = await api2(`/conversations?type=${t}&page=${page}${q ? "&q=" + enc(q) : ""}${fresh ? "&fresh=1" : ""}`);
   r.items.forEach(c => fixFan(c.fan));
-  LISTS[k] = page === 1 ? { items: r.items, page: 1, more: r.more && !q } : { items: L.items.concat(r.items.filter(x => !L.items.some(y => y.id === x.id))), page, more: r.more };
+  const ins = (list, add) => { const out = list.slice(); add.forEach(c => { const t0 = Date.parse(c.last.at) || 0, i = out.findIndex(x => (Date.parse(x.last.at) || Infinity) < t0); i < 0 ? out.push(c) : out.splice(i, 0, c); }); return out; };
+  LISTS[k] = page === 1 ? { items: r.items, page: 1, more: r.more && !q } : { items: ins(L.items, r.items.filter(x => !L.items.some(y => y.id === x.id))), page, more: r.more };
+  const U = ua && await ua;
+  if (U && U.items) { U.items.forEach(c => fixFan(c.fan)); const have = new Set(LISTS[k].items.map(c => c.id)); LISTS[k].items = ins(LISTS[k].items, U.items.filter(c => !have.has(c.id))); }
   return LISTS[k];
 }
 async function loadList(fresh, more) {
@@ -1645,6 +1659,7 @@ function paintHist(c, H) {
 }
 
 /* ================= coffre intelligent ================= */
+const PROMO_T = [["u", "Illimitée"], ["h6", "6 h"], ["h12", "12 h"], ["h24", "24 h"], ["d2", "2 jours"], ["d7", "7 jours"]];
 async function vault(acceptId, preset) {
   const conv = CUR; if (!conv) return; if (!HIST[conv.id]) loadHist();
   const first1 = esc((conv.fan.name || "").split(" ")[0]);
@@ -1656,6 +1671,9 @@ async function vault(acceptId, preset) {
         <div id="vS"></div><div id="vW"></div><div class="vgrid" id="vG"></div></div></div>
     <div class="vf"><div class="vdock"><span class="dkst" id="vDk"><span class="dkemp"></span></span><span class="dt"><b id="vDt">Rien de choisi</b><small id="vDs">Clique sur les médias</small></span></div>
       <div class="pz"><div class="prow" id="vP">${[0, 5, 10, 15, 20, 30, 50].map(p => `<button data-p="${p}">${p ? p + " €" : "Gratuit"}</button>`).join("")}<input id="vPrice" type="number" min="0" max="500" step="1" placeholder="Autre prix"></div>
+        <div class="vpr"><button type="button" class="vpr-t" id="vPrT" disabled><span class="sw"><i></i></span>Ajouter une promo</button>
+          <div class="vpr-b" id="vPrB" hidden><div class="vpr-r"><span style="font:700 11.5px Inter;color:#8a8a8a">Remise</span><input id="vPrV" type="number" min="1" step="1" placeholder="0"><span class="vpr-seg"><button type="button" data-pt="eur" class="on">€</button><button type="button" data-pt="pct">%</button></span><span class="vpr-res" id="vPrRes"></span></div>
+            <div class="vpr-r"><span style="font:700 11.5px Inter;color:#8a8a8a">Pendant</span><span class="vpr-d">${PROMO_T.map(([k, l]) => `<button type="button" data-pd="${k}">${l}</button>`).join("")}</span></div></div></div>
         <input class="tx" id="vTxt" placeholder="Message avec le média (obligatoire sur Twizz)"><span class="hint" id="vH" hidden><i></i>Les prix que ${first1} achète le plus souvent</span></div>
       <button class="go2" id="vGo" disabled>${SV(IC.send, 18, 2.6)}<span id="vGl">Choisis un média</span><span class="kbd">↵</span></button></div></div>`;
   document.body.appendChild(m);
@@ -1680,10 +1698,17 @@ async function vault(acceptId, preset) {
     const vids = bo.filter(i => i.videos).length;
     $("vI").innerHTML = (fav.length ? `<span>${SV(IC.coin, 13)}Achète surtout <b>${fav.map(p => E(p)).join(" – ")}</b></span>` : "") + (bo.length && vids * 2 > bo.length ? `<span>${SV(IC.play, 11)}Préfère <b>les vidéos</b></span>` : "") + (paid.length ? `<span>${SV(IC.check, 12, 3)}<b>${bo.length} / ${paid.length}</b> PPV achetés</span>` : "");
     m.querySelectorAll("#vP [data-p]").forEach(b => b.classList.toggle("hb", fav.includes(+b.dataset.p))); $("vH").hidden = !fav.length; }
+  // promo Twizz : remise en € ou en %, pour une durée (comme dans l'appli Twizz)
+  const PR = { on: false, type: "eur", value: null, time: null };
+  const promoPrice = () => !PR.on || !PR.value ? price : PR.type === "eur" ? price - PR.value : Math.round(price * (100 - PR.value)) / 100;
+  const promoWhy = () => !PR.on ? "" : !PR.value ? "Choisis la remise" : PR.value % 1 ? "Remise sans centimes" : PR.type === "eur" ? (PR.value >= price ? "Remise plus grande que le prix" : "") : PR.value > 99 ? "Remise de 99 % au plus" : "";
   // mêmes règles que Twizz : prix rond, 3 € minimum (ou gratuit), 500 € maximum, et un texte
-  const pWhy = () => price === null || !price ? "" : price % 1 ? "Prix sans centimes" : price < 3 ? "3 € minimum sur Twizz" : price > 500 ? "500 € maximum sur Twizz" : "";
-  const upd = () => { const go = $("vGo"), n = SEL.length, pw = pWhy(), tx = !!$("vTxt").value.trim(); go.disabled = !n || price === null || !!pw || !tx;
-    $("vGl").textContent = !n ? "Choisis un média" : price === null ? "Choisis un prix" : pw ? pw : !tx ? "Écris un message avec le média" : `Envoyer à ${conv.fan.name.split(" ")[0]} · ${price ? E(price) : "gratuit"}`;
+  const pWhy = () => price === null || !price ? "" : price % 1 ? "Prix sans centimes" : price < 3 ? "3 € minimum sur Twizz" : price > 500 ? "500 € maximum sur Twizz" : promoWhy() || (PR.on && !PR.time ? "Choisis la durée de la promo" : "");
+  const promoUi = () => { const ok = !!price && price > 0; if (!ok && PR.on) PR.on = false; $("vPrT").disabled = !ok; $("vPrT").classList.toggle("on", PR.on); $("vPrB").hidden = !PR.on;
+    m.querySelectorAll("[data-pt]").forEach(b => b.classList.toggle("on", b.dataset.pt === PR.type)); m.querySelectorAll("[data-pd]").forEach(b => b.classList.toggle("on", b.dataset.pd === PR.time));
+    $("vPrRes").innerHTML = PR.on && PR.value && !promoWhy() ? `${E(promoPrice())}<s>${E(price)}</s>` : ""; };
+  const upd = () => { promoUi(); const go = $("vGo"), n = SEL.length, pw = pWhy(), tx = !!$("vTxt").value.trim(); go.disabled = !n || price === null || !!pw || !tx;
+    $("vGl").textContent = !n ? "Choisis un média" : price === null ? "Choisis un prix" : pw ? pw : !tx ? "Écris un message avec le média" : `Envoyer à ${conv.fan.name.split(" ")[0]} · ${price ? E(promoPrice()) + (PR.on ? " en promo" : "") : "gratuit"}`;
     const ch = SEL.map(id => FILES.get(id)).filter(Boolean), nv = ch.filter(f => /video/i.test(f.type) || isVid(f.url)).length, np = ch.length - nv, pl = (k, a, b) => k + " " + (k > 1 ? b : a);
     $("vDk").innerHTML = ch.length ? ch.slice(0, 5).map(f => `<span class="dk"><img src="${esc(f.thumb)}" alt=""></span>`).join("") : `<span class="dkemp"></span>`;
     $("vDt").textContent = n ? pl(n, "média choisi", "médias choisis") : "Rien de choisi"; $("vDs").textContent = n ? [nv ? pl(nv, "vidéo", "vidéos") : "", np ? pl(np, "photo", "photos") : ""].filter(Boolean).join(" · ") : "Clique sur les médias";
@@ -1691,6 +1716,10 @@ async function vault(acceptId, preset) {
       const tr = t.querySelector(".trace"); if (k >= 0 && !tr) t.insertAdjacentHTML("beforeend", '<span class="trace"></span>'); if (k < 0 && tr) tr.remove(); }); };
   m.querySelectorAll("#vP [data-p]").forEach(b => b.onclick = () => { price = +b.dataset.p; $("vPrice").value = ""; m.querySelectorAll("#vP [data-p]").forEach(x => x.classList.toggle("on", x === b)); upd(); });
   $("vTxt").addEventListener("input", () => upd());
+  $("vPrT").onclick = () => { if (!price) return; PR.on = !PR.on; upd(); if (PR.on) $("vPrV").focus(); };
+  $("vPrV").oninput = () => { PR.value = $("vPrV").value === "" ? null : Math.max(0, +$("vPrV").value); upd(); };
+  m.querySelectorAll("[data-pt]").forEach(b => b.onclick = () => { PR.type = b.dataset.pt; upd(); });
+  m.querySelectorAll("[data-pd]").forEach(b => b.onclick = () => { PR.time = b.dataset.pd; upd(); });
   $("vPrice").oninput = () => { price = $("vPrice").value === "" ? null : Math.max(0, +$("vPrice").value); m.querySelectorAll("#vP [data-p]").forEach(x => x.classList.remove("on")); upd(); };
   m.querySelectorAll("#vF [data-f]").forEach(b => b.onclick = () => { filter = +b.dataset.f; m.querySelectorAll("#vF [data-f]").forEach(x => x.classList.toggle("on", x === b)); slideInd($("vF")); grid(); });
   requestAnimationFrame(() => slideInd($("vF")));
@@ -1734,11 +1763,12 @@ async function vault(acceptId, preset) {
   $("vGo").onclick = async () => {
     const go = $("vGo"); if (go.disabled) return;
     if (!(await hereOk())) return;
-    if (!confirm(`Envoyer ${SEL.length} média${SEL.length > 1 ? "s" : ""} à ${conv.fan.name} ${price ? "pour " + E(price) : "gratuitement"} ?`)) return;
+    const promo = PR.on && price ? { type: PR.type, value: PR.value, time: PR.time } : null;
+    if (!confirm(`Envoyer ${SEL.length} média${SEL.length > 1 ? "s" : ""} à ${conv.fan.name} ${price ? "pour " + E(promoPrice()) + (promo ? ` (promo : ${PR.type === "eur" ? "-" + E(PR.value) : "-" + PR.value + " %"} pendant ${PROMO_T.find(x => x[0] === PR.time)[1].toLowerCase()}, au lieu de ${E(price)})` : "") : "gratuitement"} ?`)) return;
     go.disabled = true; $("vGl").textContent = "Envoi…";
-    try { const sr = await api2("/send-media", { body: { conversationId: conv.id, fan: conv.fan.id, files: SEL.slice(), price, text: $("vTxt").value, acceptId: acceptId || null } });
+    try { const sr = await api2("/send-media", { body: { conversationId: conv.id, fan: conv.fan.id, files: SEL.slice(), price, promo, text: $("vTxt").value, acceptId: acceptId || null } });
       if (preset && preset.run) runAfterSend(conv, "media", sr && sr.message && sr.message.id);
-      const n = SEL.length; m.querySelector(".vbox").insertAdjacentHTML("beforeend", `<div class="done"><div class="dc"><span class="rip"></span><span class="rip" style="animation-delay:.9s"></span>${[["left:30px;top:30px", .75, 14], ["right:34px;top:22px", .9, 11], ["right:24px;bottom:40px", 1, 12], ["left:22px;bottom:50px", .85, 9]].map(([p, d, s]) => `<span class="spk" style="${p};animation-delay:${d}s;width:${s}px;height:${s}px">${SPARK}</span>`).join("")}<svg class="ok" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="#5fd3a2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="36" cy="36" r="31" pathLength="1"/><path d="M23 37l9 9 18-19" pathLength="1"/></svg><b>${n} média${n > 1 ? "s" : ""} envoyé${n > 1 ? "s" : ""} à ${esc(conv.fan.name.split(" ")[0])}</b><small>${price ? E(price) : "Gratuit"} · signé à ton nom dans la conversation</small></div></div>`);
+      const n = SEL.length; m.querySelector(".vbox").insertAdjacentHTML("beforeend", `<div class="done"><div class="dc"><span class="rip"></span><span class="rip" style="animation-delay:.9s"></span>${[["left:30px;top:30px", .75, 14], ["right:34px;top:22px", .9, 11], ["right:24px;bottom:40px", 1, 12], ["left:22px;bottom:50px", .85, 9]].map(([p, d, s]) => `<span class="spk" style="${p};animation-delay:${d}s;width:${s}px;height:${s}px">${SPARK}</span>`).join("")}<svg class="ok" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="#5fd3a2" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="36" cy="36" r="31" pathLength="1"/><path d="M23 37l9 9 18-19" pathLength="1"/></svg><b>${n} média${n > 1 ? "s" : ""} envoyé${n > 1 ? "s" : ""} à ${esc(conv.fan.name.split(" ")[0])}</b><small>${price ? E(promoPrice()) + (PR.on ? " en promo" : "") : "Gratuit"} · signé à ton nom dans la conversation</small></div></div>`);
       markDone(conv); setTimeout(close, 1700); await loadMsgs(true); loadList(true); loadHist(true); }
     catch (e) { upd(); notify("Média non envoyé", e.message, "err"); }
   };

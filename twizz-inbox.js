@@ -282,6 +282,16 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   app.get("/api/twizz/inbox/:cid/unread", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid);
     const j = await G(`/conversations/user/${enc(cid)}?page=1&type=GENERAL&creatorId=${enc(cid)}`, 60e3);
     return { count: applySeen(cid, arr(j).map(c => conv(c, cid))).filter(c => c.unread > 0).length }; }));
+  // tous les fans « à répondre » d'un coup (filtre « Non répondu » du CRM Twizz) : 5 pages au plus, gardées 20 s
+  app.get("/api/twizz/inbox/:cid/unanswered", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid);
+    if (req.query.fresh === "1") drop(`/conversations/user/Unanswered/${enc(cid)}`);
+    const items = []; let pages = 1;
+    for (let p = 1; p <= Math.min(pages, 5); p++) { const j = await G(`/conversations/user/Unanswered/${enc(cid)}?page=${p}&type=GENERAL&userId=${enc(cid)}`, 20e3);
+      const d = j && j.data; pages = (d && d.totalPages) || 1; arr(j).forEach(c => { const x = conv(c, cid); if (x.id && !items.some(y => y.id === x.id)) items.push(x); }); }
+    applySeen(cid, items); try { snapSave(cid, items); } catch (e) {}
+    items.forEach(c => { const h = hereOf(c.id, req.user.id); if (h.length) c.here = h.map(x => x.name); });
+    return { items, more: pages > 5 };
+  }));
   app.get("/api/twizz/inbox/:cid/conversations", auth, inbox, wrap(async req => {
     const cid = creatorOk(req.params.cid), type = ["GENERAL", "TO_DELIVER"].includes(req.query.type) ? req.query.type : "GENERAL", page = Math.max(1, +req.query.page || 1);
     const q = String(req.query.q || "").trim().slice(0, 60);
@@ -668,15 +678,25 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     if (price % 1) throw bad("Twizz n'accepte que des prix ronds, sans centimes");
     if (price > 0 && price < 3) throw bad("Le prix minimum sur Twizz est 3 € (ou gratuit)");
     if (price > 500) throw bad("Le prix maximum sur Twizz est 500 €");
+    // promo Twizz : remise en € ou en %, pendant une durée (mêmes choix que l'appli Twizz)
+    const PT = { u: ["UNLIMITED", 0], h6: ["HOURS", 6], h12: ["HOURS", 12], h24: ["HOURS", 24], d2: ["DAYS", 2], d7: ["DAYS", 7] }, pr = b.promo && typeof b.promo === "object" ? b.promo : null;
+    let promo = null;
+    if (pr) { const v = +pr.value, pct = pr.type === "pct", t = PT[str(pr.time)];
+      if (!price) throw bad("Une promo demande un média payant");
+      if (!v || v < 1 || v % 1) throw bad("Remise : un nombre rond, 1 au minimum");
+      if (pct ? v > 99 : v >= price) throw bad(pct ? "Remise de 99 % au plus" : "La remise doit être plus petite que le prix");
+      if (!t) throw bad("Choisis la durée de la promo");
+      promo = { discount: v, discountType: pct ? "PERCENTAGE" : "CURRENCY", expireTime: t[1], expireTimeType: t[0], final: pct ? Math.round(price * (100 - v)) / 100 : price - v }; }
     // même formulaire que celui de l'appli Twizz (pas de durée de validité sans promo)
     const f = new FormData();
-    f.set("promo", "false"); f.set("price", String(price)); f.set("text", text);
+    f.set("promo", promo ? "true" : "false"); f.set("price", String(price)); f.set("text", text);
+    if (promo) { f.set("discount", String(promo.discount)); f.set("discountType", promo.discountType); f.set("expireTime", String(promo.expireTime)); f.set("expireTimeType", promo.expireTimeType); }
     f.set("isConversation", "true"); f.set("conversationId", conversationId); f.set("receivers", JSON.stringify([fan]));
     f.set("fileIds", "[]"); f.set("quickFiles", JSON.stringify(files.map(id => ({ id, isPrivate: true })))); f.set("creatorId", cid);
     const j = await call("POST", "/mediapush/conversation", f, true);
     const d = (j && j.data) || j || {}, nm = d.newMessage || null;
     if (!nm && d.message) throw bad("Twizz a refusé l'envoi : " + d.message);
-    db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at, files) VALUES (?,?,?,?,?,?,?,?)").run(str(nm && nm._id), conversationId, fan, cid, req.user.id, price, Date.now(), JSON.stringify(files));
+    db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at, files) VALUES (?,?,?,?,?,?,?,?)").run(str(nm && nm._id), conversationId, fan, cid, req.user.id, nm && nm.mediaPushPrice && isFinite(+nm.mediaPushPrice.resultPrice) ? +nm.mediaPushPrice.resultPrice : promo ? promo.final : price, Date.now(), JSON.stringify(files));
     if (b.acceptId) await call("PATCH", "/messages/update-message-status", { messageId: str(b.acceptId), action: "accepted", creatorId: cid, userType: "creator" }, true).catch(() => {});
     drop(conversationId, `/conversations/user/${enc(cid)}`);
     return { ok: true, message: nm ? msg(nm, fan) : null };
