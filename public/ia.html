@@ -133,8 +133,9 @@ async function paintBody() {
         <div class="chat" id="chat"></div>
         <div class="cin"><input class="inp" id="tryIn" placeholder="Message du fan…" maxlength="1000"><button class="btn w" id="tryGo">Envoyer</button></div></div>
       <div class="pn up" style="animation-delay:.05s"><div class="ph"><h3>Réglages <em>pour toutes</em></h3></div>
-        <div class="row"><div class="t"><b>Message « c'est l'IA »${F ? "" : '<span class="lock">· réglé par le fondateur</span>'}</b><small>${G.notice ? "Allumé : le premier message au fan commence par ce texte." : "Coupé : seul le 🤖 à la fin de chaque message signale l'IA."}</small></div><button class="sw ${G.notice ? "on" : ""}" id="gNotice" ${F ? "" : "disabled"} aria-label="Message c'est l'IA"><i></i></button></div>
+        <div class="row"><div class="t"><b>Message « c'est l'IA »${F ? "" : '<span class="lock">· réglé par le fondateur</span>'}</b><small>${G.notice ? "Allumé : le premier message au fan commence par ce texte." : "Coupé : seul le 🤖 à la fin de chaque message signale l'IA."}${G.notice && !G.mark ? " Obligatoire tant que le 🤖 est retiré des messages." : ""}</small></div><button class="sw ${G.notice ? "on" : ""}" id="gNotice" ${F ? "" : "disabled"} aria-label="Message c'est l'IA"><i></i></button></div>
         <div class="row" style="display:block"><textarea class="inp" id="gText" maxlength="240" ${G.notice ? "" : "disabled"}>${esc(G.noticeText)}</textarea><small style="display:block;font:500 11.5px Inter;color:#6f6f6f;margin-top:5px">{creatrice} est remplacé par son nom.</small></div>
+        <div class="row"><div class="t"><b>🤖 à la fin de chaque message${F ? "" : '<span class="lock">· réglé par le fondateur</span>'}</b><small>${G.mark ? "Le fan voit un 🤖 au bout de chaque message de l'IA." : "Retiré des messages : le fan est prévenu par le message « c'est l'IA »."} Sur le site, les bulles de l'IA portent toujours un 🤖 pour l'équipe. Au moins un des deux réglages reste allumé.</small></div><button class="sw ${G.mark ? "on" : ""}" id="gMark" ${F ? "" : "disabled"} aria-label="Robot à la fin des messages"><i></i></button></div>
         <div class="row"><div class="t"><b>Quand le dire</b></div><select class="inp" id="gFreq" ${G.notice ? "" : "disabled"}><option value="run" ${G.noticeFreq === "run" ? "selected" : ""}>À chaque séance</option><option value="fan" ${G.noticeFreq === "fan" ? "selected" : ""}>Une fois par fan</option></select></div>
         <div class="row" ${G.notice && G.noticeFreq === "fan" ? "" : "hidden"}><div class="t"><b>Le redire après</b></div><input class="inp n" type="number" min="1" max="365" data-g="noticeDays" value="${G.noticeDays}"><span class="unit">jours</span></div>
         <div class="row"><div class="t"><b>Délai avant de répondre</b><small>Elle attend que le fan ait fini d'écrire, comme quelqu'un qui répond.</small></div><input class="inp n" type="number" min="5" max="600" data-g="waitMin" value="${G.waitMin}"><span class="unit">à</span><input class="inp n" type="number" min="5" max="900" data-g="waitMax" value="${G.waitMax}"><span class="unit">s</span></div>
@@ -155,6 +156,7 @@ async function paintBody() {
   $("extra").onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { extra: $("extra").value })) { notify("Consignes enregistrées", "", "ok"); loadInfo(true); } };
   // réglages pour toutes
   if (F) $("gNotice").onclick = async () => { if (await save("/api/twizz/ai/cfg", { notice: !D.cfg.notice })) { notify(D.cfg.notice ? "Message IA rallumé" : "Message IA coupé", D.cfg.notice ? "" : "Le 🤖 reste à la fin de chaque message", "info"); paintBody(); } };
+  if (F) $("gMark").onclick = async () => { if (await save("/api/twizz/ai/cfg", { mark: !D.cfg.mark })) { notify(D.cfg.mark ? "🤖 remis dans les messages" : "🤖 retiré des messages", "", "info"); paintBody(); } };
   $("gText").onchange = async () => { if (await save("/api/twizz/ai/cfg", { noticeText: $("gText").value })) notify("Message enregistré", "", "ok"); };
   $("gFreq").onchange = async () => { if (await save("/api/twizz/ai/cfg", { noticeFreq: $("gFreq").value })) paintBody(); };
   $("gModel").onchange = async () => { if (await save("/api/twizz/ai/cfg", { model: $("gModel").value })) notify("Modèle enregistré", "", "ok"); };
@@ -189,7 +191,7 @@ function paintHist() {
 function paintChat() {
   const L = CHAT[CID] || [], box = $("chat"); if (!box) return;
   box.innerHTML = L.length ? L.map(m => m.fan ? `<div class="bb f">${esc(m.text)}</div>` : m.leave ? `<div class="bb x">L'IA laisserait ce fan à l'équipe : ${esc(m.leave)}</div>`
-    : `<div class="bb a">${esc(m.text)} 🤖${m.media ? `<small>+ média de « ${esc(m.media)} » à ${m.prix} €</small>` : ""}</div>`).join("") : `<div class="emp">Commence par un message de fan, par exemple « coucou ça va ? »</div>`;
+    : `<div class="bb a">${esc(m.text)}${D.cfg.mark ? " 🤖" : ""}${m.media ? `<small>+ média de « ${esc(m.media)} » à ${m.prix} €</small>` : ""}</div>`).join("") : `<div class="emp">Commence par un message de fan, par exemple « coucou ça va ? »</div>`;
   box.scrollTop = box.scrollHeight;
 }
 async function tryIt() {

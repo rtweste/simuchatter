@@ -1,6 +1,7 @@
 // IA de secours : quand un chatter manque, un manager la lance sur une créatrice et elle répond aux fans à sa place.
 // Elle écrit avec Grok (xAI, variable XAI_API_KEY), jamais avec la clé Anthropic du site, d'après la fiche de la créatrice.
-// Chaque message finit par 🤖 (fixe) ; le premier message peut en plus dire que c'est l'IA de la créatrice (réglable par le fondateur).
+// Le fan est toujours prévenu : par le premier message « c'est l'IA de … », par un 🤖 à la fin de chaque message, ou les deux (au moins un des deux, réglé par le fondateur).
+// Sur le site, les bulles écrites par l'IA portent un 🤖 pour l'équipe.
 // Elle s'arrête toute seule dès qu'un chatter pointe sur cette créatrice ou ouvre sa messagerie. Interrupteur général : le fondateur.
 module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, gest }) {
   const { call, S } = twizz;
@@ -19,15 +20,17 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
 
   /* ---------- réglages ---------- */
   const MODELS = { fast: ["grok-4-1-fast-non-reasoning", "Rapide"], smart: ["grok-4-1-fast-reasoning", "Plus réfléchi (un peu plus lent)"] };
-  const G_DEF = { notice: true, noticeText: "🤖 Petite précision : c'est l'IA de {creatrice} qui te répond en ce moment.", noticeFreq: "run", noticeDays: 30,
+  const G_DEF = { notice: true, mark: false, noticeText: "Petite précision : c'est l'IA de {creatrice} qui te répond en ce moment 😊", noticeFreq: "run", noticeDays: 30,
     waitMin: 35, waitMax: 80, teamPause: 15, fanWindow: 12, perFan: 40, maxHours: 12, model: "fast" };
   const M_DEF = { ok: false, sell: true, maxPrice: 100, gap: 20, pile: true, albums: [], skipTags: [], extra: "" };
-  const gcfg = () => ({ ...G_DEF, ...(S.get("twizz_ai_cfg", {}) || {}) });
+  const gcfg = () => { const o = { ...G_DEF, ...(S.get("twizz_ai_cfg", {}) || {}) }; if (!o.notice && !o.mark) o.mark = true; return o; };   // jamais les deux coupés
   const mcfg = cid => ({ ...M_DEF, ...(S.get("twizz_ai_m:" + cid, {}) || {}) });
   const int = (v, a, b, name) => { const n = parseInt(v, 10); if (!Number.isFinite(n) || n < a || n > b) throw fail(`${name} : entre ${a} et ${b}`); return n; };
   function setG(b, founder) {
     const c = gcfg(), o = { ...c };
     if (typeof b.notice === "boolean" && b.notice !== c.notice) { if (!founder) throw fail("Seul le fondateur peut allumer ou couper le message IA"); o.notice = b.notice; }
+    if (typeof b.mark === "boolean" && b.mark !== c.mark) { if (!founder) throw fail("Seul le fondateur peut régler le 🤖 dans les messages"); o.mark = b.mark; }
+    if (!o.notice && !o.mark) throw fail("Garde au moins un des deux : le message « c'est l'IA » ou le 🤖 à la fin des messages. Sinon le fan ne saurait jamais que c'est une IA.");
     if (b.noticeText != null) { const t = str(b.noticeText).trim().slice(0, 240); if (t.length < 8) throw fail("Message IA trop court"); o.noticeText = t; }
     if (b.noticeFreq != null) { if (!["run", "fan"].includes(b.noticeFreq)) throw fail("Fréquence inconnue"); o.noticeFreq = b.noticeFreq; }
     if (b.noticeDays != null) o.noticeDays = int(b.noticeDays, 1, 365, "Jours avant de redire que c'est une IA");
@@ -130,9 +133,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       L("samples").length && `Exemples de ses vrais messages (imite ce style) :\n${L("samples").map(x => "« " + x + " »").join("\n")}`].filter(Boolean);
     return { text: parts.join("\n"), prices: cat.length ? cat.join(" · ") : str(m.prices) };
   }
-  function system(c, M, fiche, albums, sellNote, fanInfo) {
+  function system(c, M, fiche, albums, sellNote, fanInfo, C) {
     return [`Tu es l'IA de ${c.label}, créatrice de contenus sur Twizz (plateforme de contenus payants réservée aux adultes). Tu réponds à ses fans à sa place pendant que son équipe est absente, en écrivant comme elle.`,
-      `Chacun de tes messages est signé 🤖 par le site. Si un fan te demande si tu es la vraie ${c.label}, un humain ou une IA, réponds honnêtement que tu es son IA.`,
+      `${C && C.mark ? "Chacun de tes messages est signé 🤖 par le site." : "Le site prévient le fan que c'est ton IA qui répond."} Si un fan te demande si tu es la vraie ${c.label}, un humain ou une IA, réponds honnêtement que tu es son IA. N'écris jamais 🤖 toi-même.`,
       fiche.text ? `FICHE DE ${c.label.toUpperCase()}\n${fiche.text}` : "",
       c.note ? `Ses consignes sur Twizz, à respecter absolument : ${c.note}` : "", M.extra ? `Consignes du manager pour toi, à respecter absolument : ${M.extra}` : "",
       fiche.prices ? `Son catalogue et ses prix : ${fiche.prices}` : "", fanInfo ? `Ce qu'on sait du fan : ${fanInfo}` : "",
@@ -204,7 +207,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const note = db.prepare("SELECT text FROM twizz_fan_notes WHERE creator_id = ? AND fan_id = ?").get(cr.id, c.fan.id);
     const fanInfo = [c.fan.name && c.fan.name !== "Fan" ? "prénom ou pseudo : " + c.fan.name : "", note && note.text ? "note de l'équipe : " + str(note.text).slice(0, 300) : ""].filter(Boolean).join(" ; ");
     const sell = await sellable(cr, M, L);
-    const msgs = [{ role: "system", content: system(cr, M, ficheOf(cr), sell.albums, sell.note, fanInfo) }];
+    const msgs = [{ role: "system", content: system(cr, M, ficheOf(cr), sell.albums, sell.note, fanInfo, C) }];
     L.forEach(m => { const t = lineOf(m); if (t) msgs.push({ role: m.fromFan ? "user" : "assistant", content: t }); });
     const out = await grok(msgs);
     const mark = (patch) => db.prepare(`INSERT INTO twizz_ai_convs (run_id, conv_id, fan_id, fan_name, notified, replies, last_fan_msg, blocked, at) VALUES (?,?,?,?,?,?,?,?,?)
@@ -219,7 +222,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     }
     const text = str(out.message).replace(/🤖/g, "").trim().slice(0, 1500); if (!text) return false;
     const tell = needNotice(cr, c, row, C);
-    const body = (tell ? noticeOf(cr, C) + "\n\n" : "") + text + " 🤖";
+    const body = (tell ? noticeOf(cr, C) + "\n\n" : "") + text + (C.mark ? " 🤖" : "");
     let price = Math.round(+out.prix || 0), f = null;
     if (out.album && sell.albums.some(a => a.id === str(out.album)) && price >= 3) {
       price = Math.min(price, M.maxPrice);
@@ -290,8 +293,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (typeof b.on === "boolean") { S.set("twizz_ai_on", b.on); log(req.user.id, "a", `**${req.user.username}** a ${b.on ? "activé" : "coupé"} l'IA de secours`, "");
       if (!b.on) active().forEach(r => end(r, req.user.id, "IA coupée par le fondateur")); }
     return state(req); }));
-  app.post("/api/twizz/ai/cfg", auth, mgr, wrap(async req => { const before = gcfg().notice, o = setG(req.body || {}, req.user.rk === "founder");
+  app.post("/api/twizz/ai/cfg", auth, mgr, wrap(async req => { const before = gcfg().notice, beforeMark = gcfg().mark, o = setG(req.body || {}, req.user.rk === "founder");
     if (o.notice !== before) log(req.user.id, "a", `**${req.user.username}** a ${o.notice ? "rallumé" : "coupé"} le message « c'est l'IA » de l'IA de secours`, "");
+    if (o.mark !== beforeMark) log(req.user.id, "a", `**${req.user.username}** a ${o.mark ? "remis" : "retiré"} le 🤖 à la fin des messages de l'IA de secours`, "");
     return state(req); }));
   app.post("/api/twizz/ai/cfg/:cid", auth, mgr, wrap(async req => { const c = okC(req.params.cid), was = mcfg(c.id).ok, o = setM(c.id, req.body || {});
     if (o.ok !== was) log(req.user.id, "a", `**${req.user.username}** a ${o.ok ? "coché" : "retiré"} l'accord de **${c.label}** pour l'IA de secours`, "");
@@ -301,7 +305,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     let albums = []; try { albums = await albumsOf(c.id); } catch (e) {}
     const tags = db.prepare("SELECT id, name, color FROM twizz_tags WHERE COALESCE(active, 1) = 1 ORDER BY name").all();
     const A = M.albums.length ? albums.filter(a => M.albums.includes(a.id)) : albums;
-    return { albums, tags, prompt: system(c, M, ficheOf(c), M.sell ? A : [], M.sell ? "" : "la vente de médias est coupée pour cette créatrice", "(prénom du fan, note de l'équipe)") }; }));
+    return { albums, tags, prompt: system(c, M, ficheOf(c), M.sell ? A : [], M.sell ? "" : "la vente de médias est coupée pour cette créatrice", "(prénom du fan, note de l'équipe)", gcfg()) }; }));
   // essayer l'IA sans rien envoyer : une fausse conversation, la réponse de Grok s'affiche seulement
   const TRIED = new Map();
   app.post("/api/twizz/ai/try/:cid", auth, mgr, wrap(async req => { const c = okC(req.params.cid), M = mcfg(c.id);
@@ -310,7 +314,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const L = (Array.isArray(req.body && req.body.messages) ? req.body.messages : []).slice(-20).map(m => ({ role: m && m.fan ? "user" : "assistant", content: str(m && m.text).slice(0, 1000) })).filter(m => m.content);
     if (!L.length || L[L.length - 1].role !== "user") throw fail("Écris un message de fan pour essayer");
     let albums = []; try { albums = M.sell ? await albumsOf(c.id) : []; } catch (e) {} if (M.albums.length) albums = albums.filter(a => M.albums.includes(a.id));
-    const out = await grok([{ role: "system", content: system(c, M, ficheOf(c), albums, M.sell ? "" : "la vente de médias est coupée pour cette créatrice", "") }, ...L]);
+    const out = await grok([{ role: "system", content: system(c, M, ficheOf(c), albums, M.sell ? "" : "la vente de médias est coupée pour cette créatrice", "", gcfg()) }, ...L]);
     const al = out.album ? albums.find(a => a.id === str(out.album)) : null;
     return { message: str(out.message).replace(/🤖/g, "").trim(), album: al ? al.name : null, prix: al ? Math.min(Math.round(+out.prix || 0), M.maxPrice) : null, laisser: str(out.laisser).trim() || null };
   }));

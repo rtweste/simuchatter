@@ -590,6 +590,7 @@
 .tgs.ro{cursor:help}#teamB[hidden],#aiB[hidden]{display:none!important}
 #aiB.run{color:#5fd3a2;box-shadow:0 0 0 1px rgba(95,211,162,.45),0 0 16px -4px rgba(95,211,162,.6)}
 .ai-bar{display:flex;align-items:center;gap:10px;margin:2px 16px 8px;padding:9px 10px 9px 14px;border-radius:16px;background:rgba(95,211,162,.08);border:1px solid rgba(95,211,162,.3);color:#cfeee0;font:600 12.5px Inter;animation:vchIn .5s cubic-bezier(.3,1.4,.5,1) both}
+.mx-g.me.ai .mx-b{position:relative;box-shadow:0 0 0 1.5px rgba(95,211,162,.55)}.mx-g.me.ai .mx-b::after{content:"🤖";position:absolute;top:-9px;left:-9px;width:20px;height:20px;border-radius:50%;background:#0f1f18;border:1px solid rgba(95,211,162,.6);display:grid;place-items:center;font-size:11px;line-height:1}
 .ai-bar[hidden]{display:none}@media(max-width:900px){.mx.open .ai-bar{display:none}.ai-bar{margin:2px 10px 8px}}.ai-bar b{color:#fff;font-weight:800}.ai-bar .t{flex:1;min-width:0}.ai-bar .t small{display:block;color:#8fbfaa;font:500 11.5px Inter;margin-top:1px}
 .ai-bar i{flex:none;width:8px;height:8px;border-radius:50%;background:#5fd3a2;box-shadow:0 0 10px #5fd3a2;animation:hrP 1.6s infinite}
 .ai-bar button,.ai-r button{flex:none;height:30px;padding:0 13px;border-radius:10px;border:1px solid #2a2a2a;background:#151515;color:#eee;font:800 12px Inter;cursor:pointer}.ai-bar button:hover,.ai-r button:hover{background:#1e1e1e}
@@ -1310,7 +1311,8 @@ async function loadOlder() {
 const SHOWN = new Set();   // messages déjà affichés : eux ne s'animent plus
 const CHK2 = '<svg width="14" height="10" viewBox="0 0 28 20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 11l5 5L18 4"/><path d="M12 15l1.5 1.5L26 4"/></svg>';
 const SPK1 = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c.6 6.2 5.8 11.4 12 12-6.2.6-11.4 5.8-12 12-.6-6.2-5.8-11.4-12-12C6.2 11.4 11.4 6.2 12 0z" fill="currentColor"/></svg>';
-const sigHtml = m => `<span class="lbl ag"><span class="agd" style="--c:${m.by ? pal(m.by)[0] : "#9a9a9a"}">${esc((m.by || "Twizz")[0].toUpperCase())}</span>${esc(m.by || "Twizz")} · ${tm(m.at)}${m.read ? ` · <span class="vu" title="Vu par le fan">${CHK2}</span>` : ""}</span>`;
+const isAi = m => m && m.by === "🤖 IA";
+const sigHtml = m => `<span class="lbl ag"><span class="agd" style="--c:${isAi(m) ? "#5fd3a2" : m.by ? pal(m.by)[0] : "#9a9a9a"}">${esc(isAi(m) ? "🤖" : (m.by || "Twizz")[0].toUpperCase())}</span>${esc(isAi(m) ? "IA de secours" : m.by || "Twizz")} · ${tm(m.at)}${m.read ? ` · <span class="vu" title="Vu par le fan">${CHK2}</span>` : ""}</span>`;
 const fullDate = d => new Date(d).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 function mediaGrid(m) {
   return `<div class="mx-md n${Math.min(3, m.medias.length)}" style="--n:${Math.min(3, m.medias.length)}">${m.medias.map((x, i) => x.audio ? `<audio controls src="${esc(x.url)}" style="width:240px"></audio>`
@@ -1348,12 +1350,12 @@ function groupHtml(G) {
     const pr = m.type === "FILE" && m.price != null ? (m.price > 0 ? `<span class="mx-pr ${esc(m.status)}">${E(m.price)} · ${m.status === "accepted" ? "acheté" : m.status === "refused" ? "refusé" : "pas encore acheté"}</span>` : `<span class="mx-pr">Gratuit</span>`) : "";
     return `${md}${m.text ? `<div class="mx-b">${esc(m.text)}</div>` : ""}${pr}`; }).join("");
   const st = last.tmp ? (last.failed ? `<span class="st ko" data-retry="${esc(last.id)}">Échec · réessayer</span>` : `<span class="st"><i></i>envoi…</span>`) : me ? sigHtml(last) : `<span class="lbl tm2">${tm(last.at)}</span>`;
-  const tip = me && !last.tmp ? `<span class="tip">${last.by ? `Écrit par <b>${esc(last.by)}</b> sur StellADS` : `Envoyé directement depuis l'appli <b>Twizz</b>`} · ${esc(fullDate(last.at))}</span>` : "";
+  const tip = me && !last.tmp ? `<span class="tip">${isAi(last) ? `Écrit par <b>l'IA de secours</b> (Grok)` : last.by ? `Écrit par <b>${esc(last.by)}</b> sur StellADS` : `Envoyé directement depuis l'appli <b>Twizz</b>`} · ${esc(fullDate(last.at))}</span>` : "";
   if (!me) return `<div class="fgr ${fresh && SHOWN.size ? "nw" : ""}">${av(CUR.fan, "fav")}<div class="mx-g">${parts}${st}</div></div>`;
   // un PPV acheté dans ce groupe : le moment est marqué au milieu du fil
   const won = G.filter(m => isPPV(m) && m.price > 0 && m.status === "accepted"), sp = SPEND[CUR.fan.id];
   const ev = won.length ? `<div class="aur-ev">${SV(SPK1.replace(/<\/?svg[^>]*>/g, ""), 12, 0)}${esc((CUR.fan.name || "Le fan").split(" ")[0])} a acheté · <b>+${E(won.reduce((t, m) => t + m.price, 0))}</b>${sp && sp.total > 0 ? ` · ${E(sp.total)} au total` : ""}</div>` : "";
-  return `<div class="mx-g me ${fresh && SHOWN.size ? "nw" : ""}">${parts}${st}${tip}</div>${ev}`;
+  return `<div class="mx-g me ${isAi(last) ? "ai" : ""} ${fresh && SHOWN.size ? "nw" : ""}">${parts}${st}${tip}</div>${ev}`;
 }
 function crewHtml() { const H = CUR && HIST[CUR.id]; const t = H ? H.team.filter(x => x.msgs || x.sold).slice(0, 4) : [];
   return t.length ? `<span class="cap">Sur ce fan</span><span class="stk">${t.map(x => `<span title="${esc(x.name)}">${chatterAv(x.name, 28)}</span>`).join("")}</span>` : ""; }

@@ -322,9 +322,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
         outPage++; await new Promise(r => setTimeout(r, 350)); const jj = await GD(P(outPage), 45e3); d = jj && jj.data; L = arr(jj); raw.push(...L); } }
     const items = applySeen(cid, raw.map(c => conv(c, cid)));
     const by = authors(items.filter(c => !c.last.fromFan).map(c => c.last.id));
-    const near = db.prepare("SELECT u.username name, s.at FROM twizz_sent s JOIN users u ON u.id = s.user_id WHERE s.conv_id = ? ORDER BY s.at DESC LIMIT 1");
+    const near = db.prepare("SELECT u.username name, s.via, s.at FROM twizz_sent s LEFT JOIN users u ON u.id = s.user_id WHERE s.conv_id = ? ORDER BY s.at DESC LIMIT 1");
     items.forEach(c => { if (c.last.fromFan) return; c.last.by = by[c.last.id] || null;
-      if (!c.last.by && c.last.at) { const r = near.get(c.id); if (r && Math.abs(r.at - Date.parse(c.last.at)) < 120e3) c.last.by = r.name; } });
+      if (!c.last.by && c.last.at) { const r = near.get(c.id); if (r && Math.abs(r.at - Date.parse(c.last.at)) < 120e3) c.last.by = r.via === "ia" ? "🤖 IA" : r.name || null; } });
     try { items.forEach(c => c.fan.id && fact(cid, c.fan.id, { name: c.fan.name, first_at: ts(c.since), [c.last.fromFan ? "fan_at" : "team_at"]: ts(c.last.at) })); } catch (e) {}
     try { snapSave(cid, items); } catch (e) {}
     items.forEach(c => { const h = hereOf(c.id, req.user.id); if (h.length) c.here = h.map(x => x.name); });
