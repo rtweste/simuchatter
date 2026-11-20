@@ -11,6 +11,18 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const log = (...a) => { try { gest.log(...a); } catch (e) {} };
   const fail = (m, code) => { const e = new Error(m); e.code = code || 400; return e; };
   const J = (v, d) => { try { const x = JSON.parse(v); return x == null ? d : x; } catch (e) { return d; } };
+  let sharp = null; try { sharp = require("sharp"); } catch (e) {}
+  // Grok n'accepte que le JPG et le PNG ; les vignettes Twizz sont en WebP : on les convertit en JPG (envoyé en base64)
+  async function toImage(url) {
+    if (/^data:image\/(jpeg|png);/i.test(url)) return url;
+    let r; try { r = await fetch(url, { signal: AbortSignal.timeout(20000) }); } catch (e) { throw fail("Image injoignable : " + e.message); }
+    if (!r.ok) throw fail(`Image injoignable (code ${r.status})`);
+    const buf = Buffer.from(await r.arrayBuffer()), ct = str(r.headers.get("content-type")).split(";")[0];
+    if (/^image\/(jpeg|png)$/i.test(ct) && buf.length < 8e6) return `data:${ct};base64,${buf.toString("base64")}`;
+    if (!sharp) throw fail("Conversion d'image impossible : module sharp absent");
+    const out = await sharp(buf).rotate().resize(1024, 1024, { fit: "inside", withoutEnlargement: true }).jpeg({ quality: 82 }).toBuffer();
+    return "data:image/jpeg;base64," + out.toString("base64");
+  }
 
   db.exec(`CREATE TABLE IF NOT EXISTS twizz_ai_runs (id INTEGER PRIMARY KEY, creator_id TEXT NOT NULL, model_id INTEGER, started_by INTEGER, started_at INTEGER NOT NULL, reason TEXT,
       ended_at INTEGER, ended_by INTEGER, end_reason TEXT, replies INTEGER NOT NULL DEFAULT 0, medias INTEGER NOT NULL DEFAULT 0, last_error TEXT, last_at INTEGER);
@@ -293,12 +305,13 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (relance) opt.relance = { since: relance.since, unbought: sell.open ? sell.open.price : null };
     const msgs = [{ role: "system", content: system(cr, M, ficheOf(cr), sell.albums, sell.note, fanInfo, C, opt) }];
     // la dernière photo envoyée par le fan : Grok la regarde (les autres restent en texte)
-    const lastPic = [...L].reverse().find(m => m.fromFan && m.medias.some(isImg));
+    const lastPic = [...L].reverse().find(m => m.fromFan && m.medias.some(isImg)); let picUrl = null;
+    if (lastPic) { const x = lastPic.medias.find(isImg); try { picUrl = await toImage(x.thumb || x.url); } catch (e) { picUrl = null; } }
     L.forEach(m => { const t = lineOf(m); if (!t) return;
-      const pic = m === lastPic && m.medias.find(isImg);
-      msgs.push({ role: m.fromFan ? "user" : "assistant", content: pic ? [{ type: "text", text: m.text || "[le fan t'envoie cette photo]" }, { type: "image_url", image_url: { url: pic.thumb || pic.url } }] : t }); });
+      const pic = m === lastPic && picUrl;
+      msgs.push({ role: m.fromFan ? "user" : "assistant", content: pic ? [{ type: "text", text: m.text || "[le fan t'envoie cette photo]" }, { type: "image_url", image_url: { url: pic } }] : t }); });
     let out; try { out = await grok(msgs); }
-    catch (e) { if (!lastPic) throw e; msgs.forEach(m => { if (Array.isArray(m.content)) m.content = m.content[0].text; }); out = await grok(msgs); }   // image refusée : sans la photo
+    catch (e) { if (!picUrl) throw e; msgs.forEach(m => { if (Array.isArray(m.content)) m.content = m.content[0].text; }); out = await grok(msgs); }   // image refusée : sans la photo
     const mark = (patch) => db.prepare(`INSERT INTO twizz_ai_convs (run_id, conv_id, fan_id, fan_name, notified, replies, last_fan_msg, blocked, at, relances, relance_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(run_id, conv_id) DO UPDATE SET notified = excluded.notified, replies = excluded.replies, last_fan_msg = excluded.last_fan_msg, blocked = excluded.blocked, at = excluded.at, relances = excluded.relances, relance_at = excluded.relance_at`)
       .run(r.id, c.id, c.fan.id, c.fan.name, patch.notified ?? row.notified ?? 0, patch.replies ?? row.replies ?? 0, relance ? row.last_fan_msg || null : last.id, patch.blocked ?? row.blocked ?? null, now(),
@@ -365,17 +378,18 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const c = crOf(cid), M = mcfg(cid); if (!c) throw fail("Créatrice inconnue"); if (!XAI()) throw fail("Clé Grok manquante");
     if (SCAN[cid] && SCAN[cid].running) throw fail("Analyse déjà en cours");
     let A = await albumsOf(cid); if (M.albums.length) A = A.filter(a => M.albums.includes(a.id));
-    const todo = [];
-    for (const a of A) { const F = await filesOf(cid, a.id), D = descrOf(cid, F.map(f => f.id)); F.filter(f => !D.has(f.id) && (f.thumb || f.url)).forEach(f => todo.push({ f, a })); }
+    const todo = [];   // une vidéo sans vignette n'a rien à regarder : elle est sautée
+    for (const a of A) { const F = await filesOf(cid, a.id), D = descrOf(cid, F.map(f => f.id)); F.filter(f => !D.has(f.id) && (f.thumb || (f.kind === "image" && f.url))).forEach(f => todo.push({ f, a })); }
     const S2 = SCAN[cid] = { running: true, done: 0, total: Math.min(todo.length, 300), errors: 0, at: now() };
     (async () => {
       for (const { f, a } of todo.slice(0, 300)) {
-        try { const x = await grok([{ role: "user", content: [{ type: "text", text: "Décris ce média en 15 mots maximum, pour aider à le vendre : tenue, pose, cadrage, lieu, ambiance, niveau de nudité (habillée, lingerie, seins nus, nue) et si le visage est visible. Réponds seulement la description." },
-            { type: "image_url", image_url: { url: f.thumb || f.url } }] }], { tool: null, model: XVISION(), temp: 0.3, max: 80 });
+        try { const img = await toImage(f.thumb || f.url);
+          const x = await grok([{ role: "user", content: [{ type: "text", text: "Décris ce média en 15 mots maximum, pour aider à le vendre : tenue, pose, cadrage, lieu, ambiance, niveau de nudité (habillée, lingerie, seins nus, nue) et si le visage est visible. Réponds seulement la description." },
+            { type: "image_url", image_url: { url: img } }] }], { tool: null, model: XVISION(), temp: 0.3, max: 80 });
           const d = str(x.text).replace(/\s+/g, " ").trim().slice(0, 160);
           db.prepare("INSERT INTO twizz_ai_media (creator_id, file_id, album_id, kind, descr, err, at) VALUES (?,?,?,?,?,NULL,?) ON CONFLICT(creator_id, file_id) DO UPDATE SET descr = excluded.descr, err = NULL, at = excluded.at")
             .run(cid, f.id, a.id, f.kind, d ? (f.kind === "video" ? "vidéo : " : "photo : ") + d : null, now()); }
-        catch (e) { S2.errors++; db.prepare("INSERT INTO twizz_ai_media (creator_id, file_id, album_id, kind, err, at) VALUES (?,?,?,?,?,?) ON CONFLICT(creator_id, file_id) DO UPDATE SET err = excluded.err, at = excluded.at").run(cid, f.id, a.id, f.kind, str(e.message).slice(0, 200), now()); }
+        catch (e) { S2.errors++; S2.lastError = str(e.message).slice(0, 200); db.prepare("INSERT INTO twizz_ai_media (creator_id, file_id, album_id, kind, err, at) VALUES (?,?,?,?,?,?) ON CONFLICT(creator_id, file_id) DO UPDATE SET err = excluded.err, at = excluded.at").run(cid, f.id, a.id, f.kind, str(e.message).slice(0, 200), now()); }
         S2.done++; await sleep(1200);
       }
       S2.running = false; S2.end = now();
