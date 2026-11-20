@@ -848,7 +848,7 @@ function renderAlerts() {
   const out = [], DIS = new Set(A.dismissed || []), X = k => `<button class="p-alx" data-dis="${k}" aria-label="Masquer cette alerte" title="C'est réglé">✕</button>`;
   const push = (k, html) => { if (!DIS.has(k)) out.push(html.replace(/^<div class="p-al ([a-z]+)">/, `<div class="p-al $1" data-k="${k}">${X(k)}`)); };
   A.missing.forEach(s => { const asked = A.helps.some(h => h.model_id === s.model_id);
-    const aic = AIS && AIS.on && AIS.key && AIS.send ? AIS.creators.find(c => c.model_id === s.model_id) : null;
+    const aic = AIS && AIS.on && AIS.key && AIS.send ? AIS.creators.find(c => c.model_id === s.model_id && (c.run || c.cfg.ok)) : null;
     const ai = !aic ? "" : aic.run ? '<span class="p-tag v live"><i></i>🤖 IA en cours</span>' : `<button class="p-sb" data-ai="${s.model_id}" data-who="${esc(s.username)}">🤖 Lancer l'IA</button>`;
     push("miss:" + s.id, `<div class="p-al r"><span class="i">!</span><div><b>${esc(s.username)} n'a pas pointé</b><small>${esc(s.model_name)} · ${slotKey(s)} · a commencé il y a ${s.late} min</small>${asked ? '<span class="p-tag w live"><i></i>Renfort demandé</span>' : `<button class="p-sb" data-ask="${s.id}">Demander un renfort</button>`} ${ai}</div></div>`); });
   A.helps.filter(h => h.for_user && h.created_by === h.for_user).forEach(h => push("help:" + h.id, `<div class="p-al r"><span class="i">!</span><div><b>${esc(h.for_name)} a un souci</b><small>Renfort demandé sur ${esc(h.model_name)} · ${ago(h.created_at)}</small></div></div>`));

@@ -56,6 +56,7 @@ const ICONS = {
   euro: '<path d="M18 7.5A7 7 0 1 0 18 16.5"/><path d="M4 10.5h9M4 13.5h9"/>',
   gauge: '<path d="M3.5 17a9 9 0 1 1 17 0"/><path d="M12 13l4.5-4.5"/><circle cx="12" cy="13" r="1.4"/>',
   spark: '<path d="M12 3l2.2 5.6L20 11l-5.8 2.4L12 19l-2.2-5.6L4 11l5.8-2.4z"/><path d="M19 3v3M17.5 4.5h3"/>',
+  bot: '<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4.5V8"/><circle cx="12" cy="3.5" r="1"/><path d="M9 14h.01M15 14h.01"/>',
   film: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M10 9.5v5l4.5-2.5z"/><path d="M3 9h2M3 15h2M19 9h2M19 15h2"/>',
   bubbles: '<path d="M14 9a6 6 0 0 1-8.7 5.4L2.5 15l.7-2.8A6 6 0 1 1 14 9z"/><path d="M9.5 16.6A6 6 0 0 0 18.2 19l2.8.6-.7-2.8A6 6 0 0 0 16 8.2"/>',
   pulse: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M6 11h2.5l1.5-3 2.5 6 1.5-3H18M9 21h6M12 17v4"/>',
@@ -101,6 +102,8 @@ const MODULES = [
     desc: "La bibliothèque de messages tout prêts des chatters : créer, modifier, importer depuis Twizz, voir ceux qui marchent." },
   { id: "publications", label: "Publications", href: "/publications", icon: "film", section: "Manager", roles: ["admin"], nodock: ["admin"], hide: ["assistant"],
     desc: "Le feed et les vidéos de présentation des créatrices sur Twizz : file d'attente et publication automatique." },
+  { id: "ia", label: "IA de secours", href: "/ia", icon: "bot", section: "Manager", roles: ["admin"], nodock: ["admin"], hide: ["assistant"],
+    desc: "L'IA qui répond aux fans quand un chatter manque : accord des créatrices, vente de médias, message IA, délais, essai sans rien envoyer." },
   { id: "tags", label: "Tags", href: "/tags", icon: "tag", section: "Manager", roles: ["admin"], nodock: ["admin"], hide: ["assistant"],
     desc: "Les tags des fans : règles qui les posent tout seuls (gros payeur, nouveau, inactif…), tags de l'équipe et ce que valent leurs fans." },
   { id: "admin", label: "Gestion", href: "/admin", icon: "team", section: "Manager", roles: ["admin"],
@@ -119,7 +122,7 @@ const RKOF = me => me.rk || (me.role === "admin" ? "manager" : me.role);
 /* ---------- côté managers : moins d'entrées dans le menu, les pages proches sont regroupées avec des onglets en haut de page ---------- */
 const MGR_GROUPS = {
   "g-ventes": { label: "Ventes", icon: "receipt", tabs: [["ventes", "Ventes"], ["compta", "Compta"]] },
-  "g-msg": { label: "Messagerie", short: "Twizz", icon: "bubbles", tabs: [["messagerie", "Conversations"], ["scripts", "Scripts"], ["tags", "Tags"]] },
+  "g-msg": { label: "Messagerie", short: "Twizz", icon: "bubbles", tabs: [["messagerie", "Conversations"], ["scripts", "Scripts"], ["tags", "Tags"], ["ia", "IA de secours"]] },
   "g-crea": { label: "Créatrices", icon: "spark", nodock: 1, tabs: [["creatrices", "Fiches"], ["publications", "Publications"], ["admin#crea", "Gestion des créatrices"]] },
   "g-form": { label: "Formation", icon: "gauge", nodock: 1, tabs: [["simu", "Simu Chatter"], ["tests", "Tests d'aptitude"]] },
   "g-motiv": { label: "Motivation", icon: "flag", nodock: 1, tabs: [["defis", "Défis"], ["admin#stel", "Stella's"], ["boutique", "Boutique"], ["parrainage", "Parrainage"]] },
