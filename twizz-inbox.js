@@ -302,12 +302,32 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     return { ok: true }; }));
   // pastille de la créatrice : quand la 1re page est pleine de non lus, on compte aussi les suivantes
   // (mêmes pages que le fil, gardées à part 90 s ; 6 pages au plus) : plus de plafond à 15
+  // toutes les conversations non lues (filtre « Non lus » du CRM Twizz) : lues jusqu'au bout, 10 pages au plus ; la 1re gardée 20 s, les suivantes 60 s
+  async function unreadConvs(cid, fresh) {
+    const P = p => `/conversations/user/Unread/${enc(cid)}?page=${p}&type=GENERAL&creatorId=${enc(cid)}`; if (fresh) drop(P(1));
+    const out = [], ids = new Set(); let pages = 1;
+    for (let p = 1; p <= Math.min(pages, 10); p++) {
+      const j = p === 1 ? await G(P(1), 20e3) : await GD(P(p), 60e3), d = j && j.data, L = arr(j); pages = (d && d.totalPages) || (L.length >= 10 ? p + 1 : p);
+      if (!L.length) break; L.forEach(c => { const x = conv(c, cid); if (x.id && !ids.has(x.id)) { ids.add(x.id); out.push(x); } });
+      if (p < pages) await new Promise(r => setTimeout(r, 300)); }
+    return out;
+  }
+  // pastille de la créatrice : nombre de conversations non lues (toutes, pas seulement la 1re page)
   app.get("/api/twizz/inbox/:cid/unread", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid);
-    const P = p => `/conversations/user/${enc(cid)}?page=${p}&type=GENERAL&creatorId=${enc(cid)}`;
-    const j = await G(P(1), 60e3); let d = j && j.data, L = arr(j).map(c => conv(c, cid)), all = L.slice(), p = 1;
-    while (p < 6 && d && d.totalPages > p && L.length && L.filter(c => c.unread > 0).length >= Math.max(2, Math.ceil(L.length / 3))) {
-      p++; const jj = await GD(P(p), 90e3); d = jj && jj.data; L = arr(jj).map(c => conv(c, cid)); all = all.concat(L.filter(c => !all.some(x => x.id === c.id))); }
-    return { count: applySeen(cid, all).filter(c => c.unread > 0).length }; }));
+    return { count: applySeen(cid, await unreadConvs(cid)).filter(c => c.unread > 0).length }; }));
+  app.get("/api/twizz/inbox/:cid/unread-list", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid);
+    return { items: decorate(cid, applySeen(cid, await unreadConvs(cid, req.query.fresh === "1")), req) }; }));
+  // auteur du dernier message, faits du fan, aperçus, qui est dessus : pour toute liste de conversations
+  function decorate(cid, items, req) {
+    const by = authors(items.filter(c => !c.last.fromFan).map(c => c.last.id));
+    const near = db.prepare("SELECT u.username name, s.via, s.at FROM twizz_sent s LEFT JOIN users u ON u.id = s.user_id WHERE s.conv_id = ? ORDER BY s.at DESC LIMIT 1");
+    items.forEach(c => { if (c.last.fromFan) return; c.last.by = by[c.last.id] || null;
+      if (!c.last.by && c.last.at) { const r = near.get(c.id); if (r && Math.abs(r.at - Date.parse(c.last.at)) < 120e3) c.last.by = r.via === "ia" ? "🤖 IA" : r.name || null; } });
+    try { items.forEach(c => c.fan.id && fact(cid, c.fan.id, { name: c.fan.name, first_at: ts(c.since), [c.last.fromFan ? "fan_at" : "team_at"]: ts(c.last.at) })); } catch (e) {}
+    try { snapSave(cid, items); } catch (e) {}
+    items.forEach(c => { const h = hereOf(c.id, req.user.id); if (h.length) c.here = h.map(x => x.name); });
+    return items;
+  }
   app.get("/api/twizz/inbox/:cid/conversations", auth, inbox, wrap(async req => {
     const cid = creatorOk(req.params.cid), type = ["GENERAL", "TO_DELIVER"].includes(req.query.type) ? req.query.type : "GENERAL", page = Math.max(1, +req.query.page || 1);
     const q = String(req.query.q || "").trim().slice(0, 60);
@@ -320,14 +340,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
       const waiting = A => A.filter(c => conv(c, cid).last.fromFan).length;
       while (outPage < 6 && (!d || !d.totalPages || d.totalPages > outPage) && L.length && waiting(L) >= Math.max(2, Math.ceil(L.length / 3))) {
         outPage++; await new Promise(r => setTimeout(r, 350)); const jj = await GD(P(outPage), 45e3); d = jj && jj.data; L = arr(jj); raw.push(...L); } }
-    const items = applySeen(cid, raw.map(c => conv(c, cid)));
-    const by = authors(items.filter(c => !c.last.fromFan).map(c => c.last.id));
-    const near = db.prepare("SELECT u.username name, s.via, s.at FROM twizz_sent s LEFT JOIN users u ON u.id = s.user_id WHERE s.conv_id = ? ORDER BY s.at DESC LIMIT 1");
-    items.forEach(c => { if (c.last.fromFan) return; c.last.by = by[c.last.id] || null;
-      if (!c.last.by && c.last.at) { const r = near.get(c.id); if (r && Math.abs(r.at - Date.parse(c.last.at)) < 120e3) c.last.by = r.via === "ia" ? "🤖 IA" : r.name || null; } });
-    try { items.forEach(c => c.fan.id && fact(cid, c.fan.id, { name: c.fan.name, first_at: ts(c.since), [c.last.fromFan ? "fan_at" : "team_at"]: ts(c.last.at) })); } catch (e) {}
-    try { snapSave(cid, items); } catch (e) {}
-    items.forEach(c => { const h = hereOf(c.id, req.user.id); if (h.length) c.here = h.map(x => x.name); });
+    const items = decorate(cid, applySeen(cid, raw.map(c => conv(c, cid))), req);
     return { items, page: outPage, more: !!(d && (d.totalPages ? outPage < d.totalPages : raw.length >= 10)), aiStopped, sample: req.query.debug ? arr(j)[0] : undefined };
   }));
   app.get("/api/twizz/inbox/:cid/messages/:conv", auth, inbox, wrap(async req => {
@@ -759,5 +772,5 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     await call("PATCH", "/messages/read-all-messages", { conversationId: str(req.body?.conversationId), creatorId: cid }, true); drop(str(req.body?.conversationId), `/conversations/user/${enc(cid)}`); return { ok: true };
   }));
   // pour l'IA de secours : mêmes lectures et mêmes formats que la messagerie
-  return { conv, msg, arr, file, hereOf, G, drop, mapped, sendOn };
+  return { conv, msg, arr, file, hereOf, G, drop, mapped, sendOn, unreadConvs };
 };
