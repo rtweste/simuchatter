@@ -629,6 +629,9 @@ const INTRO = window.INTRO = (() => {
   .in-ps.on{opacity:1}
   @media (max-width:640px){.in-ov{padding:14px}.in-v{border-radius:16px}.in-sub{display:none}}`;
   const fmt = s => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+  // une vidéo qui n'a pas chargé n'est pas reproposée à chaque page : on attend 12 h sur ce navigateur
+  const errSet = (src, on) => { try { on ? localStorage.setItem("intro-err:" + src, String(Date.now())) : localStorage.removeItem("intro-err:" + src); } catch (e) {} };
+  const errRecent = src => { try { return Date.now() - (+localStorage.getItem("intro-err:" + src) || 0) < 12 * 3600e3; } catch (e) { return false; } };
   function show(me, opts = {}) {
     if (box) return;
     const src = opts.src || SRC, seen = opts.seen || "/api/me/intro-seen";
@@ -641,7 +644,7 @@ const INTRO = window.INTRO = (() => {
         <div class="in-ps"><svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></div>
         <div class="in-cv" data-start><button class="in-play" aria-label="Lancer la présentation"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12.5-7.5z"/></svg></button><b>Lancer la présentation</b><small>Monte le son 🔊</small></div>
         <div class="in-cv off" data-end><b style="font-size:24px">Tu es prêt.</b><small>${opts.endSub || "Tu peux la revoir quand tu veux depuis le menu."}</small><div style="display:flex;gap:10px;margin-top:6px"><button class="in-ghost" data-again>Revoir</button><button class="in-go" data-go>C'est parti</button></div></div>
-        <div class="in-cv off" data-err><b>La vidéo ne se charge pas</b><small>Vérifie ta connexion. Tu pourras la regarder plus tard depuis le menu.</small><button class="in-go" data-go>Continuer</button></div></div>
+        <div class="in-cv off" data-err><b>La vidéo ne se charge pas</b><small data-errt></small><button class="in-go" data-go>Continuer</button></div></div>
       <div class="in-ft"><span class="in-bar"><i></i></span><span class="in-tm">—</span>${opts.replay ? '<button class="in-ghost" data-close>Fermer</button>' : opts.skip ? '<button class="in-ghost" data-skip>Passer la vidéo</button>' : ""}</div></div>`;
     document.body.appendChild(box); document.body.style.overflow = "hidden";
     requestAnimationFrame(() => box.classList.add("on"));
@@ -656,8 +659,19 @@ const INTRO = window.INTRO = (() => {
     v.addEventListener("seeking", () => { if (!opts.replay && !opts.skip && v.currentTime > maxT + .5) v.currentTime = maxT; });
     v.addEventListener("click", () => { if (!started) return; if (v.paused) v.play(); else v.pause(); });
     v.addEventListener("pause", () => { if (!v.ended) ps.classList.add("on"); }); v.addEventListener("play", () => ps.classList.remove("on"));
-    v.addEventListener("ended", () => { box.querySelector("[data-end]").classList.remove("off"); if (!opts.replay) api(seen, { body: {} }).catch(() => {}); });
-    v.addEventListener("error", () => box.querySelector("[data-err]").classList.remove("off"));
+    v.addEventListener("ended", () => { box.querySelector("[data-end]").classList.remove("off"); errSet(src, false); if (!opts.replay) api(seen, { body: {} }).catch(() => {}); });
+    // vidéo qui ne charge pas : un nouvel essai, puis un message (avec le code d'erreur du navigateur) à la place du bouton de lecture
+    let tries = 0;
+    v.addEventListener("error", () => {
+      if (!box || box.querySelector("video") !== v) return;
+      if (tries++ < 1) { setTimeout(() => { if (!box) return; v.src = src + (src.includes("?") ? "&" : "?") + "r=" + Date.now(); v.load(); if (started) v.play().catch(() => {}); }, 1500); return; }
+      const code = v.error ? v.error.code : 0;
+      box.querySelector("[data-start]").classList.add("off"); box.querySelector("[data-end]").classList.add("off");
+      box.querySelector("[data-errt]").textContent = (code === 3 || code === 4 ? "Ton navigateur n'arrive pas à la lire. Vérifie ta connexion ou essaie avec Google Chrome." : "Vérifie ta connexion.")
+        + (opts.replay ? "" : " Elle te sera reproposée plus tard.") + (code ? ` (code ${code})` : "");
+      box.querySelector("[data-err]").classList.remove("off");
+      if (!opts.replay) errSet(src, true);
+    });
     box.querySelector("[data-again]").onclick = () => { v.currentTime = 0; start(); };
     box.querySelectorAll("[data-go], [data-close]").forEach(b => b.onclick = close);
     // chatter : il peut passer la vidéo (elle compte comme vue) ; un élève doit la regarder en entier
@@ -668,9 +682,9 @@ const INTRO = window.INTRO = (() => {
     if (e.key === " ") { e.preventDefault(); v.paused ? v.play() : v.pause(); } }
   function close() { if (!box) return; const b = box; b.querySelector("video").pause(); b.classList.remove("on"); setTimeout(() => b.remove(), 500); box = null; document.body.style.overflow = ""; document.removeEventListener("keydown", key); }
   // manager ou fondateur : la vidéo « côté manager », une seule fois, à la première connexion
-  const mgr = me => fetch("/video/manager.mp4", { method: "HEAD" }).then(r => { if (r.ok) show(me, { src: "/video/manager.mp4", seen: "/api/me/mgr-intro-seen", eb: "CÔTÉ MANAGER",
+  const mgr = me => errRecent("/video/manager.mp4") ? null : fetch("/video/manager.mp4", { method: "HEAD" }).then(r => { if (r.ok) show(me, { src: "/video/manager.mp4", seen: "/api/me/mgr-intro-seen", eb: "CÔTÉ MANAGER",
     title: "Tout piloter <em>de A à Z.</em>", sub: "Moins de trois minutes pour voir comment gérer l'équipe, du recrutement jusqu'à la paie.", endSub: "Tout est là. À toi de piloter." }); }).catch(() => {});
-  return { show, check: me => { if (!INTRO_ON || !me) return; if ((me.role === "trainee" || me.role === "chatter") && !me.introSeen) show(me, me.role === "chatter" ? { skip: true } : {});
+  return { show, check: me => { if (!INTRO_ON || !me) return; if ((me.role === "trainee" || me.role === "chatter") && !me.introSeen) { if (!errRecent(SRC)) show(me, me.role === "chatter" ? { skip: true } : {}); }
     else if (me.role === "admin" && ["founder", "manager"].includes(me.rk) && !me.mgrIntroSeen) mgr(me); } };
 })();
 
