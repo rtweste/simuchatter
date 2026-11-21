@@ -1,6 +1,6 @@
 // Messagerie Twizz sur le site. Fermée par défaut (fondateur seulement) ; le fondateur l'ouvre à l'équipe
-// et choisit qui y a accès : lecture, ou lecture + envoi. Un chatter ne voit que ses créatrices habituelles
-// (Gestion) et celle de son shift en cours. Rien n'est marqué comme lu automatiquement,
+// et choisit qui y a accès : lecture, ou lecture + envoi. Un chatter voit ses créatrices, même hors de son shift :
+// celles de la Gestion, celles de son planning (30 jours avant, 14 jours après) et celle de son shift en cours. Rien n'est marqué comme lu automatiquement,
 // et l'envoi est bloqué pour tout le monde tant que l'interrupteur « Envoi activé » est coupé.
 module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   const { call, S } = twizz;
@@ -85,9 +85,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   const openOn = () => !!S.get("twizz_inbox_open", false);
   // managers : accès d'office (envoi), sauf si le fondateur l'a réglé autrement ; chatters : rien tant que le fondateur ne leur donne pas accès
   const levelOf = (uid, rk) => { const r = db.prepare("SELECT level FROM twizz_inbox_access WHERE user_id = ?").get(uid); return r ? r.level || 0 : rk === "manager" ? 2 : 0; };
-  // créatrices d'un chatter : ses créatrices habituelles (Gestion) + celle(s) de son shift en cours (renfort compris)
-  const scopeOf = uid => { const mids = new Set();
+  // créatrices d'un chatter, même hors de son shift (pour parler à ses fans perso…) : ses créatrices habituelles (Gestion),
+  // celles de son planning des 30 derniers jours et des 14 prochains, et celle(s) de son shift en cours (renfort compris)
+  const scopeOf = uid => { const mids = new Set(), day = d => new Date(Date.now() + d * 864e5).toISOString().slice(0, 10);
     try { db.prepare("SELECT model_id FROM user_models WHERE user_id = ?").all(uid).forEach(r => mids.add(r.model_id)); } catch (e) {}
+    try { db.prepare("SELECT DISTINCT model_id FROM shifts WHERE user_id = ? AND date BETWEEN ? AND ?").all(uid, day(-30), day(14)).forEach(r => mids.add(r.model_id)); } catch (e) {}
     try { db.prepare("SELECT model_id FROM clocks WHERE user_id = ? AND end_at IS NULL").all(uid).forEach(r => mids.add(r.model_id)); } catch (e) {}
     return new Set(mapped().filter(c => mids.has(c.model_id)).map(c => c.id)); };
   function accessOf(req) {
