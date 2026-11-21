@@ -32,6 +32,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     CREATE TABLE IF NOT EXISTS twizz_ai_media (creator_id TEXT NOT NULL, file_id TEXT NOT NULL, album_id TEXT, kind TEXT, descr TEXT, err TEXT, at INTEGER, PRIMARY KEY (creator_id, file_id));`);
   // teasing : l'IA a annoncé un média sans l'envoyer ; elle ne peut l'envoyer qu'après une réponse du fan
   db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_tease (creator_id TEXT NOT NULL, conv_id TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (creator_id, conv_id))");
+  // tickets (Snap, cam, vidéo custom) : un média payant du coffre avec « Ticket … » en texte ; une fois payé, la demande part au Studio
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_ticket (creator_id TEXT NOT NULL, fan_id TEXT NOT NULL, conv_id TEXT, kind TEXT, minutes INTEGER, price REAL, msg_id TEXT, state TEXT, at INTEGER, paid_at INTEGER, custom_id INTEGER, PRIMARY KEY (creator_id, fan_id))");
   db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_fanoff (creator_id TEXT NOT NULL, fan_id TEXT NOT NULL, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id))");
   for (const [k, t] of [["relances", "INTEGER NOT NULL DEFAULT 0"], ["relance_at", "INTEGER"], ["mem_at", "INTEGER"], ["busy", "INTEGER NOT NULL DEFAULT 0"], ["fan_at", "INTEGER"]])
     if (!db.prepare("PRAGMA table_info(twizz_ai_convs)").all().some(x => x.name === k)) db.exec(`ALTER TABLE twizz_ai_convs ADD COLUMN ${k} ${t}`);
@@ -42,7 +44,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     waitMin: 35, waitMax: 80, teamPause: 15, fanWindow: 12, perFan: 40, maxHours: 12, model: "fast",
     relance: true, relanceAfter: 45, relanceMax: 1, quietFrom: 1, quietTo: 9, memory: true };
   const M_DEF = { ok: false, sell: true, maxPrice: 100, gap: 20, pile: true, albums: [], albumNotes: {}, skipTags: [], extra: "", profile: "", scripts: true, promo: true, maxDiscount: 30, promoHours: 24, vision: true,
-    minMsgs: 8, tease: true, teaseWindow: 90, askSkip: false, cooldownH: 6, coolFull: false, sexDays: 1, details: {} };
+    minMsgs: 8, tease: true, teaseWindow: 90, askSkip: false, cooldownH: 6, coolFull: false, sexDays: 1, details: {},
+    tk: true, snapMin: 50, snapMax: 100, camMin: 130, camMax: 200, camHour: 300, customPrice: 150, tkAlbum: "" };
   const gcfg = () => { const o = { ...G_DEF, ...(S.get("twizz_ai_cfg", {}) || {}) }; if (!o.notice && !o.mark) o.mark = true; return o; };   // jamais les deux coupés
   const mcfg = cid => ({ ...M_DEF, ...(S.get("twizz_ai_m:" + cid, {}) || {}) });
   const int = (v, a, b, name) => { const n = parseInt(v, 10); if (!Number.isFinite(n) || n < a || n > b) throw fail(`${name} : entre ${a} et ${b}`); return n; };
@@ -97,6 +100,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (Array.isArray(b.skipTags)) o.skipTags = b.skipTags.map(x => parseInt(x, 10)).filter(Number.isFinite).slice(0, 40);
     if (b.extra != null) o.extra = str(b.extra).slice(0, 6000);
     if (b.profile != null) o.profile = str(b.profile).trim().slice(0, 10000);   // vide : texte tiré de la fiche
+    if (typeof b.tk === "boolean") o.tk = b.tk;
+    for (const [k, l] of [["snapMin", "Snap : prix minimum"], ["snapMax", "Snap : prix maximum"], ["camMin", "Cam 20 à 30 min : prix minimum"], ["camMax", "Cam 20 à 30 min : prix maximum"], ["camHour", "Cam d'une heure : prix"], ["customPrice", "Vidéo custom : prix"]])
+      if (b[k] != null) o[k] = int(b[k], 5, 2000, l);
+    if (o.snapMin > o.snapMax) throw fail("Snap : le prix minimum dépasse le maximum");
+    if (o.camMin > o.camMax) throw fail("Cam 20 à 30 min : le prix minimum dépasse le maximum");
+    if (b.tkAlbum != null) o.tkAlbum = str(b.tkAlbum).slice(0, 60);
     S.set("twizz_ai_m:" + cid, o); return o;
   }
   const aiOn = () => !!S.get("twizz_ai_on", false);
@@ -158,7 +167,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     laisser: { type: "string", description: "Facultatif : remplis-le seulement si l'équipe doit reprendre ce fan elle-même (raison courte). Rien n'est alors envoyé au fan." },
     lancer: { type: "integer", description: "Facultatif : numéro du script à lancer maintenant (seulement parmi les scripts disponibles listés dans les consignes)." },
     etape: { type: "boolean", description: "Mets true pour envoyer maintenant l'étape suivante du script en cours, quand les consignes disent que tu peux." },
-    plancher: { type: "boolean", description: "Mets true pour lui proposer le prix plancher du média pas encore acheté, une seule fois, quand les consignes le permettent." }
+    plancher: { type: "boolean", description: "Mets true pour lui proposer le prix plancher du média pas encore acheté, une seule fois, quand les consignes le permettent." },
+    ticket: { type: "string", enum: ["snap", "cam", "custom"], description: "Facultatif : le ticket à lui envoyer maintenant (Snap, cam ou vidéo custom), seulement quand les consignes « DEMANDES SPÉCIALES » le permettent. Remplis aussi prix (et duree pour une cam)." },
+    duree: { type: "integer", description: "Pour un ticket cam : durée en minutes (20 à 30, ou 60 pour une heure)." },
+    snap: { type: "string", description: "Quand il a payé le ticket Snap et te donne son pseudo Snap : ce pseudo, tel quel." },
+    demande: { type: "string", description: "Quand il a payé un ticket cam ou vidéo custom et t'a dit ce qu'il veut : sa demande, avec tous les détails (et ses dispos pour une cam)." }
   } } } };
   async function grok(messages, o = {}) {
     const tool = o.tool === undefined ? TOOL : o.tool, body = { model: o.model || XMODEL(), messages, temperature: o.temp ?? (tool === TOOL ? 0.75 : 0.9), max_tokens: o.max || (tool === TOOL ? 500 : 900) };
@@ -449,6 +462,32 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   // ce que le site sait déjà du fan (pour savoir si la découverte est finie)
   const knownOf = (cr, fanId) => { const K = {}; db.prepare("SELECT field, value FROM twizz_fan_profile WHERE creator_id = ? AND fan_id = ?").all(cr.id, fanId).forEach(r => K[r.field] = r.value);
     const B = J((db.prepare("SELECT data FROM twizz_fan_brief WHERE creator_id = ? AND fan_id = ?").get(cr.id, fanId) || {}).data, null) || {}; if (B.prenom) K.prenom = B.prenom; return K; };
+  // tickets : libellé, prix permis, note pour Grok selon où en est le ticket du fan
+  const TK = { snap: "Snap", cam: "cam", custom: "vidéo custom" };
+  const tkLabel = T => T.kind === "cam" ? `Cam (${T.minutes >= 60 ? "1 h" : T.minutes + " min"})` : T.kind === "snap" ? "Snap" : "vidéo custom";
+  const clampP = (v, a, b) => { const p = Math.round(+v || 0); return p >= a && p <= b ? p : Math.round((a + b) / 2); };
+  function tkPlan(M, kind, prix, duree) {
+    if (kind === "snap") return { kind, minutes: null, price: clampP(prix, M.snapMin, M.snapMax), text: "Ticket snap" };
+    if (kind === "cam") { const m = +duree >= 45 ? 60 : Math.min(30, Math.max(20, Math.round(+duree || 25)));
+      return { kind, minutes: m, price: m === 60 ? M.camHour : clampP(prix, M.camMin, M.camMax), text: `Ticket Cam (${m === 60 ? "1 h" : m + " min"})` }; }
+    if (kind === "custom") return { kind, minutes: null, price: M.customPrice, text: "Ticket vidéo custom" };
+    return null;
+  }
+  // le ticket du fan ; payé dès que son média est accepté dans la conversation
+  function tkOf(cr, fanId, L) {
+    const T = db.prepare("SELECT * FROM twizz_ai_ticket WHERE creator_id = ? AND fan_id = ?").get(cr.id, fanId) || null;
+    if (T && T.state === "sent") { const m = L.find(x => x.id === T.msg_id); if (m && m.status === "accepted") { T.state = "paid"; T.paid_at = Date.parse(m.at) || now();
+      db.prepare("UPDATE twizz_ai_ticket SET state = 'paid', paid_at = ? WHERE creator_id = ? AND fan_id = ?").run(T.paid_at, cr.id, fanId); } }
+    return T;
+  }
+  function tkNote(M, T) {
+    if (!M.tk || !M.sell) return "";
+    if (T && T.state === "sent") return `TICKET ${tkLabel(T).toUpperCase()} À ${eurs(T.price)} ENVOYÉ, PAS ENCORE PAYÉ : tu peux le lui rappeler gentiment, sans baisser le prix ni rien envoyer d'autre pour ça. Ne lui demande rien tant qu'il n'a pas payé.`;
+    if (T && T.state === "paid") return T.kind === "snap" ? `TICKET SNAP PAYÉ : remercie-le et demande-lui son pseudo Snap. Quand il te l'a donné, remplis snap avec ce pseudo et dis-lui que tu l'ajoutes très vite.`
+      : T.kind === "cam" ? `TICKET ${tkLabel(T).toUpperCase()} PAYÉ : remercie-le, demande-lui ce qu'il aimerait pendant la cam et quand il est disponible. Quand il a répondu, remplis demande (ce qu'il veut et ses dispos) et dis-lui que tu reviens vers lui pour caler l'heure.`
+      : `TICKET VIDÉO CUSTOM PAYÉ : remercie-le et demande-lui précisément ce qu'il veut voir (tenue, ce que tu fais, s'il veut que tu dises son prénom…). Quand il a répondu, remplis demande avec tous les détails et dis-lui que tu t'en occupes et que tu lui envoies dès que c'est prêt.`;
+    return `DEMANDES SPÉCIALES (Snap, cam, vidéo custom) : s'il demande ton Snap, une cam, ou une vidéo tournée rien que pour lui, ne le laisse jamais à l'équipe pour ça : propose-lui le ticket. Remplis ticket (snap, cam ou custom) et prix : Snap de ${M.snapMin} à ${M.snapMax} € (selon ce qu'il a déjà dépensé) ; cam de 20 à 30 min de ${M.camMin} à ${M.camMax} € (remplis aussi duree, de 20 à 30) ; cam d'une heure ${M.camHour} € (duree 60) ; vidéo custom de 3 à 5 min ${M.customPrice} €. Pour une cam, demande d'abord combien de temps il veut s'il ne l'a pas dit. Le ticket part juste après ta bulle, avec le texte « Ticket … » : dans ta bulle, dis-lui simplement de le prendre pour que tu t'occupes de lui. S'il réclame un contenu précis que tu n'as pas dans le coffre, propose-lui la vidéo custom.`;
+  }
   function rulesOf(M, L, o = {}) {
     const ST = strat(), K = o.known || {}, first = L.find(m => m.fromFan), t0 = first ? Date.parse(first.at) || now() : now();
     const kycOver = L.length >= ST.kycMax || now() - t0 >= ST.kycHours * 3600e3, kycKnown = !!(K.prenom && (K.ville || K.metier));
@@ -456,11 +495,34 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     return ["FORMAT : ta réponse tient en 1 à 3 bulles courtes, avec une seule question au plus. Dans l'historique, les mentions entre crochets comme [média envoyé…] sont des notes du site : ne les écris jamais, et ne dis jamais que tu envoies un média (c'est le site qui l'envoie).",
       "COHÉRENCE : réponds d'abord à ce qu'il vient de dire, ses derniers messages ensemble. S'il te pose une question, réponds-y vraiment (s'il te demande ce que tu fais, dis-le). S'il fait une remarque (tu as l'air agressive, tu ne réponds pas…), réagis-y. Ne lui repose jamais une question à laquelle il a déjà répondu, ne réponds pas à une question qu'il n'a pas posée, et reste dans le sujet de la conversation.", ST.style, factsOf(M), scriptOpen || kycKnown ? "" : kycOver ? "Tu as assez parlé de lui : arrête de lui poser des questions sur lui et laisse la conversation avancer." : `DÉCOUVERTE DU FAN :\n${ST.kyc}`,
       M.sell ? `SEXUALISATION :\n${ST.sex}` : "", o.relance ? `RELANCE :\n${ST.relance}` : "",
+      o.busy || o.relance ? "" : tkNote(M, o.ticket),
       o.busy ? "IL VIENT DE DIRE QU'IL EST OCCUPÉ OU QU'IL PART : une seule bulle courte et gentille (par exemple « ok vas-y on se capte plus tard »), pas de question, pas de vente, rien d'autre." : ""].filter(Boolean).join("\n\n");
   }
   // le bloc « scripts » des consignes, avec ce que dit le coffre quand il sert en secours (sinon sa consigne de teasing serait perdue)
   const scriptNote = (plan, coffre, sell) => !plan ? "" : [plan.text, !coffre ? "" : sell.albums.length ? (plan.coffre ? "" : "Le coffre ci-dessous sert seulement s'il réclame un contenu précis qu'aucun script ne propose : sinon lance le script qui colle.")
     : sell.note ? `${plan.coffre ? "Coffre" : "Coffre, seulement pour un contenu précis qu'aucun script ne propose"} : ${sell.note}.` : ""].filter(Boolean).join("\n\n");
+
+  // le média du ticket : au hasard dans l'album choisi pour les tickets (sinon dans les albums autorisés), un qu'il n'a pas encore reçu si possible
+  async function tkMedia(cr, M, c, L) {
+    let A = []; try { A = await albumsOf(cr.id); } catch (e) {}
+    const pool = M.tkAlbum && A.some(a => a.id === M.tkAlbum) ? A.filter(a => a.id === M.tkAlbum) : M.albums.length ? A.filter(a => M.albums.includes(a.id)) : A;
+    for (const a of pool.sort(() => Math.random() - .5)) { try { const f = await pickMedia(cr.id, a.id, c.id, L); if (f) return f; } catch (e) {} }
+    for (const a of pool) { try { const F = await filesOf(cr.id, a.id); if (F.length) return F[Math.floor(Math.random() * F.length)]; } catch (e) {} }
+    return null;
+  }
+  // ticket payé et infos reçues : la demande part au Studio (au nom du manager qui a lancé l'IA), les managers sont prévenus
+  function toStudio(r, cr, c, T, info) {
+    const uid = r.started_by || (db.prepare("SELECT id FROM users WHERE role = 'admin' ORDER BY id LIMIT 1").get() || {}).id, fanTw = str(c.fan.name || "un fan").slice(0, 60);
+    if (!cr.model_id || !uid) { db.prepare("UPDATE twizz_ai_runs SET last_error = ? WHERE id = ?").run(`${fanTw} : demande Studio impossible (créatrice sans fiche)`, r.id); return; }
+    const paid = `ticket payé ${eurs(T.price)}`, kind = T.kind === "custom" ? "video" : T.kind;
+    const request = (T.kind === "snap" ? `Snap à ajouter : ${info} (fan Twizz : ${fanTw}) · ${paid}` : T.kind === "cam" ? `${tkLabel(T)} pour ${fanTw} : ${info} · ${paid}` : `Vidéo custom de 3 à 5 min pour ${fanTw} : ${info} · ${paid}`) + " · demandé par l'IA de secours";
+    const id = db.prepare("INSERT INTO customs (sale_id, user_id, model_id, fan, kind, duration, qty, request, due_at, urgent, created_at, price, paid_at) VALUES (NULL,?,?,?,?,?,NULL,?,NULL,0,?,?,?)")
+      .run(uid, cr.model_id, (T.kind === "snap" ? info : fanTw).slice(0, 60), kind, T.kind === "cam" ? T.minutes * 60 : null, request.slice(0, 1500), now(), T.price, T.paid_at || now()).lastInsertRowid;
+    try { app.locals.twizzMatch && app.locals.twizzMatch(id); } catch (e) {}
+    db.prepare("UPDATE twizz_ai_ticket SET state = 'done', custom_id = ? WHERE creator_id = ? AND fan_id = ?").run(id, cr.id, c.fan.id);
+    ping(`🤖 ${cr.label} : demande envoyée au Studio`, `${tkLabel(T)} pour ${fanTw} (${paid})`, "ai-studio-" + id);
+    log(0, "a", `L'IA de secours a envoyé une demande au Studio : **${tkLabel(T)}** pour **${fanTw}** (${cr.label})`, request.slice(0, 160));
+  }
 
   /* ---------- envoi (mêmes requêtes que la messagerie) ---------- */
   async function sendText(cid, c, text) {
@@ -468,6 +530,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const id = str(j && j.data && j.data._id);
     db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at, via) VALUES (?,?,?,?,NULL,NULL,?, 'ia')").run(id, c.id, c.fan.id, cid, now());
     return id;
+  }
+  // conversation lue par l'IA : marquée lue aussi chez Twizz (une requête, seulement si un message du fan n'est pas encore lu)
+  async function readOnTwizz(cid, c, L) {
+    if (!L.some(m => m.fromFan && !m.read)) return;
+    try { await call("PATCH", "/messages/read-all-messages", { conversationId: c.id, creatorId: cid }, true); } catch (e) { console.error("IA de secours, lu chez Twizz", e.message); }
   }
   const PROMO_T = { 6: ["HOURS", 6, "h6"], 12: ["HOURS", 12, "h12"], 24: ["HOURS", 24, "h24"], 48: ["DAYS", 2, "d2"] };
   async function sendMedia(cid, c, f, price, text, promo) {
@@ -496,6 +563,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const NOTE_RE = /\[\s*(?:m[ée]dia|photo|vid[ée]o|le fan|image|vocal|fichier)[^\]\n]{0,90}\]?/gi;
   function unleak(out) {
     if (!out) return out; let seen = false, junk = false;
+    // « laisser » vide, false, « non », « null »… : ce n'est pas une raison de laisser le fan à l'équipe
+    { const v = typeof out.laisser === "string" ? out.laisser.trim() : ""; out.laisser = !v || /^(false|faux|non|no|none|null|undefined|aucune?|rien|0|-)\.?$/i.test(v) || v.length < 4 ? "" : v; }
     const fix = x => { if (str(x).length > 500) junk = true; const P = str(x).split(new RegExp(TEASE_TAG.source, "i")); let t = P[0];
       if (P.length > 1) { if (!seen) t += " " + P[1]; seen = true; }
       const before = t; t = t.replace(NOTE_RE, " ").replace(/\[\s*$/, ""); if (t !== before) junk = true;
@@ -541,7 +610,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
         relance ? (row.relances || 0) + 1 : 0, relance ? now() : row.relance_at || null);   // il a réécrit : les relances repartent de zéro
     const mark = patch => { mark0(patch); if (!relance) db.prepare("UPDATE twizz_ai_convs SET busy = ?, fan_at = ? WHERE run_id = ? AND conv_id = ?").run(busy ? 1 : 0, Date.parse(lastFan ? lastFan.at : last.at) || now(), r.id, c.id); };
     // « ok » juste après avoir dit qu'il partait : pas de réponse, on le laisse partir
-    if (!relance && row.busy && lastFan && ACK.test(lastFan.text)) { mark0({}); return false; }
+    if (!relance && row.busy && lastFan && ACK.test(lastFan.text)) { mark0({}); await readOnTwizz(cr.id, c, L); return false; }
     const tell = needNotice(cr, c, row, C), tail = C.mark ? " 🤖" : "", who = prenomOf(cr, c), pre = tell ? noticeOf(cr, C) + "\n\n" : "";
     const told = () => { if (tell) db.prepare("INSERT INTO twizz_ai_told (creator_id, fan_id, at) VALUES (?,?,?) ON CONFLICT(creator_id, fan_id) DO UPDATE SET at = excluded.at").run(cr.id, c.fan.id, now()); };
     // relance d'un média de script pas acheté : la relance écrite dans l'étape, telle quelle, une fois
@@ -551,7 +620,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       db.prepare("UPDATE twizz_ai_runs SET replies = replies + 1, last_at = ?, last_error = NULL WHERE id = ?").run(now(), r.id);
       mark({ notified: tell || row.notified ? 1 : 0, replies: (row.replies || 0) + 1 }); drop(c.id, `/conversations/user/${enc(cr.id)}`); return true;
     }
-    const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell), rules: rulesOf(M, L, { known: knownOf(cr, c.fan.id), plan, relance: !!relance, busy }) };
+    const T = tkOf(cr, c.fan.id, L);
+    const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell), rules: rulesOf(M, L, { known: knownOf(cr, c.fan.id), plan, relance: !!relance, busy, ticket: T }) };
     if (relance) opt.relance = { since: relance.since, unbought: sell.open ? sell.open.price : plan && plan.lock ? plan.lock.price : null };
     const msgs = [{ role: "system", content: system(cr, M, ficheOf(cr), sell.albums, sell.note, fanInfo, C, opt) }];
     // la dernière photo envoyée par le fan : Grok la regarde (les autres restent en texte)
@@ -587,6 +657,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (!act && plan.S && !plan.lock && (plan.force || (plan.step && out.etape))) act = { kind: "step", sc: plan.sc, k: plan.S.step + 1 };
       if (!act && plan.lock && plan.floor && out.plancher) act = { kind: "floor", sc: plan.sc, k: plan.S.step };
     }
+    // tickets : en envoyer un (Snap, cam, vidéo custom), ou, une fois payé, envoyer sa demande au Studio
+    let tk = null, tkInfo = "";
+    if (M.tk && M.sell && !relance && !busy && !act) {
+      if ((!T || T.state === "done") && TK[str(out.ticket)]) { tk = tkPlan(M, str(out.ticket), out.prix, out.duree); tk.f = await tkMedia(cr, M, c, L); if (!tk.f) { tk = null; db.prepare("UPDATE twizz_ai_runs SET last_error = ? WHERE id = ?").run(`${c.fan.name || "un fan"} : ticket impossible, aucun média dans le coffre`, r.id); } }
+      else if (T && T.state === "paid") { const v = (T.kind === "snap" ? str(out.snap).replace(/^@/, "") : str(out.demande)).trim(); if (v.length >= 2) tkInfo = v; }
+    }
     let B = oneQ(bubbles(out)), price = cents(out.prix), f = null, promo = null, guarded = false; if (busy) B = B.slice(0, 1);
     // jamais deux fois la même bulle à ce fan : les redites sont retirées ; si toute la réponse est redite, on redemande une fois à Grok
     const said = saidOf(L); let rep = false;
@@ -594,17 +670,17 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (!B.length && !act) { let again = null; try { again = unleak(await grok(msgs.concat([{ role: "system", content: REDIT(bubbles(out)) }]))); } catch (e) {}
         B = again && !str(again.laisser).trim() ? fresh(oneQ(bubbles(again)), said) : []; if (busy) B = B.slice(0, 1); }
       rep = !B.length; }
-    if (!act && out.album && sell.albums.some(a => a.id === str(out.album)) && price >= 3) {
+    if (!act && !tk && out.album && sell.albums.some(a => a.id === str(out.album)) && price >= 3) {
       price = Math.min(price, M.maxPrice);
       const pct = Math.round(+out.remise || 0), hesit = !!sell.open || L.some(m => !m.fromFan && m.type === "FILE" && m.price > 0 && m.status !== "accepted");
       if (M.promo && pct >= 5 && (sell.requirePromo || hesit)) promo = { pct: Math.min(pct, M.maxDiscount), hours: M.promoHours };
       if (!sell.requirePromo || promo) { try { f = await pickMedia(cr.id, str(out.album), c.id, L, str(out.media).replace(/^m:/, "")); } catch (e) { f = null; } }
     }
     // aucun média ne part avec la réponse : pas de « je te l'envoie », « et voilà »… (une seconde chance, puis on retire la bulle)
-    if (!act && !f && B.some(fakeSend)) { guarded = true;
+    if (!act && !f && !tk && B.some(fakeSend)) { guarded = true;
       let again = null; try { again = unleak(await grok(msgs.concat([{ role: "system", content: "Ta réponse disait que tu envoyais ou préparais un média alors qu'aucun ne part avec ce message : c'est interdit. Réécris ta réponse sans ça." }]))); } catch (e) {}
       B = fresh((again && !str(again.laisser).trim() ? bubbles(again) : B).filter(t => !fakeSend(t)), said); }
-    if (!B.length && !act) { if (relance || guarded || rep) mark({}); return false; }   // rien d'utile à envoyer
+    if (!B.length && !act && !tk) { if (relance || guarded || rep) mark({}); if (!relance && (guarded || rep)) await readOnTwizz(cr.id, c, L); return false; }   // rien d'utile à envoyer
     // plusieurs bulles : envoyées à la suite, le temps de les taper ; un média du coffre ou le prix plancher part avec la dernière, l'étape du script après
     let usedPre = false; const floor = act && act.kind === "floor";
     for (let i = 0; i < B.length; i++) {
@@ -616,10 +692,18 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     }
     if (floor && !B.length) { await runFloor(r, cr, c, act.sc, act.k, pre + (fillStep(act.sc.steps[act.k].text, cr, who) || "🙈") + tail); usedPre = true; }
     if (act && act.kind === "step" && runOf(cr.id)) { if (B.length) await sleep(2500 + Math.random() * 3000); await runStep(r, cr, c, act.sc, act.k, C, usedPre ? "" : pre, who); }
+    if (tk && runOf(cr.id)) { if (B.length) await sleep(2000 + Math.random() * 2500);
+      const id = await sendMedia(cr.id, c, tk.f, tk.price, (usedPre ? "" : pre) + tk.text + tail, null); usedPre = true;
+      db.prepare("UPDATE twizz_ai_runs SET medias = medias + 1 WHERE id = ?").run(r.id);
+      db.prepare(`INSERT INTO twizz_ai_ticket (creator_id, fan_id, conv_id, kind, minutes, price, msg_id, state, at, paid_at, custom_id) VALUES (?,?,?,?,?,?,?, 'sent', ?, NULL, NULL)
+        ON CONFLICT(creator_id, fan_id) DO UPDATE SET conv_id = excluded.conv_id, kind = excluded.kind, minutes = excluded.minutes, price = excluded.price, msg_id = excluded.msg_id, state = 'sent', at = excluded.at, paid_at = NULL, custom_id = NULL`)
+        .run(cr.id, c.fan.id, c.id, tk.kind, tk.minutes, tk.price, id, now()); }
+    if (tkInfo) toStudio(r, cr, c, T, tkInfo);
     told();
     if (f) teaseClear(cr, c); else if (out.teaser && (sell.teaseNow || sell.albums.length)) teaseSet(cr, c);   // un média envoyé : il faudra re-teaser pour le suivant
     db.prepare("UPDATE twizz_ai_runs SET replies = replies + 1, last_at = ?, last_error = NULL WHERE id = ?").run(now(), r.id);
     mark({ notified: tell || row.notified ? 1 : 0, replies: (row.replies || 0) + 1 });
+    if (!relance) await readOnTwizz(cr.id, c, L);   // un fan laissé à l'équipe reste non lu, pour les chatters
     drop(c.id, `/conversations/user/${enc(cr.id)}`);
     // mémoire : toutes les 3 réponses, au plus toutes les 30 min par fan, l'IA complète la fiche du fan
     if (C.memory && ((row.replies || 0) + 1) % 3 === 0 && now() - (row.mem_at || 0) > 30 * 60e3) {
@@ -814,7 +898,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const coffre = !busy && (!plan || plan.coffre || (plan.coffreAsk && (asks(lastFan.text) || !!(tz && now() - tz.at < M.teaseWindow * 60e3))));
     let sell = { albums: [], note: "" }; if (coffre) try { sell = await sellable(c, M, LL, null, tz); } catch (e) {} const albums = sell.albums;
     const KN = { new: {}, reg: { prenom: "Thomas", ville: "Lyon" }, big: { prenom: "Thomas", metier: "chef d'entreprise" } };
-    const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell), rules: rulesOf(M, LL, { known: KN[b.fan] || {}, plan, busy }) };
+    // le ticket de l'essai : l'écran le garde et le renvoie ; payé quand on a cliqué « Il achète » sur son média
+    let TK0 = b.ticket && TK[b.ticket.kind] ? { kind: b.ticket.kind, minutes: +b.ticket.minutes || null, price: +b.ticket.price || 0, msg_id: str(b.ticket.id), state: ["sent", "paid", "done"].includes(b.ticket.state) ? b.ticket.state : "sent" } : null;
+    if (TK0 && TK0.state === "sent" && LL.some(m => m.id === TK0.msg_id && m.status === "accepted")) TK0.state = "paid";
+    const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell), rules: rulesOf(M, LL, { known: KN[b.fan] || {}, plan, busy, ticket: TK0 }) };
     const FANS = { new: "pseudo : Thomas ; n'a encore jamais rien acheté", reg: "pseudo : Thomas ; prénom : Thomas ; ville : Lyon ; a déjà dépensé 150 € avec elle en 8 achats ; tags de l'équipe : Vidéos",
       big: "pseudo : Thomas ; prénom : Thomas ; métier : chef d'entreprise ; a déjà dépensé 850 € avec elle en 30 achats ; tags de l'équipe : Spender ; résumé de l'équipe : achète vite quand on le chauffe, aime qu'on se souvienne de lui" };
     const L = LL.map(m => ({ role: m.fromFan ? "user" : "assistant", content: m.fromFan ? lineOf(m) : untag(lineOf(m)) })).filter(m => m.content);
@@ -825,8 +912,14 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (plan && !busy) { if (plan.launch.length && +out.lancer) { const sc = plan.launch.find(x => x.id === +out.lancer); if (sc) act = { kind: "step", sc, k: 0 }; }
       if (!act && plan.S && !plan.lock && (plan.force || (plan.step && out.etape))) act = { kind: "step", sc: plan.sc, k: plan.S.step + 1 };
       if (!act && plan.lock && plan.floor && out.plancher) act = { kind: "floor", sc: plan.sc, k: plan.S.step }; }
-    const al = !act && out.album ? albums.find(a => a.id === str(out.album)) : null, it = al && (al.items || []).find(x => x.id === str(out.media).replace(/^m:/, ""));
-    let B = oneQ(bubbles(out)), guarded = false; if (busy) B = B.slice(0, 1); if (!act && !al && B.some(fakeSend)) { B = B.filter(t => !fakeSend(t)); guarded = true; }
+    let tk = null, studio = null;
+    if (M.tk && M.sell && !busy && !act) {
+      if ((!TK0 || TK0.state === "done") && TK[str(out.ticket)]) { tk = tkPlan(M, str(out.ticket), out.prix, out.duree); tk.id = "k" + now(); TK0 = { ...tk, msg_id: tk.id, state: "sent" }; }
+      else if (TK0 && TK0.state === "paid") { const v = (TK0.kind === "snap" ? str(out.snap).replace(/^@/, "") : str(out.demande)).trim();
+        if (v.length >= 2) { studio = `${tkLabel(TK0)} · ${TK0.kind === "snap" ? "Snap du fan : " : ""}${v} · ticket payé ${eurs(TK0.price)}`; TK0 = { ...TK0, state: "done" }; } }
+    }
+    const al = !act && !tk && out.album ? albums.find(a => a.id === str(out.album)) : null, it = al && (al.items || []).find(x => x.id === str(out.media).replace(/^m:/, ""));
+    let B = oneQ(bubbles(out)), guarded = false; if (busy) B = B.slice(0, 1); if (!act && !al && !tk && B.some(fakeSend)) { B = B.filter(t => !fakeSend(t)); guarded = true; }
     const said = saidOf(LL), redit = fresh(B, said).length < B.length;
     if (redit) { B = fresh(B, said); if (!B.length && !act) { try { const again = unleak(await grok([{ role: "system", content: system(c, M, ficheOf(c), albums, sell.note, FANS[b.fan] || "", gcfg(), opt) }, ...L, { role: "system", content: REDIT(bubbles(out)) }]));
       if (!str(again.laisser).trim()) B = fresh(oneQ(bubbles(again)), said).filter(t => act || al || !fakeSend(t)); } catch (e) {} } }
@@ -842,7 +935,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (act && act.kind === "floor") { const id = "f" + now(); floor = { id, price: act.sc.steps[act.k].floor }; state = { ...T0, lockId: id, lock_price: floor.price, floor_used: 1 }; }
     const mode = busy ? "Fan occupé : une bulle courte, pas de vente, pas de relance ensuite" : !plan ? "" : plan.after ? "Script terminé : elle raccompagne le fan, sans vendre" : plan.S ? `Script « ${plan.sc.title} » · étape ${plan.S.step + 1}/${plan.sc.steps.length}${plan.lock ? ` · média à ${eurs(plan.lock.price)} pas encore pris` : plan.force ? " · étape suivante due" : plan.step ? " · étape suivante possible" : ""}`
       : plan.launch.length ? `${plan.launch.length} script${plan.launch.length > 1 ? "s" : ""} disponible${plan.launch.length > 1 ? "s" : ""}, elle lance quand le fan est prêt` : plan.coffre ? "Tous les scripts déjà reçus : coffre en secours" : clip(plan.text.split("(")[0], 90);
-    return { bulles: B, step, floor, state, burned: [...burned], ended, mode, guarded, redit, album: al ? al.name : null, media: it ? it.descr : null, prix: al ? Math.min(cents(out.prix), M.maxPrice) : null,
+    return { bulles: B, step, floor, state, burned: [...burned], ended, mode, guarded, redit, ticket: tk ? { id: tk.id, kind: tk.kind, minutes: tk.minutes, price: tk.price, text: tk.text } : null,
+      tkState: TK0 ? { id: TK0.msg_id, kind: TK0.kind, minutes: TK0.minutes, price: TK0.price, state: TK0.state } : null, studio, album: al ? al.name : null, media: it ? it.descr : null, prix: al ? Math.min(cents(out.prix), M.maxPrice) : null,
       remise: al && M.promo && pct >= 5 ? Math.min(pct, M.maxDiscount) : null, laisser: null, teaser: !al && !act && !!out.teaser && !!(sell.teaseNow || albums.length), gate: plan ? "" : albums.length ? "" : sell.note };
   }));
   app.post("/api/twizz/ai/scan/:cid", auth, mgr, wrap(async req => { await scan(okC(req.params.cid).id, req.user.id); return state(req); }));
