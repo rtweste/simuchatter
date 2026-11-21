@@ -524,9 +524,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at, via) VALUES (?,?,?,?,NULL,NULL,?, 'ia')").run(id, c.id, c.fan.id, cid, now());
     return id;
   }
-  // conversation lue par l'IA : marquée lue aussi chez Twizz (une requête, seulement si un message du fan n'est pas encore lu)
+  // conversation lue par l'IA : marquée lue aussi chez Twizz (une requête ; sautée seulement si la liste dit déjà qu'elle est lue).
+  // Le « lu » des messages du fan ne veut rien dire chez Twizz (souvent vrai) : c'est la conversation qui compte (hasNewMessages)
   async function readOnTwizz(cid, c, L) {
-    if (!L.some(m => m.fromFan && !m.read)) return;
+    if (c.unread === 0) return;
     try { await call("PATCH", "/messages/read-all-messages", { conversationId: c.id, creatorId: cid }, true); } catch (e) { console.error("IA de secours, lu chez Twizz", e.message); }
   }
   const PROMO_T = { 6: ["HOURS", 6, "h6"], 12: ["HOURS", 12, "h12"], 24: ["HOURS", 24, "h24"], 48: ["DAYS", 2, "d2"] };

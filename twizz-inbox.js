@@ -306,7 +306,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   app.post("/api/twizz/inbox/:cid/seen/:conv", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid), conv = str(req.params.conv).slice(0, 64), t = ts(req.body?.last_at) || Date.now();
     db.prepare("INSERT INTO twizz_seen (creator_id, conv_id, last_at, user_id, at) VALUES (?,?,?,?,?) ON CONFLICT(creator_id, conv_id) DO UPDATE SET last_at = MAX(last_at, excluded.last_at), user_id = excluded.user_id, at = excluded.at").run(cid, conv, t, req.user.id, Date.now());
     // ouverte par un chatter : lue aussi chez Twizz (une requête, seulement si l'envoi est permis pour lui ; la messagerie n'appelle ceci que pour une conversation non lue)
-    let twizz = false; if (sendOn() && !req.viewAs && !(req.acc && !req.acc.send)) { try { await call("PATCH", "/messages/read-all-messages", { conversationId: conv, creatorId: cid }, true); twizz = true; } catch (e) {} }
+    let twizz = false; if (sendOn() && !req.viewAs && !(req.acc && !req.acc.send)) twizz = await readConv(cid, conv, true);
     return { ok: true, twizz }; }));
   // pastille de la créatrice : quand la 1re page est pleine de non lus, on compte aussi les suivantes
   // (mêmes pages que le fil, gardées à part 90 s ; 6 pages au plus) : plus de plafond à 15
@@ -754,11 +754,16 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   }));
 
   /* ---------- actions (bloquées tant que l'envoi n'est pas activé) ---------- */
+  // conversation marquée lue chez Twizz (au plus une fois toutes les 2 min par conversation, sauf ouverture)
+  const READ = new Map();
+  async function readConv(cid, conv, force) { if (!conv || (!force && Date.now() - (READ.get(conv) || 0) < 120e3)) return false; READ.set(conv, Date.now()); if (READ.size > 3000) READ.delete(READ.keys().next().value);
+    try { await call("PATCH", "/messages/read-all-messages", { conversationId: conv, creatorId: cid }, true); return true; } catch (e) { return false; } }
   app.post("/api/twizz/inbox/:cid/send", auth, inbox, wrap(async req => {
     mustSend(req); const cid = creatorOk(req.params.cid), text = String(req.body?.text || "").trim().slice(0, 4000), conversationId = str(req.body?.conversationId);
     if (!text || !conversationId) throw bad("Message vide");
     const j = await call("POST", "/messages/send-message", { temp_id: `temp_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`, conversationId, type: "TEXT", text, creatorId: cid }, true);
     if (j && j.data && j.data._id) db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at) VALUES (?,?,?,?,?,?,?)").run(str(j.data._id), conversationId, str(req.body?.fan), cid, req.user.id, null, Date.now());
+    await readConv(cid, conversationId);   // répondu depuis le site : lu aussi chez Twizz
     drop(conversationId, `/conversations/user/${enc(cid)}`);
     return { ok: true, message: j && j.data ? msg(j.data, str(req.body?.fan)) : null };
   }));
@@ -789,6 +794,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const j = await call("POST", "/mediapush/conversation", f, true);
     const d = (j && j.data) || j || {}, nm = d.newMessage || null;
     if (!nm && d.message) throw bad("Twizz a refusé l'envoi : " + d.message);
+    await readConv(cid, conversationId);   // répondu depuis le site : lu aussi chez Twizz
     db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at, files, promo, via) VALUES (?,?,?,?,?,?,?,?,?,?)").run(str(nm && nm._id), conversationId, fan, cid, req.user.id, nm && nm.mediaPushPrice && isFinite(+nm.mediaPushPrice.resultPrice) ? +nm.mediaPushPrice.resultPrice : promo ? promo.final : price, Date.now(), JSON.stringify(files), promo ? JSON.stringify({ type: promo.discountType === "PERCENTAGE" ? "pct" : "eur", value: promo.discount, time: str(pr.time) }) : null, b.via === "script" ? "script" : null);
     if (b.acceptId) await call("PATCH", "/messages/update-message-status", { messageId: str(b.acceptId), action: "accepted", creatorId: cid, userType: "creator" }, true).catch(() => {});
     drop(conversationId, `/conversations/user/${enc(cid)}`);
