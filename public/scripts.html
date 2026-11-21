@@ -568,7 +568,7 @@ function parsePaste(t) {
     let lines = b.split("\n"), title = "", cat = "";
     const m = lines[0].match(/^\s*\[([^\]]{1,30})\]\s*(.*)$/); if (m) { cat = m[1].trim(); lines[0] = m[2]; if (!lines[0].trim()) lines.shift(); }
     if (lines.length > 1 && (/^#+\s*/.test(lines[0]) || /:\s*$/.test(lines[0]))) title = lines.shift().replace(/^#+\s*/, "").replace(/:\s*$/, "").trim();
-    const steps = lines.join("\n").split(/\n\s*\n+/).map(x => x.trim()).filter(Boolean).slice(0, 15).map(text => ({ text: text.slice(0, 2000), media: [], price: null }));
+    const steps = lines.join("\n").split(/\n\s*\n+/).map(x => x.trim()).filter(Boolean).map(text => ({ text: text.slice(0, 2000), media: [], price: null }));
     return { title: title.slice(0, 80), cat, steps };
   }).filter(x => x.steps.length);
 }

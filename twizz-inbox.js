@@ -622,7 +622,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     if (old && b.pinned === undefined) b.pinned = !!old.pinned;
     // les étapes ; sans étapes envoyées (ancien format : un seul message), on garde celles déjà enregistrées
     const raw = Array.isArray(b.steps) ? b.steps : old && b.body === undefined ? stepsOf(old) : [{ text: b.body, media: b.media, price: b.price }];
-    const steps = raw.slice(0, 15).map(cleanStep).filter(x => x.text || x.media.length);
+    const steps = raw.map(cleanStep).filter(x => x.text || x.media.length);
     if (!steps.length) throw bad("Le script est vide : écris au moins une étape");
     if (steps.some(x => x.media.length) && !creator) throw bad("Un script avec des médias doit être pour une seule créatrice : les médias viennent de son coffre");
     steps.forEach((x, i) => { if (x.floor != null && (x.floor < 3 || x.floor >= x.price)) throw bad(`Étape ${i + 1} : le prix plancher doit être plus bas que le prix, et 3 € au moins`); });
