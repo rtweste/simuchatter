@@ -411,6 +411,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const DELIV = [/(?:^|[^a-zà-ÿ])(?:je|j'?|jvais|je vais|vais)\s*(?:te|t'|t)\s*(?:l'|la |le |les |l )?\s*envoi(?:e|er|es)?\b/i, /\bjt'?envoi/i, /\bet voil[aà]\b/i, /\bc'?est parti\b/i, /\bregarde bien\b/i,
     /(?:^|[^a-zà-ÿ])(?:je|j'?)\s*te\s*(?:la |le |les )?pr[ée]par/i, /\bjte pr[ée]par/i, /\btu vas voir\b/i, /(?:^|[^a-zà-ÿ])(?:je|j'?)\s*te\s*r[ée]serv/i, /\bjte r[ée]serv/i];
   const fakeSend = t => DELIV.some(x => x.test(str(t)));
+  // le bloc « scripts » des consignes, avec ce que dit le coffre quand il sert en secours (sinon sa consigne de teasing serait perdue)
+  const scriptNote = (plan, coffre, sell) => !plan ? "" : [plan.text, !coffre ? "" : sell.albums.length ? (plan.coffre ? "" : "Le coffre ci-dessous sert seulement s'il réclame un contenu précis qu'aucun script ne propose : sinon lance le script qui colle.")
+    : sell.note ? `${plan.coffre ? "Coffre" : "Coffre, seulement pour un contenu précis qu'aucun script ne propose"} : ${sell.note}.` : ""].filter(Boolean).join("\n\n");
 
   /* ---------- envoi (mêmes requêtes que la messagerie) ---------- */
   async function sendText(cid, c, text) {
@@ -469,7 +472,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const fanInfo = await fanCtx(cr, c), lastFan = [...L].reverse().find(m => m.fromFan), plan = planOf(cr, M, L, c.fan.id);
     if (plan && plan.endNow) scEnd(cr.id, c.fan.id, plan.endNow.why, plan.endNow.full, plan.endNow.at);
     // le coffre : sans script IA, quand il a déjà reçu tous les scripts, ou s'il réclame un contenu précis (jamais pendant un script)
-    const coffre = !plan || plan.coffre || (plan.coffreAsk && lastFan && asks(lastFan.text));
+    // (un média du coffre déjà teasé reste possible au message suivant du fan, même s'il ne le réclame pas mot pour mot)
+    const tz0 = teaseOf(cr, c.id, L), teased = !!(tz0 && now() - tz0.at < M.teaseWindow * 60e3);
+    const coffre = !plan || plan.coffre || (plan.coffreAsk && lastFan && (asks(lastFan.text) || teased));
     const sell = coffre ? await sellable(cr, M, L, c.id) : { albums: [], note: "" };
     const mark = (patch) => db.prepare(`INSERT INTO twizz_ai_convs (run_id, conv_id, fan_id, fan_name, notified, replies, last_fan_msg, blocked, at, relances, relance_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(run_id, conv_id) DO UPDATE SET notified = excluded.notified, replies = excluded.replies, last_fan_msg = excluded.last_fan_msg, blocked = excluded.blocked, at = excluded.at, relances = excluded.relances, relance_at = excluded.relance_at`)
@@ -484,7 +489,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       db.prepare("UPDATE twizz_ai_runs SET replies = replies + 1, last_at = ?, last_error = NULL WHERE id = ?").run(now(), r.id);
       mark({ notified: tell || row.notified ? 1 : 0, replies: (row.replies || 0) + 1 }); drop(c.id, `/conversations/user/${enc(cr.id)}`); return true;
     }
-    const opt = { requirePromo: sell.requirePromo, script: plan ? [plan.text, plan.coffreAsk && sell.albums.length ? "Le coffre ci-dessous sert seulement s'il réclame un contenu précis qu'aucun script ne propose : sinon lance le script qui colle." : ""].filter(Boolean).join("\n\n") : "" };
+    const opt = { requirePromo: sell.requirePromo, script: scriptNote(plan, coffre, sell) };
     if (relance) opt.relance = { since: relance.since, unbought: sell.open ? sell.open.price : plan && plan.lock ? plan.lock.price : null };
     const msgs = [{ role: "system", content: system(cr, M, ficheOf(cr), sell.albums, sell.note, fanInfo, C, opt) }];
     // la dernière photo envoyée par le fan : Grok la regarde (les autres restent en texte)
@@ -698,9 +703,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const S0 = T0 ? { script_id: +T0.script_id, step: +T0.step || 0, sent_at: atId(T0.sentId), lock_msg: T0.lockId || null, lock_price: T0.lock_price || null, floor_used: T0.floor_used ? 1 : 0, relanced: 0,
       state: T0.state || "open", ended_at: T0.state && T0.state !== "open" ? atId(T0.endedId) : null, full: T0.full ? 1 : 0 } : null;
     const burned = new Set((Array.isArray(b.burned) ? b.burned : []).map(Number).filter(Number.isFinite)), lastFan = LL[LL.length - 1];
-    const plan = planOf(c, M, LL, "essai", { S: S0, burned }), coffre = !plan || plan.coffre || (plan.coffreAsk && asks(lastFan.text));
+    const plan = planOf(c, M, LL, "essai", { S: S0, burned }), coffre = !plan || plan.coffre || (plan.coffreAsk && (asks(lastFan.text) || !!(tz && now() - tz.at < M.teaseWindow * 60e3)));
     let sell = { albums: [], note: "" }; if (coffre) try { sell = await sellable(c, M, LL, null, tz); } catch (e) {} const albums = sell.albums;
-    const opt = { requirePromo: sell.requirePromo, script: plan ? [plan.text, plan.coffreAsk && albums.length ? "Le coffre ci-dessous sert seulement s'il réclame un contenu précis qu'aucun script ne propose : sinon lance le script qui colle." : ""].filter(Boolean).join("\n\n") : "" };
+    const opt = { requirePromo: sell.requirePromo, script: scriptNote(plan, coffre, sell) };
     const FANS = { new: "pseudo : Thomas ; n'a encore jamais rien acheté", reg: "pseudo : Thomas ; prénom : Thomas ; ville : Lyon ; a déjà dépensé 150 € avec elle en 8 achats ; tags de l'équipe : Vidéos",
       big: "pseudo : Thomas ; prénom : Thomas ; métier : chef d'entreprise ; a déjà dépensé 850 € avec elle en 30 achats ; tags de l'équipe : Spender ; résumé de l'équipe : achète vite quand on le chauffe, aime qu'on se souvienne de lui" };
     const L = LL.map(m => ({ role: m.fromFan ? "user" : "assistant", content: m.fromFan ? lineOf(m) : untag(lineOf(m)) })).filter(m => m.content);
