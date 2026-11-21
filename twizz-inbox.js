@@ -305,7 +305,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     items.forEach(c => { const t = S2.get(c.id); if (c.unread > 0 && t && t >= (ts(c.last.at) || 0)) c.unread = 0; }); return items; };
   app.post("/api/twizz/inbox/:cid/seen/:conv", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid), conv = str(req.params.conv).slice(0, 64), t = ts(req.body?.last_at) || Date.now();
     db.prepare("INSERT INTO twizz_seen (creator_id, conv_id, last_at, user_id, at) VALUES (?,?,?,?,?) ON CONFLICT(creator_id, conv_id) DO UPDATE SET last_at = MAX(last_at, excluded.last_at), user_id = excluded.user_id, at = excluded.at").run(cid, conv, t, req.user.id, Date.now());
-    return { ok: true }; }));
+    // ouverte par un chatter : lue aussi chez Twizz (une requête, seulement si l'envoi est permis pour lui ; la messagerie n'appelle ceci que pour une conversation non lue)
+    let twizz = false; if (sendOn() && !req.viewAs && !(req.acc && !req.acc.send)) { try { await call("PATCH", "/messages/read-all-messages", { conversationId: conv, creatorId: cid }, true); twizz = true; } catch (e) {} }
+    return { ok: true, twizz }; }));
   // pastille de la créatrice : quand la 1re page est pleine de non lus, on compte aussi les suivantes
   // (mêmes pages que le fil, gardées à part 90 s ; 6 pages au plus) : plus de plafond à 15
   // toutes les conversations non lues (filtre « Non lus » du CRM Twizz) : lues jusqu'au bout, 10 pages au plus ; la 1re gardée 20 s, les suivantes 60 s
