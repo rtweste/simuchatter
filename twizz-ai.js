@@ -3,7 +3,7 @@
 // Le fan est toujours prévenu : par le premier message « c'est l'IA de … », par un 🤖 à la fin de chaque message, ou les deux (au moins un des deux, réglé par le fondateur).
 // Sur le site, les bulles écrites par l'IA portent un 🤖 pour l'équipe.
 // Elle s'arrête toute seule dès qu'un chatter pointe sur cette créatrice ou ouvre sa messagerie. Interrupteur général : le fondateur.
-module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, gest }) {
+module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, gest, dataDir }) {
   const { call, S } = twizz;
   const { conv, msg, arr, file, hereOf, G, drop, mapped, sendOn, unreadConvs } = inbox;
   const str = v => (v == null ? "" : String(v)), now = () => Date.now(), enc = encodeURIComponent;
@@ -11,6 +11,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const log = (...a) => { try { gest.log(...a); } catch (e) {} };
   const fail = (m, code) => { const e = new Error(m); e.code = code || 400; return e; };
   const J = (v, d) => { try { const x = JSON.parse(v); return x == null ? d : x; } catch (e) { return d; } };
+  const fs = require("fs"), path = require("path");
   let sharp = null; try { sharp = require("sharp"); } catch (e) {}
   // Grok n'accepte que le JPG et le PNG ; les vignettes Twizz sont en WebP : on les convertit en JPG (envoyé en base64)
   async function toImage(url) {
@@ -34,6 +35,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_tease (creator_id TEXT NOT NULL, conv_id TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (creator_id, conv_id))");
   // tickets (Snap, cam, vidéo custom) : un média payant du coffre avec « Ticket … » en texte ; une fois payé, la demande part au Studio
   db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_ticket (creator_id TEXT NOT NULL, fan_id TEXT NOT NULL, conv_id TEXT, kind TEXT, minutes INTEGER, price REAL, msg_id TEXT, state TEXT, at INTEGER, paid_at INTEGER, custom_id INTEGER, PRIMARY KEY (creator_id, fan_id))");
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_delivery (custom_id INTEGER PRIMARY KEY, creator_id TEXT, fan_id TEXT, conv_id TEXT, at INTEGER, ok INTEGER, error TEXT)");   // vidéos custom envoyées au fan par le site
   // médias payants envoyés par l'IA (étape de script, prix plancher, coffre, ticket) et leur achat vu dans la conversation : pour « Ce qui vend »
   db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_sold (msg_id TEXT PRIMARY KEY, creator_id TEXT, fan_id TEXT, conv_id TEXT, kind TEXT, script_id INTEGER, step INTEGER, tk_kind TEXT, price REAL, at INTEGER, paid_at INTEGER)");
   db.exec("CREATE INDEX IF NOT EXISTS twizz_ai_sold_cr ON twizz_ai_sold(creator_id, at)");
@@ -529,6 +531,51 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     ping(`🤖 ${cr.label} : demande envoyée au Studio`, `${tkLabel(T)} pour ${fanTw} (${paid})`, "ai-studio-" + id);
     log(0, "a", `L'IA de secours a envoyé une demande au Studio : **${tkLabel(T)}** pour **${fanTw}** (${cr.label})`, request.slice(0, 160));
   }
+
+  // vidéo custom prête dans le Studio (demande envoyée par l'IA) : le site l'envoie au fan, offerte (le ticket est déjà payé), puis la marque livrée.
+  // Même chemin que l'import depuis l'ordinateur sur Twizz : une vidéo part en morceaux de 5 Mo vers le stockage de Twizz, une photo directement avec le message.
+  const CHUNK = 5 * 1024 * 1024;
+  async function uploadVideo(cid, buf, name, type) {
+    const parts = Math.ceil(buf.length / CHUNK), j = await call("POST", `/storage/init-upload?creatorId=${enc(cid)}`, { filename: name, contentType: type, partNumbers: parts, currentCreator: cid }, true) || {};
+    if (!j.uploadId || !Array.isArray(j.signedUrls) || j.signedUrls.length < parts) throw fail("Twizz n'a pas ouvert l'envoi de la vidéo" + (j.message ? " : " + str(j.message) : ""));
+    const P = [];
+    for (let i = 0; i < parts; i++) { const r = await fetch(j.signedUrls[i], { method: "PUT", headers: { "Content-Type": type }, body: buf.subarray(i * CHUNK, Math.min(buf.length, (i + 1) * CHUNK)), signal: AbortSignal.timeout(120000) });
+      const et = r.headers.get("etag"); if (!r.ok || !et) throw fail(`Envoi de la vidéo interrompu (morceau ${i + 1} sur ${parts})`); P.push({ ETag: et, PartNumber: i + 1 }); }
+    const f = await call("POST", `/storage/finalize-upload?creatorId=${enc(cid)}`, { uploadId: j.uploadId, parts: P, filename: j.filename || name }, true) || {}, m = f.message;
+    if (!m || typeof m !== "object" || !m.Location) throw fail("Twizz n'a pas terminé l'envoi de la vidéo");
+    return m;
+  }
+  let delivering = false;
+  async function deliver() {
+    if (delivering || !sendOn() || !dataDir) return; delivering = true;
+    try {
+      const L = db.prepare(`SELECT t.creator_id, t.fan_id, t.conv_id, k.id kid, k.file, k.mime, k.fname, k.fan FROM twizz_ai_ticket t JOIN customs k ON k.id = t.custom_id
+        LEFT JOIN twizz_ai_delivery d ON d.custom_id = k.id WHERE t.kind = 'custom' AND k.status = 'ready' AND k.file IS NOT NULL AND d.custom_id IS NULL ORDER BY k.ready_at LIMIT 2`).all();
+      for (const x of L) {
+        const cr = crOf(x.creator_id); if (!cr) continue;
+        db.prepare("INSERT INTO twizz_ai_delivery (custom_id, creator_id, fan_id, conv_id, at, ok) VALUES (?,?,?,?,?,0)").run(x.kid, x.creator_id, x.fan_id, x.conv_id, now());   // une seule tentative
+        try {
+          const buf = fs.readFileSync(path.join(dataDir, "studio", path.basename(x.file))), type = str(x.mime) || "video/mp4", name = str(x.fname).replace(/[^\w.\- ]+/g, "_") || path.basename(x.file);
+          const fd = new FormData(), ids = [{ fileId: "0", isPrivate: true, originalFileName: name }];
+          if (/^image\//.test(type)) fd.append("files", new Blob([buf], { type }), name);
+          else if (/^video\//.test(type)) { const v = await uploadVideo(cr.id, buf, name, type); fd.set("videoFiles", JSON.stringify([{ Location: v.Location, isPrivate: true, Key: v.Key, ETag: v.ETag, Bucket: v.Bucket, filename: name, size: buf.length }])); }
+          else throw fail("ce format s'envoie à la main");
+          fd.set("promo", "false"); fd.set("price", "0"); fd.set("text", "ta vidéo rien que pour toi est prête 😘" + (gcfg().mark ? " 🤖" : "")); fd.set("isConversation", "true"); fd.set("conversationId", x.conv_id);
+          fd.set("receivers", JSON.stringify([x.fan_id])); fd.set("fileIds", JSON.stringify(ids)); fd.set("quickFiles", "[]"); fd.set("creatorId", cr.id);
+          const j = await call("POST", "/mediapush/conversation", fd, true), d = (j && j.data) || j || {}; if (!d.newMessage) throw fail("Twizz a refusé la vidéo" + (d.message ? " : " + str(d.message) : ""));
+          db.prepare("UPDATE twizz_ai_delivery SET ok = 1 WHERE custom_id = ?").run(x.kid);
+          db.prepare("UPDATE customs SET status = 'delivered', delivered_at = ?, seen = 1 WHERE id = ?").run(now(), x.kid);
+          ping(`🤖 ${cr.label} : vidéo custom envoyée`, `Envoyée à ${x.fan} par le site`, "ai-deliv-" + x.kid);
+          log(0, "a", `L'IA de secours a envoyé la vidéo custom à **${x.fan}** (${cr.label})`, "");
+        } catch (e) {
+          db.prepare("UPDATE twizz_ai_delivery SET error = ? WHERE custom_id = ?").run(str(e.message).slice(0, 240), x.kid);
+          ping(`🤖 ${cr.label} : vidéo custom à envoyer à la main`, `${x.fan} : ${str(e.message).slice(0, 120)}`, "ai-deliv-" + x.kid);
+          console.error("IA de secours, livraison", cr.label, x.fan, e.message);
+        }
+      }
+    } finally { delivering = false; }
+  }
+  setInterval(() => { deliver().catch(e => console.error("IA de secours, livraison", e.message)); }, 120e3);
 
   /* ---------- envoi (mêmes requêtes que la messagerie) ---------- */
   async function sendText(cid, c, text) {
