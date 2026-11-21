@@ -166,7 +166,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       body: JSON.stringify(body), signal: AbortSignal.timeout(60000) }); }
     catch (e) { throw fail("Grok ne répond pas : " + e.message); }
     const j = await r.json().catch(() => null);
-    if (!r.ok) throw fail(`Grok a refusé la demande (code ${r.status})${j && j.error ? " : " + str(j.error.message || j.error).slice(0, 160) : ""}`);
+    if (!r.ok) { const e = fail(`Grok a refusé la demande (code ${r.status})${j && j.error ? " : " + str(j.error.message || j.error).slice(0, 160) : ""}`); e.status = r.status; throw e; }
     const m = j && j.choices && j.choices[0] && j.choices[0].message; if (!m) throw fail("Réponse de Grok vide");
     if (!tool) return { text: str(m.content).trim() };
     const tc = (m.tool_calls || []).find(x => x && x.function && x.function.name === tool.function.name);
@@ -540,8 +540,17 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     L.forEach(m => { const t = m.fromFan ? lineOf(m) : untag(lineOf(m)); if (!t) return;
       const pic = m === lastPic && picUrl;
       msgs.push({ role: m.fromFan ? "user" : "assistant", content: pic ? [{ type: "text", text: m.text || "[le fan t'envoie cette photo]" }, { type: "image_url", image_url: { url: pic } }] : t }); });
-    let out; try { out = await grok(msgs); }
-    catch (e) { if (!picUrl) throw e; msgs.forEach(m => { if (Array.isArray(m.content)) m.content = m.content[0].text; }); out = await grok(msgs); }   // image refusée : sans la photo
+    let out = null, err = null; try { out = await grok(msgs); } catch (e) { err = e; }
+    if (!out && picUrl && err.status !== 401) { msgs.forEach(m => { if (Array.isArray(m.content)) m.content = m.content[0].text; }); try { out = await grok(msgs); err = null; } catch (e) { err = e; } }   // image refusée : sans la photo
+    // le filtre de sécurité de xAI refuse cette conversation (code 403) : le fan est laissé à l'équipe, au lieu de redemander à chaque tour
+    if (!out && err && err.status === 403) {
+      mark({ blocked: "Grok refuse de répondre à cette conversation (filtre de sécurité de xAI) : à reprendre par un chatter" });
+      ping(`🤖 ${cr.label} : un fan à reprendre`, `${c.fan.name || "Un fan"} : Grok refuse de répondre à cette conversation`, "ai-leave-" + c.id);
+      log(0, "a", `L'IA de secours laisse **${c.fan.name || "un fan"}** (${cr.label}) à l'équipe`, "Grok refuse de répondre à cette conversation (filtre de sécurité de xAI)");
+      console.error("IA de secours", cr.label, c.fan.name, err.message);
+      return true;
+    }
+    if (!out) throw err;
     unleak(out);
     const leave = str(out.laisser).trim();
     if (leave) {
