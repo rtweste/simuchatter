@@ -33,7 +33,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
   const str = (v, n) => String(v ?? "").trim().slice(0, n);
 
   /* ===================== CONTENUS PERSONNALISÉS ===================== */
-  const KINDS = { video: "Vidéo", photos: "Photos", audio: "Audio", autre: "Autre", snap: "Snap" };
+  const KINDS = { video: "Vidéo", photos: "Photos", audio: "Audio", autre: "Autre", snap: "Snap", cam: "Cam" };
   const SEL = `SELECT c.*, u.username, m.name model_name, s.amount, s.status sale_status FROM customs c JOIN users u ON u.id = c.user_id JOIN models m ON m.id = c.model_id LEFT JOIN sales s ON s.id = c.sale_id`;
   const pubC = c => ({ id: c.id, sale_id: c.sale_id, user_id: c.user_id, username: c.username, model_id: c.model_id, model_name: c.model_name, fan: c.fan, kind: c.kind, kindLabel: KINDS[c.kind] || c.kind,
     duration: c.duration, qty: c.qty, request: c.request, due_at: c.due_at, urgent: !!c.urgent, status: c.status, amount: c.amount != null ? c.amount : c.price, price: c.price, sale_status: c.sale_status, mgr_note: c.mgr_note,
