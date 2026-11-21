@@ -504,6 +504,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     return (i > 80 ? c.slice(0, i + 1) : c.slice(0, c.lastIndexOf(" ") > 80 ? c.lastIndexOf(" ") : 320)).trim(); };
   const oneQ = B => { const pure = b => /^[^.!?…]*\?[\s\S]{0,6}$/.test(b), q = B.map((b, i) => /\?/.test(b) ? i : -1).filter(i => i >= 0); if (q.length < 2) return B;
     const keep = q[q.length - 1], out = B.filter((b, i) => i === keep || !q.includes(i) || !pure(b)); return out.length ? out : [B[keep]]; };
+  // ce qu'elle a déjà écrit à ce fan (ses 10 derniers messages, sans emojis, ponctuation ni majuscules) : une bulle déjà envoyée n'est jamais renvoyée
+  const nrm = t => str(t).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  const saidOf = L => L.filter(m => !m.fromFan).slice(-10).map(m => nrm(m.text)).filter(Boolean);
+  const fresh = (B, said) => B.filter(b => { const n = nrm(b); return !n || !said.some(x => x === n || (n.includes(" ") && x.endsWith(" " + n))); });
+  const REDIT = B => `Tu as déjà écrit exactement ça à ce fan : « ${B.join(" / ")} ». Ne répète jamais une phrase déjà envoyée : réponds autre chose, en suivant la conversation.`;
   const bubbles = out => [...new Set((Array.isArray(out.bulles) && out.bulles.length ? out.bulles : [out.message]).map(x => short(str(x).replace(/🤖/g, "").trim())).filter(Boolean))].slice(0, 3);
 
   /* ---------- une conversation ---------- */
@@ -576,6 +581,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (!act && plan.lock && plan.floor && out.plancher) act = { kind: "floor", sc: plan.sc, k: plan.S.step };
     }
     let B = oneQ(bubbles(out)), price = cents(out.prix), f = null, promo = null, guarded = false; if (busy) B = B.slice(0, 1);
+    // jamais deux fois la même bulle à ce fan : les redites sont retirées ; si toute la réponse est redite, on redemande une fois à Grok
+    const said = saidOf(L); let rep = false;
+    if (fresh(B, said).length < B.length) { B = fresh(B, said);
+      if (!B.length && !act) { let again = null; try { again = unleak(await grok(msgs.concat([{ role: "system", content: REDIT(bubbles(out)) }]))); } catch (e) {}
+        B = again && !str(again.laisser).trim() ? fresh(oneQ(bubbles(again)), said) : []; if (busy) B = B.slice(0, 1); }
+      rep = !B.length; }
     if (!act && out.album && sell.albums.some(a => a.id === str(out.album)) && price >= 3) {
       price = Math.min(price, M.maxPrice);
       const pct = Math.round(+out.remise || 0), hesit = !!sell.open || L.some(m => !m.fromFan && m.type === "FILE" && m.price > 0 && m.status !== "accepted");
@@ -585,8 +596,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     // aucun média ne part avec la réponse : pas de « je te l'envoie », « et voilà »… (une seconde chance, puis on retire la bulle)
     if (!act && !f && B.some(fakeSend)) { guarded = true;
       let again = null; try { again = unleak(await grok(msgs.concat([{ role: "system", content: "Ta réponse disait que tu envoyais ou préparais un média alors qu'aucun ne part avec ce message : c'est interdit. Réécris ta réponse sans ça." }]))); } catch (e) {}
-      B = (again && !str(again.laisser).trim() ? bubbles(again) : B).filter(t => !fakeSend(t)); }
-    if (!B.length && !act) { if (relance || guarded) mark({}); return false; }   // rien d'utile à envoyer
+      B = fresh((again && !str(again.laisser).trim() ? bubbles(again) : B).filter(t => !fakeSend(t)), said); }
+    if (!B.length && !act) { if (relance || guarded || rep) mark({}); return false; }   // rien d'utile à envoyer
     // plusieurs bulles : envoyées à la suite, le temps de les taper ; un média du coffre ou le prix plancher part avec la dernière, l'étape du script après
     let usedPre = false; const floor = act && act.kind === "floor";
     for (let i = 0; i < B.length; i++) {
@@ -809,6 +820,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (!act && plan.lock && plan.floor && out.plancher) act = { kind: "floor", sc: plan.sc, k: plan.S.step }; }
     const al = !act && out.album ? albums.find(a => a.id === str(out.album)) : null, it = al && (al.items || []).find(x => x.id === str(out.media).replace(/^m:/, ""));
     let B = oneQ(bubbles(out)), guarded = false; if (busy) B = B.slice(0, 1); if (!act && !al && B.some(fakeSend)) { B = B.filter(t => !fakeSend(t)); guarded = true; }
+    const said = saidOf(LL), redit = fresh(B, said).length < B.length;
+    if (redit) { B = fresh(B, said); if (!B.length && !act) { try { const again = unleak(await grok([{ role: "system", content: system(c, M, ficheOf(c), albums, sell.note, FANS[b.fan] || "", gcfg(), opt) }, ...L, { role: "system", content: REDIT(bubbles(out)) }]));
+      if (!str(again.laisser).trim()) B = fresh(oneQ(bubbles(again)), said).filter(t => act || al || !fakeSend(t)); } catch (e) {} } }
     const pct = Math.round(+out.remise || 0);
     // l'état du script après cette réponse : l'écran le garde et le renvoie au prochain message
     let state = T0, step = null, floor = null, ended = null;
@@ -821,7 +835,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (act && act.kind === "floor") { const id = "f" + now(); floor = { id, price: act.sc.steps[act.k].floor }; state = { ...T0, lockId: id, lock_price: floor.price, floor_used: 1 }; }
     const mode = busy ? "Fan occupé : une bulle courte, pas de vente, pas de relance ensuite" : !plan ? "" : plan.after ? "Script terminé : elle raccompagne le fan, sans vendre" : plan.S ? `Script « ${plan.sc.title} » · étape ${plan.S.step + 1}/${plan.sc.steps.length}${plan.lock ? ` · média à ${eurs(plan.lock.price)} pas encore pris` : plan.force ? " · étape suivante due" : plan.step ? " · étape suivante possible" : ""}`
       : plan.launch.length ? `${plan.launch.length} script${plan.launch.length > 1 ? "s" : ""} disponible${plan.launch.length > 1 ? "s" : ""}, elle lance quand le fan est prêt` : plan.coffre ? "Tous les scripts déjà reçus : coffre en secours" : clip(plan.text.split("(")[0], 90);
-    return { bulles: B, step, floor, state, burned: [...burned], ended, mode, guarded, album: al ? al.name : null, media: it ? it.descr : null, prix: al ? Math.min(cents(out.prix), M.maxPrice) : null,
+    return { bulles: B, step, floor, state, burned: [...burned], ended, mode, guarded, redit, album: al ? al.name : null, media: it ? it.descr : null, prix: al ? Math.min(cents(out.prix), M.maxPrice) : null,
       remise: al && M.promo && pct >= 5 ? Math.min(pct, M.maxDiscount) : null, laisser: null, teaser: !al && !act && !!out.teaser && !!(sell.teaseNow || albums.length), gate: plan ? "" : albums.length ? "" : sell.note };
   }));
   app.post("/api/twizz/ai/scan/:cid", auth, mgr, wrap(async req => { await scan(okC(req.params.cid).id, req.user.id); return state(req); }));
