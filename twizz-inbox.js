@@ -657,7 +657,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const old = db.prepare("SELECT r.script_id, r.step, r.at, u.username by FROM twizz_script_runs r LEFT JOIN users u ON u.id = r.user_id WHERE r.creator_id = ? AND r.fan_id = ? UNION ALL SELECT p.script_id, p.step, p.at, u.username FROM twizz_script_paused p LEFT JOIN users u ON u.id = p.user_id WHERE p.creator_id = ? AND p.fan_id = ?").all(cid, fan, cid, fan);
     old.forEach(r => { for (let i = 0; i < r.step; i++) if (!has.has(r.script_id + ":" + i)) { has.add(r.script_id + ":" + i); L.push({ scriptId: r.script_id, step: i, msg: null, at: r.at, by: r.by || null }); } });
     return L; };
-  app.get("/api/twizz/inbox/:cid/run/:fan", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid), fan = str(req.params.fan); return { run: runGet(cid, fan), paused: pausedOf(cid, fan), sent: sentOf(cid, fan) }; }));
+  app.get("/api/twizz/inbox/:cid/run/:fan", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid), fan = str(req.params.fan); let aiOff = false; try { aiOff = !!db.prepare("SELECT 1 FROM twizz_ai_fanoff WHERE creator_id = ? AND fan_id = ?").get(cid, fan); } catch (e) {}
+    return { run: runGet(cid, fan), paused: pausedOf(cid, fan), sent: sentOf(cid, fan), aiOff }; }));
   app.post("/api/twizz/inbox/:cid/script-sent/:fan", auth, inbox, wrap(async req => {
     const cid = creatorOk(req.params.cid), fan = str(req.params.fan), b = req.body || {}, sc = db.prepare("SELECT * FROM twizz_scripts WHERE id = ?").get(+b.script);
     if (!fan || !sc) throw bad("Script introuvable"); const step = Math.max(0, Math.min(stepsOf(sc).length - 1, Math.round(+b.step || 0)));

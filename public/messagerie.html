@@ -1586,7 +1586,7 @@ function useScript(x) { if (!x || !CUR) return;
   api(`/api/twizz/scripts/${x.id}/use`, { body: {} }).then(() => { x.uses++; }).catch(() => {}); }
 
 /* ================= déroulé d'un script sur le fan : une étape à la fois, envoyée par le chatter ================= */
-const RUNS = {}, PAUSED = {}, GOT = {}; let PEND = null, RUN_SIG = "";
+const RUNS = {}, PAUSED = {}, GOT = {}, AIOFF = {}; let PEND = null, RUN_SIG = "";
 // scripts déjà reçus par le fan ouvert : « reçu il y a … », et vu ou pas d'après la conversation (lu sur Twizz, ou il a répondu depuis)
 function seenOf(r) { const T = CUR && THREADS[CUR.id]; if (!T || !r) return null; const m = r.msg && T.items.find(x => x.id === r.msg);
   if ((m && m.read) || T.items.some(x => x.fromFan && Date.parse(x.at) > r.at)) return true; return m ? false : null; }
@@ -1605,7 +1605,7 @@ function askBox(title, text, buttons) { return new Promise(res => { const m = do
   m.querySelectorAll("[data-k]").forEach(b => b.onclick = () => done(buttons[+b.dataset.k].value)); const p = m.querySelector(".pri"); if (p) p.focus(); }); }
 const runKey = () => CUR ? CID + "|" + CUR.fan.id : "";
 async function loadRun(force) { const c = CUR; if (!c) return; const k = runKey(); if (RUNS[k] !== undefined && !force) return paintRun();
-  try { const r = await api2(`/run/${enc(c.fan.id)}`); RUNS[k] = r.run; PAUSED[k] = r.paused || []; GOT[k] = r.sent || []; if (r.run || PAUSED[k].length) await getScripts().catch(() => {}); } catch (e) { RUNS[k] = null; }
+  try { const r = await api2(`/run/${enc(c.fan.id)}`); RUNS[k] = r.run; PAUSED[k] = r.paused || []; GOT[k] = r.sent || []; AIOFF[k] = !!r.aiOff; if (r.run || PAUSED[k].length) await getScripts().catch(() => {}); } catch (e) { RUNS[k] = null; }
   if (CUR === c) paintRun(); }
 function runNow() { const R = RUNS[runKey()]; if (!R) return null; const s = (SCRIPTS && SCRIPTS.cid === CID ? SCRIPTS.items : []).find(x => x.id === R.scriptId); return s ? { R, s } : null; }
 async function saveRun(body) { const c = CUR, k = runKey(); if (!c) return;
@@ -1806,7 +1806,7 @@ function paintFan(c) {
   if (first) { F.dataset.conv = c.id; NOTE_ED = false; PR_ED = ""; STG_MENU = false; if (TPOPX) TPOPX(true);
     F.innerHTML = `<div class="fhd up" id="fHd"></div><div class="ftg up" id="fTg" style="animation-delay:.03s"></div>
       <div class="wtb ftab up" id="fTb" style="animation-delay:.05s"><span class="ind ${["", "p1", "p2"][FTAB]}"></span>${["Analyse", "Historique", "Profil"].map((t, i) => `<button class="${i === FTAB ? "on" : ""}" data-ft="${i}">${t}</button>`).join("")}</div>
-      <div class="fpane ${FTAB === 0 ? "on" : ""}" data-fp="0"><div id="fKp"></div><div id="fTi"></div><div id="fSt"></div><div id="fBr"></div><div id="fRun"></div></div>
+      <div class="fpane ${FTAB === 0 ? "on" : ""}" data-fp="0"><div id="fKp"></div><div id="fTi"></div><div id="fSt"></div><div id="fBr"></div><div id="fRun"></div><div id="fAi"></div></div>
       <div class="fpane ${FTAB === 1 ? "on" : ""}" data-fp="1"><div id="fBuy"></div><div id="fHs"></div><div id="fTm" style="margin-top:14px"></div></div>
       <div class="fpane ${FTAB === 2 ? "on" : ""}" data-fp="2"><div id="fPr"></div><div id="fCr"></div><div id="fNt"></div></div>`;
     F.querySelectorAll("[data-ft]").forEach(b => b.onclick = () => { FTAB = +b.dataset.ft; try { localStorage.setItem("mx:ftab", FTAB); } catch (e) {}
@@ -1885,7 +1885,17 @@ function paintStage(c, X) {
   B.querySelectorAll("[data-sg]").forEach(b => b.onclick = async () => { const v = b.dataset.sg === "auto" || +b.dataset.sg === X.auto && !man ? null : +b.dataset.sg; STG_MENU = false;
     try { CARDS[key] = await api2(`/stage/${enc(c.fan.id)}`, { body: { stage: v === X.auto ? null : v } }); } catch (e) { notify("Étape non changée", e.message, "err"); } if (CUR === c) paintStage(c, fanStats(c)); });
 }
+// IA de secours : la couper pour ce fan (elle ne lui répondra plus, même quand elle tourne) ; pour les managers
+function paintFanAi() {
+  const B = $("fAi"); if (!B) return; if (!CUR || !ST || !(ST.founder || ST.manager)) { B.innerHTML = ""; return; }
+  const k = CID + "|" + CUR.fan.id, off = !!AIOFF[k];
+  B.innerHTML = `<div class="fc-card"><div class="ta-o" style="margin:0;padding:0;border:0;background:none"><div><b>🤖 IA de secours</b><small>${off ? "Coupée pour ce fan : elle ne lui répondra pas, même quand elle tourne." : "Elle peut répondre à ce fan quand elle tourne sur cette créatrice."}</small></div><button type="button" class="ta-sw ${off ? "" : "on"}" id="fAiSw" aria-label="IA de secours pour ce fan"><i></i></button></div></div>`;
+  const conv = CUR; $("fAiSw").onclick = async () => { const nx = !AIOFF[k];
+    try { await api(`/api/twizz/ai/fan/${enc(CID)}/${enc(conv.fan.id)}`, { body: { off: nx } }); AIOFF[k] = nx; notify(nx ? "IA coupée pour ce fan" : "IA rallumée pour ce fan", "", "info"); } catch (e) { notify("Impossible", e.message, "err"); }
+    if (CUR === conv) paintFanAi(); };
+}
 function paintFanRun() {
+  paintFanAi();
   const B = $("fRun"); if (!B) return; const X = runNow(); if (!X) { B.innerHTML = ""; return; }
   const { R, s } = X, n = s.steps.length, k = R.step, done = k >= n, st = s.steps[k];
   B.innerHTML = `<div class="fc-card"><div class="fc-run"><span class="ic">${SV(IC.doc, 13)}</span><b>${esc(s.title || "Script")}</b><span class="dots">${s.steps.map((_, i) => `<i class="${i < k ? "ok" : i === k ? "cu" : ""}"></i>`).join("")}</span><small>${done ? "Terminé" : `Étape ${k + 1}/${n}`}</small></div><p>${done ? "Toutes les étapes sont envoyées" : "Prochaine : « " + esc(fillVars(st.text) || "médias") + " »"}</p></div>`;
