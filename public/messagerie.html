@@ -1269,6 +1269,7 @@ const isPPV = m => !m.fromFan && m.type === "FILE" && m.price != null && m.media
 // vente à montrer après un lien direct : le PPV envoyé (ou celui au bon prix juste avant l'achat) est mis en avant
 let DEEP = null;
 async function showDeep() { const d = DEEP; if (!d || d.busy || !CUR || CUR.id !== d.conv || !THREADS[CUR.id]) return; d.busy = true;
+  if (!d.msg && !d.amt) { DEEP = null; return; }   // lien vers une conversation seule (page IA, « À reprendre ») : pas de vente à chercher
   const desc = (a, b) => Date.parse(b.at) - Date.parse(a.at);
   const find = () => { const T = THREADS[CUR.id]; if (!T) return null; const ppv = T.items.filter(m => isPPV(m) && !m.fromFan);
     let m = d.msg && ppv.find(x => x.id === d.msg);

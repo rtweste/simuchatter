@@ -8,79 +8,236 @@
 <link rel="stylesheet" href="/style.css">
 <style>
 .main-area.iam{padding:0!important}
-.ia-w{position:relative;min-height:100dvh;padding:26px 28px 70px;background:radial-gradient(900px 300px at 30% -120px,rgba(95,211,162,.07),transparent 70%),#0a0a0a;box-sizing:border-box}
-.up{animation:up .7s cubic-bezier(.16,1,.3,1) both}@keyframes up{from{opacity:0;transform:translateY(12px);filter:blur(4px)}}
-.cap{font:800 10px Inter;letter-spacing:.2em;text-transform:uppercase;color:#6a6a6a}
-.met{font-style:italic;background:linear-gradient(100deg,#fff,#8a8a8a 55%,#e6e6e6);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.08em}
-.hd{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap}
-.hd h1{margin:6px 0 0;font:900 38px Inter;letter-spacing:-.045em;line-height:1.02}
-.lead{font:500 13px/1.55 Inter;color:#7a7a7a;max-width:780px;margin:8px 0 16px}.lead b{color:#cfcfcf}
-.auto{margin-left:auto;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px;border-radius:16px;background:#111;border:1px solid #232323}
-.auto b{display:block;font:800 13px Inter;color:#eee}.auto small{display:block;font:600 11.5px Inter;color:#7a7a7a;margin-top:2px}
-.sw{flex:none;width:44px;height:26px;border-radius:999px;border:0;background:#2a2a2a;position:relative;cursor:pointer;transition:background .25s}.sw i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#bbb;transition:transform .3s cubic-bezier(.3,1.4,.5,1),background .25s}
-.sw.on{background:#3ddc97}.sw.on i{transform:translateX(18px);background:#fff}.sw:disabled{opacity:.45;cursor:not-allowed}
-.warn{margin:0 0 12px;padding:11px 14px;border-radius:14px;background:rgba(255,180,80,.08);border:1px solid rgba(255,180,80,.3);color:#ffc77a;font:600 12.5px/1.45 Inter}.warn b{color:#ffe0b0}
-.crs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px;margin-bottom:14px}.crs::-webkit-scrollbar{display:none}
-.crs button{flex:none;position:relative;display:flex;align-items:center;gap:9px;height:44px;padding:4px 16px 4px 4px;border-radius:999px;border:1px solid #232323;background:#121212;color:#bbb;font:800 13px Inter;cursor:pointer}
-.crs button .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#1d1d1d;border:1px solid #333;font:900 13px Inter;color:#eee}
-.crs button.on{background:#f5f5f5;color:#0a0a0a;border-color:#f5f5f5}.crs button.on .av{background:#0a0a0a;color:#fff;border-color:#0a0a0a}
-.crs button .tg{font:800 10px Inter;padding:2px 7px;border-radius:999px;background:#222;color:#9a9a9a}.crs button .tg.ok{background:rgba(61,220,151,.15);color:#3ddc97}.crs button .tg.run{background:#3ddc97;color:#05261a}
-.cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px;align-items:start}
-.pn{position:relative;border-radius:20px;background:linear-gradient(180deg,#101010,#0c0c0c);border:1px solid #1c1c1c;padding:16px 18px;margin-bottom:14px}
-.pn h3{margin:0;font:900 17px Inter;letter-spacing:-.02em}.pn h3 em{font-style:italic;color:#9a9a9a}
-.ph{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}.ph .r{margin-left:auto;display:flex;gap:8px;align-items:center}
-.btn{height:38px;padding:0 14px;border-radius:12px;border:1px solid #262626;background:#151515;color:#e8e8e8;font:800 12.5px Inter;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;text-decoration:none}
-.btn[hidden]{display:none}.btn:hover{background:#1c1c1c}.btn.w{background:#f2f2f2;color:#0a0a0a;border-color:#f2f2f2}.btn.r{color:#ff8a8a;border-color:rgba(255,120,120,.35)}.btn:disabled{opacity:.45;cursor:not-allowed}.btn.sm{height:32px;padding:0 11px;font-size:12px;border-radius:10px}
-.row{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid #181818}.row:first-of-type{border-top:0}
-.row .t{flex:1;min-width:0}.row .t b{display:block;font:800 13.5px Inter;color:#eee}.row .t small{display:block;font:500 12px/1.45 Inter;color:#808080;margin-top:2px}
-.inp{height:34px;border-radius:10px;border:1px solid #2a2a2a;background:#141414;color:#eee;font:700 13px Inter;padding:0 10px;color-scheme:dark;box-sizing:border-box}
-.inp.n{width:78px;text-align:center}.unit{font:700 12px Inter;color:#7a7a7a}
-select.inp{padding-right:8px}.row select.inp{width:auto;flex:none;min-width:190px;max-width:60%}
-textarea.inp{width:100%;min-height:70px;height:auto;padding:9px 11px;font:500 13px/1.5 Inter;resize:vertical}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.chips button{height:30px;padding:0 11px;border-radius:999px;border:1px solid #2a2a2a;background:#141414;color:#9a9a9a;font:700 12px Inter;cursor:pointer}
-.chips button.on{background:#ededed;color:#0a0a0a;border-color:#ededed}.chips .hint{font:600 11.5px Inter;color:#6f6f6f;align-self:center}
-.st{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#121212;border:1px solid #1f1f1f}.st.run{background:rgba(61,220,151,.07);border-color:rgba(61,220,151,.35)}
-.st i{flex:none;width:9px;height:9px;border-radius:50%;background:#444}.st.run i{background:#3ddc97;box-shadow:0 0 10px #3ddc97;animation:pl 1.6s infinite}@keyframes pl{50%{opacity:.3}}
-.st .t{flex:1;min-width:0}.st .t b{display:block;font:800 13.5px Inter}.st .t small{display:block;font:500 12px/1.45 Inter;color:#8a8a8a;margin-top:2px}
-.lv{margin-top:8px;padding:8px 11px;border-radius:11px;background:rgba(255,160,110,.07);border:1px solid rgba(255,160,110,.25);font:600 12px/1.45 Inter;color:#ffbf98}.lv b{color:#ffe1cf}
-.fiche{display:flex;align-items:center;gap:12px}.fiche .g{flex:1;height:7px;border-radius:5px;background:#1f1f1f;overflow:hidden}.fiche .g i{display:block;height:100%;background:linear-gradient(90deg,#3ddc97,#9ff0cc);border-radius:5px}
-.fiche b{font:800 13px Inter;white-space:nowrap}
-.pvh{margin:14px 0 6px;font:800 12.5px Inter;color:#e6e6e6}.pvh span{font-weight:600;color:#7a7a7a;margin-left:6px}
-textarea.mono{font:500 12.5px/1.6 ui-monospace,Menlo,monospace;min-height:260px;color:#e6e6e6}.pvn{display:block;font:500 11.5px Inter;color:#6f6f6f;margin-top:5px}
-.pvp{white-space:pre-wrap;margin:0;padding:12px;border-radius:12px;background:#0b0b0b;border:1px solid #1f1f1f;font:500 12px/1.55 ui-monospace,Menlo,monospace;color:#9d9d9d;max-height:360px;overflow:auto}.pvp.lk{color:#c9b98a;border-color:#2a2618;background:#0e0d09}
-details.pv{margin-top:10px}details.pv summary{cursor:pointer;font:700 12.5px Inter;color:#9a9a9a}details.pv pre{white-space:pre-wrap;margin:8px 0 0;padding:12px;border-radius:12px;background:#0b0b0b;border:1px solid #1f1f1f;font:500 12px/1.55 ui-monospace,Menlo,monospace;color:#bdbdbd;max-height:420px;overflow:auto}
-.chat{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto;padding:4px 2px 8px}
-.bb{max-width:85%;padding:8px 12px;border-radius:15px;font:500 13.5px/1.45 Inter;white-space:pre-wrap;word-break:break-word}
-.bb.f{align-self:flex-start;background:#1c1c1c;color:#eee;border-bottom-left-radius:5px}.bb.a{align-self:flex-end;background:#2a3d34;color:#e9fff4;border-bottom-right-radius:5px}
-.bb.x{align-self:center;background:rgba(255,160,110,.1);color:#ffbf98;font-size:12px}
-.bb.s{align-self:flex-end;background:#22344a;color:#e6f1ff;border-bottom-right-radius:5px;border:1px solid rgba(125,180,255,.35)}.bb.s .sh{display:block;font:800 10px Inter;letter-spacing:.12em;text-transform:uppercase;color:#9cc6ff;margin-bottom:4px}
-.bb .buy{margin-top:6px;height:26px;padding:0 10px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;font:800 11.5px Inter;cursor:pointer}.bb .ok{display:inline-block;margin-top:6px;font:800 11.5px Inter;color:#7be0b0}
-.md{align-self:center;font:700 11px Inter;color:#6f8fb3;padding:2px 0}
-.dts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}.dts label{display:flex;flex-direction:column;gap:4px;font:700 11.5px Inter;color:#8a8a8a}.dts label.w{grid-column:1/-1}.dts .inp{width:100%}
-.scl{display:flex;flex-direction:column;gap:6px;margin:4px 0 6px}.scl .it{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:11px;background:#111;border:1px solid #1f1f1f;font:700 12.5px Inter;color:#ddd}
-.scl .it small{font:600 11.5px Inter;color:#7a7a7a}.scl .it .w{margin-left:auto;font:700 11px Inter;color:#ffb48a}.scl .no{padding:10px 12px;border-radius:11px;background:rgba(255,180,120,.07);border:1px solid rgba(255,180,120,.25);font:600 12.5px/1.5 Inter;color:#ffcfa8}.bb small{display:block;margin-top:4px;font:700 11px Inter;color:#9fd9bd}
-.cin{display:flex;gap:8px;margin-top:6px}.cin .inp{flex:1}
-.emp{padding:14px;text-align:center;font:600 13px/1.5 Inter;color:#6f6f6f}
-.hs{padding:9px 0;border-top:1px solid #181818}.hs:first-child{border-top:0}.hs b{font:800 13px Inter}.hs small{display:block;font:500 12px/1.45 Inter;color:#7f7f7f;margin-top:2px}
-.an{display:flex;align-items:center;gap:10px;margin-top:7px}.an span{flex:none;width:130px;font:700 12.5px Inter;color:#cfcfcf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.an .inp{flex:1;min-width:0}
-.cmp{width:100%;border-collapse:collapse;font:600 13px Inter}.cmp th{font:800 10.5px Inter;letter-spacing:.06em;text-transform:uppercase;color:#7a7a7a;text-align:right;padding:6px 8px}.cmp th:first-child,.cmp td:first-child{text-align:left}
-.cmp td{padding:9px 8px;border-top:1px solid #1a1a1a;text-align:right;color:#ddd}.cmp td:first-child{color:#9a9a9a}.cmp td.w{color:#3ddc97;font-weight:900}.cmpn{font:500 11.5px/1.5 Inter;color:#6f6f6f;margin-top:8px}
-.lock{font:700 11px Inter;color:#7a7a7a;margin-left:6px}.row[hidden]{display:none}
-@media(max-width:1100px){.cols{grid-template-columns:1fr}}
-@media(max-width:860px){.ia-w{padding:16px 12px 120px}.hd h1{font-size:28px}.auto{margin-left:0;width:100%;box-sizing:border-box}.row{flex-wrap:wrap}}
+.ia-w{position:relative;min-height:100dvh;padding:28px 32px 70px;background:radial-gradient(1100px 380px at 18% -8%,rgba(95,211,162,.07),transparent 70%),#0a0a0a;box-sizing:border-box;color:#ededed;font-family:Inter,system-ui,sans-serif}
+.ia-in{max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.gslot:empty{display:none}.gslot .gtabs{margin:0}
+.ia-w :focus-visible{outline:2px solid #8be8c2;outline-offset:2px}
+.up{animation:up .5s cubic-bezier(.16,1,.3,1) both}@keyframes up{from{opacity:0;transform:translateY(8px)}}
+@media (prefers-reduced-motion:reduce){.up,.dot{animation:none!important}}
+/* en-tête */
+.hd{position:relative;z-index:20;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px}
+.hl{display:flex;align-items:center;gap:14px;min-width:0}
+.hlogo{flex:none;width:46px;height:46px;border-radius:14px;background:rgba(95,211,162,.12);border:1px solid rgba(95,211,162,.3);display:grid;place-items:center;color:#5fd3a2}
+.hd h1{margin:0;font:800 28px/1.05 Inter;letter-spacing:-.02em}.hd h1 em{font-style:italic;color:#8f8f8f}
+.hd p{margin:4px 0 0;font:500 13px/1.4 Inter;color:#9b9b9b}
+.hr{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.crw{position:relative}.crw[hidden]{display:none}
+.crb{display:flex;align-items:center;gap:10px;height:48px;padding:4px 14px 4px 5px;border-radius:999px;border:1px solid #2a2a2a;background:#141414;color:#ededed;font:800 13.5px Inter;cursor:pointer;max-width:100%}
+.crb:hover{background:#191919}.crb>svg{flex:none;color:#8f8f8f}.crb>b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cav{flex:none;width:38px;height:38px;border-radius:50%;background:#1d3b2f;color:#9ff0cc;display:grid;place-items:center;font:800 14px Inter}
+.tg{flex:none;display:inline-flex;align-items:center;gap:6px;font:800 11px Inter;padding:4px 9px;border-radius:999px;background:#1d1d1d;color:#9b9b9b;white-space:nowrap}
+.tg.ok{background:rgba(95,211,162,.1);color:#9ff0cc}.tg.run{background:rgba(95,211,162,.14);color:#9ff0cc}.tg.run i{width:6px;height:6px;border-radius:50%;background:#5fd3a2}
+.crm{position:absolute;z-index:30;top:calc(100% + 8px);right:0;min-width:290px;max-height:60vh;overflow:auto;padding:6px;border-radius:18px;background:#141414;border:1px solid #2a2a2a;box-shadow:0 18px 50px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:2px}
+.crm[hidden]{display:none}
+.crm button{display:flex;align-items:center;gap:10px;padding:6px 10px 6px 6px;border-radius:12px;border:0;background:transparent;color:#ededed;font:800 13px Inter;cursor:pointer;text-align:left}
+.crm button b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.crm button .cav{width:32px;height:32px;font-size:12px}
+.crm button:hover,.crm button:focus-visible{background:#1d1d1d}.crm button[aria-selected="true"]{background:#16241e}
+.auto{display:flex;align-items:center;gap:10px;height:48px;padding:0 8px 0 14px;border-radius:999px;border:1px solid #2a2a2a;background:#141414;box-sizing:border-box}.auto[hidden]{display:none}
+.auto .al{font:800 12.5px Inter;color:#cfcfcf;white-space:nowrap}
+#warns{display:flex;flex-direction:column;gap:8px}#warns:empty{display:none}
+.warn{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:16px;background:rgba(240,180,90,.08);border:1px solid rgba(240,180,90,.3);color:#f3cf94;font:600 13px/1.45 Inter}.warn svg{flex:none;margin-top:1px}.warn b{color:#ffe0b0}
+/* onglets */
+.iatabs{display:flex;gap:4px;padding:5px;border-radius:16px;background:#111;border:1px solid #1e1e1e;align-self:flex-start;max-width:100%;box-sizing:border-box;overflow-x:auto;scrollbar-width:none}
+.iatabs[hidden]{display:none}.iatabs::-webkit-scrollbar{display:none}
+.iatabs button{flex:none;display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:11px;border:0;background:transparent;color:#b5b5b5;font:700 13.5px Inter;cursor:pointer;white-space:nowrap}
+.iatabs button:hover{color:#ededed;background:#171717}
+.iatabs button[aria-selected="true"]{background:#f2f2f2;color:#0a0a0a;font-weight:800}
+.iatabs .all{font:800 10.5px Inter;color:#8ab8ff;background:rgba(125,180,255,.12);padding:2px 7px;border-radius:999px}
+.iatabs button[aria-selected="true"] .all{color:#1b4a8a;background:#dbe9ff}
+.tab{display:flex;flex-direction:column;gap:18px}.tab[hidden]{display:none}
+.gl{margin:0;display:flex;align-items:center;gap:10px;font:600 13px/1.4 Inter;color:#b9d3ff}.gl svg{flex:none;color:#8ab8ff}
+/* mise en page et cartes */
+.lay{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.lay>.mn{flex:999 1 600px;min-width:0;display:flex;flex-direction:column;gap:18px}
+.lay>.as{flex:1 1 360px;min-width:0;display:flex;flex-direction:column;gap:18px}
+.pn{position:relative;padding:20px;border-radius:22px;background:#111;border:1px solid #1e1e1e;box-shadow:inset 0 1px 0 rgba(255,255,255,.03);box-sizing:border-box;min-width:0}
+.pn h2{margin:0;font:800 16px Inter;letter-spacing:-.005em}.pn h2 em,.pn h3 em{font-style:italic;color:#8f8f8f}
+.sh{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:10px}
+.ic{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font:800 14px Inter}
+.ic.g{background:rgba(95,211,162,.12);color:#5fd3a2}.ic.a{background:rgba(240,180,90,.12);color:#f0b45a}.ic.b{background:rgba(125,180,255,.12);color:#8ab8ff}.ic.n{background:rgba(255,255,255,.06);color:#cfcfcf}
+.sht{flex:1;min-width:180px}.sht small{display:block;margin-top:2px;font:500 12.5px/1.4 Inter;color:#9b9b9b}
+.shr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;padding:13px 0;border-top:1px solid #1b1b1b}.row[hidden]{display:none}
+.row .t{flex:1;min-width:160px}.row .t b{display:block;font:700 13.5px Inter;color:#ededed}.row .t small{display:block;margin-top:2px;font:500 12px/1.45 Inter;color:#9b9b9b}
+.row.bl{display:block}.row.bl .t{margin-bottom:9px}
+.inp{height:36px;border-radius:11px;border:1px solid #2a2a2a;background:#161616;color:#ededed;font:700 13px Inter;padding:0 11px;color-scheme:dark;box-sizing:border-box;min-width:0}
+.inp:focus{border-color:#3d6b58;outline:none}.inp:disabled{opacity:.5}
+textarea.inp{display:block;width:100%;height:auto;min-height:90px;padding:11px 13px;border-radius:12px;font:500 13px/1.6 Inter;resize:vertical}
+select.inp{width:auto;padding-right:8px;cursor:pointer}
+#left:empty{display:none}.qh svg{flex:none}
+textarea.mono{font:500 12.5px/1.6 ui-monospace,Menlo,monospace;min-height:260px;color:#e6e6e6}
+.stp{flex:none;display:inline-flex;align-items:center;border-radius:11px;border:1px solid #2a2a2a;background:#161616;overflow:hidden}
+.stp .sb{width:34px;height:36px;border:0;background:transparent;color:#cfcfcf;font:800 16px Inter;cursor:pointer}.stp .sb:hover{background:#1f1f1f;color:#fff}
+.stp .inp{width:50px;height:36px;border:0;border-radius:0;background:transparent;text-align:center;padding:0 2px;font-weight:800;-moz-appearance:textfield;appearance:textfield}
+.stp .inp::-webkit-inner-spin-button,.stp .inp::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.stp .u{font:700 12px Inter;color:#8f8f8f;padding-right:2px;white-space:nowrap}
+.unit{font:700 12px Inter;color:#8f8f8f}
+.sw{flex:none;position:relative;width:44px;height:26px;border-radius:999px;border:0;background:#2a2a2a;cursor:pointer;transition:background .2s}
+.sw i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#8a8a8a;transition:transform .25s cubic-bezier(.3,1.4,.5,1),background .2s}
+.sw.on{background:#5fd3a2}.sw.on i{transform:translateX(18px);background:#062a1d}.sw:disabled{opacity:.45;cursor:not-allowed}
+.btn{height:38px;padding:0 14px;border-radius:11px;border:1px solid #2c2c2c;background:#181818;color:#ededed;font:800 12.5px Inter;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;text-decoration:none;box-sizing:border-box}
+.btn[hidden]{display:none}.btn:hover{background:#1f1f1f;color:#fff}.btn.w{background:#f2f2f2;color:#0a0a0a;border-color:#f2f2f2}.btn.w:hover{background:#fff;color:#0a0a0a}.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{height:32px;padding:0 11px;font-size:12px;border-radius:10px}.btn.big{height:46px;padding:0 20px;border-radius:13px;font-size:13.5px}
+.btn.stop{border-color:#6a2e2e;background:#261313;color:#ffb8b8}.btn.stop:hover{background:#311818;color:#ffd0d0}
+.lnk{border:0;background:none;padding:6px 4px;color:#5fd3a2;font:800 12.5px Inter;cursor:pointer;text-decoration:none;white-space:nowrap}.lnk:hover{color:#8be8c2}
+.ib{flex:none;width:38px;height:38px;border-radius:11px;border:1px solid #2a2a2a;background:#181818;color:#cfcfcf;display:grid;place-items:center;cursor:pointer}.ib:hover{background:#1f1f1f;color:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chips button{height:32px;padding:0 12px;border-radius:999px;border:1px solid #2c2c2c;background:#171717;color:#cfcfcf;font:700 12px Inter;cursor:pointer}
+.chips button.on{background:#f2f2f2;color:#0a0a0a;border-color:#f2f2f2;font-weight:800}.hint{font:600 12px Inter;color:#8f8f8f;align-self:center}
+.seg{flex:none;display:inline-flex;padding:3px;border-radius:11px;background:#161616;border:1px solid #262626}
+.seg button{height:30px;padding:0 12px;border-radius:8px;border:0;background:transparent;color:#b5b5b5;font:700 12px Inter;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#5fd3a2;color:#062a1d;font-weight:800}
+.seg.wide{display:flex;background:#0b0b0b;border-color:#222;border-radius:12px}.seg.wide button{flex:1;height:32px;border-radius:9px;font-size:11.5px}.seg.wide button[aria-pressed="true"]{background:#f2f2f2;color:#0a0a0a}
+.emp{padding:14px;text-align:center;font:600 13px/1.5 Inter;color:#8f8f8f}
+.cnt{margin-top:6px;text-align:right;font:600 12px Inter;color:#8f8f8f}
+/* vue d'ensemble */
+.pn.live{background:#0f1915;border-color:#1f3a2f}
+.lvh{display:flex;flex-wrap:wrap;align-items:center;gap:16px}
+.lvh .t{flex:1;min-width:240px;display:flex;flex-direction:column;gap:4px}
+.kick{font:800 11px Inter;letter-spacing:.14em;text-transform:uppercase;color:#8f8f8f}.kick.g{color:#7fcfa9}
+.lvh .t b{font:800 20px/1.25 Inter;letter-spacing:-.01em}.lvh .t small{font:500 13px/1.45 Inter;color:#9b9b9b}.pn.live .lvh .t small{color:#a9cbbb}
+.dot{flex:none;width:14px;height:14px;border-radius:50%;background:#5fd3a2;box-shadow:0 0 0 6px rgba(95,211,162,.16),0 0 18px rgba(95,211,162,.5);animation:pl 1.8s infinite}
+.dot.off{background:#3a3a3a;box-shadow:0 0 0 6px rgba(255,255,255,.04);animation:none}@keyframes pl{50%{opacity:.45}}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:10px;margin-top:18px}
+.stats>*{padding:14px 16px;border-radius:15px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.04);display:flex;flex-direction:column;gap:6px;color:inherit;text-decoration:none}
+.stats span{font:700 12px Inter;color:#a9cbbb}.stats b{font:800 28px Inter;letter-spacing:-.02em}
+.stats .am{background:rgba(240,180,90,.08);border-color:rgba(240,180,90,.28)}.stats .am span,.stats .am b{color:#f3cf94}
+.lerr{margin-top:14px;display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:12px;background:rgba(240,180,90,.08);border:1px solid rgba(240,180,90,.25);font:600 12.5px/1.45 Inter;color:#f3cf94}.lerr svg{flex:none;margin-top:1px}
+.lf{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:12px 14px;border-radius:16px;background:#0c0c0c;border:1px solid #222;margin-top:8px}
+.lf .cav{background:#262626;color:#ededed}.lf .t{flex:1;min-width:200px}.lf .t b{display:block;font:800 14px Inter}.lf .t small{display:block;margin-top:3px;font:500 12.5px/1.4 Inter;color:#e3be8f}
+.bars{display:flex;gap:4px}.bars i{width:26px;height:6px;border-radius:999px;background:#f0b45a}.bars i.g{background:#5fd3a2}
+.ck{display:flex;align-items:center;gap:12px;padding:11px 4px;border-top:1px solid #1b1b1b}
+.ck>span{flex:none;display:grid}.ck>span.g{color:#5fd3a2}.ck>span.a{color:#f0b45a}
+.ck .t{flex:1;min-width:0}.ck .t b{display:block;font:700 13.5px Inter}.ck .t small{display:block;margin-top:2px;font:500 12px/1.45 Inter;color:#9b9b9b}
+.duo{display:flex;flex-wrap:wrap;gap:18px}.duo>.pn{flex:1 1 320px}
+.cb{display:flex;flex-direction:column;gap:6px;margin-top:12px}.cbt{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;font:600 12.5px Inter;color:#8f8f8f}.cbt>span:first-child{color:#b5b5b5;font-weight:700}.cbt b{color:#9ff0cc}
+.cbb{display:flex;gap:4px;height:6px}.cbb i{border-radius:999px;background:#3a3a3a;min-width:4px}.cbb i:first-child{background:#5fd3a2}.cbb.z i{background:#262626}
+.cmpl{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;margin-top:14px;padding-top:12px;border-top:1px solid #1b1b1b;font:700 12px Inter;color:#b5b5b5}
+.cmpn{margin:8px 0 0;font:500 11.5px/1.5 Inter;color:#8f8f8f}
+.pill{flex:none;width:auto;height:30px;border-radius:999px;font-size:11.5px;padding:0 10px}
+.hs{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #1b1b1b}.hs:first-child{border-top:0}
+.hs i{flex:none;width:8px;height:8px;border-radius:50%;background:#3a3a3a}.hs i.on{background:#5fd3a2}
+.hs .w{flex:1;min-width:0;font:600 12.5px Inter;color:#b5b5b5}.hs b{font:800 12.5px Inter;text-align:right}
+.hsl{margin:-4px 0 8px 18px;font:600 11.5px/1.4 Inter;color:#e3be8f}
+.try{padding:0;overflow:hidden;display:flex;flex-direction:column}
+.tryh{padding:16px 18px;border-bottom:1px solid #1e1e1e;display:flex;flex-direction:column;gap:10px}
+.tryt{display:flex;align-items:flex-start;gap:10px}
+.fanx{font:600 11.5px Inter;color:#8f8f8f}
+.chat{display:flex;flex-direction:column;gap:8px;padding:16px;background:#0c0c0c;min-height:400px;max-height:560px;overflow:auto}
+.bb{max-width:80%;padding:9px 13px;font:500 13.5px/1.45 Inter;white-space:pre-wrap;word-break:break-word;box-sizing:border-box}
+.bb.f{align-self:flex-start;background:#1d1d1d;color:#ededed;border-radius:17px 17px 17px 6px}
+.bb.a{align-self:flex-end;background:#234033;color:#eafff5;border-radius:17px 17px 6px 17px}
+.bb.x{align-self:center;max-width:90%;background:rgba(240,180,90,.1);border:1px solid rgba(240,180,90,.25);color:#f3cf94;font-size:12px;border-radius:12px}
+.bb.s{align-self:flex-end;width:80%;padding:0;background:#17263a;border:1px solid rgba(125,180,255,.3);border-radius:17px 17px 6px 17px;overflow:hidden;color:#e6f1ff;white-space:normal}
+.mph{height:84px;display:grid;place-items:center;align-content:center;gap:4px;background:repeating-linear-gradient(135deg,#1e3149 0 10px,#1a2b41 10px 20px);font:800 11.5px Inter;color:#9cc6ff}
+.mph.pd{background:repeating-linear-gradient(135deg,#2a2414 0 10px,#241f12 10px 20px);color:#f3d491}
+.sbd{padding:9px 12px;display:flex;flex-direction:column;gap:4px}.sbd>span{white-space:pre-wrap}
+.stl{font:800 10px Inter;letter-spacing:.12em;text-transform:uppercase;color:#9cc6ff}
+.bb small{display:block;margin-top:4px;font:700 11px/1.4 Inter;color:#9fd9bd;white-space:normal}.bb.s small{color:#9cc6ff;margin-top:0}
+.bb .buy{display:block;margin-top:6px;height:30px;padding:0 12px;border-radius:9px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:#fff;font:800 11.5px Inter;cursor:pointer}
+.bb .ok{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font:800 11.5px Inter;color:#7be0b0}
+.md{align-self:center;max-width:90%;font:800 11px/1.4 Inter;color:#9cc6ff;padding:4px 10px;border-radius:999px;background:rgba(125,180,255,.08);text-align:center}
+.cin{display:flex;gap:8px;padding:12px;border-top:1px solid #1e1e1e}.cin .inp{flex:1;height:44px;border-radius:12px}
+.snd{flex:none;width:44px;height:44px;border-radius:12px;border:0;background:#5fd3a2;color:#062a1d;display:grid;place-items:center;cursor:pointer}.snd:disabled{opacity:.5;cursor:wait}
+/* vente */
+.howh{display:flex;align-items:center;gap:12px;padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid #1b1b1b}
+.howh .t{flex:1}.howh b{display:block;font:800 15px Inter}.howh small{display:block;margin-top:2px;font:500 12.5px/1.4 Inter;color:#9b9b9b}
+.how3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:14px;transition:opacity .2s}
+.how3>div{display:flex;gap:12px;align-items:flex-start}
+.how3 .n{flex:none;width:32px;height:32px;border-radius:50%;background:#262626;color:#ededed;display:grid;place-items:center;font:800 14px Inter}.how3 .n.g{background:#5fd3a2;color:#062a1d}
+.how3 b{display:block;font:800 14px Inter}.how3 small{display:block;margin-top:3px;font:500 12.5px/1.45 Inter;color:#9b9b9b}
+.how.off .how3{opacity:.4}
+.scs{display:flex;flex-direction:column;gap:12px}
+.sc{padding:16px;border-radius:18px;background:#0c0c0c;border:1px solid #222;display:flex;flex-direction:column;gap:14px}
+.sct{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.sct>b{font:800 15px Inter}
+.scw{margin-left:auto;font:500 12px/1.4 Inter;color:#9b9b9b;max-width:100%}
+.bdg{display:inline-flex;align-items:center;gap:6px;font:800 11px Inter;padding:3px 9px;border-radius:999px;white-space:nowrap}.bdg.g{background:#5fd3a2;color:#062a1d}.bdg.a{background:rgba(240,180,90,.1);border:1px solid rgba(240,180,90,.3);color:#f3cf94;white-space:normal}
+.lad{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;align-items:center;row-gap:8px}
+.lad li{display:flex;align-items:center}.lad li+li::before{content:"";width:22px;height:2px;background:#2a2a2a}
+.nd{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;border-radius:14px;background:#161616;border:1px solid #262626}
+.nd .k{flex:none;width:26px;height:26px;border-radius:50%;background:#3a3a3a;color:#ededed;display:grid;place-items:center;font:800 12px Inter}
+.nd b{display:block;font:800 12.5px Inter}.nd small{display:block;font:600 11.5px Inter;color:#9b9b9b}
+.nd.fr{background:#13221c;border-color:#22413a}.nd.fr .k{background:#5fd3a2;color:#062a1d}.nd.fr small{color:#9ff0cc}
+.nd.pd{background:#221d10;border-color:#3d3317}.nd.pd .k{background:#f0b45a;color:#2a1c05}.nd.pd small{color:#f3cf94}
+.scm{display:flex;flex-wrap:wrap;gap:6px 16px;font:500 12px Inter;color:#9b9b9b}
+.nos{padding:12px 14px;border-radius:14px;background:rgba(240,180,90,.07);border:1px solid rgba(240,180,90,.25);font:600 12.5px/1.5 Inter;color:#f3cf94}
+.an{display:flex;align-items:center;gap:10px;margin-top:8px}.an span{flex:none;width:140px;font:700 12.5px Inter;color:#cfcfcf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.an .inp{flex:1}
+/* comportement */
+.p7{display:flex;gap:16px}
+.rail{flex:none;width:32px;display:flex;flex-direction:column;align-items:center}
+.rail .num{width:32px;height:32px;border-radius:50%;background:#1d1d1d;border:1px solid #2c2c2c;color:#dcdcdc;display:grid;place-items:center;font:800 13px Inter;box-sizing:border-box;transition:background .2s}
+.rail i{flex:1;width:2px;min-height:14px;background:#252525;margin:6px 0 4px}
+.p7.open .rail .num{background:#5fd3a2;border-color:#5fd3a2;color:#062a1d}
+.phc{flex:1;min-width:0;margin-bottom:10px;border-radius:18px;background:#0c0c0c;border:1px solid #222;transition:border-color .2s}
+.p7.open .phc{border-color:#2c4a3e}
+.phh{width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;border-radius:18px;font-family:Inter}
+.phh .t{flex:1;min-width:0}.phh b{display:block;font:800 15px Inter}.phh small{display:block;margin-top:2px;font:500 12.5px/1.4 Inter;color:#9b9b9b}
+.phh>svg{flex:none;color:#7a7a7a;transition:transform .2s}.p7.open .phh>svg{transform:rotate(180deg)}
+.ptg{flex:none;font:800 11.5px Inter;padding:4px 10px;border-radius:999px;background:#1d1d1d;color:#cfcfcf}.ptg.p{background:#5fd3a2;color:#062a1d}
+.phb{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}.phb[hidden]{display:none}
+.pht{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px}.pht p{flex:1;min-width:220px;margin:0;font:500 12.5px/1.5 Inter;color:#9b9b9b}
+.phf{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;font:600 12px Inter;color:#8f8f8f}
+.phk{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-top:12px;border-top:1px solid #1b1b1b;font:700 13px Inter}
+details.adv{padding:0}
+details.adv>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:16px 20px;cursor:pointer;border-radius:22px}
+details.adv>summary::-webkit-details-marker{display:none}details.adv>summary b{display:block;font:800 14px Inter}details.adv>summary small{display:block;margin-top:2px;font:500 12px Inter;color:#9b9b9b}
+details.adv>summary>svg{margin-left:auto;flex:none;color:#7a7a7a;transition:transform .2s}details.adv[open]>summary>svg{transform:rotate(90deg)}
+details.adv:not([open]){border-style:dashed;border-color:#2c2c2c;background:#0e0e0e}
+.advb{padding:0 20px 20px}
+.advh{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding-top:14px;border-top:1px solid #1b1b1b}.advh p{margin:0;font:500 12.5px Inter;color:#9b9b9b}
+.pvh{margin:16px 0 6px;font:800 12.5px Inter;color:#e6e6e6}.pvh span{font-weight:600;color:#8f8f8f;margin-left:6px}
+.pvn{display:block;font:500 11.5px/1.45 Inter;color:#8f8f8f;margin-top:5px}
+.pvp{white-space:pre-wrap;margin:0;padding:12px;border-radius:12px;background:#0b0b0b;border:1px solid #1f1f1f;font:500 12px/1.55 ui-monospace,Menlo,monospace;color:#9d9d9d;max-height:360px;overflow:auto}.pvp.lk{color:#c9b98a;border-color:#2a2618;background:#0e0d09}.pvp[hidden]{display:none}
+/* profil */
+.idc{display:flex;flex-wrap:wrap;align-items:center;gap:20px;padding:22px}
+.idc .big{flex:none;width:72px;height:72px;border-radius:22px;background:#1d3b2f;color:#9ff0cc;display:grid;place-items:center;font:800 30px Inter}
+.idc>.t{flex:1;min-width:240px;display:flex;flex-direction:column;gap:4px}.idc>.t b{font:800 22px Inter;letter-spacing:-.01em}.idc>.t small{font:500 13px/1.45 Inter;color:#9b9b9b}
+.ring{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:16px;background:#0c0c0c;border:1px solid #222}.ring svg{flex:none}.ring b{display:block;font:800 15px Inter}.ring small{display:block;margin-top:2px;font:500 12px/1.4 Inter;color:#9b9b9b;max-width:230px}
+.dts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:12px}
+.fld{margin:0;display:flex;flex-direction:column;gap:6px;font:700 12px Inter;color:#b5b5b5;min-width:0}.fld.w{grid-column:1/-1}
+.fld .inp{width:100%;height:42px;border-radius:12px;border-style:dashed;border-color:#333;background:#121212;font-size:13.5px}
+.fld.on .inp{border-style:solid;border-color:#2f3a35;background:#151a18}
+.gcnt{font:800 12px Inter;color:#9b9b9b}
+.fiche{display:flex;align-items:center;gap:12px;margin:2px 0 6px}.fiche .g{flex:1;height:6px;border-radius:999px;background:#262626;overflow:hidden}.fiche .g i{display:block;height:100%;background:#5fd3a2;border-radius:999px}.fiche b{font:800 12.5px Inter;color:#9ff0cc;white-space:nowrap}
+/* réglages */
+.fr{padding:16px 24px 12px;border-radius:18px;background:#0c0c0c;border:1px solid #222}
+.frw{position:relative;height:70px;cursor:copy;touch-action:none}
+.frt,.frf{position:absolute;left:0;top:51px;height:3px;border-radius:999px}.frt{right:0;background:#2a2a2a}.frf{background:linear-gradient(90deg,rgba(95,211,162,.15),rgba(95,211,162,.6))}
+.fr0{position:absolute;left:0;top:46px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:#ededed;box-shadow:0 0 0 4px #0c0c0c}
+.frp{position:absolute;top:10px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;padding:0;border:0;background:transparent;color:#ededed;font-family:Inter;cursor:grab;touch-action:none;border-radius:12px}
+.frp b{height:24px;padding:0 9px;border-radius:999px;background:#13221c;border:1px solid #2c4a3e;display:inline-flex;align-items:center;font:800 12px Inter;color:#9ff0cc;white-space:nowrap}
+.frp i{width:20px;height:20px;border-radius:50%;background:#5fd3a2;box-shadow:0 0 0 4px #0c0c0c,0 0 0 5px rgba(95,211,162,.35);transition:transform .15s}
+.frp.drag{cursor:grabbing;z-index:2}.frp.drag i,.frp:hover i{transform:scale(1.15)}
+.frs{display:flex;justify-content:space-between;margin-top:4px;font:700 11px Inter;color:#6f6f6f}
+.frh{margin:10px 0 0;font:500 12px Inter;color:#9b9b9b}
+.frc{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 4px}
+.chipx{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:999px;border:1px solid #2c2c2c;background:#171717;color:#ededed;font:800 12px Inter;cursor:pointer}.chipx svg{color:#8f8f8f}.chipx:hover svg{color:#ff9a9a}.chipx:disabled{opacity:.5;cursor:not-allowed}
+.frn{font:600 11.5px Inter;color:#8f8f8f}
+.qh{display:inline-flex;align-items:center;gap:8px;color:#8ab8ff}.qh>span{color:#6f6f6f;font-weight:800}
+.mdl{display:flex;flex-direction:column;gap:10px}
+.mdl button{display:flex;align-items:center;gap:12px;padding:14px;border-radius:16px;border:1px solid #262626;background:#0c0c0c;color:#ededed;text-align:left;cursor:pointer;font-family:Inter}
+.mdl .rd{flex:none;width:18px;height:18px;border-radius:50%;border:2px solid #444;box-sizing:border-box;display:grid;place-items:center}
+.mdl button[aria-pressed="true"]{border-color:#2c4a3e;background:#10201a}.mdl button[aria-pressed="true"] .rd{border-color:#5fd3a2}.mdl button[aria-pressed="true"] .rd::after{content:"";width:8px;height:8px;border-radius:50%;background:#5fd3a2}
+.mdl .t{flex:1}.mdl .t b{font:800 14px Inter}.mdl .t small{display:block;margin-top:3px;font:500 12px/1.4 Inter;color:#9b9b9b}.mdl button[aria-pressed="true"] .t small{color:#a9cbbb}
+.lockn{display:flex;align-items:center;gap:10px;margin-top:8px;padding:12px 14px;border-radius:14px;background:#0c0c0c;border:1px solid #222;font:500 12px/1.45 Inter;color:#9b9b9b}.lockn svg{flex:none;color:#8f8f8f}
+@media(max-width:600px){.lad{flex-direction:column;align-items:flex-start}.lad li{flex-direction:column;align-items:flex-start}.lad li+li::before{width:2px;height:10px;margin-left:20px}}
+@media(max-width:860px){.ia-w{padding:16px 12px 120px}.hd h1{font-size:24px}.hr{width:100%}.crw{flex:1;min-width:0}.crb{width:100%}.crm{left:0;right:auto;min-width:100%}.p7{gap:10px}}
 </style>
 </head>
 <body>
 <div class="shell">
 <aside class="sidebar" id="sidebar"></aside>
 <main class="main-area iam">
-<div class="ia-w" id="w">
-  <div class="hd up"><div><div class="cap">Messagerie</div><h1>IA de <em class="met">secours.</em></h1></div><div class="auto" id="auto" hidden></div></div>
-  <p class="lead up" style="animation-delay:.04s">Quand un chatter manque, un manager lance l'IA sur une créatrice : elle répond à ses fans avec <b>Grok</b>, en écrivant comme elle d'après <b>sa fiche</b>, et peut vendre des médias du coffre. Chaque message finit par 🤖. Elle <b>s'arrête toute seule</b> dès qu'un chatter pointe sur la créatrice ou ouvre sa messagerie.</p>
+<div class="ia-w" id="w"><div class="ia-in">
+  <div id="gtabs" class="gslot"></div>
+  <header class="hd up">
+    <div class="hl"><span class="hlogo"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3.5"/><path d="M12 4v4M9 13.5h.01M15 13.5h.01M9.5 17h5"/></svg></span>
+      <div><h1>IA de <em>secours</em></h1><p>Elle répond aux fans quand un chatter manque, et s'arrête dès qu'il reprend.</p></div></div>
+    <div class="hr"><div class="crw" id="crw"></div><div class="auto" id="auto" hidden></div></div>
+  </header>
   <div id="warns"></div>
-  <div class="crs up" id="crs" style="animation-delay:.06s"></div>
+  <nav class="iatabs up" id="tabs" role="tablist" aria-label="Réglages de l'IA" hidden></nav>
   <div id="body"></div>
-</div>
+</div></div>
 </main>
 </div>
 <script src="/common.js"></script>
@@ -88,101 +245,200 @@ details.pv{margin-top:10px}details.pv summary{cursor:pointer;font:700 12.5px Int
 (() => {
 const $ = id => document.getElementById(id), enc = encodeURIComponent;
 let D = null, CID = null, INFO = {}, CHAT = {}, TST = {};   // TST : état du script dans l'essai, par créatrice
+let TAB = "main", PH = "style", ADV = false, MENU = false; const FAN = {};   // onglet, phase ouverte, « Avancé » ouvert, menu des créatrices, fan de l'essai
 // détails de la créatrice : clé, libellé, exemple, champ large
 const DTL = [["prenom", "Prénom", "Léa"], ["age", "Âge", "22 ans"], ["naissance", "Date de naissance", "18 mars"], ["genre", "Genre", "femme"], ["origine", "Origine", "française"], ["ville", "Ville", "Paris"], ["fuseau", "Fuseau", "Paris"],
   ["cheveux", "Cheveux", "blonds"], ["yeux", "Yeux", "verts"], ["taille", "Taille", "1,68 m"], ["poids", "Poids", "54 kg"], ["pointure", "Pointure", "39"], ["poitrine", "Tour de poitrine", "85B"], ["langues", "Langues", "français, anglais"],
   ["hobbies", "Passions", "sport, musique pop, séries, skincare", 1], ["traits", "Personnalité", "timide au début, sportive, coquine une fois en confiance", 1], ["signes", "Signes distinctifs", "tatouage rose sur l'avant-bras, piercing au nombril", 1]];
-const hmin = m => m < 60 ? m + "min" : Math.floor(m / 60) + "h" + (m % 60 ? String(m % 60).padStart(2, "0") : "");
-const pmin = v => { const t = String(v || "").trim().toLowerCase().replace(/\s/g, ""); if (!t) return 0; let m = t.match(/^(\d+)h(\d{1,2})?$/); if (m) return +m[1] * 60 + +(m[2] || 0);
-  m = t.match(/^(\d+)(?:min|mn|m)?$/); if (m) return /m/.test(t) || +m[1] > 23 ? +m[1] : +m[1] * 60; return 0; };
-try { CID = localStorage.getItem("ia:cid"); } catch (e) {}
+const GRP = [["Identité", "Les questions qu'on lui pose en premier", "g", ["prenom", "age", "naissance", "genre", "origine", "ville", "fuseau", "langues"]],
+  ["Apparence", "Quand un fan demande à quoi elle ressemble", "a", ["cheveux", "yeux", "taille", "poids", "pointure", "poitrine", "signes"]],
+  ["Personnalité", "Ce qui la rend différente des autres", "b", ["hobbies", "traits"]]];
+const TABS = [["main", "Vue d'ensemble", "grid"], ["vente", "Vente", "tag"], ["comp", "Comportement", "chat", 1], ["prof", "Profil", "user"], ["regl", "Réglages", "sliders", 1]];
+// les 7 phases d'une conversation (textes pour toutes les créatrices) : clé, nom, résumé, explication
+const PHS = [["style", "Langage", "Longueur, ponctuation, emojis, questions", "Comment elle écrit : longueur des messages, ponctuation, emojis, questions."],
+  ["kyc", "Découverte du fan", "", "Ce qu'elle cherche à savoir sur lui avant de vendre. Elle arrête de lui poser des questions quand le site connaît déjà son prénom et sa ville ou son métier, ou après les limites ci-dessous."],
+  ["launch", "Lancer un script", "Quand elle a le droit de vendre", "Quand elle lance un script. Le site bloque déjà tout script avant « Messages avant le premier média » et pendant la pause après un script (onglet Vente)."],
+  ["sex", "Sexualisation", "Jusqu'où elle va, et quand", "Jusqu'où elle va, et quand."],
+  ["nego", "Média pas encore acheté", "Tant qu'il n'a pas pris le média de l'étape", "Ce qu'elle fait tant que le fan n'a pas pris le média payant de l'étape. Le site bloque l'étape suivante, et le prix descend au plus une fois, au prix plancher de l'étape."],
+  ["after", "Après un script", "Ce qu'elle fait une fois le script fini", "Ce qu'elle fait une fois le script fini. La pause avant un nouveau script se règle dans l'onglet Vente."],
+  ["relance", "Relances", "Comment elle revient vers un fan silencieux", "Comment elle revient vers un fan qui ne répond plus. Les moments des relances se règlent dans l'onglet Réglages."]];
+// ce que le site fait toujours, quels que soient les textes
+const ALW = [["Fan occupé ou qui part", "Une seule bulle courte, pas de vente, pas de relance, et rien après son « ok »"],
+  ["Une seule question par réponse", "Les bulles de questions en trop sont retirées avant l'envoi"],
+  ["Jamais « je te l'envoie » sans média", "Grok réécrit sa réponse, sinon la bulle est retirée"],
+  ["Un script à la fois", "Pas d'étape suivante tant que le média n'est pas pris"],
+  ["Prix plancher, une seule fois", "Jamais en dessous, jamais un autre prix"],
+  ["Refus de Grok", "Le fan est laissé à l'équipe et les managers sont prévenus"]];
+const MDL = { fast: ["Rapide", "Répond en quelques secondes, se perd plus vite dans une longue conversation"], smart: ["Plus réfléchi", "Suit mieux la conversation et les règles, un peu plus lent", "conseillé"] };
+const IC = { grid: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+  tag: '<path d="M20 13l-7 7-9-9V4h7z"/><circle cx="8" cy="8" r="1.4"/>', chat: '<path d="M20 12a8 8 0 0 1-11.5 7.2L4 20l1-4.3A8 8 0 1 1 20 12z"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.6-4 4.5-6 8-6s6.4 2 8 6"/>', sliders: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+  chev: '<path d="M6 9l6 6 6-6"/>', right: '<path d="M9 6l6 6-6 6"/>', arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>', plus: '<path d="M12 5v14M5 12h14"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  check: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>', alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/>', info: '<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>',
+  shield: '<path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3z"/>', doc: '<path d="M7 4h10l3 3v13H4V4z"/><path d="M8 11h8M8 15h5"/>', box: '<rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18M10 14h4"/>',
+  back: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>', ok: '<path d="M5 12l5 5 9-10"/>', lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  code: '<path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/>', book: '<path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5z"/><path d="M8 7h6M8 11h6"/>', pen: '<path d="M4 20h4l10-10-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+  clock: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>', pulse: '<path d="M3 12h4l3-8 4 16 3-8h4"/>', moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+  chip: '<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>', reload: '<path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v4h4"/>',
+  search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>' };
+const ico = (k, s = 16, w = 2.2) => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${IC[k]}</svg>`;
+const STOP = '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+const PLAY = '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>';
+// petits morceaux d'interface : titre de carte, interrupteur, champ avec − et +
+const head = (ic, tone, title, sub, right) => `<div class="sh"><span class="ic ${tone}">${ico(ic, 17)}</span><div class="sht"><h2>${title}</h2>${sub ? `<small>${sub}</small>` : ""}</div>${right ? `<div class="shr">${right}</div>` : ""}</div>`;
+const sw = (on, attrs, label) => `<button type="button" class="sw ${on ? "on" : ""}" aria-pressed="${!!on}" aria-label="${esc(label)}" ${attrs || ""}><i></i></button>`;
+const stp = (attr, label, val, min, max, unit, step) => `<span class="stp"><button type="button" class="sb" data-d="-1" aria-label="Moins : ${esc(label)}">−</button><input class="inp n" type="number" inputmode="numeric" min="${min}" max="${max}" step="${step || 1}" ${attr} aria-label="${esc(label)}" value="${val}">${unit ? `<span class="u">${unit}</span>` : ""}<button type="button" class="sb" data-d="1" aria-label="Plus : ${esc(label)}">+</button></span>`;
+const row = (title, sub, ctl, attrs) => `<div class="row" ${attrs || ""}><div class="t"><b>${title}</b>${sub ? `<small>${sub}</small>` : ""}</div>${ctl}</div>`;
+const hfr = m => (m = Math.round(m)) < 60 ? m + " min" : Math.floor(m / 60) + " h" + (m % 60 ? " " + String(m % 60).padStart(2, "0") : "");
+const pl = (n, a, b) => `${n} ${n > 1 ? b : a}`;
+try { CID = localStorage.getItem("ia:cid"); TAB = localStorage.getItem("ia:tab") || "main"; } catch (e) {}
+if (!TABS.some(t => t[0] === TAB)) TAB = "main";
 const cur = () => D && D.creators.find(c => c.id === CID);
+const init = c => (String((c && c.label) || "?").trim()[0] || "?").toUpperCase();
 const hm = t => new Date(t).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 const day = t => new Date(t).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+const rel = t => { const d = new Date(t).toDateString(); return d === new Date().toDateString() ? "Aujourd'hui" : d === new Date(Date.now() - 864e5).toDateString() ? "Hier" : day(t); };
 const eur = n => String((+n || 0).toFixed(2)).replace(".", ",") + " €";
-const line = r => `${r.replies} réponse${r.replies > 1 ? "s" : ""}${r.medias ? ` · ${r.medias} média${r.medias > 1 ? "s" : ""} envoyé${r.medias > 1 ? "s" : ""}` : ""}${r.sales && r.sales.n ? ` · ${eur(r.sales.net)} vendus` : ""}`;
+const eu = n => String(Math.round((+n || 0) * 100) / 100).replace(".", ",") + " €";
+const line = r => `${r.replies} réponse${r.replies > 1 ? "s" : ""}${r.medias ? ` · ${r.medias} média${r.medias > 1 ? "s" : ""}` : ""}${r.sales && r.sales.n ? ` · ${eur(r.sales.net)}` : ""}`;
+const filled = c => DTL.filter(([k]) => String(((c.cfg.details || {})[k]) || "").trim()).length;
 
 async function load(keep) {
   D = await api("/api/twizz/ai", { fresh: true });
-  if (!D.creators.length) { $("crs").innerHTML = ""; $("body").innerHTML = `<div class="pn emp">Aucune créatrice Twizz : teste d'abord la connexion Twizz dans Réglages fondateur.</div>`; return; }
+  if (!D.creators.length) { $("crw").innerHTML = ""; $("tabs").hidden = true; $("body").innerHTML = `<div class="pn emp">Aucune créatrice Twizz : teste d'abord la connexion Twizz dans Réglages fondateur.</div>`; return; }
   if (!cur()) CID = D.creators[0].id;
-  paintAuto(); paintWarns(); paintCrs(); if (!keep) await paintBody(); else { paintRun(); paintHist(); }
+  paintAuto(); paintWarns(); paintCrs(); paintTabs(); if (!keep) await paintBody(); else { paintRun(); paintHist(); paintReady(); }
 }
 const save = async (url, body) => { try { D = await api(url, { body }); return true; } catch (e) { notify("Réglage refusé", e.message, "err"); await load(); return false; } };
 function paintAuto() {
-  const A = $("auto"); A.hidden = false;
-  A.innerHTML = `<div><b>IA de secours</b><small>${D.on ? "Allumée : les managers peuvent la lancer." : "Coupée : personne ne peut la lancer."}${D.founder ? "" : " Réglée par le fondateur."}</small></div><button class="sw ${D.on ? "on" : ""}" id="autoSw" ${D.founder ? "" : "disabled"} aria-label="Allumer l'IA de secours"><i></i></button>`;
+  const A = $("auto"); A.hidden = false; A.title = (D.on ? "Allumée : les managers peuvent la lancer." : "Coupée : personne ne peut la lancer.") + (D.founder ? "" : " Réglée par le fondateur.");
+  A.innerHTML = `<span class="al">${D.on ? "IA allumée" : "IA coupée"}</span>${sw(D.on, `id="autoSw" ${D.founder ? "" : "disabled"}`, "Allumer ou couper l'IA de secours")}`;
   if (D.founder) $("autoSw").onclick = async () => { if (!D.on && !confirm("Allumer l'IA de secours ?\n\nLes managers pourront la lancer sur une créatrice : elle répondra vraiment aux fans sur Twizz, avec Grok.")) return;
     if (await save("/api/twizz/ai/switch", { on: !D.on })) { notify(D.on ? "IA de secours allumée" : "IA de secours coupée", "", D.on ? "ok" : "info"); paintAuto(); paintCrs(); paintRun(); } };
 }
 function paintWarns() {
-  $("warns").innerHTML = (!D.key ? `<div class="warn">Clé Grok manquante : ajoute la variable <b>XAI_API_KEY</b> dans Railway, puis redémarre le site.</div>` : "")
-    + (!D.send ? `<div class="warn">L'envoi vers les fans est coupé dans la messagerie : l'IA ne pourrait rien envoyer.</div>` : "");
+  const w = t => `<div class="warn">${ico("alert", 16, 2.4)}<span>${t}</span></div>`;
+  $("warns").innerHTML = (!D.key ? w("Clé Grok manquante : ajoute la variable <b>XAI_API_KEY</b> dans Railway, puis redémarre le site.") : "")
+    + (!D.send ? w("L'envoi vers les fans est coupé dans la messagerie : l'IA ne pourrait rien envoyer.") : "");
 }
+// choix de la créatrice : un bouton et sa liste (caché sur les onglets qui valent pour toutes)
 function paintCrs() {
-  $("crs").innerHTML = D.creators.map(c => `<button data-c="${esc(c.id)}" class="${c.id === CID ? "on" : ""}"><span class="av">${esc((c.label || "?")[0].toUpperCase())}</span>${esc(c.label)}${c.run ? `<span class="tg run">🤖 en cours</span>` : c.cfg.ok ? `<span class="tg ok">accord ✓</span>` : `<span class="tg">pas d'accord</span>`}</button>`).join("");
-  $("crs").querySelectorAll("[data-c]").forEach(b => b.onclick = () => { CID = b.dataset.c; try { localStorage.setItem("ia:cid", CID); } catch (e) {} paintCrs(); paintBody(); });
+  const c = cur(), box = $("crw"); if (!c) return;
+  const tg = x => x.run ? `<span class="tg run"><i></i>En cours</span>` : x.cfg.ok ? `<span class="tg ok">Accord</span>` : `<span class="tg">Pas d'accord</span>`;
+  box.innerHTML = `<button type="button" class="crb" id="crb" aria-haspopup="listbox" aria-expanded="${MENU}" aria-label="Choisir la créatrice, ${esc(c.label)}"><span class="cav">${esc(init(c))}</span><b>${esc(c.label)}</b>${tg(c)}${ico("chev", 16, 2.4)}</button>
+    <div class="crm" role="listbox" aria-label="Créatrices" ${MENU ? "" : "hidden"}>${D.creators.map(x => `<button type="button" role="option" aria-selected="${x.id === CID}" data-c="${esc(x.id)}"><span class="cav">${esc(init(x))}</span><b>${esc(x.label)}</b>${tg(x)}</button>`).join("")}</div>`;
+  box.hidden = TAB === "comp" || TAB === "regl";
+  $("crb").onclick = e => { e.stopPropagation(); MENU = !MENU; paintCrs(); if (MENU) { const s = box.querySelector('[aria-selected="true"]'); if (s) s.focus(); } };
+  box.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { MENU = false; const changed = b.dataset.c !== CID; CID = b.dataset.c; try { localStorage.setItem("ia:cid", CID); } catch (e) {}
+    paintCrs(); if (changed) paintBody(); $("crb").focus(); });
+}
+function paintTabs() {
+  const N = $("tabs"); N.hidden = false;
+  N.innerHTML = TABS.map(([k, l, i, all]) => `<button type="button" role="tab" id="tb-${k}" aria-controls="t-${k}" aria-selected="${TAB === k}" tabindex="${TAB === k ? 0 : -1}" data-tab="${k}">${ico(i)}${l}${all ? `<span class="all">toutes</span>` : ""}</button>`).join("");
+}
+function setTab(k, focus) {
+  if (!TABS.some(t => t[0] === k)) return; TAB = k; try { localStorage.setItem("ia:tab", k); } catch (e) {} MENU = false; paintTabs(); paintCrs();
+  document.querySelectorAll(".tab").forEach(s => { const on = s.id === "t-" + k; s.hidden = !on; if (on) { s.classList.remove("up"); void s.offsetWidth; s.classList.add("up"); } });
+  if (focus) $("tb-" + k).focus();
+}
+const FANX = { new: "Nouveau fan, n'a jamais rien acheté", reg: "Fan régulier, 150 € dépensés", big: "Gros payeur, 850 € dépensés" };
+const GIF = { relance: G => G.relance, notice: G => G.notice, noticeFan: G => G.notice && G.noticeFreq === "fan" };
+const sellTxt = M => M.sell ? "Allumé : elle vend avec ses scripts, puis avec le coffre." : "Coupé : elle discute seulement, sans rien proposer.";
+const kindOf = s => s.v && !s.p ? (s.v > 1 ? `${s.v} vidéos` : "Vidéo") : s.p && !s.v ? (s.p > 1 ? `${s.p} photos` : "Photo") : pl(s.n, "média", "médias");
+const gcount = (keys, Dt) => `${keys.filter(k => String(Dt[k] || "").trim()).length} sur ${keys.length}`;
+const hsel = (k, v, label) => `<select class="inp" data-g="${k}" aria-label="${label}">${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${+v === h ? "selected" : ""}>${h} h</option>`).join("")}</select>`;
+const flip = (b, v) => { if (!b) return; b.classList.toggle("on", !!v); b.setAttribute("aria-pressed", !!v); };
+const scanNote = c => (c.scan && !c.scan.running && !c.scan.total && c.scan.note ? `<span style="display:block;color:#f3cf94;margin-top:3px">Dernière analyse : rien à analyser, ${esc(c.scan.note)} (${pl(c.scan.albums || 0, "album", "albums")}, ${pl(c.scan.files || 0, "média lu", "médias lus")})</span>` : "")
+  + (c.scan && !c.scan.running && c.scan.errors ? `<span style="display:block;color:#ff9a9a;margin-top:3px">Dernière analyse : ${pl(c.scan.errors, "erreur", "erreurs")}${c.scan.lastError ? " — " + esc(c.scan.lastError) : ""}</span>` : "");
+let WAITING = null;   // créatrice dont l'essai attend la réponse de Grok
+
+/* ---------- les 5 onglets (tout est dans la page, l'onglet choisi est affiché) ---------- */
+function tabMain(c) { const f = FAN[c.id] || "new";
+  return `<section class="tab" id="t-main" role="tabpanel" aria-labelledby="tb-main" ${TAB === "main" ? "" : "hidden"}><div class="lay">
+    <div class="mn">
+      <div class="pn" id="run" aria-live="polite"></div>
+      <div id="left"></div>
+      <div class="pn" id="ready"></div>
+      <div class="duo">
+        <div class="pn"><div class="sh"><div class="sht"><h2>IA <em>contre chatters</em></h2></div><select class="inp pill" id="cmpD" aria-label="Période"><option value="7">7 jours</option><option value="30" selected>30 jours</option><option value="90">90 jours</option></select></div><div id="cmp"><div class="emp">Chargement…</div></div></div>
+        <div class="pn"><div class="sh"><div class="sht"><h2>Dernières <em>séances</em></h2></div></div><div id="hist"></div></div>
+      </div>
+    </div>
+    <aside class="as" aria-label="Essayer l'IA"><div class="pn try">
+      <div class="tryh"><div class="tryt"><div class="sht"><h2>Essayer <em>l'IA</em></h2><small>Écris comme un fan : elle répond avec les réglages de ${esc(c.label)}. Rien n'est envoyé sur Twizz.</small></div><button type="button" class="ib" id="tryR" aria-label="Recommencer l'essai" title="Recommencer">${ico("reload")}</button></div>
+        <div class="seg wide" role="group" aria-label="Fan de l'essai">${[["new", "Nouveau"], ["reg", "Régulier"], ["big", "Gros payeur"]].map(([v, l]) => `<button type="button" data-fan="${v}" aria-pressed="${f === v}">${l}</button>`).join("")}</div>
+        <small class="fanx" id="fanX">${FANX[f]}</small></div>
+      <div class="chat" id="chat" aria-live="polite"></div>
+      <div class="cin"><input class="inp" id="tryIn" placeholder="Écris comme un fan…" maxlength="1000" aria-label="Message du fan"><button type="button" class="snd" id="tryGo" aria-label="Envoyer">${ico("arrow", 18, 2.4)}</button></div>
+    </div></aside>
+  </div></section>`; }
+
+function scHtml(x, G) {
+  const P = x.path || [], paid = P.some(s => s.price > 0), rm = (P.find(s => s.price > 0 && s.relanceMin) || {}).relanceMin || G.relanceAfter;
+  const node = (s, i) => s.n && s.price > 0 ? `<li><span class="nd pd"><span class="k">${i + 1}</span><span><b>${kindOf(s)} · ${eu(s.price)}</b><small>${s.floor ? `plancher ${eu(s.floor)}` : "pas de plancher"}${s.tease ? " · teasing avant" : ""}</small></span></span></li>`
+    : s.n ? `<li><span class="nd fr"><span class="k">${i + 1}</span><span><b>${kindOf(s)}</b><small>offert${s.tease ? " · teasing avant" : ""}</small></span></span></li>`
+    : `<li><span class="nd"><span class="k">${i + 1}</span><span><b>Message</b><small>sans média</small></span></span></li>`;
+  return `<article class="sc"><div class="sct"><b>${esc(x.title)}</b>${x.first ? `<span class="bdg g">Premier script</span>` : ""}${x.when ? `<span class="scw">Quand : ${esc(x.when)}</span>` : `<span class="bdg a">${ico("alert", 12, 2.6)}Ajoute une description dans Scripts : elle saura quand le lancer</span>`}</div>
+    <ol class="lad" aria-label="Étapes de ${esc(x.title)}">${P.map(node).join("")}</ol>
+    <div class="scm">${paid && G.relance ? `<span>Relance s'il n'achète pas : ${hfr(rm)}</span>` : ""}<span>Quitte le script après ${String(x.timeout).replace(".", ",")} h sans réponse</span></div></article>`;
+}
+function tabVente(c, M, G) {
+  return `<section class="tab" id="t-vente" role="tabpanel" aria-labelledby="tb-vente" ${TAB === "vente" ? "" : "hidden"}>
+    <div class="pn how ${M.sell ? "" : "off"}" id="how">
+      <div class="howh"><div class="t"><b>Vendre des médias</b><small id="sellS">${sellTxt(M)}</small></div>${sw(M.sell, 'data-m="sell"', "Vendre des médias")}</div>
+      <div class="how3">
+        <div><span class="n g">1</span><div><b>Ses scripts d'abord</b><small>Étapes, médias et prix fixés par toi. Elle choisit seulement quand lancer, et discute entre les étapes.</small></div></div>
+        <div><span class="n">2</span><div><b>Le coffre en secours</b><small>Quand aucun script ne convient : il les a tous reçus, ou il réclame autre chose.</small></div></div>
+        <div><span class="n">${ico("shield", 15, 2.4)}</span><div><b>Toujours des garde-fous</b><small>Appliqués par le site, quoi que Grok veuille faire.</small></div></div>
+      </div></div>
+    <div class="lay"><div class="mn">
+      <div class="pn">${head("doc", "b", "Ses scripts <em>de vente</em>", "Un script déjà reçu par un fan ne lui est jamais renvoyé", `<a class="btn w sm" href="/scripts">${ico("plus", 14, 2.8)}Nouveau script</a>`)}
+        <div class="scs">${c.scripts.length ? c.scripts.map(x => scHtml(x, G)).join("") : `<div class="nos">Aucun script IA pour ${esc(c.label)} : elle vend avec le coffre. Crée au moins 2 scripts dans Scripts et coche « L'IA peut vendre avec ce script ».</div>`}</div></div>
+      <div class="pn">${head("box", "n", "Coffre <em>en secours</em>", "Ici, c'est elle qui choisit le média et le prix")}
+        <div class="row bl"><div class="t"><b>Albums qu'elle peut vendre</b><small>Aucun choisi = tous les albums photo et vidéo du coffre.</small></div><div class="chips" id="albs"><span class="hint">Chargement du coffre…</span></div></div>
+        <div class="row bl"><div class="t"><b>Ce qu'il y a dans chaque album</b><small>En quelques mots : elle s'en sert pour savoir ce qu'elle vend et faire monter l'envie (en plus de l'analyse du coffre).</small></div><div id="anotes"></div></div>
+        ${row("Prix maximum d'un média", "Elle suit le catalogue de la fiche, sans jamais dépasser ce prix.", stp('data-n="maxPrice"', "Prix maximum d'un média", M.maxPrice, 3, 500, "€"))}
+        ${row("Remises", "Quand il hésite ou n'a pas acheté, elle peut refaire une proposition moins chère (promo Twizz). Jamais à la première proposition.", sw(M.promo, 'data-m="promo"', "Remises"))}
+        ${row("Remise maximum", "", stp('data-n="maxDiscount"', "Remise maximum", M.maxDiscount, 5, 90, "%", 5) + `<select class="inp" id="mPromoH" aria-label="Durée de la remise">${[6, 12, 24, 48].map(h => `<option value="${h}" ${M.promoHours === h ? "selected" : ""}>pendant ${h} h</option>`).join("")}</select>`, `data-if="promo" ${M.promo ? "" : "hidden"}`)}
+        ${row("Voir les médias", `Grok regarde chaque média du coffre une fois et le décrit : elle choisit le média qui colle à ce qu'il veut et en parle comme si elle l'avait sous les yeux. Elle voit aussi les photos que le fan envoie. <b id="medN">${pl(c.media, "média décrit", "médias décrits")}</b>${scanNote(c)}`, `<button type="button" class="btn sm" id="scanB">${c.scan && c.scan.running ? `Analyse… ${c.scan.done}/${c.scan.total}` : "Analyser le coffre"}</button>${sw(M.vision, 'data-m="vision"', "Voir les médias")}`)}
+      </div></div>
+      <aside class="as"><div class="pn">${head("shield", "g", "Garde-<em>fous</em>", `Pour ${esc(c.label)}, appliqués par le site`)}
+        ${row("Messages avant le premier média", "Elle fait connaissance : aucun média ni allusion avant.", stp('data-n="minMsgs"', "Messages avant le premier média", M.minMsgs, 0, 40))}
+        ${row("Teasing obligatoire", "Elle fait d'abord désirer le média, puis l'envoie après sa réponse.", sw(M.tease, 'data-m="tease"', "Teasing obligatoire"))}
+        ${row("Délai pour envoyer après le teasing", "Passé ce délai, elle doit re-teaser.", stp('data-n="teaseWindow"', "Délai pour envoyer après le teasing", M.teaseWindow, 10, 720, "min", 5), `data-if="tease" ${M.tease ? "" : "hidden"}`)}
+        ${row("S'il réclame un média", "Elle peut l'envoyer sans teasing (le minimum de messages compte toujours).", sw(M.askSkip, 'data-m="askSkip"', "Sans teasing s'il réclame un média"), `data-if="tease" ${M.tease ? "" : "hidden"}`)}
+        ${row("Un média à la fois", "Rien de nouveau tant qu'il n'a pas acheté le précédent (sauf une deuxième chance avec remise).", sw(M.pile, 'data-m="pile"', "Un média à la fois"))}
+        ${row("Délai entre deux médias payants", "Pour un même fan.", stp('data-n="gap"', "Délai entre deux médias payants", M.gap, 0, 1440, "min", 5))}
+        ${row("Pause après un script", "Aucun nouveau script, même s'il en redemande. Elle discute sans rien proposer.", stp('data-n="cooldownH"', "Pause après un script", M.cooldownH, 0, 48, "h"))}
+        ${row("Pause sans sexualisation", "Après un script, en jours : elle ne ramène pas le sujet, elle suit s'il le fait.", stp('data-n="sexDays"', "Pause sans sexualisation, en jours", M.sexDays, 0, 5, "j"))}
+        ${row("Pause aussi s'il a tout acheté", "Sinon il peut enchaîner sur un autre script s'il en redemande.", sw(M.coolFull, 'data-m="coolFull"', "Pause aussi s'il a tout acheté"))}
+        <div class="row bl"><div class="t"><b>Fans laissés à l'équipe</b><small>Elle ne répond pas aux fans qui ont un de ces tags.</small></div><div class="chips" id="tags"><span class="hint">Chargement…</span></div></div>
+      </div></aside>
+    </div></section>`;
 }
 
-async function paintBody() {
-  const c = cur(); if (!c) return; const M = c.cfg, G = D.cfg, F = D.founder;
-  $("body").innerHTML = `<div class="cols">
-    <div>
-      <div class="pn up"><div class="ph"><h3>Séance <em>en cours</em></h3></div><div id="run"></div></div>
-      <div class="pn up" style="animation-delay:.03s"><div class="ph"><h3>Accord <em>et vente</em></h3></div>
-        <div class="row"><div class="t"><b>Accord de ${esc(c.label)}</b><small>Elle est d'accord pour que son IA réponde à ses fans. Sans cette case, impossible de lancer l'IA sur elle.</small></div><button class="sw ${M.ok ? "on" : ""}" data-m="ok" aria-label="Accord"><i></i></button></div>
-        <div class="row"><div class="t"><b>Vendre des médias</b><small>Avec ses scripts IA (voir « Vente par scripts ») ; sans script disponible, avec un média payant du coffre quand le moment s'y prête.</small></div><button class="sw ${M.sell ? "on" : ""}" data-m="sell" aria-label="Vendre des médias"><i></i></button></div>
-        <div class="row"><div class="t"><b>Prix maximum d'un média</b><small>L'IA suit le catalogue de la fiche, sans jamais dépasser ce prix.</small></div><input class="inp n" type="number" min="3" max="500" data-n="maxPrice" value="${M.maxPrice}"><span class="unit">€</span></div>
-        <div class="row"><div class="t"><b>Délai entre deux médias payants</b><small>Pour un même fan.</small></div><input class="inp n" type="number" min="0" max="1440" data-n="gap" value="${M.gap}"><span class="unit">min</span></div>
-        <div class="row"><div class="t"><b>Un média à la fois</b><small>Pas de nouveau média payant tant que le fan n'a pas acheté le précédent${M.promo ? ", sauf une deuxième chance avec une remise" : ""}.</small></div><button class="sw ${M.pile ? "on" : ""}" data-m="pile" aria-label="Un média à la fois"><i></i></button></div>
-        <div class="row"><div class="t"><b>Messages avant le premier média</b><small>Tant que la conversation n'a pas ce nombre de messages, l'IA ne peut envoyer aucun média et n'en parle pas : elle apprend à connaître le fan.</small></div><input class="inp n" type="number" min="0" max="40" data-n="minMsgs" value="${M.minMsgs}"></div>
-        <div class="row"><div class="t"><b>Teasing obligatoire</b><small>Avant chaque média, l'IA doit d'abord le faire désirer sans l'envoyer. Elle ne peut l'envoyer qu'après une réponse du fan, et le teasing est à refaire pour le média suivant.</small></div><button class="sw ${M.tease ? "on" : ""}" data-m="tease" aria-label="Teasing obligatoire"><i></i></button></div>
-        <div class="row" ${M.tease ? "" : "hidden"}><div class="t"><b>Délai pour envoyer après le teasing</b><small>Passé ce délai, il faut re-teaser.</small></div><input class="inp n" type="number" min="10" max="720" data-n="teaseWindow" value="${M.teaseWindow}"><span class="unit">min</span></div>
-        <div class="row" ${M.tease ? "" : "hidden"}><div class="t"><b>Si le fan réclame un média</b><small>Quand le fan demande lui-même une photo ou une vidéo, l'IA peut l'envoyer sans teasing (le nombre minimum de messages compte toujours).</small></div><button class="sw ${M.askSkip ? "on" : ""}" data-m="askSkip" aria-label="Sans teasing si le fan réclame"><i></i></button></div>
-        <div class="row"><div class="t"><b>Remises</b><small>Quand le fan hésite ou n'a pas acheté, l'IA peut lui refaire une proposition moins chère (promo Twizz). Jamais à la première proposition.</small></div><button class="sw ${M.promo ? "on" : ""}" data-m="promo" aria-label="Remises"><i></i></button></div>
-        <div class="row" ${M.promo ? "" : "hidden"}><div class="t"><b>Remise maximum</b></div><input class="inp n" type="number" min="5" max="90" data-n="maxDiscount" value="${M.maxDiscount}"><span class="unit">%</span><select class="inp" id="mPromoH" style="min-width:120px">${[6, 12, 24, 48].map(h => `<option value="${h}" ${M.promoHours === h ? "selected" : ""}>pendant ${h} h</option>`).join("")}</select></div>
-        <div class="row"><div class="t"><b>Voir les médias</b><small>Grok regarde chaque média du coffre une fois et le décrit : l'IA choisit le média qui colle à ce que veut le fan et en parle comme si elle l'avait sous les yeux. Elle voit aussi les photos que le fan envoie. <b id="medN">${c.media} média${c.media > 1 ? "s" : ""} décrit${c.media > 1 ? "s" : ""}</b>${c.scan && !c.scan.running && !c.scan.total && c.scan.note ? `<span style="display:block;color:#ffb48a;margin-top:3px">Dernière analyse : rien à analyser, ${esc(c.scan.note)} (${c.scan.albums || 0} album${c.scan.albums > 1 ? "s" : ""}, ${c.scan.files || 0} média${c.scan.files > 1 ? "s" : ""} lus)</span>` : ""}${c.scan && !c.scan.running && c.scan.errors ? `<span style="display:block;color:#ff9a9a;margin-top:3px">Dernière analyse : ${c.scan.errors} erreur${c.scan.errors > 1 ? "s" : ""}${c.scan.lastError ? " — " + esc(c.scan.lastError) : ""}</span>` : ""}</small></div><button class="btn sm" id="scanB">${c.scan && c.scan.running ? `Analyse… ${c.scan.done}/${c.scan.total}` : "Analyser le coffre"}</button><button class="sw ${M.vision ? "on" : ""}" data-m="vision" aria-label="Voir les médias"><i></i></button></div>
-        <div class="row" style="display:block"><div class="t"><b>Albums que l'IA peut vendre</b><small>Aucun choisi = tous les albums photo et vidéo du coffre.</small></div><div class="chips" id="albs"><span class="hint">Chargement du coffre…</span></div></div>
-        <div class="row" style="display:block"><div class="t"><b>Ce qu'il y a dans chaque album</b><small>En quelques mots, ce que contient l'album : l'IA s'en sert pour savoir ce qu'elle vend et faire monter l'envie (en plus de l'analyse du coffre).</small></div><div id="anotes"></div></div>
-        <div class="row"><div class="t"><b>S'inspirer des scripts</b><small>L'IA reçoit les scripts épinglés et les plus utilisés de la bibliothèque comme exemples de messages qui marchent.</small></div><button class="sw ${M.scripts ? "on" : ""}" data-m="scripts" aria-label="S'inspirer des scripts"><i></i></button></div>
-        <div class="row" style="display:block"><div class="t"><b>Fans laissés à l'équipe</b><small>L'IA ne répond pas aux fans qui ont un de ces tags : ils restent pour les chatters.</small></div><div class="chips" id="tags"><span class="hint">Chargement…</span></div></div>
+function tabComp(c) {
+  const S = D.strat, SD = D.stratDef, kycSub = () => `Ce qu'elle cherche à savoir · s'arrête après ${S.kycMax} messages ou ${S.kycHours} h`;
+  return `<section class="tab" id="t-comp" role="tabpanel" aria-labelledby="tb-comp" ${TAB === "comp" ? "" : "hidden"}>
+    <p class="gl">${ico("info")}Ces règles valent pour toutes les créatrices. Ce qui est propre à une créatrice va dans son Profil.</p>
+    <div class="lay"><div class="mn">
+      <div class="pn"><div class="sh"><div class="sht"><h2>Les 7 phases <em>d'une conversation</em></h2><small>Dans l'ordre où elles arrivent. « Perso » remplace le texte par défaut par le tien.</small></div></div>
+        ${PHS.map(([k, name, sub, long], i) => { const cu = S[k] !== SD[k], op = PH === k;
+          return `<div class="p7 ${op ? "open" : ""}" data-p7="${k}"><div class="rail"><span class="num">${i + 1}</span>${i < PHS.length - 1 ? "<i></i>" : ""}</div><div class="phc">
+            <button type="button" class="phh" data-pho="${k}" aria-expanded="${op}" aria-controls="phb-${k}"><span class="t"><b>${name}</b><small data-phs="${k}">${k === "kyc" ? kycSub() : sub}</small></span><span class="ptg ${cu ? "p" : ""}" data-ptg="${k}">${cu ? "Perso" : "Défaut"}</span>${ico("chev", 18, 2.4)}</button>
+            <div class="phb" id="phb-${k}" ${op ? "" : "hidden"}>
+              <div class="pht"><p>${long}</p><div class="seg" role="group" aria-label="Texte de la phase ${name}"><button type="button" data-def="${k}" aria-pressed="${!cu}">Défaut</button><button type="button" data-per="${k}" aria-pressed="${cu}">Perso</button></div></div>
+              <textarea class="inp" id="ph-${k}" data-st="${k}" rows="10" maxlength="3000" aria-label="${name}">${esc(S[k] || "")}</textarea>
+              <div class="phf"><button type="button" class="lnk" data-sd="${k}" aria-expanded="false">Voir le texte par défaut</button><span data-cnt="${k}">${String(S[k] || "").length} / 3000</span></div>
+              <pre class="pvp" data-sdp="${k}" hidden>${esc(SD[k] || "")}</pre>
+              ${k === "kyc" ? `<div class="phk">Arrêter la découverte après ${stp('data-sk="kycMax"', "Messages maximum de découverte", S.kycMax, 4, 30)} messages ou ${stp('data-sk="kycHours"', "Durée maximum de découverte", S.kycHours, 1, 48, "h")}</div>` : ""}
+            </div></div></div>`; }).join("")}
       </div>
-      <div class="pn up" style="animation-delay:.045s"><div class="ph"><h3>Vente par <em>scripts</em></h3><div class="r"><a class="btn sm" href="/scripts">Ouvrir les scripts</a></div></div>
-        <p class="lead" style="margin:0 0 8px">Comme sur OnlyChat : l'IA vend avec des scripts préparés dans l'onglet Scripts (interrupteur « L'IA peut vendre avec ce script »). Chaque étape part telle qu'elle est écrite, avec ses médias et son prix ; l'IA choisit seulement quand lancer et discute entre les étapes. Un script déjà reçu n'est jamais renvoyé au même fan. Sans script disponible, elle vend avec le coffre.</p>
-        <div class="scl">${c.scripts.length ? c.scripts.map(x => `<div class="it">🤖 ${esc(x.title)} <small>${esc(x.ladder)}${x.first ? " · premier script" : ""}</small>${x.desc ? "" : `<span class="w">sans description</span>`}</div>`).join("")
-          : `<div class="no">Aucun script IA pour ${esc(c.label)} : l'IA vend avec le coffre, comme avant. Crée au moins 2 scripts dans l'onglet Scripts et coche « L'IA peut vendre avec ce script ».</div>`}</div>
-        <div class="row"><div class="t"><b>Pause après un script</b><small>Pas de nouveau script pour ce fan pendant ce temps, même s'il en redemande. Elle continue de discuter sans rien proposer.</small></div><input class="inp n" type="number" min="0" max="48" data-n="cooldownH" value="${M.cooldownH}"><span class="unit">h</span></div>
-        <div class="row"><div class="t"><b>Pause sans sexualisation après un script</b><small>Pendant ce temps, l'IA reste sympa sans ramener la conversation vers le sexe ou un média. Si le fan relance lui-même, elle peut suivre.</small></div><input class="inp n" type="number" min="0" max="5" data-n="sexDays" value="${M.sexDays}"><span class="unit">jour${M.sexDays > 1 ? "s" : ""}</span></div>
-        <div class="row"><div class="t"><b>Pause aussi s'il a tout acheté</b><small>Sinon, un fan qui a tout pris peut enchaîner sur un autre script s'il en redemande.</small></div><button class="sw ${M.coolFull ? "on" : ""}" data-m="coolFull" aria-label="Pause aussi s'il a tout acheté"><i></i></button></div>
-        <div class="row" style="display:block"><div class="t"><b>Quand lancer un script</b><small>Pour toutes les créatrices. Le site bloque déjà tout script avant « Messages avant le premier média » et pendant la pause.</small></div><textarea class="inp" id="stLaunch" rows="6" maxlength="3000">${esc(D.strat.launch)}</textarea></div>
-        <div class="row" style="display:block"><div class="t"><b>Média pas encore acheté</b><small>Ce que fait l'IA tant que le fan n'a pas pris le média payant de l'étape. Le site bloque l'étape suivante et le prix descend au plus une fois, au prix plancher de l'étape.</small></div><textarea class="inp" id="stNego" rows="6" maxlength="3000">${esc(D.strat.nego)}</textarea></div>
-        <div class="row" style="display:block"><div class="t"><b>Après un script</b></div><textarea class="inp" id="stAfter" rows="3" maxlength="3000">${esc(D.strat.after)}</textarea></div>
-        <div class="row" style="border:0"><div class="t"><small>Vide = texte par défaut.</small></div><button class="btn sm" id="stReset">Rétablir les règles par défaut</button></div>
-      </div>
-      <div class="pn up" style="animation-delay:.05s"><div class="ph"><h3>Règles de <em>conversation</em></h3><div class="r"><button class="btn sm" id="phReset">Rétablir par défaut</button></div></div>
-        <p class="lead" style="margin:0 0 8px">Pour toutes les créatrices, comme les phases d'OnlyChat. Vide = texte par défaut.</p>
-        <div class="row" style="display:block"><div class="t"><b>Langage</b><small>Comment elle écrit : longueur, ponctuation, emojis, questions.</small></div><textarea class="inp" id="phStyle" rows="6" maxlength="3000">${esc(D.strat.style)}</textarea></div>
-        <div class="row" style="display:block"><div class="t"><b>Découverte du fan</b><small>Ce qu'elle cherche à savoir sur lui avant de vendre. Elle arrête de lui poser des questions quand le site connaît déjà son prénom et sa ville ou son métier, ou après les limites ci-dessous.</small></div><textarea class="inp" id="phKyc" rows="4" maxlength="3000">${esc(D.strat.kyc)}</textarea></div>
-        <div class="row"><div class="t"><b>Arrêter la découverte après</b></div><input class="inp n" type="number" min="4" max="30" id="phKm" value="${D.strat.kycMax}"><span class="unit">messages ou</span><input class="inp n" type="number" min="1" max="48" id="phKh" value="${D.strat.kycHours}"><span class="unit">h</span></div>
-        <div class="row" style="display:block"><div class="t"><b>Sexualisation</b><small>Jusqu'où elle va, et quand.</small></div><textarea class="inp" id="phSex" rows="5" maxlength="3000">${esc(D.strat.sex)}</textarea></div>
-        <div class="row" style="display:block"><div class="t"><b>Relances</b><small>Comment elle revient vers un fan qui ne répond plus. Les moments sont dans « Réglages pour toutes ».</small></div><textarea class="inp" id="phRel" rows="5" maxlength="3000">${esc(D.strat.relance)}</textarea></div>
-        <div class="row" style="border:0"><div class="t"><small>Le site gère seul le fan occupé : s'il dit qu'il part ou qu'il bosse, une seule bulle courte, pas de vente, pas de relance, et pas de réponse à son « ok » juste après.</small></div></div>
-      </div>
-      <div class="pn up" style="animation-delay:.055s"><div class="ph"><h3>Détails de <em>${esc(c.label)}</em></h3></div>
-        <p class="lead" style="margin:0 0 8px">Ce que les fans demandent tout le temps : l'IA le donne comme des faits et ne se contredit jamais. Laisse vide ce que tu ne veux pas dire.</p>
-        <div class="dts">${DTL.map(([k, l, ph, w]) => `<label class="${w ? "w" : ""}"><span>${l}</span><input class="inp" data-dt="${k}" maxlength="${w ? 600 : 120}" placeholder="${esc(ph)}" value="${esc((M.details || {})[k] || "")}"></label>`).join("")}</div>
-      </div>
-      <div class="pn up" style="animation-delay:.06s"><div class="ph"><h3>Personnalité</h3><div class="r"><a class="btn sm" href="/creatrices">Ouvrir les fiches</a></div></div>
-        <div class="fiche"><span class="g"><i style="width:${Math.round(c.fiche / 7 * 100)}%"></i></span><b>Fiche remplie ${c.fiche}/7</b></div>
-        <p class="lead" style="margin:8px 0 10px">L'IA écrit d'après la fiche de ${esc(c.label)} : sa façon d'écrire, sa personnalité, son histoire, ce qu'elle fait et ne fait jamais, son catalogue, ses exemples de messages et ses curseurs de style. Plus la fiche est remplie, plus l'IA lui ressemble.</p>
-        <div class="t" style="margin-bottom:6px"><b style="font:800 13.5px Inter">Consignes en plus pour l'IA</b></div>
-        <textarea class="inp" id="extra" maxlength="6000" rows="8" placeholder="Ex. : son histoire, sa routine, ses limites, ses blagues récurrentes, comment elle appelle ses fans… (comme « Additional info » sur OnlyChat, jusqu'à 6 000 caractères)">${esc(M.extra || "")}</textarea>
-      </div>
-      <div class="pn up" style="animation-delay:.08s"><div class="ph"><h3>Ce que l'IA <em>reçoit</em></h3><div class="r"><button class="btn sm" id="baseReset">Rétablir par défaut</button></div></div>
-        <p class="lead" style="margin:0 0 8px">Ce texte est envoyé à Grok avant chaque réponse, dans cet ordre.</p>
+      <details class="pn adv" id="adv" ${ADV ? "open" : ""}><summary><span class="ic n">${ico("code", 17)}</span><span><b>Avancé : ce que Grok reçoit</b><small>Instructions de base, bloc de ${esc(c.label)}, règles fixes</small></span>${ico("right", 18, 2.4)}</summary>
+        <div class="advb"><div class="advh"><p>Ce texte est envoyé à Grok avant chaque réponse, dans cet ordre.</p><button type="button" class="btn sm" id="baseReset">Rétablir les instructions par défaut</button></div>
         <div class="pvh">1 · Instructions de base <span>pour toutes les créatrices · modifiable</span></div>
         <textarea class="inp mono" id="base" maxlength="8000" spellcheck="false"></textarea>
-        <small class="pvn">{creatrice} est remplacé par son nom. Pour une seule créatrice, utilise plutôt « Consignes en plus » au-dessus.</small>
+        <small class="pvn">{creatrice} est remplacé par son nom. Pour une seule créatrice, utilise plutôt « Son histoire et ses limites » dans l'onglet Profil.</small>
         <div class="pvh">2 · ${esc(c.label)} <span id="profTag">tiré de sa fiche · modifiable</span><button class="btn sm" id="profReset" style="float:right;margin-top:-6px">Revenir à la fiche</button></div>
         <textarea class="inp mono" id="prof" maxlength="10000" spellcheck="false"></textarea>
         <small class="pvn" id="profNote"></small>
@@ -194,39 +450,78 @@ async function paintBody() {
 <textarea class="inp mono" id="locked" maxlength="4000" spellcheck="false"></textarea>
 <small class="pvn">{creatrice} et {mark} sont remplacés automatiquement.</small>
       </div>
+      </details>
     </div>
-    <div>
-      <div class="pn up" style="animation-delay:.02s"><div class="ph"><h3>Essayer <em>l'IA</em></h3><div class="r"><button class="btn sm" id="tryR">Recommencer</button></div></div>
-        <p class="lead" style="margin:0 0 8px">Écris comme un fan : l'IA répond ici avec les réglages de ${esc(c.label)}. <b>Rien n'est envoyé sur Twizz.</b></p>
-        <div class="row" style="padding:0 0 8px;border:0"><div class="t"><b>Fan de l'essai</b></div><select class="inp" id="tryFan"><option value="new">Nouveau, n'a jamais acheté</option><option value="reg">Régulier, 150 € dépensés</option><option value="big">Gros payeur, 850 € dépensés</option></select></div>
-        <div class="chat" id="chat"></div>
-        <div class="cin"><input class="inp" id="tryIn" placeholder="Message du fan…" maxlength="1000"><button class="btn w" id="tryGo">Envoyer</button></div></div>
-      <div class="pn up" style="animation-delay:.05s"><div class="ph"><h3>Réglages <em>pour toutes</em></h3></div>
-        <div class="row"><div class="t"><b>Message « c'est l'IA »${F ? "" : '<span class="lock">· réglé par le fondateur</span>'}</b><small>${G.notice ? "Allumé : le premier message au fan commence par ce texte." : "Coupé : seul le 🤖 à la fin de chaque message signale l'IA."}${G.notice && !G.mark ? " Obligatoire tant que le 🤖 est retiré des messages." : ""}</small></div><button class="sw ${G.notice ? "on" : ""}" id="gNotice" ${F ? "" : "disabled"} aria-label="Message c'est l'IA"><i></i></button></div>
-        <div class="row" style="display:block"><textarea class="inp" id="gText" maxlength="240" ${G.notice ? "" : "disabled"}>${esc(G.noticeText)}</textarea><small style="display:block;font:500 11.5px Inter;color:#6f6f6f;margin-top:5px">{creatrice} est remplacé par son nom.</small></div>
-        <div class="row"><div class="t"><b>🤖 à la fin de chaque message${F ? "" : '<span class="lock">· réglé par le fondateur</span>'}</b><small>${G.mark ? "Le fan voit un 🤖 au bout de chaque message de l'IA." : "Retiré des messages : le fan est prévenu par le message « c'est l'IA »."} Sur le site, les bulles de l'IA portent toujours un 🤖 pour l'équipe. Au moins un des deux réglages reste allumé.</small></div><button class="sw ${G.mark ? "on" : ""}" id="gMark" ${F ? "" : "disabled"} aria-label="Robot à la fin des messages"><i></i></button></div>
-        <div class="row"><div class="t"><b>Quand le dire</b></div><select class="inp" id="gFreq" ${G.notice ? "" : "disabled"}><option value="run" ${G.noticeFreq === "run" ? "selected" : ""}>À chaque séance</option><option value="fan" ${G.noticeFreq === "fan" ? "selected" : ""}>Une fois par fan</option></select></div>
-        <div class="row" ${G.notice && G.noticeFreq === "fan" ? "" : "hidden"}><div class="t"><b>Le redire après</b></div><input class="inp n" type="number" min="1" max="365" data-g="noticeDays" value="${G.noticeDays}"><span class="unit">jours</span></div>
-        <div class="row"><div class="t"><b>Délai avant de répondre</b><small>Elle attend que le fan ait fini d'écrire, comme quelqu'un qui répond.</small></div><input class="inp n" type="number" min="5" max="600" data-g="waitMin" value="${G.waitMin}"><span class="unit">à</span><input class="inp n" type="number" min="5" max="900" data-g="waitMax" value="${G.waitMax}"><span class="unit">s</span></div>
-        <div class="row"><div class="t"><b>Pause quand l'équipe vient d'écrire</b><small>Elle laisse la conversation tranquille pendant ce temps.</small></div><input class="inp n" type="number" min="0" max="240" data-g="teamPause" value="${G.teamPause}"><span class="unit">min</span></div>
-        <div class="row"><div class="t"><b>Fans qui ont écrit dans les dernières</b><small>Plus ancien, elle ne répond pas.</small></div><input class="inp n" type="number" min="1" max="72" data-g="fanWindow" value="${G.fanWindow}"><span class="unit">h</span></div>
-        <div class="row"><div class="t"><b>Réponses maximum par fan</b><small>Par séance.</small></div><input class="inp n" type="number" min="1" max="300" data-g="perFan" value="${G.perFan}"></div>
-        <div class="row"><div class="t"><b>Durée maximum d'une séance</b><small>Elle s'arrête toute seule au bout de ce temps.</small></div><input class="inp n" type="number" min="1" max="24" data-g="maxHours" value="${G.maxHours}"><span class="unit">h</span></div>
-        <div class="row"><div class="t"><b>Relances</b><small>Pendant sa séance, l'IA relance les fans à qui elle a parlé et qui ne répondent plus (ou n'ont pas acheté le dernier média).</small></div><button class="sw ${G.relance ? "on" : ""}" id="gRel" aria-label="Relances"><i></i></button></div>
-        <div class="row" ${G.relance ? "" : "hidden"}><div class="t"><b>Moments des relances</b><small>Jusqu'à 4 relances dans les 24 h, comptées depuis le dernier message du fan (ex. 3h, 8h, 18h, 23h). Elles repartent de zéro quand il réécrit. Jamais après un fan qui a dit qu'il était occupé.</small></div>${[0, 1, 2, 3].map(i => `<input class="inp n" data-rp="${i}" placeholder="—" value="${D.strat.points[i] ? hmin(D.strat.points[i]) : ""}" style="width:64px">`).join("")}</div>
-        <div class="row" ${G.relance ? "" : "hidden"}><div class="t"><b>Relance d'un média de script pas acheté</b><small>Délai de la première relance quand le média de l'étape n'est pas pris (sauf si l'étape a son propre délai).</small></div><input class="inp n" type="number" min="10" max="720" data-g="relanceAfter" value="${G.relanceAfter}"><span class="unit">min</span></div>
-        <div class="row" ${G.relance ? "" : "hidden"}><div class="t"><b>Pas de relance entre</b><small>Heure de Paris. Elle répond toujours aux fans qui écrivent.</small></div><input class="inp n" type="number" min="0" max="23" data-g="quietFrom" value="${G.quietFrom}"><span class="unit">h et</span><input class="inp n" type="number" min="0" max="23" data-g="quietTo" value="${G.quietTo}"><span class="unit">h</span></div>
-        <div class="row"><div class="t"><b>Mémoire</b><small>Toutes les 3 réponses, l'IA complète la fiche du fan (prénom, ville, goûts, résumé) : l'IA et les chatters s'en souviendront la prochaine fois.</small></div><button class="sw ${G.memory ? "on" : ""}" id="gMem" aria-label="Mémoire"><i></i></button></div>
-        <div class="row"><div class="t"><b>Modèle Grok</b></div><select class="inp" id="gModel">${D.models.map(m => `<option value="${m.id}" ${G.model === m.id ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></div>
+    <aside class="as"><div class="pn">${head("lock", "a", "Toujours <em>appliqué</em>", "Par le site, quels que soient les textes")}
+      ${ALW.map(([b, s]) => `<div class="ck"><span class="g">${ico("check", 18, 2.6)}</span><div class="t"><b>${b}</b><small>${s}</small></div></div>`).join("")}
+    </div></aside></div></section>`;
+}
+
+function idHead(c) {
+  const Dt = c.cfg.details || {}, n = filled(c), nm = String(Dt.prenom || c.label).trim(), age = String(Dt.age || "").trim(), C = 94.25;
+  const tip = n >= 17 ? "Tout est rempli" : !(String(Dt.age || "").trim() && String(Dt.ville || "").trim() && String(Dt.cheveux || "").trim()) ? "Commence par l'âge, la ville et le physique" : "Plus c'est rempli, moins elle invente";
+  return `<span class="big" aria-hidden="true">${esc(init({ label: nm }))}</span><div class="t"><span class="kick">Ce que l'IA sait d'elle</span><b>${esc(nm)}${age ? ", " + esc(age) : ""}</b><small>Elle donne ces infos comme des faits, sans jamais se contredire. Laisse vide ce que tu ne veux pas dire.</small></div>
+    <div class="ring"><svg role="img" aria-label="${n} champs remplis sur 17" width="54" height="54" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="#262626" stroke-width="4"/>${n ? `<circle cx="18" cy="18" r="15" fill="none" stroke="${n >= 6 ? "#5fd3a2" : "#f0b45a"}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${(n / 17 * C).toFixed(1)} ${C}" transform="rotate(-90 18 18)"/>` : ""}</svg><div><b>${n} sur 17</b><small>${tip}</small></div></div>`;
+}
+function tabProf(c, M) { const Dt = M.details || {};
+  return `<section class="tab" id="t-prof" role="tabpanel" aria-labelledby="tb-prof" ${TAB === "prof" ? "" : "hidden"}>
+    <div class="pn idc" id="idc">${idHead(c)}</div>
+    <div class="lay"><div class="mn">
+      ${GRP.map(([t, s, tone, keys], gi) => `<div class="pn"><div class="sh"><span class="ic ${tone}" aria-hidden="true">${t[0]}</span><div class="sht"><h2>${t}</h2><small>${s}</small></div><span class="gcnt" data-gc="${gi}">${gcount(keys, Dt)}</span></div>
+        <div class="dts">${keys.map(k => { const [, l, ph, w] = DTL.find(x => x[0] === k), v = String(Dt[k] || ""); return `<label class="fld ${w ? "w" : ""} ${v.trim() ? "on" : ""}"><span>${l}</span><input class="inp" data-dt="${k}" maxlength="${w ? 600 : 120}" placeholder="ex. ${esc(ph)}" value="${esc(v)}"></label>`; }).join("")}</div></div>`).join("")}
+    </div>
+    <aside class="as">
+      <div class="pn">${head("book", "b", "Son histoire <em>et ses limites</em>", "Comme « Additional info » sur OnlyChat")}
+        <textarea class="inp" id="extra" maxlength="6000" rows="11" aria-label="Son histoire et ses limites" placeholder="Sa routine, ses limites, ses blagues récurrentes, comment elle appelle ses fans…">${esc(M.extra || "")}</textarea><div class="cnt" id="extraN">${(M.extra || "").length} / 6000</div></div>
+      <div class="pn">${head("pen", "g", "Sa façon d'écrire", "Style, exemples de messages et catalogue, dans sa fiche", `<a class="btn sm" href="/creatrices">Ouvrir sa fiche${ico("right", 14, 2.4)}</a>`)}
+        <div class="fiche"><span class="g"><i style="width:${Math.round(c.fiche / 7 * 100)}%"></i></span><b>Fiche ${c.fiche} sur 7</b></div>
+        ${row("S'inspirer des scripts", "Elle reçoit les scripts épinglés et les plus utilisés de la bibliothèque comme exemples de messages qui marchent.", sw(M.scripts, 'data-m="scripts"', "S'inspirer des scripts"))}
       </div>
-      <div class="pn up" style="animation-delay:.07s"><div class="ph"><h3>IA contre <em>chatters</em></h3><div class="r"><select class="inp" id="cmpD"><option value="7">7 jours</option><option value="30" selected>30 jours</option><option value="90">90 jours</option></select></div></div><div id="cmp"><div class="emp">Chargement…</div></div></div>
-      <div class="pn up" style="animation-delay:.08s"><div class="ph"><h3>Dernières <em>séances</em></h3></div><div id="hist"></div></div>
-    </div></div>`;
-  paintRun(); paintHist(); paintChat();
-  // réglages de la créatrice
-  document.querySelectorAll("[data-m]").forEach(b => b.onclick = async () => { const k = b.dataset.m, v = !cur().cfg[k];
-    if (k === "ok" && !v && cur().run && !confirm(`Retirer l'accord de ${cur().label} ?\n\nL'IA qui tourne sur elle va s'arrêter.`)) return;
-    if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { [k]: v })) { if (k === "promo" || k === "tease") return paintBody(); b.classList.toggle("on", v); paintCrs(); paintRun(); loadInfo(true); } });
+    </aside></div></section>`;
+}
+
+function tabRegl(G, F) { const lockT = F ? "" : " · réglé par le fondateur";
+  return `<section class="tab" id="t-regl" role="tabpanel" aria-labelledby="tb-regl" ${TAB === "regl" ? "" : "hidden"}>
+    <p class="gl">${ico("info")}Ces réglages valent pour toutes les créatrices.</p>
+    <div class="lay"><div class="mn">
+      <div class="pn">${head("clock", "g", "Relances <em>sur 24 h</em>", "Pendant sa séance, elle relance les fans à qui elle a parlé et qui ne répondent plus. Comptées depuis le dernier message du fan, elles repartent de zéro quand il réécrit, et jamais après un fan qui a dit qu'il partait.", sw(G.relance, 'id="gRel"', "Relances"))}
+        <div data-gif="relance" ${G.relance ? "" : "hidden"}>
+          <div class="fr" id="frise"></div>
+          <p class="frh">Clique sur la frise pour ajouter un moment (4 au plus), glisse un point pour le déplacer.</p>
+          <div class="frc" id="friseC"></div>
+          ${row("Média de script pas acheté", "Délai de la première relance quand le média de l'étape n'est pas pris (sauf si l'étape a son propre délai).", stp('data-g="relanceAfter"', "Relance d'un média de script pas acheté", G.relanceAfter, 10, 720, "min", 5))}
+          ${row("Heures calmes", "Heure de Paris. Pas de relance ; elle répond toujours aux fans qui écrivent.", `<span class="qh">${ico("moon", 15)}${hsel("quietFrom", G.quietFrom, "Début des heures calmes")}<span>→</span>${hsel("quietTo", G.quietTo, "Fin des heures calmes")}</span>`)}
+        </div></div>
+      <div class="pn">${head("pulse", "a", "Rythme", "Pour qu'elle ait l'air humaine et ne tourne pas sans fin")}
+        ${row("Délai avant de répondre", "Elle attend qu'il ait fini d'écrire, comme quelqu'un qui répond.", stp('data-g="waitMin"', "Délai minimum avant de répondre", G.waitMin, 5, 600, "", 5) + `<span class="unit">à</span>` + stp('data-g="waitMax"', "Délai maximum avant de répondre", G.waitMax, 5, 900, "s", 5))}
+        ${row("Pause quand l'équipe vient d'écrire", "Elle laisse la conversation tranquille pendant ce temps.", stp('data-g="teamPause"', "Pause quand l'équipe vient d'écrire", G.teamPause, 0, 240, "min", 5))}
+        ${row("Fans qui ont écrit dans les dernières", "Plus ancien, elle ne répond pas.", stp('data-g="fanWindow"', "Fans qui ont écrit dans les dernières heures", G.fanWindow, 1, 72, "h"))}
+        ${row("Réponses maximum par fan", "Par séance.", stp('data-g="perFan"', "Réponses maximum par fan", G.perFan, 1, 300, "", 5))}
+        ${row("Durée maximum d'une séance", "Elle s'arrête toute seule au bout de ce temps.", stp('data-g="maxHours"', "Durée maximum d'une séance", G.maxHours, 1, 24, "h"))}
+      </div></div>
+      <aside class="as">
+        <div class="pn">${head("chip", "b", "Modèle <em>Grok</em>", "Le cerveau qui écrit ses réponses")}
+          <div class="mdl">${D.models.map(m => { const L = MDL[m.id] || [m.label, ""]; return `<button type="button" data-model="${esc(m.id)}" aria-pressed="${G.model === m.id}"><span class="rd"></span><span class="t"><b>${esc(L[0])}</b>${L[2] ? ` <span class="bdg g">${L[2]}</span>` : ""}<small>${esc(L[1])}</small></span></button>`; }).join("")}</div>
+          ${row("Mémoire des fans", "Toutes les 3 réponses, elle complète la fiche du fan (prénom, ville, goûts, résumé) : elle et les chatters s'en souviendront.", sw(G.memory, 'id="gMem"', "Mémoire des fans"))}
+        </div>
+        <div class="pn">${head("shield", "a", "Prévenir <em>le fan</em>", "Au moins un des deux reste allumé")}
+          ${row(`Message « c'est l'IA »${lockT}`, G.notice ? "Sa première réponse commence par ce texte." : "Coupé : seul le 🤖 à la fin de chaque message signale l'IA.", sw(G.notice, `id="gNotice" ${F ? "" : "disabled"}`, "Message c'est l'IA"))}
+          <div data-gif="notice" ${G.notice ? "" : "hidden"}>
+            <textarea class="inp" id="gText" maxlength="240" rows="2" aria-label="Texte du message c'est l'IA">${esc(G.noticeText)}</textarea><small class="pvn">{creatrice} est remplacé par son nom.</small>
+            ${row("Quand le dire", "", `<select class="inp" id="gFreq" aria-label="Quand le dire"><option value="run" ${G.noticeFreq === "run" ? "selected" : ""}>À chaque séance</option><option value="fan" ${G.noticeFreq === "fan" ? "selected" : ""}>Une fois par fan</option></select>`)}
+            ${row("Le redire après", "", stp('data-g="noticeDays"', "Le redire après, en jours", G.noticeDays, 1, 365, "j"), `data-gif="noticeFan" ${G.notice && G.noticeFreq === "fan" ? "" : "hidden"}`)}
+          </div>
+          ${row(`🤖 à la fin de chaque message${lockT}`, G.mark ? "Le fan voit un 🤖 au bout de chaque message de l'IA." : "Retiré des messages : le fan est prévenu par le message « c'est l'IA ».", sw(G.mark, `id="gMark" ${F ? "" : "disabled"}`, "Robot à la fin des messages"))}
+          <div class="lockn">${ico("lock", 15)}<span>${F ? "" : "Réglé par le fondateur. "}Sur le site, les bulles de l'IA portent toujours un 🤖 pour l'équipe.</span></div>
+        </div>
+      </aside></div></section>`;
+}
+
+async function paintBody() {
+  const c = cur(); if (!c) return; const M = c.cfg, G = D.cfg, F = D.founder;
+  $("body").innerHTML = tabMain(c) + tabVente(c, M, G) + tabComp(c) + tabProf(c, M) + tabRegl(G, F);
+  paintRun(); paintHist(); paintChat(); paintReady(); paintFrise();
+  // réglages de la créatrice (les interrupteurs data-m passent par toggleM)
   document.querySelectorAll("[data-n]").forEach(i => i.onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { [i.dataset.n]: +i.value })) { notify("Enregistré", "", "ok"); loadInfo(true); } });
   $("base").onchange = async () => { if (await save("/api/twizz/ai/cfg", { base: $("base").value })) { notify("Instructions enregistrées", "Elles valent pour toutes les créatrices", "ok"); INFO = {}; loadInfo(true); } };
     $("locked").onchange = async () => { if (await save("/api/twizz/ai/cfg", { locked: $("locked").value })) { notify("Règles fixes enregistrées", "Elles valent pour toutes les créatrices", "ok"); INFO = {}; loadInfo(true); } };
@@ -235,45 +530,79 @@ async function paintBody() {
   $("profReset").onclick = async () => { if (!confirm(`Revenir à la fiche de ${cur().label} ?\n\nLe texte écrit à la main sera effacé.`)) return; if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { profile: "" })) { notify("Fiche reprise", "", "ok"); loadInfo(true); } };
   $("baseReset").onclick = async () => { if (!confirm("Remettre les instructions de base par défaut ?")) return; if (await save("/api/twizz/ai/cfg", { base: "" })) { notify("Instructions par défaut remises", "", "ok"); INFO = {}; loadInfo(true); } };
   $("extra").onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { extra: $("extra").value })) { notify("Consignes enregistrées", "", "ok"); loadInfo(true); } };
-  // réglages pour toutes
-  if (F) $("gNotice").onclick = async () => { if (await save("/api/twizz/ai/cfg", { notice: !D.cfg.notice })) { notify(D.cfg.notice ? "Message IA rallumé" : "Message IA coupé", D.cfg.notice ? "" : "Le 🤖 reste à la fin de chaque message", "info"); paintBody(); } };
-  if (F) $("gMark").onclick = async () => { if (await save("/api/twizz/ai/cfg", { mark: !D.cfg.mark })) { notify(D.cfg.mark ? "🤖 remis dans les messages" : "🤖 retiré des messages", "", "info"); paintBody(); } };
-  $("gRel").onclick = async () => { if (await save("/api/twizz/ai/cfg", { relance: !D.cfg.relance })) paintBody(); };
-  $("gMem").onclick = async () => { if (await save("/api/twizz/ai/cfg", { memory: !D.cfg.memory })) paintBody(); };
+  $("extra").oninput = () => { $("extraN").textContent = `${$("extra").value.length} / 6000`; };
   $("mPromoH").onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { promoHours: +$("mPromoH").value })) notify("Durée enregistrée", "", "ok"); };
   $("scanB").onclick = async () => { const b = $("scanB"); b.disabled = true; if (await save(`/api/twizz/ai/scan/${enc(CID)}`, {})) { notify("Analyse du coffre lancée", "Grok décrit chaque média, une seule fois", "ok"); scanPoll(); } else b.disabled = false; };
   if (c.scan && c.scan.running) scanPoll();
+  document.querySelectorAll("[data-dt]").forEach(i => { i.oninput = () => i.parentNode.classList.toggle("on", !!i.value.trim());
+    i.onchange = async () => { const d = {}; document.querySelectorAll("[data-dt]").forEach(x => { if (x.value.trim()) d[x.dataset.dt] = x.value.trim(); });
+      if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { details: d })) { notify("Détails enregistrés", "", "ok"); paintIdc(); paintReady(); loadInfo(true); } }; });
+  // réglages pour toutes
+  if (F) $("gNotice").onclick = async () => { if (await save("/api/twizz/ai/cfg", { notice: !D.cfg.notice })) { notify(D.cfg.notice ? "Message IA rallumé" : "Message IA coupé", D.cfg.notice ? "" : "Le 🤖 reste à la fin de chaque message", "info"); paintBody(); } };
+  if (F) $("gMark").onclick = async () => { if (await save("/api/twizz/ai/cfg", { mark: !D.cfg.mark })) { notify(D.cfg.mark ? "🤖 remis dans les messages" : "🤖 retiré des messages", "", "info"); paintBody(); } };
+  $("gRel").onclick = async () => { if (await save("/api/twizz/ai/cfg", { relance: !D.cfg.relance })) { flip($("gRel"), D.cfg.relance); deps(); } };
+  $("gMem").onclick = async () => { if (await save("/api/twizz/ai/cfg", { memory: !D.cfg.memory })) flip($("gMem"), D.cfg.memory); };
   $("gText").onchange = async () => { if (await save("/api/twizz/ai/cfg", { noticeText: $("gText").value })) notify("Message enregistré", "", "ok"); };
-  $("gFreq").onchange = async () => { if (await save("/api/twizz/ai/cfg", { noticeFreq: $("gFreq").value })) paintBody(); };
-  $("gModel").onchange = async () => { if (await save("/api/twizz/ai/cfg", { model: $("gModel").value })) notify("Modèle enregistré", "", "ok"); };
+  $("gFreq").onchange = async () => { if (await save("/api/twizz/ai/cfg", { noticeFreq: $("gFreq").value })) deps(); };
+  document.querySelectorAll("[data-model]").forEach(b => b.onclick = async () => { if (b.getAttribute("aria-pressed") === "true") return;
+    if (await save("/api/twizz/ai/cfg", { model: b.dataset.model })) { document.querySelectorAll("[data-model]").forEach(x => x.setAttribute("aria-pressed", x.dataset.model === D.cfg.model)); notify("Modèle enregistré", "", "ok"); } });
   document.querySelectorAll("[data-g]").forEach(i => i.onchange = async () => { if (await save("/api/twizz/ai/cfg", { [i.dataset.g]: +i.value })) notify("Enregistré", "", "ok"); });
-  // règles de conversation (pour toutes)
-  [["phStyle", "style"], ["phKyc", "kyc"], ["phSex", "sex"], ["phRel", "relance"]].forEach(([id, k]) => $(id).onchange = async () => { if (await save("/api/twizz/ai/strat", { [k]: $(id).value })) notify("Règles enregistrées", "Elles valent pour toutes les créatrices", "ok"); });
-  [["phKm", "kycMax"], ["phKh", "kycHours"]].forEach(([id, k]) => $(id).onchange = async () => { if (await save("/api/twizz/ai/strat", { [k]: +$(id).value })) notify("Enregistré", "", "ok"); });
-  $("phReset").onclick = async () => { if (!confirm("Remettre les règles de conversation par défaut ?")) return; if (await save("/api/twizz/ai/strat", { style: "", kyc: "", sex: "", relance: "", kycMax: 20, kycHours: 6 })) { notify("Règles par défaut remises", "", "ok"); paintBody(); } };
-  document.querySelectorAll("[data-rp]").forEach(i => i.onchange = async () => { const P = [...document.querySelectorAll("[data-rp]")].map(x => pmin(x.value)).filter(x => x);
-    if (await save("/api/twizz/ai/strat", { points: P })) { notify("Relances enregistrées", D.strat.points.map(hmin).join(", "), "ok"); paintBody(); } });
-  document.querySelectorAll("[data-dt]").forEach(i => i.onchange = async () => { const d = {}; document.querySelectorAll("[data-dt]").forEach(x => { if (x.value.trim()) d[x.dataset.dt] = x.value.trim(); });
-    if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { details: d })) { notify("Détails enregistrés", "", "ok"); loadInfo(true); } });
-  // règles de vente par scripts (pour toutes)
-  [["stLaunch", "launch"], ["stNego", "nego"], ["stAfter", "after"]].forEach(([id, k]) => $(id).onchange = async () => { if (await save("/api/twizz/ai/strat", { [k]: $(id).value })) notify("Règles enregistrées", "Elles valent pour toutes les créatrices", "ok"); });
-  $("stReset").onclick = async () => { if (!confirm("Remettre les règles de vente par scripts par défaut ?")) return; if (await save("/api/twizz/ai/strat", { launch: "", nego: "", after: "" })) { notify("Règles par défaut remises", "", "ok"); paintBody(); } };
+  // comportement : les 7 phases (pour toutes)
+  document.querySelectorAll("[data-pho]").forEach(b => b.onclick = () => { PH = PH === b.dataset.pho ? null : b.dataset.pho; setPh(); });
+  document.querySelectorAll("[data-st]").forEach(t => { const k = t.dataset.st;
+    t.oninput = () => { document.querySelector(`[data-cnt="${k}"]`).textContent = `${t.value.length} / 3000`; };
+    t.onchange = async () => { if (await save("/api/twizz/ai/strat", { [k]: t.value })) { notify("Règles enregistrées", "Elles valent pour toutes les créatrices", "ok"); phTag(k); } }; });
+  document.querySelectorAll("[data-def]").forEach(b => b.onclick = async () => { const k = b.dataset.def; if (D.strat[k] === D.stratDef[k]) return;
+    if (!confirm("Remettre le texte par défaut pour cette phase ?\n\nTon texte sera effacé.")) return;
+    if (await save("/api/twizz/ai/strat", { [k]: "" })) { notify("Texte par défaut remis", "", "ok"); phTag(k, true); } });
+  document.querySelectorAll("[data-per]").forEach(b => b.onclick = () => { const k = b.dataset.per, t = $("ph-" + k); t.focus(); t.setSelectionRange(t.value.length, t.value.length);
+    if (D.strat[k] === D.stratDef[k]) notify("Écris ton texte", "Il remplacera le texte par défaut dès que tu quittes le champ", "info"); });
+  document.querySelectorAll("[data-sd]").forEach(b => b.onclick = () => { const p = document.querySelector(`[data-sdp="${b.dataset.sd}"]`); p.hidden = !p.hidden; b.setAttribute("aria-expanded", !p.hidden); b.textContent = p.hidden ? "Voir le texte par défaut" : "Cacher le texte par défaut"; });
+  document.querySelectorAll("[data-sk]").forEach(i => i.onchange = async () => { if (await save("/api/twizz/ai/strat", { [i.dataset.sk]: +i.value })) { notify("Enregistré", "", "ok");
+    const s = document.querySelector('[data-phs="kyc"]'); if (s) s.textContent = `Ce qu'elle cherche à savoir · s'arrête après ${D.strat.kycMax} messages ou ${D.strat.kycHours} h`; } });
+  $("adv").ontoggle = () => { ADV = $("adv").open; };
   // essai
   $("tryGo").onclick = tryIt; $("tryIn").onkeydown = e => { if (e.key === "Enter") tryIt(); };
   $("tryR").onclick = () => { CHAT[CID] = []; TST[CID] = null; paintChat(); };
+  document.querySelectorAll("[data-fan]").forEach(b => b.onclick = () => { FAN[CID] = b.dataset.fan; document.querySelectorAll("[data-fan]").forEach(x => x.setAttribute("aria-pressed", x === b)); $("fanX").textContent = FANX[FAN[CID]]; });
   loadInfo(); loadCmp();
   $("cmpD").onchange = loadCmp;
+}
+// interrupteurs de la créatrice : la même clé peut être à deux endroits (accord dans « prête ? »)
+async function toggleM(b) {
+  const k = b.dataset.m, c = cur(); if (!c || b.disabled) return; const v = !c.cfg[k];
+  if (k === "ok" && !v && c.run && !confirm(`Retirer l'accord de ${c.label} ?\n\nL'IA qui tourne sur elle va s'arrêter.`)) return;
+  b.disabled = true; const ok = await save(`/api/twizz/ai/cfg/${enc(CID)}`, { [k]: v }); b.disabled = false; if (!ok) return;
+  document.querySelectorAll(`#body [data-m="${k}"]`).forEach(x => flip(x, v)); deps(); paintCrs(); paintRun(); paintReady(); loadInfo(true);
+}
+// lignes qui n'ont de sens que si un réglage est allumé
+function deps() {
+  const c = cur(); if (!c) return;
+  document.querySelectorAll("[data-if]").forEach(r => r.hidden = !c.cfg[r.dataset.if]);
+  document.querySelectorAll("[data-gif]").forEach(r => r.hidden = !GIF[r.dataset.gif](D.cfg));
+  const h = $("how"); if (h) { h.classList.toggle("off", !c.cfg.sell); $("sellS").textContent = sellTxt(c.cfg); }
+}
+function setPh() {
+  document.querySelectorAll("[data-p7]").forEach(p => { const k = p.dataset.p7, op = PH === k; p.classList.toggle("open", op); p.querySelector(".phh").setAttribute("aria-expanded", op); $("phb-" + k).hidden = !op; });
+}
+function phTag(k, reset) {
+  const cu = D.strat[k] !== D.stratDef[k], t = document.querySelector(`[data-ptg="${k}"]`); if (t) { t.textContent = cu ? "Perso" : "Défaut"; t.classList.toggle("p", cu); }
+  const a = document.querySelector(`[data-def="${k}"]`), b = document.querySelector(`[data-per="${k}"]`); if (a) a.setAttribute("aria-pressed", !cu); if (b) b.setAttribute("aria-pressed", cu);
+  const ta = $("ph-" + k); if (ta && (reset || document.activeElement !== ta)) { ta.value = D.strat[k] || ""; const n = document.querySelector(`[data-cnt="${k}"]`); if (n) n.textContent = `${ta.value.length} / 3000`; }
+}
+function paintIdc() {
+  const c = cur(); if (!c || !$("idc")) return; $("idc").innerHTML = idHead(c);
+  GRP.forEach(([, , , keys], gi) => { const e = document.querySelector(`[data-gc="${gi}"]`); if (e) e.textContent = gcount(keys, c.cfg.details || {}); });
 }
 async function loadCmp() {
   const cid = CID, box = $("cmp"); if (!box) return; let R;
   try { R = await api(`/api/twizz/ai/compare/${enc(cid)}?days=${$("cmpD").value}`, { fresh: true }); } catch (e) { box.innerHTML = `<div class="emp">${esc(e.message)}</div>`; return; }
-  if (cid !== CID) return; const A = R.ai, T = R.team, f = (v, u) => v == null ? "—" : u === "€" ? eur(v) : u === "%" ? String(v).replace(".", ",") + " %" : String(v).replace(".", ",") + (u || "");
-  const row = (l, k, u, best) => { const a = A[k], t = T[k], win = best && a != null && t != null && a !== t ? (best === "max" ? (a > t ? "a" : "t") : (a < t ? "a" : "t")) : "";
-    return `<tr><td>${l}</td><td class="${win === "a" ? "w" : ""}">${f(a, u)}</td><td class="${win === "t" ? "w" : ""}">${f(t, u)}</td></tr>`; };
-  box.innerHTML = `<table class="cmp"><tr><th></th><th>🤖 IA</th><th>Chatters</th></tr>
-    ${row("Heures couvertes", "hours", " h")}${row("Médias payants envoyés", "paid")}${row("Ventes en conversation", "sales")}${row("Chiffre d'affaires net", "net", "€", "max")}
-    ${row("Par heure couverte", "perHour", "€", "max")}${row("Taux d'achat", "rate", "%", "max")}${row("Panier moyen", "basket", "€", "max")}</table>
-    <div class="cmpn">Estimations sur ${R.days} jours pour ${esc(cur().label)}. Côté chatters : leurs heures pointées, les médias envoyés depuis le site et toutes les ventes de médias privés qui ne viennent pas de l'IA. Pour une vraie comparaison, fais tourner l'IA plusieurs séances aux mêmes heures que les chatters.</div>`;
+  if (cid !== CID || !$("cmp")) return; const A = R.ai, T = R.team, f = (v, u) => v == null ? "—" : u === "€" ? eur(v) : u === "%" ? String(v).replace(".", ",") + " %" : String(v).replace(".", ",") + (u || "");
+  const bar = (l, k, u) => { const a = +A[k] || 0, t = +T[k] || 0, z = !a && !t;
+    return `<div class="cb"><div class="cbt"><span>${l}</span><span><b>IA ${f(A[k], u)}</b> · chatters ${f(T[k], u)}</span></div><div class="cbb ${z ? "z" : ""}" aria-hidden="true"><i style="flex:${z ? 1 : a}"></i><i style="flex:${z ? 1 : t}"></i></div></div>`; };
+  $("cmp").innerHTML = bar("Par heure couverte", "perHour", "€") + bar("Taux d'achat", "rate", "%") + bar("Panier moyen", "basket", "€")
+    + `<div class="cmpl"><span>IA : ${f(A.hours, " h")} · ${f(A.net, "€")}</span><span>Chatters : ${f(T.hours, " h")} · ${f(T.net, "€")}</span></div>
+    <p class="cmpn">Estimations sur ${R.days} jours pour ${esc(cur().label)}, sur les heures où chacun a tourné. Pour comparer vraiment, fais tourner l'IA plusieurs séances aux mêmes heures que les chatters.</p>`;
 }
 let scT = null;
 async function scanPoll() { clearTimeout(scT); try { D = await api("/api/twizz/ai", { fresh: true }); } catch (e) { return; }
@@ -305,30 +634,87 @@ async function loadInfo(fresh) {
 }
 function paintRun() {
   const c = cur(), box = $("run"); if (!c || !box) return; const r = c.run, ok = D.on && D.key && D.send && c.cfg.ok;
-  box.innerHTML = r ? `<div class="st run"><i></i><div class="t"><b>🤖 L'IA répond pour ${esc(c.label)}</b><small>Depuis ${hm(r.started_at)}${r.by ? " · lancée par " + esc(r.by) : ""} · ${line(r)}${r.error ? "<br>Dernier souci : " + esc(r.error) : ""}</small></div><button class="btn r sm" id="stop">Arrêter</button></div>${r.left.map(x => `<div class="lv"><b>À reprendre : ${esc(x.fan_name || "un fan")}</b> — ${esc(x.blocked)}</div>`).join("")}`
-    : `<div class="st"><i></i><div class="t"><b>L'IA ne tourne pas sur ${esc(c.label)}</b><small>${!D.on ? "L'IA de secours est coupée par le fondateur." : !D.key ? "Clé Grok manquante." : !D.send ? "L'envoi vers les fans est coupé." : !c.cfg.ok ? `Coche d'abord l'accord de ${esc(c.label)} ci-dessous.` : "Lance-la si un chatter manque : elle s'arrête dès qu'un chatter reprend."}</small></div><button class="btn w sm" id="go" ${ok ? "" : "disabled"}>Lancer</button></div>`;
+  if (r) { const since = rel(r.started_at) === "Aujourd'hui" ? hm(r.started_at) : `${rel(r.started_at).toLowerCase()} ${hm(r.started_at)}`;
+    box.className = "pn live";
+    box.innerHTML = `<div class="lvh"><span class="dot"></span><div class="t"><span class="kick g">Séance en cours</span><b>Elle répond pour ${esc(c.label)} depuis ${since}</b><small>${r.by ? `Lancée par ${esc(r.by)} · ` : ""}s'arrête dès qu'un chatter pointe sur ${esc(c.label)}</small></div><button type="button" class="btn big stop" id="stop">${STOP}Arrêter</button></div>
+      ${r.error ? `<div class="lerr">${ico("alert", 15, 2.4)}<span>Dernier souci : ${esc(r.error)}</span></div>` : ""}
+      <div class="stats"><div><span>Réponses</span><b>${r.replies}</b></div><div><span>Médias envoyés</span><b>${r.medias}</b></div><div><span>Ventes</span><b>${eur(r.sales ? r.sales.net : 0)}</b></div>${r.left.length ? `<a class="am" href="#reprendre"><span>À reprendre</span><b>${r.left.length}</b></a>` : `<div><span>À reprendre</span><b>0</b></div>`}</div>`; }
+  else { box.className = "pn";
+    const why = !D.on ? "L'IA de secours est coupée par le fondateur." : !D.key ? "Clé Grok manquante." : !D.send ? "L'envoi vers les fans est coupé." : !c.cfg.ok ? `Active d'abord l'accord de ${esc(c.label)}, juste en dessous.` : "Lance-la si un chatter manque : elle s'arrête dès qu'un chatter reprend.";
+    box.innerHTML = `<div class="lvh"><span class="dot off"></span><div class="t"><span class="kick">Pas de séance</span><b>L'IA ne tourne pas sur ${esc(c.label)}</b><small>${why}</small></div><button type="button" class="btn big w" id="go" ${ok ? "" : "disabled"}>${PLAY}Lancer</button></div>`; }
+  paintLeft();
   const s = $("stop"); if (s) s.onclick = async () => { s.disabled = true; if (await save("/api/twizz/ai/stop", { cid: CID })) notify("IA arrêtée", "", "info"); paintCrs(); paintRun(); paintHist(); };
-  const g = $("go"); if (g) g.onclick = async () => { g.disabled = true; if (await save("/api/twizz/ai/start", { cid: CID, reason: "lancée depuis la page IA de secours" })) notify("IA de secours lancée", "Elle s'arrête dès qu'un chatter reprend", "ok"); paintCrs(); paintRun(); };
+  const g = $("go"); if (g) g.onclick = async () => { g.disabled = true; if (await save("/api/twizz/ai/start", { cid: CID, reason: "lancée depuis la page IA de secours" })) notify("IA de secours lancée", "Elle s'arrête dès qu'un chatter reprend", "ok"); paintCrs(); paintRun(); paintHist(); };
+}
+function paintLeft() {
+  const c = cur(), box = $("left"); if (!c || !box) return; const L = c.run ? c.run.left : [];
+  box.innerHTML = L.length ? `<section class="pn" id="reprendre" aria-label="Fans à reprendre">${head("back", "a", "À reprendre <em>par un chatter</em>", "Les fans qu'elle a laissés à l'équipe pendant cette séance")}
+    ${L.map(x => `<div class="lf"><span class="cav">${esc(init({ label: x.fan_name || "?" }))}</span><div class="t"><b>${esc(x.fan_name || "Un fan")}</b><small>${esc(x.blocked)}</small></div>${x.fan_id ? `<a class="btn w sm" href="/messagerie?cr=${enc(c.id)}&conv=${enc(x.conv_id)}&fan=${enc(x.fan_id)}&name=${enc(x.fan_name || "Fan")}">Ouvrir la conversation${ico("arrow", 14, 2.6)}</a>` : ""}</div>`).join("")}</section>` : "";
+}
+// est-elle prête ? cinq points, avec un lien vers l'onglet où ça se règle
+function paintReady() {
+  const c = cur(), box = $("ready"); if (!c || !box) return; const M = c.cfg, nd = filled(c), ns = c.scripts.length;
+  const C = [
+    { ok: M.ok, b: `Accord de ${esc(c.label)}`, s: M.ok ? "Elle est d'accord pour que son IA réponde à ses fans" : "Sans son accord, impossible de lancer l'IA sur elle", ctl: sw(M.ok, 'data-m="ok"', `Accord de ${c.label}`) },
+    { ok: ns >= 2, b: ns ? pl(ns, "script IA", "scripts IA") : "Aucun script IA", s: ns ? esc(c.scripts.slice(0, 3).map(x => x.title + (x.first ? " (premier)" : "")).join(", ")) + (ns > 3 ? "…" : "") + (ns < 2 ? " · ajoute-en un deuxième" : "") : "Elle vend avec le coffre. Crée au moins 2 scripts IA dans Scripts", go: "vente", cta: ns >= 2 ? "Voir" : "Ajouter" },
+    { ok: nd >= 6, b: `Détails : ${nd} sur 17`, s: nd >= 6 ? "Elle répond aux questions sur elle sans inventer" : "Âge, ville, physique… les fans les demandent tout le temps", go: "prof", cta: nd >= 6 ? "Voir" : "Compléter" },
+    !M.vision ? { ok: false, b: "Elle ne voit pas les médias", s: "Allume « Voir les médias » pour qu'elle sache ce qu'elle vend", go: "vente", cta: "Allumer" }
+      : c.media ? { ok: true, b: "Coffre analysé", s: `${pl(c.media, "média décrit", "médias décrits")} : elle sait ce qu'elle vend`, go: "vente", cta: "Voir" }
+      : { ok: false, b: "Coffre pas encore analysé", s: "Analyse-le pour qu'elle sache ce qu'elle vend", go: "vente", cta: "Analyser" },
+    { ok: c.fiche >= 5, b: `Fiche de style : ${c.fiche} sur 7`, s: c.fiche >= 5 ? "Elle écrit comme elle" : "Sa façon d'écrire, ses exemples de messages, son catalogue", href: "/creatrices", cta: c.fiche >= 5 ? "Voir" : "Compléter" }];
+  const n = C.filter(x => x.ok).length;
+  box.innerHTML = head("ok", "g", `${esc(c.label)} est-elle <em>prête ?</em>`, n === C.length ? "Tout est prêt" : `${n} sur ${C.length}`, `<span class="bars" aria-hidden="true">${C.map(x => `<i class="${x.ok ? "g" : ""}"></i>`).join("")}</span>`)
+    + C.map(x => `<div class="ck"><span class="${x.ok ? "g" : "a"}">${ico(x.ok ? "check" : "alert", 18, 2.6)}</span><div class="t"><b>${x.b}</b><small>${x.s}</small></div>${x.ctl || (x.go ? `<button type="button" class="lnk" data-go="${x.go}">${x.cta}</button>` : `<a class="lnk" href="${x.href}">${x.cta}</a>`)}</div>`).join("");
 }
 function paintHist() {
-  const box = $("hist"); if (!box) return;
-  box.innerHTML = D.recent.length ? D.recent.map(r => `<div class="hs"><b>${esc(r.label)}</b><small>${day(r.started_at)} ${hm(r.started_at)} → ${hm(r.ended_at)} · ${line(r)} · ${esc(r.end_reason || "")}</small>${r.left.map(x => `<div class="lv"><b>À reprendre : ${esc(x.fan_name || "un fan")}</b> — ${esc(x.blocked)}</div>`).join("")}</div>`).join("")
-    : `<div class="emp">Aucune séance pour l'instant.</div>`;
+  const box = $("hist"), c = cur(); if (!box || !c) return;
+  const L = (c.run ? [{ ...c.run, live: true }] : []).concat(D.recent.filter(r => r.cid ? r.cid === c.id : r.label === c.label)).slice(0, 6);
+  box.innerHTML = L.length ? L.map(r => `<div class="hs" title="${esc(r.end_reason || "")}"><i class="${r.live ? "on" : ""}"></i><span class="w">${rel(r.started_at)} ${hm(r.started_at)} → ${r.live ? "en cours" : hm(r.ended_at)}</span><b>${line(r)}</b></div>${!r.live && r.left.length ? `<div class="hsl">À reprendre : ${r.left.map(x => esc(x.fan_name || "un fan")).join(", ")}</div>` : ""}`).join("")
+    : `<div class="emp">Aucune séance pour ${esc(c.label)}.</div>`;
+}
+// relances : la frise des 24 h (cliquer pour ajouter, glisser pour déplacer, flèches et Suppr au clavier)
+const snap = m => Math.min(1425, Math.max(15, Math.round(m / 15) * 15));
+async function setPoints(P, msg, fv) {
+  P = [...new Set(P.map(snap))].sort((a, b) => a - b).slice(0, 4);
+  if (await save("/api/twizz/ai/strat", { points: P })) notify(msg || "Relances enregistrées", D.strat.points.map(hfr).join(", "), "ok");
+  paintFrise(); if (fv != null) { const i = D.strat.points.indexOf(snap(fv)), b = document.querySelector(`.frp[data-i="${i}"]`); if (b) b.focus(); }
+}
+function paintFrise() {
+  const box = $("frise"), cc = $("friseC"); if (!box) return; const P0 = D.strat.points.slice();
+  box.innerHTML = `<div class="frw" id="frw"><span class="frt"></span><span class="frf" style="width:${P0.length ? P0[P0.length - 1] / 14.4 : 0}%"></span><span class="fr0"></span>${P0.map((m, i) => `<button type="button" class="frp" data-i="${i}" style="left:${m / 14.4}%" aria-label="Relance ${hfr(m)} après le dernier message du fan. Flèches pour la déplacer, Suppr pour la retirer."><b>${hfr(m)}</b><i></i></button>`).join("")}</div><div class="frs" aria-hidden="true"><span>0</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div>`;
+  cc.innerHTML = P0.map((m, i) => `<button type="button" class="chipx" data-rm="${i}" ${P0.length < 2 ? "disabled" : ""} aria-label="Retirer la relance de ${hfr(m)}">${hfr(m)}${ico("x", 12, 2.6)}</button>`).join("") + (P0.length < 4 ? `<span class="frn">${4 - P0.length} de plus possible${4 - P0.length > 1 ? "s" : ""}</span>` : "");
+  const W = $("frw"), at = x => { const r = W.getBoundingClientRect(); return snap((x - r.left) / r.width * 1440); };
+  W.onclick = e => { if (e.target.closest(".frp")) return; if (P0.length >= 4) return notify("4 relances au plus", "Retire un moment avant d'en ajouter un", "info");
+    const m = at(e.clientX); if (!P0.includes(m)) setPoints(P0.concat(m), "Relance ajoutée"); };
+  W.querySelectorAll(".frp").forEach(b => { const i = +b.dataset.i; let drag = null, kT = null;
+    const show = m => { b.style.left = m / 14.4 + "%"; b.querySelector("b").textContent = hfr(m); };
+    b.onpointerdown = e => { if (e.button) return; e.preventDefault(); b.focus(); b.setPointerCapture(e.pointerId); drag = { x: e.clientX, m: P0[i], moved: false }; b.classList.add("drag"); };
+    b.onpointermove = e => { if (!drag) return; if (Math.abs(e.clientX - drag.x) > 3) drag.moved = true; if (drag.moved) { drag.m = at(e.clientX); show(drag.m); } };
+    b.onpointerup = () => { if (!drag) return; const d = drag; drag = null; b.classList.remove("drag"); if (d.moved && d.m !== P0[i]) { const P = P0.slice(); P[i] = d.m; setPoints(P, "", d.m); } };
+    b.onpointercancel = () => { drag = null; b.classList.remove("drag"); show(P0[i]); };
+    b.onclick = e => e.stopPropagation();
+    b.onkeydown = e => { if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); if (P0.length > 1) setPoints(P0.filter((_, j) => j !== i), "Relance retirée"); return; }
+      const d = e.key === "ArrowRight" || e.key === "ArrowUp" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowDown" ? -1 : 0; if (!d) return; e.preventDefault();
+      P0[i] = snap(P0[i] + d * (e.shiftKey ? 60 : 15)); show(P0[i]); clearTimeout(kT); kT = setTimeout(() => setPoints(P0, "", P0[i]), 700); }; });
+  cc.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => setPoints(P0.filter((_, j) => j !== +b.dataset.rm), "Relance retirée"));
 }
 function paintChat() {
   const L = CHAT[CID] || [], box = $("chat"); if (!box) return;
-  const e2 = v => String(v).replace(".", ","), buy = m => m.price > 0 ? (m.paid ? `<span class="ok">✓ acheté à ${e2(m.price)} €</span>` : `<button class="buy" data-buy="${esc(m.id)}">Il achète (${e2(m.price)} €)</button>`) : "";
-  box.innerHTML = L.length ? L.map(m => m.mode ? `<div class="md">${esc(m.mode)}</div>` : m.fan ? `<div class="bb f">${esc(m.text)}</div>` : m.leave ? `<div class="bb x">L'IA laisserait ce fan à l'équipe : ${esc(m.leave)}</div>`
-    : m.step ? `<div class="bb s"><span class="sh">Étape ${m.step.k + 1}/${m.step.n} · ${esc(m.step.script)}</span>${esc(m.text || "")}${D.cfg.mark ? " 🤖" : ""}${m.step.medias ? `<small>${m.step.medias} média${m.step.medias > 1 ? "s" : ""}${m.step.what ? ` (${esc(m.step.what)})` : ""} · ${m.price > 0 ? `${e2(m.price)} €${m.step.floor ? ` · plancher ${e2(m.step.floor)} €` : ""}` : "offert"}</small>${buy(m)}` : ""}</div>`
-    : `<div class="bb a">${esc(m.text)}${D.cfg.mark ? " 🤖" : ""}${m.floor ? `<small>+ le même média au prix plancher : ${e2(m.price)} €</small>${buy(m)}` : m.tz ? `<small>teasing de l'étape, juste avant le média</small>` : m.media ? `<small>+ média de « ${esc(m.media)} »${m.what ? ` (${esc(m.what)})` : ""} à ${e2(m.prix)} €${m.remise ? ` · remise ${m.remise} %` : ""}</small>` : m.teaser ? `<small>teasing : elle pourra envoyer le média après ta réponse</small>` : ""}</div>`).join("") : `<div class="emp">Commence par un message de fan, par exemple « coucou ça va ? »</div>`;
+  const e2 = v => String(v).replace(".", ","), mk = D.cfg.mark ? " 🤖" : "";
+  const buy = m => m.price > 0 ? (m.paid ? `<span class="ok">${ico("ok", 13, 2.8)}Acheté à ${e2(m.price)} €</span>` : `<button type="button" class="buy" data-buy="${esc(m.id)}">Il achète (${e2(m.price)} €)</button>`) : "";
+  const media = (paid, label) => `<div class="mph ${paid ? "pd" : ""}">${paid ? ico("lock", 18) : ""}<span>${label}</span></div>`;
+  box.innerHTML = (L.length ? L.map(m => m.mode ? `<div class="md">${esc(m.mode)}</div>` : m.fan ? `<div class="bb f">${esc(m.text)}</div>` : m.leave ? `<div class="bb x">Elle laisserait ce fan à l'équipe : ${esc(m.leave)}</div>`
+    : m.step ? `<div class="bb s">${m.step.medias ? media(m.price > 0, `${m.step.medias > 1 ? m.step.medias + " médias" : "média"} · ${m.price > 0 ? e2(m.price) + " €" : "offert"}`) : ""}<div class="sbd"><span class="stl">Étape ${m.step.k + 1} sur ${m.step.n} · ${esc(m.step.script)}${m.price > 0 && m.step.floor ? ` · plancher ${e2(m.step.floor)} €` : ""}</span>${m.text ? `<span>${esc(m.text)}${mk}</span>` : ""}${m.step.what ? `<small>${esc(m.step.what)}</small>` : ""}${buy(m)}</div></div>`
+    : `<div class="bb a">${esc(m.text)}${m.text ? mk : ""}${m.floor ? `<small>+ le même média au prix plancher : ${e2(m.price)} €</small>${buy(m)}` : m.tz ? `<small>teasing de l'étape, juste avant le média</small>` : m.media ? `<small>+ média de « ${esc(m.media)} »${m.what ? ` (${esc(m.what)})` : ""} à ${e2(m.prix)} €${m.remise ? ` · remise ${m.remise} %` : ""}</small>` : m.teaser ? `<small>teasing : elle pourra envoyer le média après ta réponse</small>` : ""}</div>`).join("")
+    : `<div class="emp">Commence par un message de fan, par exemple « coucou ça va ? »</div>`) + (WAITING === CID ? `<div class="md">Elle écrit…</div>` : "");
   box.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => { const m = L.find(x => x.id === b.dataset.buy); if (m) { m.paid = true; paintChat(); } });
   box.scrollTop = box.scrollHeight;
 }
 async function tryIt() {
-  const t = $("tryIn").value.trim(); if (!t) return; const cid = CID, L = CHAT[cid] = CHAT[cid] || [];
+  const t = $("tryIn").value.trim(); if (!t || WAITING) return; const cid = CID, L = CHAT[cid] = CHAT[cid] || [];
   const uid = () => "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), T = TST[cid] || (TST[cid] = { state: null, burned: [] });
-  L.push({ fan: true, text: t, id: uid() }); $("tryIn").value = ""; paintChat(); $("tryGo").disabled = true; $("tryGo").textContent = "…";
-  try { const r = await api(`/api/twizz/ai/try/${enc(cid)}`, { body: { fan: $("tryFan").value, state: T.state, burned: T.burned,
+  L.push({ fan: true, text: t, id: uid() }); $("tryIn").value = ""; WAITING = cid; paintChat(); $("tryGo").disabled = true;
+  try { const r = await api(`/api/twizz/ai/try/${enc(cid)}`, { body: { fan: FAN[cid] || "new", state: T.state, burned: T.burned,
       messages: L.filter(m => !m.leave && !m.mode).map(m => ({ fan: !!m.fan, text: m.text || "", teaser: !!m.teaser, id: m.id, price: m.step || m.floor ? m.price : undefined, paid: !!m.paid })) } });
     T.state = r.state || null; T.burned = r.burned || T.burned;
     if (r.mode) L.push({ mode: r.mode + (r.ended ? ` · fin du script : ${r.ended}` : "") });
@@ -338,9 +724,27 @@ async function tryIt() {
       if (r.floor && !r.bulles.length) L.push({ id: r.floor.id, text: "", floor: true, price: r.floor.price });
       if (r.step) { if (r.step.tease) L.push({ id: uid(), text: r.step.tease, tz: true }); L.push({ id: r.step.id, text: r.step.text, step: r.step, price: r.step.price }); }
       if (r.guarded) notify("Bulle retirée", "L'IA disait envoyer un média alors qu'aucun ne partait", "info"); } }
-  catch (e) { notify("Essai impossible", e.message, "err"); L.pop(); $("tryIn").value = t; }
-  $("tryGo").disabled = false; $("tryGo").textContent = "Envoyer"; if (cid === CID) paintChat();
+  catch (e) { notify("Essai impossible", e.message, "err"); L.pop(); if (cid === CID && $("tryIn")) $("tryIn").value = t; }
+  WAITING = null; if ($("tryGo")) $("tryGo").disabled = false; if (cid === CID) paintChat();
 }
+// clics et touches pour toute la page : champs −/+, onglets, liens vers un onglet, interrupteurs de la créatrice, menu des créatrices
+document.addEventListener("click", e => {
+  const t = e.target, sb = t.closest(".stp .sb");
+  if (sb) { const i = sb.parentNode.querySelector("input"); if (!i || i.disabled) return; const st = +i.step || 1, mn = i.min === "" ? -Infinity : +i.min, mx = i.max === "" ? Infinity : +i.max;
+    const v = Math.min(mx, Math.max(mn, Math.round(((+i.value || 0) + st * +sb.dataset.d) / st) * st)); if (v === +i.value) return;
+    i.value = v; clearTimeout(i._t); i._t = setTimeout(() => i.dispatchEvent(new Event("change")), 650); return; }   // on attend la fin des clics pour enregistrer une seule fois
+  const tb = t.closest("#tabs [data-tab]"); if (tb) return setTab(tb.dataset.tab);
+  const go = t.closest("#body [data-go]"); if (go) { setTab(go.dataset.go); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  const m = t.closest("#body [data-m]"); if (m) return toggleM(m);
+  if (MENU && !t.closest("#crw")) { MENU = false; paintCrs(); }
+});
+document.addEventListener("keydown", e => {
+  if (MENU && e.key === "Escape") { MENU = false; paintCrs(); $("crb").focus(); return; }
+  if (MENU && (e.key === "ArrowDown" || e.key === "ArrowUp") && e.target.closest && e.target.closest(".crm")) { e.preventDefault();
+    const L = [...document.querySelectorAll(".crm [data-c]")], i = L.indexOf(e.target), n = L[(i + (e.key === "ArrowDown" ? 1 : -1) + L.length) % L.length]; if (n) n.focus(); return; }
+  const tb = e.target.closest && e.target.closest("#tabs [data-tab]");
+  if (tb && (e.key === "ArrowRight" || e.key === "ArrowLeft")) { e.preventDefault(); const i = TABS.findIndex(x => x[0] === tb.dataset.tab); setTab(TABS[(i + (e.key === "ArrowRight" ? 1 : -1) + TABS.length) % TABS.length][0], true); }
+});
 
 (async () => {
   const me = await api("/api/me"); renderShell("ia", me);
