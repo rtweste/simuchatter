@@ -12,7 +12,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   if (!db.prepare("PRAGMA table_info(twizz_sent)").all().some(x => x.name === "via")) db.exec("ALTER TABLE twizz_sent ADD COLUMN via TEXT");
   // scripts : messages tout prêts, pour toutes les créatrices (creator_id vide) ou une seule
   db.exec("CREATE TABLE IF NOT EXISTS twizz_scripts (id INTEGER PRIMARY KEY, creator_id TEXT, cat TEXT, title TEXT, body TEXT, uses INTEGER DEFAULT 0, user_id INTEGER, at INTEGER)");
-  for (const [c, t] of [["updated_at", "INTEGER"], ["updated_by", "INTEGER"], ["source", "TEXT"], ["ext_id", "TEXT"], ["pinned", "INTEGER DEFAULT 0"], ["media", "TEXT"], ["price", "REAL"], ["steps", "TEXT"]])
+  for (const [c, t] of [["updated_at", "INTEGER"], ["updated_by", "INTEGER"], ["source", "TEXT"], ["ext_id", "TEXT"], ["pinned", "INTEGER DEFAULT 0"], ["media", "TEXT"], ["price", "REAL"], ["steps", "TEXT"],
+    // pour l'IA de secours : script utilisable par l'IA, sa description (quand le lancer), premier script des nouveaux fans, sortie après X h sans réponse
+    ["ai", "INTEGER DEFAULT 0"], ["ai_desc", "TEXT"], ["ai_first", "INTEGER DEFAULT 0"], ["ai_timeout", "REAL"]])
     if (!db.prepare("PRAGMA table_info(twizz_scripts)").all().some(x => x.name === c)) db.exec(`ALTER TABLE twizz_scripts ADD COLUMN ${c} ${t}`);
   db.exec("CREATE TABLE IF NOT EXISTS twizz_script_uses (script_id INTEGER, user_id INTEGER, at INTEGER)");
   // où en est chaque fan dans le script qu'on lui déroule (une étape à la fois, envoyée par le chatter)
@@ -584,12 +586,17 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   // un script = un déroulé d'étapes ; chaque étape : un message, des médias du coffre (payants ou non) et, si payant, une relance s'il n'achète pas
   const cleanMedia = M => (Array.isArray(M) ? M : []).slice(0, 20).map(f => ({ id: str(f && f.id), thumb: str(f && f.thumb).slice(0, 2000), url: str(f && f.url).slice(0, 2000), type: str(f && f.type).slice(0, 60),
     keys: (Array.isArray(f && f.keys) ? f.keys : []).map(str).filter(Boolean).slice(0, 8), album: str(f && f.album) })).filter(f => f.id);
+  // pour l'IA : prix plancher (une seule baisse, jamais en dessous), rythme avant l'étape suivante, teasing juste avant le média, délai de la relance
   const cleanStep = x => { const media = cleanMedia(x && x.media), price = media.length && x.price != null && x.price !== "" && isFinite(+x.price) ? Math.max(0, Math.round(+x.price * 100) / 100) : null;
-    return { text: String((x && x.text) || "").trim().slice(0, 2000), media, price, relance: media.length && price ? String((x && x.relance) || "").trim().slice(0, 2000) : "" }; };
+    const paid = media.length && price > 0, fl = paid && x.floor != null && x.floor !== "" && isFinite(parseFloat(String(x.floor).replace(",", "."))) ? Math.round(parseFloat(String(x.floor).replace(",", ".")) * 100) / 100 : null;
+    return { text: String((x && x.text) || "").trim().slice(0, 2000), media, price, relance: media.length && price ? String((x && x.relance) || "").trim().slice(0, 2000) : "",
+      floor: fl, pace: ["few", "normal", "many"].includes(x && x.pace) ? x.pace : "normal", tease: media.length ? String((x && x.tease) || "").trim().slice(0, 300) : "",
+      relanceMin: paid && +x.relanceMin ? Math.max(5, Math.min(720, Math.round(+x.relanceMin))) : null }; };
   const stepsOf = r => { try { const L = JSON.parse(r.steps || "null"); if (Array.isArray(L) && L.length) return L; } catch (e) {}
     let media = []; try { media = JSON.parse(r.media || "[]") || []; } catch (e) {} return [{ text: r.body || "", media, price: r.price == null ? null : +r.price, relance: "" }]; };
   const scriptOut = r => ({ id: r.id, creator: r.creator_id || null, cat: r.cat || "", title: r.title || "", body: r.body || "", uses: r.uses || 0, by: r.by || null, pinned: !!r.pinned,
-    source: r.source || "site", at: r.at || null, updatedAt: r.updated_at || r.at || null, updatedBy: r.ub || r.by || null, steps: stepsOf(r) });
+    source: r.source || "site", at: r.at || null, updatedAt: r.updated_at || r.at || null, updatedBy: r.ub || r.by || null, steps: stepsOf(r),
+    ai: !!r.ai, aiDesc: r.ai_desc || "", aiFirst: !!r.ai_first, aiTimeout: r.ai_timeout == null ? 1.5 : +r.ai_timeout });
   const SQL_LIST = "SELECT s.*, u.username by, v.username ub FROM twizz_scripts s LEFT JOIN users u ON u.id = s.user_id LEFT JOIN users v ON v.id = s.updated_by";
   app.get("/api/twizz/scripts", auth, mgrOrInbox, (req, res) => {
     const cid = str(req.query.cid);
@@ -614,10 +621,17 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const steps = raw.slice(0, 15).map(cleanStep).filter(x => x.text || x.media.length);
     if (!steps.length) throw bad("Le script est vide : écris au moins une étape");
     if (steps.some(x => x.media.length) && !creator) throw bad("Un script avec des médias doit être pour une seule créatrice : les médias viennent de son coffre");
+    steps.forEach((x, i) => { if (x.floor != null && (x.floor < 3 || x.floor >= x.price)) throw bad(`Étape ${i + 1} : le prix plancher doit être plus bas que le prix, et 3 € au moins`); });
+    // réglages IA : gardés tels quels si la demande n'en parle pas (import, épinglage…)
+    const ai = b.ai === undefined ? !!(old && old.ai) : !!b.ai, aiDesc = b.aiDesc === undefined ? (old && old.ai_desc) || "" : String(b.aiDesc || "").trim().slice(0, 1000);
+    const aiFirst = b.aiFirst === undefined ? !!(old && old.ai_first) : !!b.aiFirst, aiT = b.aiTimeout === undefined ? (old && old.ai_timeout) || 1.5 : Math.max(.5, Math.min(48, Math.round((+b.aiTimeout || 1.5) * 2) / 2));
+    if (ai) { if (!creator) throw bad("Un script pour l'IA doit être pour une seule créatrice : ses médias viennent de son coffre");
+      const k = steps.findIndex(x => x.media.length && x.price == null); if (k >= 0) throw bad(`Étape ${k + 1} : choisis un prix (ou Gratuit) : l'IA ne choisit pas les prix`); }
     const body = steps.map(x => x.text).filter(Boolean).join("\n\n").slice(0, 8000), sj = JSON.stringify(steps);
-    if (old) { db.prepare("UPDATE twizz_scripts SET creator_id = ?, cat = ?, title = ?, body = ?, pinned = ?, steps = ?, media = NULL, price = NULL, updated_at = ?, updated_by = ? WHERE id = ?").run(creator, cat, title, body, b.pinned ? 1 : 0, sj, Date.now(), uid, old.id); return old.id; }
-    return Number(db.prepare("INSERT INTO twizz_scripts (creator_id, cat, title, body, uses, user_id, at, updated_at, updated_by, source, ext_id, pinned, steps) VALUES (?,?,?,?,0,?,?,?,?,?,?,?,?)")
-      .run(creator, cat, title, body, uid, Date.now(), Date.now(), uid, b.source || "site", b.ext ? str(b.ext) : null, b.pinned ? 1 : 0, sj).lastInsertRowid);
+    if (old) { db.prepare("UPDATE twizz_scripts SET creator_id = ?, cat = ?, title = ?, body = ?, pinned = ?, steps = ?, media = NULL, price = NULL, updated_at = ?, updated_by = ?, ai = ?, ai_desc = ?, ai_first = ?, ai_timeout = ? WHERE id = ?")
+      .run(creator, cat, title, body, b.pinned ? 1 : 0, sj, Date.now(), uid, ai ? 1 : 0, aiDesc || null, aiFirst ? 1 : 0, aiT, old.id); return old.id; }
+    return Number(db.prepare("INSERT INTO twizz_scripts (creator_id, cat, title, body, uses, user_id, at, updated_at, updated_by, source, ext_id, pinned, steps, ai, ai_desc, ai_first, ai_timeout) VALUES (?,?,?,?,0,?,?,?,?,?,?,?,?,?,?,?,?)")
+      .run(creator, cat, title, body, uid, Date.now(), Date.now(), uid, b.source || "site", b.ext ? str(b.ext) : null, b.pinned ? 1 : 0, sj, ai ? 1 : 0, aiDesc || null, aiFirst ? 1 : 0, aiT).lastInsertRowid);
   };
   app.post("/api/twizz/scripts", auth, mgr, wrap(async req => ({ ok: true, id: saveScript(req.body || {}, req.user.id) })));
   app.post("/api/scripts/bulk", auth, mgr, wrap(async req => {
@@ -638,8 +652,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
       .run(cid, fan, cur.script_id, cur.step, cur.ppv_msg, cur.ppv_step, cur.relanced, uid, Date.now()); return true; };
   // scripts déjà reçus par ce fan ; avant cette liste, les étapes passées des scripts en cours ou en pause comptent aussi
   const sentOf = (cid, fan) => {
-    const L = db.prepare("SELECT s.script_id, s.step, s.msg_id, s.at, u.username by FROM twizz_script_sent s LEFT JOIN users u ON u.id = s.user_id WHERE s.creator_id = ? AND s.fan_id = ?").all(cid, fan)
-      .map(r => ({ scriptId: r.script_id, step: r.step, msg: r.msg_id || null, at: r.at, by: r.by || null })), has = new Set(L.map(r => r.scriptId + ":" + r.step));
+    const L = db.prepare("SELECT s.script_id, s.step, s.msg_id, s.at, s.user_id uid, u.username by FROM twizz_script_sent s LEFT JOIN users u ON u.id = s.user_id WHERE s.creator_id = ? AND s.fan_id = ?").all(cid, fan)
+      .map(r => ({ scriptId: r.script_id, step: r.step, msg: r.msg_id || null, at: r.at, by: r.by || (r.uid == null ? "IA de secours" : null) })), has = new Set(L.map(r => r.scriptId + ":" + r.step));
     const old = db.prepare("SELECT r.script_id, r.step, r.at, u.username by FROM twizz_script_runs r LEFT JOIN users u ON u.id = r.user_id WHERE r.creator_id = ? AND r.fan_id = ? UNION ALL SELECT p.script_id, p.step, p.at, u.username FROM twizz_script_paused p LEFT JOIN users u ON u.id = p.user_id WHERE p.creator_id = ? AND p.fan_id = ?").all(cid, fan, cid, fan);
     old.forEach(r => { for (let i = 0; i < r.step; i++) if (!has.has(r.script_id + ":" + i)) { has.add(r.script_id + ":" + i); L.push({ scriptId: r.script_id, step: i, msg: null, at: r.at, by: r.by || null }); } });
     return L; };

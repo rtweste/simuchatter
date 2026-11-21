@@ -196,6 +196,20 @@ mark{background:rgba(95,211,162,.14);color:var(--ac);border-radius:4px;padding:0
 .mtx{flex:1;min-width:0}.mtx b{display:block;font:800 13px Inter}.mtx small{display:block;font:600 11.5px Inter;color:#7a7a7a;margin-top:2px}
 .mlk{display:inline-flex;gap:6px}
 .prs{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+/* IA de secours : réglages du script et des étapes */
+.aibx{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:14px;border:1px solid rgba(125,180,255,.22);background:rgba(125,180,255,.04)}
+.air{display:flex;align-items:center;gap:12px}.air>div{flex:1;min-width:0}.air b{display:block;font:800 12.5px Inter;color:#eaeaea}.air small{display:block;font:500 11.5px/1.45 Inter;color:#8a8a8a;margin-top:2px}
+.aisw{flex:none;width:40px;height:23px;border-radius:999px;border:1px solid #2c2c2c;background:#1a1a1a;position:relative;cursor:pointer;transition:all .25s}
+.aisw i{position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#6a6a6a;transition:all .25s cubic-bezier(.3,1.4,.5,1)}
+.aisw.on{background:#7db4ff;border-color:#7db4ff}.aisw.on i{left:19px;background:#0a1626}
+.aibx textarea,.aibx select{border-radius:10px;border:1px solid #262626;background:#121212;color:#eee;font:500 12.5px/1.45 Inter;padding:8px 10px}
+.aist{display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:13px;border:1px dashed rgba(125,180,255,.3);background:rgba(125,180,255,.035)}
+.aist .lbl{display:flex;align-items:center;gap:6px;font:800 10px Inter;letter-spacing:.14em;text-transform:uppercase;color:#9cc6ff}
+.aist .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.aist .row>span{font:700 11.5px Inter;color:#9a9a9a}
+.aist input{height:30px;border-radius:10px;border:1px solid #262626;background:#141414;color:#eee;font:700 12px Inter;padding:0 9px}
+.aist input.w{flex:1;min-width:180px}.aist input.n{width:76px}
+.aist .seg button{height:28px;padding:0 10px;border-radius:9px;border:1px solid #262626;background:#141414;color:#bdbdbd;font:800 11.5px Inter;cursor:pointer}
+.aist .seg button.on{background:#7db4ff;color:#0a1626;border-color:#7db4ff}
 .prs .lb{font:800 9.5px Inter;letter-spacing:.16em;text-transform:uppercase;color:#6a6a6a;margin-right:4px}
 .prs button{height:30px;padding:0 11px;border-radius:10px;border:1px solid #262626;background:#141414;color:#bdbdbd;font:800 12px Inter;cursor:pointer;transition:all .3s cubic-bezier(.3,1.4,.5,1)}
 .prs button:hover{border-color:#3a3a3a;color:#fff}
@@ -349,7 +363,7 @@ function side() {
   $("side").querySelectorAll("[data-cat]").forEach(x => x.onclick = () => { F.cat = x.dataset.cat; F.pinned = false; side(); cards(); });
   $("side").querySelectorAll("[data-pin]").forEach(x => x.onclick = () => { F.pinned = !F.pinned; F.cat = ""; side(); cards(); });
 }
-const blankStep = () => ({ text: "", media: [], price: null, relance: "" });
+const blankStep = () => ({ text: "", media: [], price: null, relance: "", floor: null, pace: "normal", tease: "", relanceMin: null });
 const fillEx = t => String(t || "").replace(/\{pr[ée]nom\}/gi, "Ben").replace(/\{cr[ée]atrice\}/gi, crOf(DRAFT && DRAFT.creator).label || "SARAH");
 const stepKind = s => !s.media || !s.media.length ? "Message" : s.price == null ? "Média · prix au choix" : s.price ? `Média payant · ${eur(s.price)}` : "Média offert";
 let ACT = 0;
@@ -360,7 +374,7 @@ function cards() {
     return `<button class="card ${SEL === x.id ? "on" : ""}" data-id="${x.id}" style="animation-delay:${Math.min(i, 12) * .03}s">${SEL === x.id ? '<span class="trace"></span>' : ""}
       <span class="t">${x.pinned ? `<span class="pin">${SV(IC.pin, 13)}</span>` : ""}<b>${esc(x.title || (S[0] && S[0].text.slice(0, 40)) || "Script")}</b>${x.cat ? `<span class="chip" style="--c:${catColor(x.cat)}">${esc(x.cat)}</span>` : ""}</span>
       <span class="sq">${S.slice(0, 3).map((s, k) => `<span class="sl"><i>${k + 1}</i>${s.media && s.media.length ? `<em class="${s.price ? "p" : ""}">${SV(IC.lock, 9, 2.8)}${s.price ? eur(s.price) : s.price === 0 ? "offert" : "média"}</em>` : ""}<span>${hl(s.text || "")}</span></span>`).join("")}${S.length > 3 ? `<span class="sl more"><i>+${S.length - 3}</i><span>${pl(S.length - 3, "autre étape", "autres étapes")}</span></span>` : ""}</span>
-      <span class="ft"><span class="chip" style="--c:#7db4ff">${pl(S.length, "étape", "étapes")}</span>${nm ? `<span class="mchip">${SV(IC.lock, 11, 2.6)}${prices.length ? prices.join(" · ") : pl(nm, "média", "médias")}</span>` : ""}<span class="chip" style="--c:${cr ? pal(cr.label)[0] : "#9a9a9a"}">${cr ? esc(cr.label) : "Toutes"}</span><span class="u"><b>${x.uses}</b> fois</span>${x.who.length ? `<span class="whos">${x.who.slice(0, 4).map(w => `<span class="w" style="--c:${pal(w.name)[0]}" title="${esc(w.name)} : ${w.n} fois">${esc(w.name[0].toUpperCase())}</span>`).join("")}</span>` : ""}
+      <span class="ft"><span class="chip" style="--c:#7db4ff">${pl(S.length, "étape", "étapes")}</span>${x.ai ? `<span class="chip" style="--c:#9cc6ff" title="Utilisable par l'IA de secours">🤖 IA</span>` : ""}${nm ? `<span class="mchip">${SV(IC.lock, 11, 2.6)}${prices.length ? prices.join(" · ") : pl(nm, "média", "médias")}</span>` : ""}<span class="chip" style="--c:${cr ? pal(cr.label)[0] : "#9a9a9a"}">${cr ? esc(cr.label) : "Toutes"}</span><span class="u"><b>${x.uses}</b> fois</span>${x.who.length ? `<span class="whos">${x.who.slice(0, 4).map(w => `<span class="w" style="--c:${pal(w.name)[0]}" title="${esc(w.name)} : ${w.n} fois">${esc(w.name[0].toUpperCase())}</span>`).join("")}</span>` : ""}
         <span class="spark" title="Utilisations des 14 derniers jours">${x.days.map((d, k) => `<i class="${k >= 12 && d ? "h" : ""}" style="height:${Math.max(2, d / mx * 20)}px"></i>`).join("")}</span></span></button>`; }).join("")
     : D.items.length ? `<div class="empty"><b>Aucun script ne correspond</b>Change de filtre ou de recherche.</div>`
     : `<div class="empty"><b>Ta bibliothèque est vide</b>Crée le premier script, ou importe ceux de Twizz avec le bouton Importer.<br><br><button class="btn2 w" id="e1">+ Nouveau script</button></div>`;
@@ -370,8 +384,9 @@ function cards() {
 function open(id, isNew) {
   SEL = id; AIV = null; GOAL = ""; ACT = 0;
   const x = id ? D.items.find(s => s.id === id) : null;
-  DRAFT = x ? { id: x.id, title: x.title, cat: x.cat, creator: x.creator, pinned: x.pinned, steps: (x.steps && x.steps.length ? x.steps : [blankStep()]).map(s => ({ text: s.text || "", media: (s.media || []).slice(), price: s.price == null ? null : s.price, relance: s.relance || "" })) }
-    : { id: null, title: "", cat: F.cat || "", creator: F.creator && F.creator !== "_all" ? F.creator : null, pinned: false, steps: [blankStep()] };
+  DRAFT = x ? { id: x.id, title: x.title, cat: x.cat, creator: x.creator, pinned: x.pinned, ai: !!x.ai, aiDesc: x.aiDesc || "", aiFirst: !!x.aiFirst, aiTimeout: x.aiTimeout || 1.5,
+      steps: (x.steps && x.steps.length ? x.steps : [blankStep()]).map(s => ({ text: s.text || "", media: (s.media || []).slice(), price: s.price == null ? null : s.price, relance: s.relance || "", floor: s.floor == null ? null : s.floor, pace: s.pace || "normal", tease: s.tease || "", relanceMin: s.relanceMin || null })) }
+    : { id: null, title: "", cat: F.cat || "", creator: F.creator && F.creator !== "_all" ? F.creator : null, pinned: false, ai: false, aiDesc: "", aiFirst: false, aiTimeout: 1.5, steps: [blankStep()] };
   if (isNew || x) { cards(); editor(); if (innerWidth <= 980) $("ed").scrollIntoView({ behavior: "smooth", block: "start" }); setTimeout(() => { const f = isNew ? $("eT") : document.querySelector('[data-tx="0"]'); if (f) f.focus(); }, 60); }
 }
 function editor() {
@@ -382,6 +397,7 @@ function editor() {
     <div class="r2"><div class="fld"><label for="eT">Titre</label><input id="eT" maxlength="80" placeholder="ex. Vente du soir" value="${esc(DRAFT.title)}"></div>
       <div class="fld"><label for="eC">Catégorie</label><input id="eC" maxlength="30" list="eCl" placeholder="ex. Vente" value="${esc(DRAFT.cat)}"><datalist id="eCl">${cats.map(c => `<option value="${esc(c)}">`).join("")}</datalist></div></div>
     <div class="fld"><label>Pour quelle créatrice</label><div class="scope" id="eS"><button class="all ${!DRAFT.creator ? "on" : ""}" data-c="">Toutes</button>${D.creators.map(c => `<button class="${DRAFT.creator === c.id ? "on" : ""}" data-c="${esc(c.id)}">${rav(c.label[0], 26, pal(c.label))}${esc(c.label)}</button>`).join("")}</div></div>
+    <div class="fld"><label>IA de secours</label><div class="aibx" id="eAI"></div></div>
     <div class="fld"><label>Le déroulé <span id="eNs" class="nst"></span></label><div class="steps" id="eSt"></div>
       <button class="addst" id="eAdd">${SV('<path d="M12 5v14M5 12h14"/>', 15, 2.6)}Ajouter une étape</button></div>
     <div class="pv"><span class="cap">Aperçu du déroulé</span><div class="pvs" id="ePv"></div></div>
@@ -390,12 +406,12 @@ function editor() {
     ${x ? `<div class="meta">Lancé <b>${x.uses} fois</b>${x.week ? `, dont <b>${x.week}</b> cette semaine` : ""}${x.who.length ? ` · par ${x.who.slice(0, 5).map(w => `<b>${esc(w.name)}</b> (${w.n})`).join(", ")}` : ""}<br>${x.updatedBy ? `Modifié par <b>${esc(x.updatedBy)}</b> ` : ""}${ago(x.updatedAt)}</div>` : ""}</div>
     <div class="ft">${x ? `<button class="btn2" id="eP2" title="Épingler en haut">${SV(IC.pin, 14)}${DRAFT.pinned ? "Désépingler" : "Épingler"}</button><button class="btn2" id="eD" title="Dupliquer">${SV(IC.copy, 14)}</button><button class="btn2 dl" id="eX" title="Supprimer">${SV(IC.trash, 14)}</button>` : `<button class="btn2" id="eQ">Annuler</button>`}
       <button class="btn2 g sv" id="eSv">${SV(IC.check, 15, 2.6)}Enregistrer <span class="kbd" style="background:rgba(5,38,26,.15);border-color:rgba(5,38,26,.25);color:#05261a">⌘S</span></button></div>`;
-  PV = pvAll; paintSteps(); pvAll();
+  PV = pvAll; paintAIS(); paintSteps(); pvAll();
   $("eT").oninput = () => DRAFT.title = $("eT").value; $("eC").oninput = () => DRAFT.cat = $("eC").value;
   E.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { const nc = b.dataset.c || null; if (nc === DRAFT.creator) return; const hasM = DRAFT.steps.some(s => s.media.length);
     if (hasM && !confirm(`Les médias viennent du coffre de ${crOf(DRAFT.creator).label}. Changer de créatrice les retire de toutes les étapes. Continuer ?`)) return;
     if (hasM) DRAFT.steps.forEach(s => { s.media = []; s.price = null; s.relance = ""; });
-    DRAFT.creator = nc; E.querySelectorAll("[data-c]").forEach(y => y.classList.toggle("on", y === b)); paintSteps(); pvAll(); });
+    DRAFT.creator = nc; E.querySelectorAll("[data-c]").forEach(y => y.classList.toggle("on", y === b)); paintAIS(); paintSteps(); pvAll(); });
   $("eAdd").onclick = () => { DRAFT.steps.push(blankStep()); ACT = DRAFT.steps.length - 1; AIV = null; paintSteps(); pvAll(); paintAI(); setTimeout(() => { const t = document.querySelector(`[data-tx="${ACT}"]`); if (t) { t.focus(); t.scrollIntoView({ block: "nearest", behavior: "smooth" }); } }, 30); };
   E.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { GOAL = GOAL === b.dataset.g ? "" : b.dataset.g; E.querySelectorAll("[data-g]").forEach(y => y.classList.toggle("on", y.dataset.g === GOAL)); });
   $("eA").onclick = variants; paintAI();
@@ -405,6 +421,28 @@ function editor() {
   if ($("eD")) $("eD").onclick = async () => { try { const r = await api("/api/twizz/scripts", { body: { ...DRAFT, id: null, title: (DRAFT.title || "Script") + " (copie)" } }); await load(); open(r.id); notify("Script dupliqué", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
   if ($("eX")) $("eX").onclick = async () => { if (!confirm(`Supprimer le script « ${DRAFT.title || (DRAFT.steps[0].text || "").slice(0, 30)} » ? Les chatters ne le verront plus.`)) return;
     try { await api(`/api/twizz/scripts/${DRAFT.id}`, { method: "DELETE" }); DRAFT = null; SEL = null; await load(); notify("Script supprimé", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
+}
+// le script pour l'IA de secours : utilisable ou non, quand le lancer, premier script des nouveaux fans, sortie s'il ne répond plus
+function paintAIS() {
+  const B = $("eAI"); if (!B) return; const D = DRAFT, H = [0.5, 1, 1.5, 2, 3, 4, 6, 12, 24, 48];
+  B.innerHTML = `<div class="air"><div><b>L'IA peut vendre avec ce script</b><small>Elle le lance quand le fan est prêt, envoie chaque étape telle qu'elle est écrite, au prix fixé, et ne descend qu'au prix plancher. Un script déjà reçu par un fan ne lui est jamais renvoyé.</small></div><button class="aisw ${D.ai ? "on" : ""}" id="eAi" aria-label="Script utilisable par l'IA"><i></i></button></div>
+    ${D.ai ? `${D.creator ? "" : `<div class="air"><div><small style="color:#ffb27a">Choisis une créatrice : un script de l'IA vend les médias de son coffre.</small></div></div>`}
+    <div class="fld"><label for="eAD" style="font-size:11px">Quand l'IA doit le lancer</label><textarea id="eAD" rows="2" maxlength="1000" placeholder="ex. La scène de la chambre, en lingerie rose. Pour un fan qui demande à la voir ou qui parle de sa tenue.">${esc(D.aiDesc)}</textarea></div>
+    <div class="air"><div><b>Premier script des nouveaux fans</b><small>L'IA le choisit en priorité pour un fan qui n'a encore reçu aucun script.</small></div><button class="aisw ${D.aiFirst ? "on" : ""}" id="eAF" aria-label="Premier script des nouveaux fans"><i></i></button></div>
+    <div class="air"><div><b>L'IA quitte le script s'il ne répond plus pendant</b><small>Elle ne le reprendra pas ensuite.</small></div><select id="eAT" aria-label="Délai avant de quitter le script">${H.map(h => `<option value="${h}" ${+D.aiTimeout === h ? "selected" : ""}>${String(h).replace(".", ",")} h</option>`).join("")}</select></div>` : ""}`;
+  $("eAi").onclick = () => { D.ai = !D.ai; paintAIS(); paintSteps(); };
+  if ($("eAD")) $("eAD").oninput = () => D.aiDesc = $("eAD").value;
+  if ($("eAF")) $("eAF").onclick = () => { D.aiFirst = !D.aiFirst; $("eAF").classList.toggle("on", D.aiFirst); };
+  if ($("eAT")) $("eAT").onchange = () => D.aiTimeout = +$("eAT").value;
+}
+// les réglages IA d'une étape : prix plancher, teasing avant le média, délai de la relance, rythme avant l'étape suivante
+function aiStepHtml(s, k, n) {
+  if (!DRAFT.ai) return ""; const M = s.media || [], paid = M.length && s.price > 0, P = [["few", "Peu (1 à 3)"], ["normal", "Normal (3 à 5)"], ["many", "Beaucoup (5 à 9)"]];
+  return `<div class="aist"><span class="lbl">Pour l'IA</span>
+    ${paid ? `<div class="row"><span>Prix plancher</span><input class="n" data-fl="${k}" inputmode="decimal" maxlength="6" placeholder="aucun" value="${s.floor == null ? "" : String(s.floor).replace(".", ",")}"><span style="font-weight:500">€ · une seule baisse si le fan refuse, jamais en dessous</span></div>` : ""}
+    ${M.length ? `<div class="row"><span>Teasing juste avant</span><input class="w" data-tz="${k}" maxlength="300" placeholder="facultatif · ex. att jte montre un truc" value="${esc(s.tease)}"></div>` : ""}
+    ${paid && (s.relance || s._rel) ? `<div class="row"><span>Relance s'il n'achète pas, après</span><input class="n" data-rm="${k}" inputmode="numeric" maxlength="3" placeholder="45" value="${s.relanceMin || ""}"><span style="font-weight:500">min</span></div>` : ""}
+    ${k < n - 1 ? `<div class="row"><span>Messages du fan avant l'étape ${k + 2}</span><span class="seg">${P.map(([v, l]) => `<button data-pace="${k}" data-v="${v}" class="${(s.pace || "normal") === v ? "on" : ""}">${l}</button>`).join("")}</span></div>` : ""}</div>`;
 }
 // une étape : le message, les médias du coffre et leur prix, et la relance s'il n'achète pas
 function stepHtml(s, k, n, cr) {
@@ -421,7 +459,7 @@ function stepHtml(s, k, n, cr) {
       <span class="sa"><button data-up="${k}" ${k === 0 ? "disabled" : ""} aria-label="Monter l'étape">${SV('<path d="M12 19V5M6 11l6-6 6 6"/>', 13, 2.4)}</button><button data-dn="${k}" ${k === n - 1 ? "disabled" : ""} aria-label="Descendre l'étape">${SV('<path d="M12 5v14M6 13l6 6 6-6"/>', 13, 2.4)}</button><button data-dup="${k}" aria-label="Dupliquer l'étape">${SV(IC.copy, 13)}</button><button class="dl" data-del="${k}" ${n === 1 ? "disabled" : ""} aria-label="Supprimer l'étape">${SV(IC.trash, 13)}</button></span></div>
       <textarea data-tx="${k}" maxlength="2000" rows="3" placeholder="${k === 0 ? "Le premier message au fan…" : `Le message de l'étape ${k + 1}…`}">${esc(s.text)}</textarea>
       <div class="vars"><button data-vk="${k}" data-v="{prenom}">+ prénom du fan</button><button data-vk="${k}" data-v="{creatrice}">+ nom de la créatrice</button><span class="cnt" data-cn="${k}">${s.text.length} / 2000</span></div>
-      ${media}${rel}</div></div>${k < n - 1 ? `<div class="gap"><span>quand il répond</span></div>` : ""}`;
+      ${media}${rel}${aiStepHtml(s, k, n)}</div></div>${k < n - 1 ? `<div class="gap"><span>quand il répond</span></div>` : ""}`;
 }
 function paintSteps() {
   const B = $("eSt"); if (!B) return; const S = DRAFT.steps, cr = DRAFT.creator ? crOf(DRAFT.creator) : null;
@@ -437,11 +475,15 @@ function paintSteps() {
   const move = (k, d) => { const j = k + d; [S[k], S[j]] = [S[j], S[k]]; ACT = j; paintSteps(); pvAll(); };
   B.querySelectorAll("[data-up]").forEach(b => b.onclick = () => move(+b.dataset.up, -1));
   B.querySelectorAll("[data-dn]").forEach(b => b.onclick = () => move(+b.dataset.dn, 1));
-  B.querySelectorAll("[data-dup]").forEach(b => b.onclick = () => { const k = +b.dataset.dup, s = S[k]; S.splice(k + 1, 0, { text: s.text, media: s.media.map(f => ({ ...f })), price: s.price, relance: s.relance }); ACT = k + 1; paintSteps(); pvAll(); });
+  B.querySelectorAll("[data-dup]").forEach(b => b.onclick = () => { const k = +b.dataset.dup, s = S[k]; S.splice(k + 1, 0, { ...s, media: s.media.map(f => ({ ...f })) }); ACT = k + 1; paintSteps(); pvAll(); });
   B.querySelectorAll("[data-del]").forEach(b => b.onclick = () => { const k = +b.dataset.del; if ((S[k].text || S[k].media.length) && !confirm(`Supprimer l'étape ${k + 1} ?`)) return; S.splice(k, 1); ACT = Math.min(ACT, S.length - 1); paintSteps(); pvAll(); });
   B.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => { ACT = +b.dataset.pick; pickMedia(ACT); });
   B.querySelectorAll("[data-unm]").forEach(b => b.onclick = () => { const s = S[+b.dataset.unm]; s.media = []; s.price = null; s.relance = ""; s._rel = false; paintSteps(); pvAll(); });
   B.querySelectorAll("[data-pp]").forEach(b => b.onclick = () => { const s = S[+b.dataset.pp]; s.price = b.dataset.p === "" ? null : +b.dataset.p; ACT = +b.dataset.pp; paintSteps(); pvAll(); });
+  B.querySelectorAll("[data-fl]").forEach(inp => inp.oninput = () => { const v = parseFloat(inp.value.replace(",", ".")); S[+inp.dataset.fl].floor = isFinite(v) ? Math.round(v * 100) / 100 : null; });
+  B.querySelectorAll("[data-tz]").forEach(inp => inp.oninput = () => { S[+inp.dataset.tz].tease = inp.value; });
+  B.querySelectorAll("[data-rm]").forEach(inp => inp.oninput = () => { const v = parseInt(inp.value, 10); S[+inp.dataset.rm].relanceMin = v > 0 ? v : null; });
+  B.querySelectorAll("[data-pace]").forEach(b => b.onclick = () => { S[+b.dataset.pace].pace = b.dataset.v; b.parentElement.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); });
   B.querySelectorAll("[data-pc]").forEach(inp => { inp.oninput = () => { const s = S[+inp.dataset.pc]; const v = parseFloat(inp.value.replace(",", ".")); s.price = isFinite(v) ? Math.max(0, Math.round(v * 100) / 100) : null; inp.parentElement.querySelectorAll("[data-pp]").forEach(x => x.classList.remove("on")); inp.classList.toggle("on", inp.value !== ""); pvAll(); }; inp.onchange = () => paintSteps(); });
 }
 // l'aperçu : tout le déroulé comme dans la messagerie, l'étape choisie en surbrillance
@@ -513,9 +555,10 @@ async function variants() { AIV = { loading: true }; paintAI(); const s = DRAFT.
   try { AIV = await api("/api/scripts/ai", { body: { body: s.text || "", title: $("eT").value, cat: $("eC").value, creator: DRAFT.creator, goal: GOAL } }); } catch (e) { AIV = { error: e.message }; }
   paintAI(); }
 async function save(quiet) {
-  const steps = DRAFT.steps.map(s => ({ text: s.text, media: s.media, price: s.media.length ? s.price : null, relance: s.media.length && s.price !== 0 ? s.relance : "" })).filter(s => s.text.trim() || s.media.length);
+  const steps = DRAFT.steps.map(s => ({ text: s.text, media: s.media, price: s.media.length ? s.price : null, relance: s.media.length && s.price !== 0 ? s.relance : "",
+    floor: s.media.length && s.price > 0 ? s.floor : null, pace: s.pace || "normal", tease: s.media.length ? s.tease || "" : "", relanceMin: s.relanceMin || null })).filter(s => s.text.trim() || s.media.length);
   if (!steps.length) return notify("Le script est vide", "Écris au moins une étape", "err");
-  try { const r = await api("/api/twizz/scripts", { body: { id: DRAFT.id, title: $("eT").value, cat: $("eC").value, creator: DRAFT.creator, pinned: DRAFT.pinned, steps } }); const a = ACT; await load(); open(r.id); ACT = Math.min(a, DRAFT.steps.length - 1); paintSteps(); pvAll(); if (quiet !== true) $("svd").innerHTML = `<span class="saved">${SV(IC.check, 12, 3)}Enregistré</span>`; }
+  try { const r = await api("/api/twizz/scripts", { body: { id: DRAFT.id, title: $("eT").value, cat: $("eC").value, creator: DRAFT.creator, pinned: DRAFT.pinned, steps, ai: DRAFT.ai, aiDesc: DRAFT.aiDesc, aiFirst: DRAFT.aiFirst, aiTimeout: DRAFT.aiTimeout } }); const a = ACT; await load(); open(r.id); ACT = Math.min(a, DRAFT.steps.length - 1); paintSteps(); pvAll(); if (quiet !== true) $("svd").innerHTML = `<span class="saved">${SV(IC.check, 12, 3)}Enregistré</span>`; }
   catch (e) { notify("Script non enregistré", e.message, "err"); }
 }
 // ---------- import : depuis Twizz ou en collant du texte ----------

@@ -52,7 +52,12 @@ details.pv{margin-top:10px}details.pv summary{cursor:pointer;font:700 12.5px Int
 .chat{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto;padding:4px 2px 8px}
 .bb{max-width:85%;padding:8px 12px;border-radius:15px;font:500 13.5px/1.45 Inter;white-space:pre-wrap;word-break:break-word}
 .bb.f{align-self:flex-start;background:#1c1c1c;color:#eee;border-bottom-left-radius:5px}.bb.a{align-self:flex-end;background:#2a3d34;color:#e9fff4;border-bottom-right-radius:5px}
-.bb.x{align-self:center;background:rgba(255,160,110,.1);color:#ffbf98;font-size:12px}.bb small{display:block;margin-top:4px;font:700 11px Inter;color:#9fd9bd}
+.bb.x{align-self:center;background:rgba(255,160,110,.1);color:#ffbf98;font-size:12px}
+.bb.s{align-self:flex-end;background:#22344a;color:#e6f1ff;border-bottom-right-radius:5px;border:1px solid rgba(125,180,255,.35)}.bb.s .sh{display:block;font:800 10px Inter;letter-spacing:.12em;text-transform:uppercase;color:#9cc6ff;margin-bottom:4px}
+.bb .buy{margin-top:6px;height:26px;padding:0 10px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;font:800 11.5px Inter;cursor:pointer}.bb .ok{display:inline-block;margin-top:6px;font:800 11.5px Inter;color:#7be0b0}
+.md{align-self:center;font:700 11px Inter;color:#6f8fb3;padding:2px 0}
+.scl{display:flex;flex-direction:column;gap:6px;margin:4px 0 6px}.scl .it{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:11px;background:#111;border:1px solid #1f1f1f;font:700 12.5px Inter;color:#ddd}
+.scl .it small{font:600 11.5px Inter;color:#7a7a7a}.scl .it .w{margin-left:auto;font:700 11px Inter;color:#ffb48a}.scl .no{padding:10px 12px;border-radius:11px;background:rgba(255,180,120,.07);border:1px solid rgba(255,180,120,.25);font:600 12.5px/1.5 Inter;color:#ffcfa8}.bb small{display:block;margin-top:4px;font:700 11px Inter;color:#9fd9bd}
 .cin{display:flex;gap:8px;margin-top:6px}.cin .inp{flex:1}
 .emp{padding:14px;text-align:center;font:600 13px/1.5 Inter;color:#6f6f6f}
 .hs{padding:9px 0;border-top:1px solid #181818}.hs:first-child{border-top:0}.hs b{font:800 13px Inter}.hs small{display:block;font:500 12px/1.45 Inter;color:#7f7f7f;margin-top:2px}
@@ -81,7 +86,7 @@ details.pv{margin-top:10px}details.pv summary{cursor:pointer;font:700 12.5px Int
 <script>
 (() => {
 const $ = id => document.getElementById(id), enc = encodeURIComponent;
-let D = null, CID = null, INFO = {}, CHAT = {};
+let D = null, CID = null, INFO = {}, CHAT = {}, TST = {};   // TST : état du script dans l'essai, par créatrice
 try { CID = localStorage.getItem("ia:cid"); } catch (e) {}
 const cur = () => D && D.creators.find(c => c.id === CID);
 const hm = t => new Date(t).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
@@ -118,7 +123,7 @@ async function paintBody() {
       <div class="pn up"><div class="ph"><h3>Séance <em>en cours</em></h3></div><div id="run"></div></div>
       <div class="pn up" style="animation-delay:.03s"><div class="ph"><h3>Accord <em>et vente</em></h3></div>
         <div class="row"><div class="t"><b>Accord de ${esc(c.label)}</b><small>Elle est d'accord pour que son IA réponde à ses fans. Sans cette case, impossible de lancer l'IA sur elle.</small></div><button class="sw ${M.ok ? "on" : ""}" data-m="ok" aria-label="Accord"><i></i></button></div>
-        <div class="row"><div class="t"><b>Vendre des médias</b><small>L'IA peut joindre un média payant du coffre quand le moment s'y prête.</small></div><button class="sw ${M.sell ? "on" : ""}" data-m="sell" aria-label="Vendre des médias"><i></i></button></div>
+        <div class="row"><div class="t"><b>Vendre des médias</b><small>Avec ses scripts IA (voir « Vente par scripts ») ; sans script disponible, avec un média payant du coffre quand le moment s'y prête.</small></div><button class="sw ${M.sell ? "on" : ""}" data-m="sell" aria-label="Vendre des médias"><i></i></button></div>
         <div class="row"><div class="t"><b>Prix maximum d'un média</b><small>L'IA suit le catalogue de la fiche, sans jamais dépasser ce prix.</small></div><input class="inp n" type="number" min="3" max="500" data-n="maxPrice" value="${M.maxPrice}"><span class="unit">€</span></div>
         <div class="row"><div class="t"><b>Délai entre deux médias payants</b><small>Pour un même fan.</small></div><input class="inp n" type="number" min="0" max="1440" data-n="gap" value="${M.gap}"><span class="unit">min</span></div>
         <div class="row"><div class="t"><b>Un média à la fois</b><small>Pas de nouveau média payant tant que le fan n'a pas acheté le précédent${M.promo ? ", sauf une deuxième chance avec une remise" : ""}.</small></div><button class="sw ${M.pile ? "on" : ""}" data-m="pile" aria-label="Un média à la fois"><i></i></button></div>
@@ -133,6 +138,17 @@ async function paintBody() {
         <div class="row" style="display:block"><div class="t"><b>Ce qu'il y a dans chaque album</b><small>En quelques mots, ce que contient l'album : l'IA s'en sert pour savoir ce qu'elle vend et faire monter l'envie (en plus de l'analyse du coffre).</small></div><div id="anotes"></div></div>
         <div class="row"><div class="t"><b>S'inspirer des scripts</b><small>L'IA reçoit les scripts épinglés et les plus utilisés de la bibliothèque comme exemples de messages qui marchent.</small></div><button class="sw ${M.scripts ? "on" : ""}" data-m="scripts" aria-label="S'inspirer des scripts"><i></i></button></div>
         <div class="row" style="display:block"><div class="t"><b>Fans laissés à l'équipe</b><small>L'IA ne répond pas aux fans qui ont un de ces tags : ils restent pour les chatters.</small></div><div class="chips" id="tags"><span class="hint">Chargement…</span></div></div>
+      </div>
+      <div class="pn up" style="animation-delay:.045s"><div class="ph"><h3>Vente par <em>scripts</em></h3><div class="r"><a class="btn sm" href="/scripts">Ouvrir les scripts</a></div></div>
+        <p class="lead" style="margin:0 0 8px">Comme sur OnlyChat : l'IA vend avec des scripts préparés dans l'onglet Scripts (interrupteur « L'IA peut vendre avec ce script »). Chaque étape part telle qu'elle est écrite, avec ses médias et son prix ; l'IA choisit seulement quand lancer et discute entre les étapes. Un script déjà reçu n'est jamais renvoyé au même fan. Sans script disponible, elle vend avec le coffre.</p>
+        <div class="scl">${c.scripts.length ? c.scripts.map(x => `<div class="it">🤖 ${esc(x.title)} <small>${esc(x.ladder)}${x.first ? " · premier script" : ""}</small>${x.desc ? "" : `<span class="w">sans description</span>`}</div>`).join("")
+          : `<div class="no">Aucun script IA pour ${esc(c.label)} : l'IA vend avec le coffre, comme avant. Crée au moins 2 scripts dans l'onglet Scripts et coche « L'IA peut vendre avec ce script ».</div>`}</div>
+        <div class="row"><div class="t"><b>Pause après un script</b><small>Pas de nouveau script pour ce fan pendant ce temps, même s'il en redemande. Elle continue de discuter sans rien proposer.</small></div><input class="inp n" type="number" min="0" max="48" data-n="cooldownH" value="${M.cooldownH}"><span class="unit">h</span></div>
+        <div class="row"><div class="t"><b>Pause aussi s'il a tout acheté</b><small>Sinon, un fan qui a tout pris peut enchaîner sur un autre script s'il en redemande.</small></div><button class="sw ${M.coolFull ? "on" : ""}" data-m="coolFull" aria-label="Pause aussi s'il a tout acheté"><i></i></button></div>
+        <div class="row" style="display:block"><div class="t"><b>Quand lancer un script</b><small>Pour toutes les créatrices. Le site bloque déjà tout script avant « Messages avant le premier média » et pendant la pause.</small></div><textarea class="inp" id="stLaunch" rows="6" maxlength="3000">${esc(D.strat.launch)}</textarea></div>
+        <div class="row" style="display:block"><div class="t"><b>Média pas encore acheté</b><small>Ce que fait l'IA tant que le fan n'a pas pris le média payant de l'étape. Le site bloque l'étape suivante et le prix descend au plus une fois, au prix plancher de l'étape.</small></div><textarea class="inp" id="stNego" rows="6" maxlength="3000">${esc(D.strat.nego)}</textarea></div>
+        <div class="row" style="display:block"><div class="t"><b>Après un script</b></div><textarea class="inp" id="stAfter" rows="3" maxlength="3000">${esc(D.strat.after)}</textarea></div>
+        <div class="row" style="border:0"><div class="t"><small>Vide = texte par défaut.</small></div><button class="btn sm" id="stReset">Rétablir les règles par défaut</button></div>
       </div>
       <div class="pn up" style="animation-delay:.06s"><div class="ph"><h3>Personnalité</h3><div class="r"><a class="btn sm" href="/creatrices">Ouvrir les fiches</a></div></div>
         <div class="fiche"><span class="g"><i style="width:${Math.round(c.fiche / 7 * 100)}%"></i></span><b>Fiche remplie ${c.fiche}/7</b></div>
@@ -204,9 +220,12 @@ async function paintBody() {
   $("gFreq").onchange = async () => { if (await save("/api/twizz/ai/cfg", { noticeFreq: $("gFreq").value })) paintBody(); };
   $("gModel").onchange = async () => { if (await save("/api/twizz/ai/cfg", { model: $("gModel").value })) notify("Modèle enregistré", "", "ok"); };
   document.querySelectorAll("[data-g]").forEach(i => i.onchange = async () => { if (await save("/api/twizz/ai/cfg", { [i.dataset.g]: +i.value })) notify("Enregistré", "", "ok"); });
+  // règles de vente par scripts (pour toutes)
+  [["stLaunch", "launch"], ["stNego", "nego"], ["stAfter", "after"]].forEach(([id, k]) => $(id).onchange = async () => { if (await save("/api/twizz/ai/strat", { [k]: $(id).value })) notify("Règles enregistrées", "Elles valent pour toutes les créatrices", "ok"); });
+  $("stReset").onclick = async () => { if (!confirm("Remettre les règles de vente par scripts par défaut ?")) return; if (await save("/api/twizz/ai/strat", { launch: "", nego: "", after: "" })) { notify("Règles par défaut remises", "", "ok"); paintBody(); } };
   // essai
   $("tryGo").onclick = tryIt; $("tryIn").onkeydown = e => { if (e.key === "Enter") tryIt(); };
-  $("tryR").onclick = () => { CHAT[CID] = []; paintChat(); };
+  $("tryR").onclick = () => { CHAT[CID] = []; TST[CID] = null; paintChat(); };
   loadInfo(); loadCmp();
   $("cmpD").onchange = loadCmp;
 }
@@ -260,15 +279,27 @@ function paintHist() {
 }
 function paintChat() {
   const L = CHAT[CID] || [], box = $("chat"); if (!box) return;
-  box.innerHTML = L.length ? L.map(m => m.fan ? `<div class="bb f">${esc(m.text)}</div>` : m.leave ? `<div class="bb x">L'IA laisserait ce fan à l'équipe : ${esc(m.leave)}</div>`
-    : `<div class="bb a">${esc(m.text)}${D.cfg.mark ? " 🤖" : ""}${m.media ? `<small>+ média de « ${esc(m.media)} »${m.what ? ` (${esc(m.what)})` : ""} à ${String(m.prix).replace(".", ",")} €${m.remise ? ` · remise ${m.remise} %` : ""}</small>` : m.teaser ? `<small>teasing : elle pourra envoyer le média après ta réponse</small>` : ""}</div>`).join("") : `<div class="emp">Commence par un message de fan, par exemple « coucou ça va ? »</div>`;
+  const e2 = v => String(v).replace(".", ","), buy = m => m.price > 0 ? (m.paid ? `<span class="ok">✓ acheté à ${e2(m.price)} €</span>` : `<button class="buy" data-buy="${esc(m.id)}">Il achète (${e2(m.price)} €)</button>`) : "";
+  box.innerHTML = L.length ? L.map(m => m.mode ? `<div class="md">${esc(m.mode)}</div>` : m.fan ? `<div class="bb f">${esc(m.text)}</div>` : m.leave ? `<div class="bb x">L'IA laisserait ce fan à l'équipe : ${esc(m.leave)}</div>`
+    : m.step ? `<div class="bb s"><span class="sh">Étape ${m.step.k + 1}/${m.step.n} · ${esc(m.step.script)}</span>${esc(m.text || "")}${D.cfg.mark ? " 🤖" : ""}${m.step.medias ? `<small>${m.step.medias} média${m.step.medias > 1 ? "s" : ""}${m.step.what ? ` (${esc(m.step.what)})` : ""} · ${m.price > 0 ? `${e2(m.price)} €${m.step.floor ? ` · plancher ${e2(m.step.floor)} €` : ""}` : "offert"}</small>${buy(m)}` : ""}</div>`
+    : `<div class="bb a">${esc(m.text)}${D.cfg.mark ? " 🤖" : ""}${m.floor ? `<small>+ le même média au prix plancher : ${e2(m.price)} €</small>${buy(m)}` : m.tz ? `<small>teasing de l'étape, juste avant le média</small>` : m.media ? `<small>+ média de « ${esc(m.media)} »${m.what ? ` (${esc(m.what)})` : ""} à ${e2(m.prix)} €${m.remise ? ` · remise ${m.remise} %` : ""}</small>` : m.teaser ? `<small>teasing : elle pourra envoyer le média après ta réponse</small>` : ""}</div>`).join("") : `<div class="emp">Commence par un message de fan, par exemple « coucou ça va ? »</div>`;
+  box.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => { const m = L.find(x => x.id === b.dataset.buy); if (m) { m.paid = true; paintChat(); } });
   box.scrollTop = box.scrollHeight;
 }
 async function tryIt() {
   const t = $("tryIn").value.trim(); if (!t) return; const cid = CID, L = CHAT[cid] = CHAT[cid] || [];
-  L.push({ fan: true, text: t }); $("tryIn").value = ""; paintChat(); $("tryGo").disabled = true; $("tryGo").textContent = "…";
-  try { const r = await api(`/api/twizz/ai/try/${enc(cid)}`, { body: { fan: $("tryFan").value, messages: L.filter(m => !m.leave).map(m => ({ fan: !!m.fan, text: m.text, teaser: !!m.teaser })) } });
-    if (r.laisser) L.push({ leave: r.laisser }); else r.bulles.forEach((b, i) => { const lst = i === r.bulles.length - 1; L.push({ text: b, media: lst ? r.album : null, what: lst ? r.media : null, prix: r.prix, remise: lst ? r.remise : null, teaser: lst && r.teaser, gate: lst ? r.gate : "" }); }); }
+  const uid = () => "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), T = TST[cid] || (TST[cid] = { state: null, burned: [] });
+  L.push({ fan: true, text: t, id: uid() }); $("tryIn").value = ""; paintChat(); $("tryGo").disabled = true; $("tryGo").textContent = "…";
+  try { const r = await api(`/api/twizz/ai/try/${enc(cid)}`, { body: { fan: $("tryFan").value, state: T.state, burned: T.burned,
+      messages: L.filter(m => !m.leave && !m.mode).map(m => ({ fan: !!m.fan, text: m.text || "", teaser: !!m.teaser, id: m.id, price: m.step || m.floor ? m.price : undefined, paid: !!m.paid })) } });
+    T.state = r.state || null; T.burned = r.burned || T.burned;
+    if (r.mode) L.push({ mode: r.mode + (r.ended ? ` · fin du script : ${r.ended}` : "") });
+    if (r.laisser) L.push({ leave: r.laisser });
+    else { r.bulles.forEach((b, i) => { const lst = i === r.bulles.length - 1; L.push({ id: lst && r.floor ? r.floor.id : uid(), text: b, media: lst ? r.album : null, what: lst ? r.media : null, prix: r.prix, remise: lst ? r.remise : null, teaser: lst && r.teaser, gate: lst ? r.gate : "",
+        floor: lst && !!r.floor, price: lst && r.floor ? r.floor.price : undefined }); });
+      if (r.floor && !r.bulles.length) L.push({ id: r.floor.id, text: "", floor: true, price: r.floor.price });
+      if (r.step) { if (r.step.tease) L.push({ id: uid(), text: r.step.tease, tz: true }); L.push({ id: r.step.id, text: r.step.text, step: r.step, price: r.step.price }); }
+      if (r.guarded) notify("Bulle retirée", "L'IA disait envoyer un média alors qu'aucun ne partait", "info"); } }
   catch (e) { notify("Essai impossible", e.message, "err"); L.pop(); $("tryIn").value = t; }
   $("tryGo").disabled = false; $("tryGo").textContent = "Envoyer"; if (cid === CID) paintChat();
 }
