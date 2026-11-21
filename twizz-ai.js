@@ -367,6 +367,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const BUSY = /(?:^|[^a-zà-ÿ])(?:je (?:dois|vais|v) (?:y aller|bosser|travailler|dormir|me coucher|manger|partir|filer)|j'?(?:y )?vais (?:au taf|au boulot|bosser|travailler|dormir|me coucher|manger)|jvais (?:au taf|au boulot|bosser|dormir|manger)|(?:au|je suis au|chui au|jsuis au) (?:taf|boulot|travail)|je (?:bosse|travaille|conduis|mange)\b|en (?:voiture|route|réunion|reunion|cours)\b|[àa] (?:plus|toute|tout [àa] l'?heure|demain)\b|a\+|bonne nuit|dodo\b|je file|je te laisse|occup[ée]e?\b|pas le temps)/i;
   const ACK = /^\s*(?:ok+|oki|okay|d'?acc?(?:ord)?|dac|ouais|oui|oklm|[çc]a marche|top|cool|👍|👌)\s*[.!]*\s*$/i;
   const SEXY = /\b(?:nue?s?|[àa] poil|band(?:e|er)|chaud(?:e)?|excit|sexe|sexy|seins?|cul|fesses|nichons|branl|jouir|mouill|suc(?:e|er)|baiser|coquin|hot|nudes?|lingerie|string)\b/i;
+  // la conversation chauffe vraiment : plusieurs messages coquins récents, dont au moins un du fan (pour qu'elle prenne l'initiative de proposer un média)
+  const HOTW = /(?:^|[^a-zà-ÿ])(?:nue?s?\b|[àa] poil|band|chaud|excit|sexe|sexy|seins?\b|cul\b|fesses|nichon|branl|jouir|joui|mouill|suc[eé]|baise|coquin|hot\b|nudes?\b|lingerie|string|doigt|caress|g[eé]mi|envie de toi|t'?es bonne)/i;
+  const hotOf = L => { const R = L.slice(-6), fan = R.filter(m => m.fromFan && HOTW.test(str(m.text))).length, all = R.filter(m => HOTW.test(str(m.text))).length; return fan >= 2 || (fan >= 1 && all >= 3); };
 
   const PACE = { few: [1, 3], normal: [3, 5], many: [5, 9] };   // messages du fan avant l'étape suivante : à partir de, au plus tard
   const aiScripts = cid => db.prepare("SELECT id, title, ai_desc, ai_first, ai_timeout, steps FROM twizz_scripts WHERE COALESCE(ai, 0) = 1 AND creator_id = ? ORDER BY COALESCE(ai_first, 0) DESC, id").all(cid)
@@ -511,11 +514,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       "COHÉRENCE : réponds d'abord à ce qu'il vient de dire, ses derniers messages ensemble. S'il te pose une question, réponds-y vraiment (s'il te demande ce que tu fais, dis-le). S'il fait une remarque (tu as l'air agressive, tu ne réponds pas…), réagis-y. Ne lui repose jamais une question à laquelle il a déjà répondu, ne réponds pas à une question qu'il n'a pas posée, et reste dans le sujet de la conversation.", ST.style, factsOf(M), scriptOpen || kycKnown ? "" : kycOver ? "Tu as assez parlé de lui : arrête de lui poser des questions sur lui et laisse la conversation avancer." : `DÉCOUVERTE DU FAN :\n${ST.kyc}`,
       M.sell ? `SEXUALISATION :\n${ST.sex}` : "", o.relance ? `RELANCE :\n${ST.relance}` : "",
       o.busy || o.relance ? "" : tkNote(M, o.ticket),
+      o.hot && !o.busy && !o.relance ? "INITIATIVE : la conversation est vraiment chaude et vous vous connaissez déjà. N'attends pas qu'il réclame : c'est toi qui proposes, dans le fil de ce que vous vous dites. D'abord un teasing (tu fais monter l'envie et tu lui demandes s'il veut voir, sans rien envoyer), puis le média après sa réponse. Une seule proposition, naturelle ; s'il ne suit pas, n'insiste pas et continue la discussion. Jamais à froid, jamais pour forcer." : "",
       o.busy ? "IL VIENT DE DIRE QU'IL EST OCCUPÉ OU QU'IL PART : une seule bulle courte et gentille (par exemple « ok vas-y on se capte plus tard »), pas de question, pas de vente, rien d'autre." : ""].filter(Boolean).join("\n\n");
   }
   // le bloc « scripts » des consignes, avec ce que dit le coffre quand il sert en secours (sinon sa consigne de teasing serait perdue)
-  const scriptNote = (plan, coffre, sell) => !plan ? "" : [plan.text, !coffre ? "" : sell.albums.length ? (plan.coffre ? "" : "Le coffre ci-dessous sert seulement s'il réclame un contenu précis qu'aucun script ne propose : sinon lance le script qui colle.")
-    : sell.note ? `${plan.coffre ? "Coffre" : "Coffre, seulement pour un contenu précis qu'aucun script ne propose"} : ${sell.note}.` : ""].filter(Boolean).join("\n\n");
+  const scriptNote = (plan, coffre, sell, hot) => !plan ? "" : [plan.text, !coffre ? "" : sell.albums.length ? (plan.coffre ? "" : hot ? "La conversation est chaude : lance le script qui colle, ou, si aucun ne colle, propose un média du coffre ci-dessous (teasing d'abord)." : "Le coffre ci-dessous sert seulement s'il réclame un contenu précis qu'aucun script ne propose : sinon lance le script qui colle.")
+    : sell.note ? `${plan.coffre ? "Coffre" : hot ? "La conversation est chaude : lance le script qui colle, ou, si aucun ne colle, propose un média du coffre. Coffre" : "Coffre, seulement pour un contenu précis qu'aucun script ne propose"} : ${sell.note}.` : ""].filter(Boolean).join("\n\n");
 
   // le média du ticket : au hasard dans l'album choisi pour les tickets (sinon dans les albums autorisés), un qu'il n'a pas encore reçu si possible
   async function tkMedia(cr, M, c, L) {
@@ -591,9 +595,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at, via) VALUES (?,?,?,?,NULL,NULL,?, 'ia')").run(id, c.id, c.fan.id, cid, now());
     return id;
   }
-  // conversation lue par l'IA : marquée lue aussi chez Twizz (une requête, seulement si un message du fan n'est pas encore lu)
+  // conversation lue par l'IA : marquée lue aussi chez Twizz (une requête ; sautée seulement si la liste dit déjà qu'elle est lue).
+  // Le « lu » des messages du fan ne veut rien dire chez Twizz (souvent vrai) : c'est la conversation qui compte (hasNewMessages)
   async function readOnTwizz(cid, c, L) {
-    if (!L.some(m => m.fromFan && !m.read)) return;
+    if (c.unread === 0) return;
     try { await call("PATCH", "/messages/read-all-messages", { conversationId: c.id, creatorId: cid }, true); } catch (e) { console.error("IA de secours, lu chez Twizz", e.message); }
   }
   const PROMO_T = { 6: ["HOURS", 6, "h6"], 12: ["HOURS", 12, "h12"], 24: ["HOURS", 24, "h24"], 48: ["DAYS", 2, "d2"] };
@@ -672,7 +677,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     // le coffre : sans script IA, quand il a déjà reçu tous les scripts, ou s'il réclame un contenu précis (jamais pendant un script)
     // (un média du coffre déjà teasé reste possible au message suivant du fan, même s'il ne le réclame pas mot pour mot)
     const tz0 = teaseOf(cr, c.id, L), teased = !!(tz0 && now() - tz0.at < M.teaseWindow * 60e3), busy = !relance && !!lastFan && BUSY.test(lastFan.text);
-    const coffre = !busy && (!plan || plan.coffre || (plan.coffreAsk && lastFan && (asks(lastFan.text) || teased)));
+    const hot = !relance && !busy && hotOf(L), coffre = !busy && (!plan || plan.coffre || (plan.coffreAsk && lastFan && (asks(lastFan.text) || teased || hot)));
     const sell = coffre ? await sellable(cr, M, L, c.id) : { albums: [], note: "" };
     const mark0 = (patch) => db.prepare(`INSERT INTO twizz_ai_convs (run_id, conv_id, fan_id, fan_name, notified, replies, last_fan_msg, blocked, at, relances, relance_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(run_id, conv_id) DO UPDATE SET notified = excluded.notified, replies = excluded.replies, last_fan_msg = excluded.last_fan_msg, blocked = excluded.blocked, at = excluded.at, relances = excluded.relances, relance_at = excluded.relance_at`)
@@ -691,7 +696,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       mark({ notified: tell || row.notified ? 1 : 0, replies: (row.replies || 0) + 1 }); drop(c.id, `/conversations/user/${enc(cr.id)}`); return true;
     }
     const T = tkOf(cr, c.fan.id, L);
-    const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell), rules: rulesOf(M, L, { known: knownOf(cr, c.fan.id), plan, relance: !!relance, busy, ticket: T }) };
+    const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell, hot), rules: rulesOf(M, L, { known: knownOf(cr, c.fan.id), plan, relance: !!relance, busy, ticket: T, hot: hot && (sell.albums.length > 0 || !!sell.teaseNow || !!(plan && plan.launch.length)) }) };
     if (relance) opt.relance = { since: relance.since, unbought: sell.open ? sell.open.price : plan && plan.lock ? plan.lock.price : null };
     const msgs = [{ role: "system", content: system(cr, M, ficheOf(cr), sell.albums, sell.note, fanInfo, C, opt) }];
     // la dernière photo envoyée par le fan : Grok la regarde (les autres restent en texte)
@@ -969,13 +974,13 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       state: T0.state || "open", ended_at: T0.state && T0.state !== "open" ? atId(T0.endedId) : null, full: T0.full ? 1 : 0 } : null;
     const burned = new Set((Array.isArray(b.burned) ? b.burned : []).map(Number).filter(Number.isFinite)), lastFan = LL[LL.length - 1];
     const busy = BUSY.test(lastFan.text), plan = planOf(c, M, LL, "essai", { S: S0, burned });
-    const coffre = !busy && (!plan || plan.coffre || (plan.coffreAsk && (asks(lastFan.text) || !!(tz && now() - tz.at < M.teaseWindow * 60e3))));
+    const hot = !busy && hotOf(LL), coffre = !busy && (!plan || plan.coffre || (plan.coffreAsk && (asks(lastFan.text) || hot || !!(tz && now() - tz.at < M.teaseWindow * 60e3))));
     let sell = { albums: [], note: "" }; if (coffre) try { sell = await sellable(c, M, LL, null, tz); } catch (e) {} const albums = sell.albums;
     const KN = { new: {}, reg: { prenom: "Thomas", ville: "Lyon" }, big: { prenom: "Thomas", metier: "chef d'entreprise" } };
     // le ticket de l'essai : l'écran le garde et le renvoie ; payé quand on a cliqué « Il achète » sur son média
     let TK0 = b.ticket && TK[b.ticket.kind] ? { kind: b.ticket.kind, minutes: +b.ticket.minutes || null, price: +b.ticket.price || 0, msg_id: str(b.ticket.id), state: ["sent", "paid", "done"].includes(b.ticket.state) ? b.ticket.state : "sent" } : null;
     if (TK0 && TK0.state === "sent" && LL.some(m => m.id === TK0.msg_id && m.status === "accepted")) TK0.state = "paid";
-    const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell), rules: rulesOf(M, LL, { known: KN[b.fan] || {}, plan, busy, ticket: TK0 }) };
+    const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell, hot), rules: rulesOf(M, LL, { known: KN[b.fan] || {}, plan, busy, ticket: TK0, hot: hot && (sell.albums.length > 0 || !!sell.teaseNow || !!(plan && plan.launch.length)) }) };
     const FANS = { new: "pseudo : Thomas ; n'a encore jamais rien acheté", reg: "pseudo : Thomas ; prénom : Thomas ; ville : Lyon ; a déjà dépensé 150 € avec elle en 8 achats ; tags de l'équipe : Vidéos",
       big: "pseudo : Thomas ; prénom : Thomas ; métier : chef d'entreprise ; a déjà dépensé 850 € avec elle en 30 achats ; tags de l'équipe : Spender ; résumé de l'équipe : achète vite quand on le chauffe, aime qu'on se souvienne de lui" };
     const L = LL.map(m => ({ role: m.fromFan ? "user" : "assistant", content: m.fromFan ? lineOf(m) : untag(lineOf(m)) })).filter(m => m.content);
