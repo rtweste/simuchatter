@@ -359,6 +359,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const stepSum = st => (st.media || []).length ? (st.price > 0 ? `média payant à ${eurs(st.price)}` : "média offert") : "message seul";
   const ladder = sc => { const P = sc.steps.filter(x => (x.media || []).length && x.price > 0).map(x => eurs(x.price)), F = sc.steps.filter(x => (x.media || []).length && !(x.price > 0)).length;
     return `${sc.steps.length} étape${sc.steps.length > 1 ? "s" : ""}${F ? `, ${F} média${F > 1 ? "s" : ""} offert${F > 1 ? "s" : ""}` : ""}${P.length ? `, puis ${P.join(", ")}` : ""}`; };
+  // une étape de script pour la page IA : nombre de photos / vidéos, prix, plancher, teasing, délai de relance
+  const stepPath = st => { const M = (st.media || []).filter(f => !/audio/i.test(str(f.type))), v = M.filter(f => /video/i.test(str(f.type)) || /\.(mp4|mov|webm|m3u8)(\?|$)/i.test(str(f.url))).length, paid = M.length && st.price > 0;
+    return { n: M.length, v, p: M.length - v, price: paid ? st.price : 0, floor: paid && st.floor ? st.floor : null, tease: !!(M.length && str(st.tease).trim()), relanceMin: paid && st.relanceMin ? st.relanceMin : null }; };
   // où en est la vente par scripts avec ce fan, et ce que l'IA a le droit de faire maintenant (o.S et o.burned : pour l'essai)
   function planOf(cr, M, L, fanId, o = {}) {
     if (!M.sell) return null;
@@ -752,15 +755,15 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const sales = r => db.prepare("SELECT COUNT(*) n, COALESCE(SUM(net), 0) net FROM twizz_tx WHERE ai = 1 AND creator_id = ? AND at BETWEEN ? AND ?").get(r.creator_id, r.started_at, (r.ended_at || now()) + 3600e3);
   const view = r => r && { id: r.id, started_at: r.started_at, by: uname(r.started_by), reason: r.reason, ended_at: r.ended_at, ended_by: uname(r.ended_by), end_reason: r.end_reason,
     replies: r.replies, medias: r.medias, error: r.last_error, last_at: r.last_at, sales: sales(r),
-    left: db.prepare("SELECT conv_id, fan_name, blocked FROM twizz_ai_convs WHERE run_id = ? AND blocked IS NOT NULL ORDER BY at DESC LIMIT 10").all(r.id) };
+    left: db.prepare("SELECT conv_id, fan_id, fan_name, blocked FROM twizz_ai_convs WHERE run_id = ? AND blocked IS NOT NULL ORDER BY at DESC LIMIT 10").all(r.id) };
   const ficheFilled = c => { const m = c.model_id ? db.prepare("SELECT profile FROM models WHERE id = ?").get(c.model_id) : null, p = J(m && m.profile, {}) || {};
     return ["voice", "story"].filter(k => str(p[k]).trim()).length + ["traits", "does", "doesnt", "catalogue", "samples"].filter(k => Array.isArray(p[k]) && p[k].length).length; };
   const state = req => ({ on: aiOn(), key: !!XAI(), send: sendOn(), founder: req.user.rk === "founder", cfg: gcfg(), models: Object.entries(MODELS).map(([k, v]) => ({ id: k, label: v[1] })),
     creators: mapped().map(c => ({ id: c.id, label: c.label, model_id: c.model_id, model: c.model, cfg: mcfg(c.id), fiche: ficheFilled(c), run: view(runOf(c.id)),
       media: db.prepare("SELECT COUNT(*) n FROM twizz_ai_media WHERE creator_id = ? AND descr IS NOT NULL").get(c.id).n, scan: SCAN[c.id] || null,
-      scripts: aiScripts(c.id).map(x => ({ id: x.id, title: x.title, steps: x.steps.length, first: x.first, desc: !!x.desc, ladder: ladder(x) })) })),
+      scripts: aiScripts(c.id).map(x => ({ id: x.id, title: x.title, steps: x.steps.length, first: x.first, desc: !!x.desc, when: clip(x.desc, 160), timeout: x.timeout, ladder: ladder(x), path: x.steps.map(stepPath) })) })),
     strat: strat(), stratDef: STRAT_DEF,
-    recent: db.prepare("SELECT * FROM twizz_ai_runs WHERE ended_at IS NOT NULL ORDER BY ended_at DESC LIMIT 12").all().map(r => ({ ...view(r), label: (crOf(r.creator_id) || {}).label || "?" })) });
+    recent: db.prepare("SELECT * FROM twizz_ai_runs WHERE ended_at IS NOT NULL ORDER BY ended_at DESC LIMIT 12").all().map(r => ({ ...view(r), cid: r.creator_id, label: (crOf(r.creator_id) || {}).label || "?" })) });
   app.get("/api/twizz/ai", auth, mgr, wrap(async req => state(req)));
   app.post("/api/twizz/ai/switch", auth, founder, wrap(async req => { const b = req.body || {};
     if (typeof b.on === "boolean") { S.set("twizz_ai_on", b.on); log(req.user.id, "a", `**${req.user.username}** a ${b.on ? "activé" : "coupé"} l'IA de secours`, "");
