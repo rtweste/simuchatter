@@ -1257,7 +1257,7 @@ function markDone(conv) {
 }
 
 /* ================= fil de discussion ================= */
-// conversation ouverte = lue sur le site pour toute l'équipe (jusqu'au prochain message du fan) ; rien n'est marqué lu chez Twizz
+// conversation ouverte = lue sur le site pour toute l'équipe (jusqu'au prochain message du fan), et lue aussi chez Twizz si l'envoi est permis
 function markSeen(c) { if (!c || !c.unread || document.hidden) return; c.unread = 0; if (CUR && CUR.id === c.id) CUR.unread = 0; const k = CID;
   [lkey("GENERAL"), lkey("TO_DELIVER"), lkey()].forEach(x => { const L = LISTS[x]; const it = L && L.items.find(i => i.id === c.id); if (it) it.unread = 0; });
   if (UNREAD[k]) { UNREAD[k] = Math.max(0, UNREAD[k] - 1); top(); }

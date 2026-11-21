@@ -462,6 +462,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at, via) VALUES (?,?,?,?,NULL,NULL,?, 'ia')").run(id, c.id, c.fan.id, cid, now());
     return id;
   }
+  // conversation lue par l'IA : marquée lue aussi chez Twizz (une requête, seulement si un message du fan n'est pas encore lu)
+  async function readOnTwizz(cid, c, L) {
+    if (!L.some(m => m.fromFan && !m.read)) return;
+    try { await call("PATCH", "/messages/read-all-messages", { conversationId: c.id, creatorId: cid }, true); } catch (e) { console.error("IA de secours, lu chez Twizz", e.message); }
+  }
   const PROMO_T = { 6: ["HOURS", 6, "h6"], 12: ["HOURS", 12, "h12"], 24: ["HOURS", 24, "h24"], 48: ["DAYS", 2, "d2"] };
   async function sendMedia(cid, c, f, price, text, promo) {
     const F = (Array.isArray(f) ? f : [f]).filter(x => x && x.id), fd = new FormData(), pt = promo && PROMO_T[promo.hours];
@@ -534,7 +539,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
         relance ? (row.relances || 0) + 1 : 0, relance ? now() : row.relance_at || null);   // il a réécrit : les relances repartent de zéro
     const mark = patch => { mark0(patch); if (!relance) db.prepare("UPDATE twizz_ai_convs SET busy = ?, fan_at = ? WHERE run_id = ? AND conv_id = ?").run(busy ? 1 : 0, Date.parse(lastFan ? lastFan.at : last.at) || now(), r.id, c.id); };
     // « ok » juste après avoir dit qu'il partait : pas de réponse, on le laisse partir
-    if (!relance && row.busy && lastFan && ACK.test(lastFan.text)) { mark0({}); return false; }
+    if (!relance && row.busy && lastFan && ACK.test(lastFan.text)) { mark0({}); await readOnTwizz(cr.id, c, L); return false; }
     const tell = needNotice(cr, c, row, C), tail = C.mark ? " 🤖" : "", who = prenomOf(cr, c), pre = tell ? noticeOf(cr, C) + "\n\n" : "";
     const told = () => { if (tell) db.prepare("INSERT INTO twizz_ai_told (creator_id, fan_id, at) VALUES (?,?,?) ON CONFLICT(creator_id, fan_id) DO UPDATE SET at = excluded.at").run(cr.id, c.fan.id, now()); };
     // relance d'un média de script pas acheté : la relance écrite dans l'étape, telle quelle, une fois
@@ -597,7 +602,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (!act && !f && B.some(fakeSend)) { guarded = true;
       let again = null; try { again = unleak(await grok(msgs.concat([{ role: "system", content: "Ta réponse disait que tu envoyais ou préparais un média alors qu'aucun ne part avec ce message : c'est interdit. Réécris ta réponse sans ça." }]))); } catch (e) {}
       B = fresh((again && !str(again.laisser).trim() ? bubbles(again) : B).filter(t => !fakeSend(t)), said); }
-    if (!B.length && !act) { if (relance || guarded || rep) mark({}); return false; }   // rien d'utile à envoyer
+    if (!B.length && !act) { if (relance || guarded || rep) mark({}); if (!relance && (guarded || rep)) await readOnTwizz(cr.id, c, L); return false; }   // rien d'utile à envoyer
     // plusieurs bulles : envoyées à la suite, le temps de les taper ; un média du coffre ou le prix plancher part avec la dernière, l'étape du script après
     let usedPre = false; const floor = act && act.kind === "floor";
     for (let i = 0; i < B.length; i++) {
@@ -613,6 +618,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (f) teaseClear(cr, c); else if (out.teaser && (sell.teaseNow || sell.albums.length)) teaseSet(cr, c);   // un média envoyé : il faudra re-teaser pour le suivant
     db.prepare("UPDATE twizz_ai_runs SET replies = replies + 1, last_at = ?, last_error = NULL WHERE id = ?").run(now(), r.id);
     mark({ notified: tell || row.notified ? 1 : 0, replies: (row.replies || 0) + 1 });
+    if (!relance) await readOnTwizz(cr.id, c, L);   // un fan laissé à l'équipe reste non lu, pour les chatters
     drop(c.id, `/conversations/user/${enc(cr.id)}`);
     // mémoire : toutes les 3 réponses, au plus toutes les 30 min par fan, l'IA complète la fiche du fan
     if (C.memory && ((row.replies || 0) + 1) % 3 === 0 && now() - (row.mem_at || 0) > 30 * 60e3) {
