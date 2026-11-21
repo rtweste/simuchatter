@@ -52,7 +52,13 @@ details.pv{margin-top:10px}details.pv summary{cursor:pointer;font:700 12.5px Int
 .chat{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto;padding:4px 2px 8px}
 .bb{max-width:85%;padding:8px 12px;border-radius:15px;font:500 13.5px/1.45 Inter;white-space:pre-wrap;word-break:break-word}
 .bb.f{align-self:flex-start;background:#1c1c1c;color:#eee;border-bottom-left-radius:5px}.bb.a{align-self:flex-end;background:#2a3d34;color:#e9fff4;border-bottom-right-radius:5px}
-.bb.x{align-self:center;background:rgba(255,160,110,.1);color:#ffbf98;font-size:12px}.bb small{display:block;margin-top:4px;font:700 11px Inter;color:#9fd9bd}
+.bb.x{align-self:center;background:rgba(255,160,110,.1);color:#ffbf98;font-size:12px}
+.bb.s{align-self:flex-end;background:#22344a;color:#e6f1ff;border-bottom-right-radius:5px;border:1px solid rgba(125,180,255,.35)}.bb.s .sh{display:block;font:800 10px Inter;letter-spacing:.12em;text-transform:uppercase;color:#9cc6ff;margin-bottom:4px}
+.bb .buy{margin-top:6px;height:26px;padding:0 10px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;font:800 11.5px Inter;cursor:pointer}.bb .ok{display:inline-block;margin-top:6px;font:800 11.5px Inter;color:#7be0b0}
+.md{align-self:center;font:700 11px Inter;color:#6f8fb3;padding:2px 0}
+.dts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}.dts label{display:flex;flex-direction:column;gap:4px;font:700 11.5px Inter;color:#8a8a8a}.dts label.w{grid-column:1/-1}.dts .inp{width:100%}
+.scl{display:flex;flex-direction:column;gap:6px;margin:4px 0 6px}.scl .it{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:11px;background:#111;border:1px solid #1f1f1f;font:700 12.5px Inter;color:#ddd}
+.scl .it small{font:600 11.5px Inter;color:#7a7a7a}.scl .it .w{margin-left:auto;font:700 11px Inter;color:#ffb48a}.scl .no{padding:10px 12px;border-radius:11px;background:rgba(255,180,120,.07);border:1px solid rgba(255,180,120,.25);font:600 12.5px/1.5 Inter;color:#ffcfa8}.bb small{display:block;margin-top:4px;font:700 11px Inter;color:#9fd9bd}
 .cin{display:flex;gap:8px;margin-top:6px}.cin .inp{flex:1}
 .emp{padding:14px;text-align:center;font:600 13px/1.5 Inter;color:#6f6f6f}
 .hs{padding:9px 0;border-top:1px solid #181818}.hs:first-child{border-top:0}.hs b{font:800 13px Inter}.hs small{display:block;font:500 12px/1.45 Inter;color:#7f7f7f;margin-top:2px}
@@ -81,7 +87,14 @@ details.pv{margin-top:10px}details.pv summary{cursor:pointer;font:700 12.5px Int
 <script>
 (() => {
 const $ = id => document.getElementById(id), enc = encodeURIComponent;
-let D = null, CID = null, INFO = {}, CHAT = {};
+let D = null, CID = null, INFO = {}, CHAT = {}, TST = {};   // TST : état du script dans l'essai, par créatrice
+// détails de la créatrice : clé, libellé, exemple, champ large
+const DTL = [["prenom", "Prénom", "Léa"], ["age", "Âge", "22 ans"], ["naissance", "Date de naissance", "18 mars"], ["genre", "Genre", "femme"], ["origine", "Origine", "française"], ["ville", "Ville", "Paris"], ["fuseau", "Fuseau", "Paris"],
+  ["cheveux", "Cheveux", "blonds"], ["yeux", "Yeux", "verts"], ["taille", "Taille", "1,68 m"], ["poids", "Poids", "54 kg"], ["pointure", "Pointure", "39"], ["poitrine", "Tour de poitrine", "85B"], ["langues", "Langues", "français, anglais"],
+  ["hobbies", "Passions", "sport, musique pop, séries, skincare", 1], ["traits", "Personnalité", "timide au début, sportive, coquine une fois en confiance", 1], ["signes", "Signes distinctifs", "tatouage rose sur l'avant-bras, piercing au nombril", 1]];
+const hmin = m => m < 60 ? m + "min" : Math.floor(m / 60) + "h" + (m % 60 ? String(m % 60).padStart(2, "0") : "");
+const pmin = v => { const t = String(v || "").trim().toLowerCase().replace(/\s/g, ""); if (!t) return 0; let m = t.match(/^(\d+)h(\d{1,2})?$/); if (m) return +m[1] * 60 + +(m[2] || 0);
+  m = t.match(/^(\d+)(?:min|mn|m)?$/); if (m) return /m/.test(t) || +m[1] > 23 ? +m[1] : +m[1] * 60; return 0; };
 try { CID = localStorage.getItem("ia:cid"); } catch (e) {}
 const cur = () => D && D.creators.find(c => c.id === CID);
 const hm = t => new Date(t).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
@@ -118,7 +131,7 @@ async function paintBody() {
       <div class="pn up"><div class="ph"><h3>Séance <em>en cours</em></h3></div><div id="run"></div></div>
       <div class="pn up" style="animation-delay:.03s"><div class="ph"><h3>Accord <em>et vente</em></h3></div>
         <div class="row"><div class="t"><b>Accord de ${esc(c.label)}</b><small>Elle est d'accord pour que son IA réponde à ses fans. Sans cette case, impossible de lancer l'IA sur elle.</small></div><button class="sw ${M.ok ? "on" : ""}" data-m="ok" aria-label="Accord"><i></i></button></div>
-        <div class="row"><div class="t"><b>Vendre des médias</b><small>L'IA peut joindre un média payant du coffre quand le moment s'y prête.</small></div><button class="sw ${M.sell ? "on" : ""}" data-m="sell" aria-label="Vendre des médias"><i></i></button></div>
+        <div class="row"><div class="t"><b>Vendre des médias</b><small>Avec ses scripts IA (voir « Vente par scripts ») ; sans script disponible, avec un média payant du coffre quand le moment s'y prête.</small></div><button class="sw ${M.sell ? "on" : ""}" data-m="sell" aria-label="Vendre des médias"><i></i></button></div>
         <div class="row"><div class="t"><b>Prix maximum d'un média</b><small>L'IA suit le catalogue de la fiche, sans jamais dépasser ce prix.</small></div><input class="inp n" type="number" min="3" max="500" data-n="maxPrice" value="${M.maxPrice}"><span class="unit">€</span></div>
         <div class="row"><div class="t"><b>Délai entre deux médias payants</b><small>Pour un même fan.</small></div><input class="inp n" type="number" min="0" max="1440" data-n="gap" value="${M.gap}"><span class="unit">min</span></div>
         <div class="row"><div class="t"><b>Un média à la fois</b><small>Pas de nouveau média payant tant que le fan n'a pas acheté le précédent${M.promo ? ", sauf une deuxième chance avec une remise" : ""}.</small></div><button class="sw ${M.pile ? "on" : ""}" data-m="pile" aria-label="Un média à la fois"><i></i></button></div>
@@ -134,11 +147,36 @@ async function paintBody() {
         <div class="row"><div class="t"><b>S'inspirer des scripts</b><small>L'IA reçoit les scripts épinglés et les plus utilisés de la bibliothèque comme exemples de messages qui marchent.</small></div><button class="sw ${M.scripts ? "on" : ""}" data-m="scripts" aria-label="S'inspirer des scripts"><i></i></button></div>
         <div class="row" style="display:block"><div class="t"><b>Fans laissés à l'équipe</b><small>L'IA ne répond pas aux fans qui ont un de ces tags : ils restent pour les chatters.</small></div><div class="chips" id="tags"><span class="hint">Chargement…</span></div></div>
       </div>
+      <div class="pn up" style="animation-delay:.045s"><div class="ph"><h3>Vente par <em>scripts</em></h3><div class="r"><a class="btn sm" href="/scripts">Ouvrir les scripts</a></div></div>
+        <p class="lead" style="margin:0 0 8px">Comme sur OnlyChat : l'IA vend avec des scripts préparés dans l'onglet Scripts (interrupteur « L'IA peut vendre avec ce script »). Chaque étape part telle qu'elle est écrite, avec ses médias et son prix ; l'IA choisit seulement quand lancer et discute entre les étapes. Un script déjà reçu n'est jamais renvoyé au même fan. Sans script disponible, elle vend avec le coffre.</p>
+        <div class="scl">${c.scripts.length ? c.scripts.map(x => `<div class="it">🤖 ${esc(x.title)} <small>${esc(x.ladder)}${x.first ? " · premier script" : ""}</small>${x.desc ? "" : `<span class="w">sans description</span>`}</div>`).join("")
+          : `<div class="no">Aucun script IA pour ${esc(c.label)} : l'IA vend avec le coffre, comme avant. Crée au moins 2 scripts dans l'onglet Scripts et coche « L'IA peut vendre avec ce script ».</div>`}</div>
+        <div class="row"><div class="t"><b>Pause après un script</b><small>Pas de nouveau script pour ce fan pendant ce temps, même s'il en redemande. Elle continue de discuter sans rien proposer.</small></div><input class="inp n" type="number" min="0" max="48" data-n="cooldownH" value="${M.cooldownH}"><span class="unit">h</span></div>
+        <div class="row"><div class="t"><b>Pause sans sexualisation après un script</b><small>Pendant ce temps, l'IA reste sympa sans ramener la conversation vers le sexe ou un média. Si le fan relance lui-même, elle peut suivre.</small></div><input class="inp n" type="number" min="0" max="5" data-n="sexDays" value="${M.sexDays}"><span class="unit">jour${M.sexDays > 1 ? "s" : ""}</span></div>
+        <div class="row"><div class="t"><b>Pause aussi s'il a tout acheté</b><small>Sinon, un fan qui a tout pris peut enchaîner sur un autre script s'il en redemande.</small></div><button class="sw ${M.coolFull ? "on" : ""}" data-m="coolFull" aria-label="Pause aussi s'il a tout acheté"><i></i></button></div>
+        <div class="row" style="display:block"><div class="t"><b>Quand lancer un script</b><small>Pour toutes les créatrices. Le site bloque déjà tout script avant « Messages avant le premier média » et pendant la pause.</small></div><textarea class="inp" id="stLaunch" rows="6" maxlength="3000">${esc(D.strat.launch)}</textarea></div>
+        <div class="row" style="display:block"><div class="t"><b>Média pas encore acheté</b><small>Ce que fait l'IA tant que le fan n'a pas pris le média payant de l'étape. Le site bloque l'étape suivante et le prix descend au plus une fois, au prix plancher de l'étape.</small></div><textarea class="inp" id="stNego" rows="6" maxlength="3000">${esc(D.strat.nego)}</textarea></div>
+        <div class="row" style="display:block"><div class="t"><b>Après un script</b></div><textarea class="inp" id="stAfter" rows="3" maxlength="3000">${esc(D.strat.after)}</textarea></div>
+        <div class="row" style="border:0"><div class="t"><small>Vide = texte par défaut.</small></div><button class="btn sm" id="stReset">Rétablir les règles par défaut</button></div>
+      </div>
+      <div class="pn up" style="animation-delay:.05s"><div class="ph"><h3>Règles de <em>conversation</em></h3><div class="r"><button class="btn sm" id="phReset">Rétablir par défaut</button></div></div>
+        <p class="lead" style="margin:0 0 8px">Pour toutes les créatrices, comme les phases d'OnlyChat. Vide = texte par défaut.</p>
+        <div class="row" style="display:block"><div class="t"><b>Langage</b><small>Comment elle écrit : longueur, ponctuation, emojis, questions.</small></div><textarea class="inp" id="phStyle" rows="6" maxlength="3000">${esc(D.strat.style)}</textarea></div>
+        <div class="row" style="display:block"><div class="t"><b>Découverte du fan</b><small>Ce qu'elle cherche à savoir sur lui avant de vendre. Elle arrête de lui poser des questions quand le site connaît déjà son prénom et sa ville ou son métier, ou après les limites ci-dessous.</small></div><textarea class="inp" id="phKyc" rows="4" maxlength="3000">${esc(D.strat.kyc)}</textarea></div>
+        <div class="row"><div class="t"><b>Arrêter la découverte après</b></div><input class="inp n" type="number" min="4" max="30" id="phKm" value="${D.strat.kycMax}"><span class="unit">messages ou</span><input class="inp n" type="number" min="1" max="48" id="phKh" value="${D.strat.kycHours}"><span class="unit">h</span></div>
+        <div class="row" style="display:block"><div class="t"><b>Sexualisation</b><small>Jusqu'où elle va, et quand.</small></div><textarea class="inp" id="phSex" rows="5" maxlength="3000">${esc(D.strat.sex)}</textarea></div>
+        <div class="row" style="display:block"><div class="t"><b>Relances</b><small>Comment elle revient vers un fan qui ne répond plus. Les moments sont dans « Réglages pour toutes ».</small></div><textarea class="inp" id="phRel" rows="5" maxlength="3000">${esc(D.strat.relance)}</textarea></div>
+        <div class="row" style="border:0"><div class="t"><small>Le site gère seul le fan occupé : s'il dit qu'il part ou qu'il bosse, une seule bulle courte, pas de vente, pas de relance, et pas de réponse à son « ok » juste après.</small></div></div>
+      </div>
+      <div class="pn up" style="animation-delay:.055s"><div class="ph"><h3>Détails de <em>${esc(c.label)}</em></h3></div>
+        <p class="lead" style="margin:0 0 8px">Ce que les fans demandent tout le temps : l'IA le donne comme des faits et ne se contredit jamais. Laisse vide ce que tu ne veux pas dire.</p>
+        <div class="dts">${DTL.map(([k, l, ph, w]) => `<label class="${w ? "w" : ""}"><span>${l}</span><input class="inp" data-dt="${k}" maxlength="${w ? 600 : 120}" placeholder="${esc(ph)}" value="${esc((M.details || {})[k] || "")}"></label>`).join("")}</div>
+      </div>
       <div class="pn up" style="animation-delay:.06s"><div class="ph"><h3>Personnalité</h3><div class="r"><a class="btn sm" href="/creatrices">Ouvrir les fiches</a></div></div>
         <div class="fiche"><span class="g"><i style="width:${Math.round(c.fiche / 7 * 100)}%"></i></span><b>Fiche remplie ${c.fiche}/7</b></div>
         <p class="lead" style="margin:8px 0 10px">L'IA écrit d'après la fiche de ${esc(c.label)} : sa façon d'écrire, sa personnalité, son histoire, ce qu'elle fait et ne fait jamais, son catalogue, ses exemples de messages et ses curseurs de style. Plus la fiche est remplie, plus l'IA lui ressemble.</p>
         <div class="t" style="margin-bottom:6px"><b style="font:800 13.5px Inter">Consignes en plus pour l'IA</b></div>
-        <textarea class="inp" id="extra" maxlength="2000" placeholder="Ex. : toujours finir par une question, vouvoyer les nouveaux, ne jamais parler de ses voyages…">${esc(M.extra || "")}</textarea>
+        <textarea class="inp" id="extra" maxlength="6000" rows="8" placeholder="Ex. : son histoire, sa routine, ses limites, ses blagues récurrentes, comment elle appelle ses fans… (comme « Additional info » sur OnlyChat, jusqu'à 6 000 caractères)">${esc(M.extra || "")}</textarea>
       </div>
       <div class="pn up" style="animation-delay:.08s"><div class="ph"><h3>Ce que l'IA <em>reçoit</em></h3><div class="r"><button class="btn sm" id="baseReset">Rétablir par défaut</button></div></div>
         <p class="lead" style="margin:0 0 8px">Ce texte est envoyé à Grok avant chaque réponse, dans cet ordre.</p>
@@ -175,8 +213,8 @@ async function paintBody() {
         <div class="row"><div class="t"><b>Réponses maximum par fan</b><small>Par séance.</small></div><input class="inp n" type="number" min="1" max="300" data-g="perFan" value="${G.perFan}"></div>
         <div class="row"><div class="t"><b>Durée maximum d'une séance</b><small>Elle s'arrête toute seule au bout de ce temps.</small></div><input class="inp n" type="number" min="1" max="24" data-g="maxHours" value="${G.maxHours}"><span class="unit">h</span></div>
         <div class="row"><div class="t"><b>Relances</b><small>Pendant sa séance, l'IA relance les fans à qui elle a parlé et qui ne répondent plus (ou n'ont pas acheté le dernier média).</small></div><button class="sw ${G.relance ? "on" : ""}" id="gRel" aria-label="Relances"><i></i></button></div>
-        <div class="row" ${G.relance ? "" : "hidden"}><div class="t"><b>Relancer après</b><small>De silence du fan.</small></div><input class="inp n" type="number" min="10" max="720" data-g="relanceAfter" value="${G.relanceAfter}"><span class="unit">min</span></div>
-        <div class="row" ${G.relance ? "" : "hidden"}><div class="t"><b>Relances maximum par fan</b><small>Par séance.</small></div><input class="inp n" type="number" min="1" max="5" data-g="relanceMax" value="${G.relanceMax}"></div>
+        <div class="row" ${G.relance ? "" : "hidden"}><div class="t"><b>Moments des relances</b><small>Jusqu'à 4 relances dans les 24 h, comptées depuis le dernier message du fan (ex. 3h, 8h, 18h, 23h). Elles repartent de zéro quand il réécrit. Jamais après un fan qui a dit qu'il était occupé.</small></div>${[0, 1, 2, 3].map(i => `<input class="inp n" data-rp="${i}" placeholder="—" value="${D.strat.points[i] ? hmin(D.strat.points[i]) : ""}" style="width:64px">`).join("")}</div>
+        <div class="row" ${G.relance ? "" : "hidden"}><div class="t"><b>Relance d'un média de script pas acheté</b><small>Délai de la première relance quand le média de l'étape n'est pas pris (sauf si l'étape a son propre délai).</small></div><input class="inp n" type="number" min="10" max="720" data-g="relanceAfter" value="${G.relanceAfter}"><span class="unit">min</span></div>
         <div class="row" ${G.relance ? "" : "hidden"}><div class="t"><b>Pas de relance entre</b><small>Heure de Paris. Elle répond toujours aux fans qui écrivent.</small></div><input class="inp n" type="number" min="0" max="23" data-g="quietFrom" value="${G.quietFrom}"><span class="unit">h et</span><input class="inp n" type="number" min="0" max="23" data-g="quietTo" value="${G.quietTo}"><span class="unit">h</span></div>
         <div class="row"><div class="t"><b>Mémoire</b><small>Toutes les 3 réponses, l'IA complète la fiche du fan (prénom, ville, goûts, résumé) : l'IA et les chatters s'en souviendront la prochaine fois.</small></div><button class="sw ${G.memory ? "on" : ""}" id="gMem" aria-label="Mémoire"><i></i></button></div>
         <div class="row"><div class="t"><b>Modèle Grok</b></div><select class="inp" id="gModel">${D.models.map(m => `<option value="${m.id}" ${G.model === m.id ? "selected" : ""}>${esc(m.label)}</option>`).join("")}</select></div>
@@ -209,9 +247,20 @@ async function paintBody() {
   $("gFreq").onchange = async () => { if (await save("/api/twizz/ai/cfg", { noticeFreq: $("gFreq").value })) paintBody(); };
   $("gModel").onchange = async () => { if (await save("/api/twizz/ai/cfg", { model: $("gModel").value })) notify("Modèle enregistré", "", "ok"); };
   document.querySelectorAll("[data-g]").forEach(i => i.onchange = async () => { if (await save("/api/twizz/ai/cfg", { [i.dataset.g]: +i.value })) notify("Enregistré", "", "ok"); });
+  // règles de conversation (pour toutes)
+  [["phStyle", "style"], ["phKyc", "kyc"], ["phSex", "sex"], ["phRel", "relance"]].forEach(([id, k]) => $(id).onchange = async () => { if (await save("/api/twizz/ai/strat", { [k]: $(id).value })) notify("Règles enregistrées", "Elles valent pour toutes les créatrices", "ok"); });
+  [["phKm", "kycMax"], ["phKh", "kycHours"]].forEach(([id, k]) => $(id).onchange = async () => { if (await save("/api/twizz/ai/strat", { [k]: +$(id).value })) notify("Enregistré", "", "ok"); });
+  $("phReset").onclick = async () => { if (!confirm("Remettre les règles de conversation par défaut ?")) return; if (await save("/api/twizz/ai/strat", { style: "", kyc: "", sex: "", relance: "", kycMax: 20, kycHours: 6 })) { notify("Règles par défaut remises", "", "ok"); paintBody(); } };
+  document.querySelectorAll("[data-rp]").forEach(i => i.onchange = async () => { const P = [...document.querySelectorAll("[data-rp]")].map(x => pmin(x.value)).filter(x => x);
+    if (await save("/api/twizz/ai/strat", { points: P })) { notify("Relances enregistrées", D.strat.points.map(hmin).join(", "), "ok"); paintBody(); } });
+  document.querySelectorAll("[data-dt]").forEach(i => i.onchange = async () => { const d = {}; document.querySelectorAll("[data-dt]").forEach(x => { if (x.value.trim()) d[x.dataset.dt] = x.value.trim(); });
+    if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { details: d })) { notify("Détails enregistrés", "", "ok"); loadInfo(true); } });
+  // règles de vente par scripts (pour toutes)
+  [["stLaunch", "launch"], ["stNego", "nego"], ["stAfter", "after"]].forEach(([id, k]) => $(id).onchange = async () => { if (await save("/api/twizz/ai/strat", { [k]: $(id).value })) notify("Règles enregistrées", "Elles valent pour toutes les créatrices", "ok"); });
+  $("stReset").onclick = async () => { if (!confirm("Remettre les règles de vente par scripts par défaut ?")) return; if (await save("/api/twizz/ai/strat", { launch: "", nego: "", after: "" })) { notify("Règles par défaut remises", "", "ok"); paintBody(); } };
   // essai
   $("tryGo").onclick = tryIt; $("tryIn").onkeydown = e => { if (e.key === "Enter") tryIt(); };
-  $("tryR").onclick = () => { CHAT[CID] = []; paintChat(); };
+  $("tryR").onclick = () => { CHAT[CID] = []; TST[CID] = null; paintChat(); };
   loadInfo(); loadCmp();
   $("cmpD").onchange = loadCmp;
 }
@@ -268,15 +317,27 @@ function paintHist() {
 }
 function paintChat() {
   const L = CHAT[CID] || [], box = $("chat"); if (!box) return;
-  box.innerHTML = L.length ? L.map(m => m.fan ? `<div class="bb f">${esc(m.text)}</div>` : m.leave ? `<div class="bb x">L'IA laisserait ce fan à l'équipe : ${esc(m.leave)}</div>`
-    : `<div class="bb a">${esc(m.text)}${D.cfg.mark ? " 🤖" : ""}${m.media ? `<small>+ média de « ${esc(m.media)} »${m.what ? ` (${esc(m.what)})` : ""} à ${String(m.prix).replace(".", ",")} €${m.remise ? ` · remise ${m.remise} %` : ""}</small>` : m.teaser ? `<small>teasing : elle pourra envoyer le média après ta réponse</small>` : ""}</div>`).join("") : `<div class="emp">Commence par un message de fan, par exemple « coucou ça va ? »</div>`;
+  const e2 = v => String(v).replace(".", ","), buy = m => m.price > 0 ? (m.paid ? `<span class="ok">✓ acheté à ${e2(m.price)} €</span>` : `<button class="buy" data-buy="${esc(m.id)}">Il achète (${e2(m.price)} €)</button>`) : "";
+  box.innerHTML = L.length ? L.map(m => m.mode ? `<div class="md">${esc(m.mode)}</div>` : m.fan ? `<div class="bb f">${esc(m.text)}</div>` : m.leave ? `<div class="bb x">L'IA laisserait ce fan à l'équipe : ${esc(m.leave)}</div>`
+    : m.step ? `<div class="bb s"><span class="sh">Étape ${m.step.k + 1}/${m.step.n} · ${esc(m.step.script)}</span>${esc(m.text || "")}${D.cfg.mark ? " 🤖" : ""}${m.step.medias ? `<small>${m.step.medias} média${m.step.medias > 1 ? "s" : ""}${m.step.what ? ` (${esc(m.step.what)})` : ""} · ${m.price > 0 ? `${e2(m.price)} €${m.step.floor ? ` · plancher ${e2(m.step.floor)} €` : ""}` : "offert"}</small>${buy(m)}` : ""}</div>`
+    : `<div class="bb a">${esc(m.text)}${D.cfg.mark ? " 🤖" : ""}${m.floor ? `<small>+ le même média au prix plancher : ${e2(m.price)} €</small>${buy(m)}` : m.tz ? `<small>teasing de l'étape, juste avant le média</small>` : m.media ? `<small>+ média de « ${esc(m.media)} »${m.what ? ` (${esc(m.what)})` : ""} à ${e2(m.prix)} €${m.remise ? ` · remise ${m.remise} %` : ""}</small>` : m.teaser ? `<small>teasing : elle pourra envoyer le média après ta réponse</small>` : ""}</div>`).join("") : `<div class="emp">Commence par un message de fan, par exemple « coucou ça va ? »</div>`;
+  box.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => { const m = L.find(x => x.id === b.dataset.buy); if (m) { m.paid = true; paintChat(); } });
   box.scrollTop = box.scrollHeight;
 }
 async function tryIt() {
   const t = $("tryIn").value.trim(); if (!t) return; const cid = CID, L = CHAT[cid] = CHAT[cid] || [];
-  L.push({ fan: true, text: t }); $("tryIn").value = ""; paintChat(); $("tryGo").disabled = true; $("tryGo").textContent = "…";
-  try { const r = await api(`/api/twizz/ai/try/${enc(cid)}`, { body: { fan: $("tryFan").value, messages: L.filter(m => !m.leave).map(m => ({ fan: !!m.fan, text: m.text, teaser: !!m.teaser })) } });
-    if (r.laisser) L.push({ leave: r.laisser }); else r.bulles.forEach((b, i) => { const lst = i === r.bulles.length - 1; L.push({ text: b, media: lst ? r.album : null, what: lst ? r.media : null, prix: r.prix, remise: lst ? r.remise : null, teaser: lst && r.teaser, gate: lst ? r.gate : "" }); }); }
+  const uid = () => "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), T = TST[cid] || (TST[cid] = { state: null, burned: [] });
+  L.push({ fan: true, text: t, id: uid() }); $("tryIn").value = ""; paintChat(); $("tryGo").disabled = true; $("tryGo").textContent = "…";
+  try { const r = await api(`/api/twizz/ai/try/${enc(cid)}`, { body: { fan: $("tryFan").value, state: T.state, burned: T.burned,
+      messages: L.filter(m => !m.leave && !m.mode).map(m => ({ fan: !!m.fan, text: m.text || "", teaser: !!m.teaser, id: m.id, price: m.step || m.floor ? m.price : undefined, paid: !!m.paid })) } });
+    T.state = r.state || null; T.burned = r.burned || T.burned;
+    if (r.mode) L.push({ mode: r.mode + (r.ended ? ` · fin du script : ${r.ended}` : "") });
+    if (r.laisser) L.push({ leave: r.laisser });
+    else { r.bulles.forEach((b, i) => { const lst = i === r.bulles.length - 1; L.push({ id: lst && r.floor ? r.floor.id : uid(), text: b, media: lst ? r.album : null, what: lst ? r.media : null, prix: r.prix, remise: lst ? r.remise : null, teaser: lst && r.teaser, gate: lst ? r.gate : "",
+        floor: lst && !!r.floor, price: lst && r.floor ? r.floor.price : undefined }); });
+      if (r.floor && !r.bulles.length) L.push({ id: r.floor.id, text: "", floor: true, price: r.floor.price });
+      if (r.step) { if (r.step.tease) L.push({ id: uid(), text: r.step.tease, tz: true }); L.push({ id: r.step.id, text: r.step.text, step: r.step, price: r.step.price }); }
+      if (r.guarded) notify("Bulle retirée", "L'IA disait envoyer un média alors qu'aucun ne partait", "info"); } }
   catch (e) { notify("Essai impossible", e.message, "err"); L.pop(); $("tryIn").value = t; }
   $("tryGo").disabled = false; $("tryGo").textContent = "Envoyer"; if (cid === CID) paintChat();
 }
