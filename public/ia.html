@@ -280,7 +280,7 @@ const IC = { grid: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13
   code: '<path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/>', book: '<path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-1.5z"/><path d="M8 7h6M8 11h6"/>', pen: '<path d="M4 20h4l10-10-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   clock: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>', pulse: '<path d="M3 12h4l3-8 4 16 3-8h4"/>', moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
   chip: '<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>', reload: '<path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v4h4"/>',
-  search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>' };
+  search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>', ticket: '<path d="M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z"/><path d="M14 7v10"/>' };
 const ico = (k, s = 16, w = 2.2) => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${IC[k]}</svg>`;
 const STOP = '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
 const PLAY = '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>';
@@ -401,6 +401,14 @@ function tabVente(c, M, G) {
         ${row("Remises", "Quand il hésite ou n'a pas acheté, elle peut refaire une proposition moins chère (promo Twizz). Jamais à la première proposition.", sw(M.promo, 'data-m="promo"', "Remises"))}
         ${row("Remise maximum", "", stp('data-n="maxDiscount"', "Remise maximum", M.maxDiscount, 5, 90, "%", 5) + `<select class="inp" id="mPromoH" aria-label="Durée de la remise">${[6, 12, 24, 48].map(h => `<option value="${h}" ${M.promoHours === h ? "selected" : ""}>pendant ${h} h</option>`).join("")}</select>`, `data-if="promo" ${M.promo ? "" : "hidden"}`)}
         ${row("Voir les médias", `Grok regarde chaque média du coffre une fois et le décrit : elle choisit le média qui colle à ce qu'il veut et en parle comme si elle l'avait sous les yeux. Elle voit aussi les photos que le fan envoie. <b id="medN">${pl(c.media, "média décrit", "médias décrits")}</b>${scanNote(c)}`, `<button type="button" class="btn sm" id="scanB">${c.scan && c.scan.running ? `Analyse… ${c.scan.done}/${c.scan.total}` : "Analyser le coffre"}</button>${sw(M.vision, 'data-m="vision"', "Voir les médias")}`)}
+      </div>
+      <div class="pn">${head("ticket", "a", "Demandes <em>spéciales</em>", "Snap, cam, vidéo custom : elle vend un ticket, puis envoie la demande au Studio")}
+        ${row("Vendre des tickets", "Elle envoie un média du coffre au hasard avec « Ticket snap », « Ticket Cam (25 min) » ou « Ticket vidéo custom » en texte. Une fois le ticket payé (le site vérifie), elle demande son Snap ou ce qu'il veut, et la demande part au Studio.", sw(M.tk, 'data-m="tk"', "Vendre des tickets"))}
+        ${row("Snap", "Elle choisit dans la fourchette selon ce qu'il a déjà dépensé.", stp('data-n="snapMin"', "Snap, prix minimum", M.snapMin, 5, 2000, "€", 5) + `<span class="unit">à</span>` + stp('data-n="snapMax"', "Snap, prix maximum", M.snapMax, 5, 2000, "€", 5), `data-if="tk" ${M.tk ? "" : "hidden"}`)}
+        ${row("Cam de 20 à 30 min", "", stp('data-n="camMin"', "Cam de 20 à 30 min, prix minimum", M.camMin, 5, 2000, "€", 5) + `<span class="unit">à</span>` + stp('data-n="camMax"', "Cam de 20 à 30 min, prix maximum", M.camMax, 5, 2000, "€", 5), `data-if="tk" ${M.tk ? "" : "hidden"}`)}
+        ${row("Cam d'une heure", "", stp('data-n="camHour"', "Cam d'une heure, prix", M.camHour, 5, 2000, "€", 5), `data-if="tk" ${M.tk ? "" : "hidden"}`)}
+        ${row("Vidéo custom", "De 3 à 5 minutes.", stp('data-n="customPrice"', "Vidéo custom, prix", M.customPrice, 5, 2000, "€", 5), `data-if="tk" ${M.tk ? "" : "hidden"}`)}
+        ${row("Média du ticket", "Pris au hasard dans cet album (un média soft, de préférence).", `<select class="inp" id="tkAlb" aria-label="Album des tickets"><option value="">Albums autorisés</option></select>`, `data-if="tk" ${M.tk ? "" : "hidden"}`)}
       </div></div>
       <aside class="as"><div class="pn">${head("shield", "g", "Garde-<em>fous</em>", `Pour ${esc(c.label)}, appliqués par le site`)}
         ${row("Messages avant le premier média", "Elle fait connaissance : aucun média ni allusion avant.", stp('data-n="minMsgs"', "Messages avant le premier média", M.minMsgs, 0, 40))}
@@ -560,9 +568,13 @@ async function paintBody() {
   $("tryGo").onclick = tryIt; $("tryIn").onkeydown = e => { if (e.key === "Enter") tryIt(); };
   $("tryR").onclick = () => { CHAT[CID] = []; TST[CID] = null; paintChat(); };
   document.querySelectorAll("[data-fan]").forEach(b => b.onclick = () => { FAN[CID] = b.dataset.fan; document.querySelectorAll("[data-fan]").forEach(x => x.setAttribute("aria-pressed", x === b)); $("fanX").textContent = FANX[FAN[CID]]; });
-  loadInfo(); loadCmp();
+  loadInfo().then(tkAlbums); loadCmp();
+  $("tkAlb").onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { tkAlbum: $("tkAlb").value })) notify("Album des tickets enregistré", "", "ok"); };
   $("cmpD").onchange = loadCmp;
 }
+// album des tickets : la liste vient du coffre (chargée avec les infos)
+function tkAlbums() { const s = $("tkAlb"), c = cur(); if (!s || !c) return; const A = (INFO[CID] || {}).albums || [];
+  s.innerHTML = `<option value="">Albums autorisés, au hasard</option>` + A.map(a => `<option value="${esc(a.id)}" ${c.cfg.tkAlbum === a.id ? "selected" : ""}>${esc(a.name)}</option>`).join(""); }
 // interrupteurs de la créatrice : la même clé peut être à deux endroits (accord dans « prête ? »)
 async function toggleM(b) {
   const k = b.dataset.m, c = cur(); if (!c || b.disabled) return; const v = !c.cfg[k];
@@ -696,6 +708,7 @@ function paintChat() {
   const buy = m => m.price > 0 ? (m.paid ? `<span class="ok">${ico("ok", 13, 2.8)}Acheté à ${e2(m.price)} €</span>` : `<button type="button" class="buy" data-buy="${esc(m.id)}">Il achète (${e2(m.price)} €)</button>`) : "";
   const media = (paid, label) => `<div class="mph ${paid ? "pd" : ""}">${paid ? ico("lock", 18) : ""}<span>${label}</span></div>`;
   box.innerHTML = (L.length ? L.map(m => m.mode ? `<div class="md">${esc(m.mode)}</div>` : m.fan ? `<div class="bb f">${esc(m.text)}</div>` : m.leave ? `<div class="bb x">Elle laisserait ce fan à l'équipe : ${esc(m.leave)}</div>`
+    : m.tk ? `<div class="bb s">${media(true, `${esc(m.text)} · ${e2(m.price)} €`)}<div class="sbd"><span class="stl">Ticket · rien n'est envoyé au Studio pendant l'essai</span>${buy(m)}</div></div>`
     : m.step ? `<div class="bb s">${m.step.medias ? media(m.price > 0, `${m.step.medias > 1 ? m.step.medias + " médias" : "média"} · ${m.price > 0 ? e2(m.price) + " €" : "offert"}`) : ""}<div class="sbd"><span class="stl">Étape ${m.step.k + 1} sur ${m.step.n} · ${esc(m.step.script)}${m.price > 0 && m.step.floor ? ` · plancher ${e2(m.step.floor)} €` : ""}</span>${m.text ? `<span>${esc(m.text)}${mk}</span>` : ""}${m.step.what ? `<small>${esc(m.step.what)}</small>` : ""}${buy(m)}</div></div>`
     : `<div class="bb a">${esc(m.text)}${m.text ? mk : ""}${m.floor ? `<small>+ le même média au prix plancher : ${e2(m.price)} €</small>${buy(m)}` : m.tz ? `<small>teasing de l'étape, juste avant le média</small>` : m.media ? `<small>+ média de « ${esc(m.media)} »${m.what ? ` (${esc(m.what)})` : ""} à ${e2(m.prix)} €${m.remise ? ` · remise ${m.remise} %` : ""}</small>` : m.teaser ? `<small>teasing : elle pourra envoyer le média après ta réponse</small>` : ""}</div>`).join("")
     : `<div class="emp">Commence par un message de fan, par exemple « coucou ça va ? »</div>`) + (WAITING === CID ? `<div class="md">Elle écrit…</div>` : "");
@@ -706,14 +719,16 @@ async function tryIt() {
   const t = $("tryIn").value.trim(); if (!t || WAITING) return; const cid = CID, L = CHAT[cid] = CHAT[cid] || [];
   const uid = () => "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), T = TST[cid] || (TST[cid] = { state: null, burned: [] });
   L.push({ fan: true, text: t, id: uid() }); $("tryIn").value = ""; WAITING = cid; paintChat(); $("tryGo").disabled = true;
-  try { const r = await api(`/api/twizz/ai/try/${enc(cid)}`, { body: { fan: FAN[cid] || "new", state: T.state, burned: T.burned,
-      messages: L.filter(m => !m.leave && !m.mode).map(m => ({ fan: !!m.fan, text: m.text || "", teaser: !!m.teaser, id: m.id, price: m.step || m.floor ? m.price : undefined, paid: !!m.paid })) } });
-    T.state = r.state || null; T.burned = r.burned || T.burned;
+  try { const r = await api(`/api/twizz/ai/try/${enc(cid)}`, { body: { fan: FAN[cid] || "new", state: T.state, burned: T.burned, ticket: T.ticket || null,
+      messages: L.filter(m => !m.leave && !m.mode).map(m => ({ fan: !!m.fan, text: m.text || "", teaser: !!m.teaser, id: m.id, price: m.step || m.floor || m.tk ? m.price : undefined, paid: !!m.paid })) } });
+    T.state = r.state || null; T.burned = r.burned || T.burned; T.ticket = r.tkState || null;
     if (r.mode) L.push({ mode: r.mode + (r.ended ? ` · fin du script : ${r.ended}` : "") });
     if (r.laisser) L.push({ leave: r.laisser });
     else { r.bulles.forEach((b, i) => { const lst = i === r.bulles.length - 1; L.push({ id: lst && r.floor ? r.floor.id : uid(), text: b, media: lst ? r.album : null, what: lst ? r.media : null, prix: r.prix, remise: lst ? r.remise : null, teaser: lst && r.teaser, gate: lst ? r.gate : "",
         floor: lst && !!r.floor, price: lst && r.floor ? r.floor.price : undefined }); });
       if (r.floor && !r.bulles.length) L.push({ id: r.floor.id, text: "", floor: true, price: r.floor.price });
+      if (r.ticket) L.push({ id: r.ticket.id, text: r.ticket.text, tk: r.ticket, price: r.ticket.price });
+      if (r.studio) L.push({ mode: "Demande envoyée au Studio : " + r.studio });
       if (r.step) { if (r.step.tease) L.push({ id: uid(), text: r.step.tease, tz: true }); L.push({ id: r.step.id, text: r.step.text, step: r.step, price: r.step.price }); }
       if (r.guarded) notify("Bulle retirée", "L'IA disait envoyer un média alors qu'aucun ne partait", "info"); } }
   catch (e) { notify("Essai impossible", e.message, "err"); L.pop(); if (cid === CID && $("tryIn")) $("tryIn").value = t; }
