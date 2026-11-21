@@ -161,7 +161,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     plancher: { type: "boolean", description: "Mets true pour lui proposer le prix plancher du média pas encore acheté, une seule fois, quand les consignes le permettent." }
   } } } };
   async function grok(messages, o = {}) {
-    const tool = o.tool === undefined ? TOOL : o.tool, body = { model: o.model || XMODEL(), messages, temperature: o.temp ?? 0.9, max_tokens: o.max || 900 };
+    const tool = o.tool === undefined ? TOOL : o.tool, body = { model: o.model || XMODEL(), messages, temperature: o.temp ?? (tool === TOOL ? 0.75 : 0.9), max_tokens: o.max || (tool === TOOL ? 500 : 900) };
     if (tool) { body.tools = [tool]; body.tool_choice = { type: "function", function: { name: tool.function.name } }; }
     let r; try { r = await fetch(XBASE() + "/chat/completions", { method: "POST", headers: { Authorization: "Bearer " + XAI(), "Content-Type": "application/json" },
       body: JSON.stringify(body), signal: AbortSignal.timeout(60000) }); }
@@ -450,7 +450,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const ST = strat(), K = o.known || {}, first = L.find(m => m.fromFan), t0 = first ? Date.parse(first.at) || now() : now();
     const kycOver = L.length >= ST.kycMax || now() - t0 >= ST.kycHours * 3600e3, kycKnown = !!(K.prenom && (K.ville || K.metier));
     const scriptOpen = o.plan && o.plan.S;
-    return [ST.style, factsOf(M), scriptOpen || kycKnown ? "" : kycOver ? "Tu as assez parlé de lui : arrête de lui poser des questions sur lui et laisse la conversation avancer." : `DÉCOUVERTE DU FAN :\n${ST.kyc}`,
+    return ["FORMAT : ta réponse tient en 1 à 3 bulles courtes, avec une seule question au plus. Dans l'historique, les mentions entre crochets comme [média envoyé…] sont des notes du site : ne les écris jamais, et ne dis jamais que tu envoies un média (c'est le site qui l'envoie).",
+      "COHÉRENCE : réponds d'abord à ce qu'il vient de dire, ses derniers messages ensemble. S'il te pose une question, réponds-y vraiment (s'il te demande ce que tu fais, dis-le). S'il fait une remarque (tu as l'air agressive, tu ne réponds pas…), réagis-y. Ne lui repose jamais une question à laquelle il a déjà répondu, ne réponds pas à une question qu'il n'a pas posée, et reste dans le sujet de la conversation.", ST.style, factsOf(M), scriptOpen || kycKnown ? "" : kycOver ? "Tu as assez parlé de lui : arrête de lui poser des questions sur lui et laisse la conversation avancer." : `DÉCOUVERTE DU FAN :\n${ST.kyc}`,
       M.sell ? `SEXUALISATION :\n${ST.sex}` : "", o.relance ? `RELANCE :\n${ST.relance}` : "",
       o.busy ? "IL VIENT DE DIRE QU'IL EST OCCUPÉ OU QU'IL PART : une seule bulle courte et gentille (par exemple « ok vas-y on se capte plus tard »), pas de question, pas de vente, rien d'autre." : ""].filter(Boolean).join("\n\n");
   }
@@ -489,18 +490,25 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   // Grok écrit parfois les champs de l'outil dans le texte (« teaser=true: … ») : on les retire, et on ne garde qu'un seul teasing
   const TEASE_TAG = /\[?\b(?:teaser|teasing)\s*[=:]\s*(?:true|vrai|oui|1)\b\]?\s*:?/i;
   const untag = t => str(t).split(new RegExp(TEASE_TAG.source, "gi")).join(" ").replace(/\s{2,}/g, " ").trim();
+  const NOTE_RE = /\[\s*(?:m[ée]dia|photo|vid[ée]o|le fan|image|vocal|fichier)[^\]\n]{0,90}\]?/gi;
   function unleak(out) {
-    if (!out) return out; let seen = false;
-    const fix = x => { const P = str(x).split(new RegExp(TEASE_TAG.source, "i")); let t = P[0];
+    if (!out) return out; let seen = false, junk = false;
+    const fix = x => { if (str(x).length > 500) junk = true; const P = str(x).split(new RegExp(TEASE_TAG.source, "i")); let t = P[0];
       if (P.length > 1) { if (!seen) t += " " + P[1]; seen = true; }
+      const before = t; t = t.replace(NOTE_RE, " ").replace(/\[\s*$/, ""); if (t !== before) junk = true;
       return t.replace(/\b(?:album|media|prix|remise|laisser|bulles)\s*=\s*\S+/gi, "").replace(/\s{2,}/g, " ").trim(); };
     if (Array.isArray(out.bulles)) out.bulles = out.bulles.map(fix).filter(Boolean);
     if (out.message != null) out.message = fix(out.message);
     if (seen) out.teaser = true;
+    if (junk) out.junk = true;   // réponse trop longue ou qui recopie les notes du site : on redemande une fois
     return out;
   }
   const cents = v => Math.round((parseFloat(str(v).replace(",", ".")) || 0) * 100) / 100;   // 9,99 ou 9.99 → 9.99
-  const bubbles = out => (Array.isArray(out.bulles) && out.bulles.length ? out.bulles : [out.message]).map(x => str(x).replace(/🤖/g, "").trim().slice(0, 1200)).filter(Boolean).slice(0, 3);
+  const short = t => { if (t.length <= 320) return t; const c = t.slice(0, 320), i = Math.max(c.lastIndexOf(". "), c.lastIndexOf("! "), c.lastIndexOf("? "), c.lastIndexOf("… "));
+    return (i > 80 ? c.slice(0, i + 1) : c.slice(0, c.lastIndexOf(" ") > 80 ? c.lastIndexOf(" ") : 320)).trim(); };
+  const oneQ = B => { const pure = b => /^[^.!?…]*\?[\s\S]{0,6}$/.test(b), q = B.map((b, i) => /\?/.test(b) ? i : -1).filter(i => i >= 0); if (q.length < 2) return B;
+    const keep = q[q.length - 1], out = B.filter((b, i) => i === keep || !q.includes(i) || !pure(b)); return out.length ? out : [B[keep]]; };
+  const bubbles = out => [...new Set((Array.isArray(out.bulles) && out.bulles.length ? out.bulles : [out.message]).map(x => short(str(x).replace(/🤖/g, "").trim())).filter(Boolean))].slice(0, 3);
 
   /* ---------- une conversation ---------- */
   /* ---------- une conversation : réponse au fan, ou relance quand il ne répond plus ---------- */
@@ -556,6 +564,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     }
     if (!out) throw err;
     unleak(out);
+    if (out.junk) { try { const again = unleak(await grok(msgs.concat([{ role: "system", content: "Ta réponse était beaucoup trop longue ou recopiait les notes du site entre crochets. Réponds en 1 à 3 bulles courtes, sans crochets." }]))); if (again && !again.junk) out = again; } catch (e) {} }
     const leave = str(out.laisser).trim();
     if (leave) {
       mark({ blocked: leave.slice(0, 200) });
@@ -570,7 +579,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (!act && plan.S && !plan.lock && (plan.force || (plan.step && out.etape))) act = { kind: "step", sc: plan.sc, k: plan.S.step + 1 };
       if (!act && plan.lock && plan.floor && out.plancher) act = { kind: "floor", sc: plan.sc, k: plan.S.step };
     }
-    let B = bubbles(out), price = cents(out.prix), f = null, promo = null, guarded = false; if (busy) B = B.slice(0, 1);
+    let B = oneQ(bubbles(out)), price = cents(out.prix), f = null, promo = null, guarded = false; if (busy) B = B.slice(0, 1);
     if (!act && out.album && sell.albums.some(a => a.id === str(out.album)) && price >= 3) {
       price = Math.min(price, M.maxPrice);
       const pct = Math.round(+out.remise || 0), hesit = !!sell.open || L.some(m => !m.fromFan && m.type === "FILE" && m.price > 0 && m.status !== "accepted");
@@ -803,7 +812,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (!act && plan.S && !plan.lock && (plan.force || (plan.step && out.etape))) act = { kind: "step", sc: plan.sc, k: plan.S.step + 1 };
       if (!act && plan.lock && plan.floor && out.plancher) act = { kind: "floor", sc: plan.sc, k: plan.S.step }; }
     const al = !act && out.album ? albums.find(a => a.id === str(out.album)) : null, it = al && (al.items || []).find(x => x.id === str(out.media).replace(/^m:/, ""));
-    let B = bubbles(out), guarded = false; if (busy) B = B.slice(0, 1); if (!act && !al && B.some(fakeSend)) { B = B.filter(t => !fakeSend(t)); guarded = true; }
+    let B = oneQ(bubbles(out)), guarded = false; if (busy) B = B.slice(0, 1); if (!act && !al && B.some(fakeSend)) { B = B.filter(t => !fakeSend(t)); guarded = true; }
     const pct = Math.round(+out.remise || 0);
     // l'état du script après cette réponse : l'écran le garde et le renvoie au prochain message
     let state = T0, step = null, floor = null, ended = null;
