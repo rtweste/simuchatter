@@ -167,7 +167,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       body: JSON.stringify(body), signal: AbortSignal.timeout(60000) }); }
     catch (e) { throw fail("Grok ne répond pas : " + e.message); }
     const j = await r.json().catch(() => null);
-    if (!r.ok) throw fail(`Grok a refusé la demande (code ${r.status})${j && j.error ? " : " + str(j.error.message || j.error).slice(0, 160) : ""}`);
+    if (!r.ok) { const e = fail(`Grok a refusé la demande (code ${r.status})${j && j.error ? " : " + str(j.error.message || j.error).slice(0, 160) : ""}`); e.status = r.status; throw e; }
     const m = j && j.choices && j.choices[0] && j.choices[0].message; if (!m) throw fail("Réponse de Grok vide");
     if (!tool) return { text: str(m.content).trim() };
     const tc = (m.tool_calls || []).find(x => x && x.function && x.function.name === tool.function.name);
@@ -544,8 +544,17 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     L.forEach(m => { const t = m.fromFan ? lineOf(m) : untag(lineOf(m)); if (!t) return;
       const pic = m === lastPic && picUrl;
       msgs.push({ role: m.fromFan ? "user" : "assistant", content: pic ? [{ type: "text", text: m.text || "[le fan t'envoie cette photo]" }, { type: "image_url", image_url: { url: pic } }] : t }); });
-    let out; try { out = await grok(msgs); }
-    catch (e) { if (!picUrl) throw e; msgs.forEach(m => { if (Array.isArray(m.content)) m.content = m.content[0].text; }); out = await grok(msgs); }   // image refusée : sans la photo
+    let out = null, err = null; try { out = await grok(msgs); } catch (e) { err = e; }
+    if (!out && picUrl && err.status !== 401) { msgs.forEach(m => { if (Array.isArray(m.content)) m.content = m.content[0].text; }); try { out = await grok(msgs); err = null; } catch (e) { err = e; } }   // image refusée : sans la photo
+    // le filtre de sécurité de xAI refuse cette conversation (code 403) : le fan est laissé à l'équipe, au lieu de redemander à chaque tour
+    if (!out && err && err.status === 403) {
+      mark({ blocked: "Grok refuse de répondre à cette conversation (filtre de sécurité de xAI) : à reprendre par un chatter" });
+      ping(`🤖 ${cr.label} : un fan à reprendre`, `${c.fan.name || "Un fan"} : Grok refuse de répondre à cette conversation`, "ai-leave-" + c.id);
+      log(0, "a", `L'IA de secours laisse **${c.fan.name || "un fan"}** (${cr.label}) à l'équipe`, "Grok refuse de répondre à cette conversation (filtre de sécurité de xAI)");
+      console.error("IA de secours", cr.label, c.fan.name, err.message);
+      return true;
+    }
+    if (!out) throw err;
     unleak(out);
     const leave = str(out.laisser).trim();
     if (leave) {
@@ -651,6 +660,22 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
 
   /* ---------- la boucle : toutes les 20 s ; chaque créatrice relue au plus toutes les 40 s ---------- */
   const POLLED = new Map(); let busy = false;
+  // une conversation qui échoue ne bloque plus les autres : elle attend un peu (2, 4, 8… min), et après 3 échecs de suite elle est laissée à l'équipe
+  const FAILS = new Map();
+  async function safely(r, cr, c, C, relance) {
+    const k = r.id + ":" + c.id, f = FAILS.get(k); if (f && now() < f.until) return false;
+    try { const ok = await handle(r, cr, c, C, relance); FAILS.delete(k); return ok; }
+    catch (e) {
+      const n = (f ? f.n : 0) + 1, msg = `${c.fan.name || "un fan"} : ${str(e.message)}`.slice(0, 240);
+      FAILS.set(k, { n, until: now() + Math.min(30, 2 ** n) * 60e3 });
+      db.prepare("UPDATE twizz_ai_runs SET last_error = ?, last_at = ? WHERE id = ?").run(msg, now(), r.id); console.error("IA de secours", cr.label, msg);
+      if (n >= 3) { FAILS.delete(k);
+        db.prepare("INSERT INTO twizz_ai_convs (run_id, conv_id, fan_id, fan_name, blocked, at) VALUES (?,?,?,?,?,?) ON CONFLICT(run_id, conv_id) DO UPDATE SET blocked = excluded.blocked, at = excluded.at")
+          .run(r.id, c.id, c.fan.id, c.fan.name, `L'IA n'arrive pas à lui répondre (${str(e.message).slice(0, 120)}) : à reprendre par un chatter`, now());
+        ping(`🤖 ${cr.label} : un fan à reprendre`, `${c.fan.name || "Un fan"} : l'IA n'arrive pas à lui répondre`, "ai-leave-" + c.id); }
+      return false;
+    }
+  }
   const parisHour = () => +new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Paris", hour: "2-digit", hourCycle: "h23" }).format(new Date());
   const quiet = C => { const h = parisHour(); return C.quietFrom === C.quietTo ? false : C.quietFrom < C.quietTo ? h >= C.quietFrom && h < C.quietTo : h >= C.quietFrom || h < C.quietTo; };
   const ago = ms => { const m = Math.round(ms / 60e3); return m < 60 ? `${m} min` : `${Math.round(m / 60)} h`; };
@@ -694,8 +719,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
         }
         // les gros payeurs d'abord, puis ceux qui attendent depuis le plus longtemps
         L.sort((a, b) => (b.value - a.value) || (a.t - b.t));
-        for (const x of L.slice(0, 3)) { if (!runOf(cr.id)) break; await handle(r, cr, x.c, C); await sleep(2500 + Math.random() * 2500); }
-        if (L.length < 3 && RL.length && runOf(cr.id)) { RL.sort((a, b) => (b.value - a.value) || (a.t - b.t)); const x = RL[0]; await handle(r, cr, x.c, C, { since: ago(x.age) }); }
+        const ready = x => !((FAILS.get(r.id + ":" + x.c.id) || {}).until > now());   // celles qui viennent d'échouer attendent leur tour
+        const LQ = L.filter(ready), RQ = RL.filter(ready);
+        for (const x of LQ.slice(0, 3)) { if (!runOf(cr.id)) break; await safely(r, cr, x.c, C); await sleep(2500 + Math.random() * 2500); }
+        if (LQ.length < 3 && RQ.length && runOf(cr.id)) { RQ.sort((a, b) => (b.value - a.value) || (a.t - b.t)); const x = RQ[0]; await safely(r, cr, x.c, C, { since: ago(x.age) }); }
       } catch (e) { db.prepare("UPDATE twizz_ai_runs SET last_error = ?, last_at = ? WHERE id = ?").run(str(e.message).slice(0, 240), now(), r.id); console.error("IA de secours", cr.label, e.message); }
     }
   }
