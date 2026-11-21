@@ -175,9 +175,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   }
   function conv(c, cid) {
     const fanRaw = c.interlocutor || c.fan || c.user || (Array.isArray(c.participants) ? c.participants.find(x => str(x._id || x.userId) !== cid) : null) || {};
-    const fan = person(fanRaw), last = c.lastMessage || c.last_message || {};
-    return { id: str(c._id || c.id), fan, last: { id: str(last._id || ""), text: str(last.text || ""), type: str(last.type || (last.isAudio ? "AUDIO" : "")), at: last.createdAt || c.updatedAt || c.createdAt || null, fromFan: !!fan.id && byFan(last, fan.id) },
-      unread: unreadOf(c, cid, fan.id, last), type: str(c.type || ""), since: c.createdAt || null, online: c.isOnline === true, subscribed: typeof c.isFanSubscribed === "boolean" ? c.isFanSubscribed : null, tags: (c.tags || []).map(t => str(t.name || t.label || t)).filter(Boolean) };
+    const fan = person(fanRaw), last = c.lastMessage || c.last_message || {}, fromFan = !!fan.id && byFan(last, fan.id);
+    // dernier message envoyé par l'équipe (chatter ou IA) : rien à lire sur le site, même si Twizz la garde « non lue » (elle n'a pas été ouverte sur Twizz)
+    return { id: str(c._id || c.id), fan, last: { id: str(last._id || ""), text: str(last.text || ""), type: str(last.type || (last.isAudio ? "AUDIO" : "")), at: last.createdAt || c.updatedAt || c.createdAt || null, fromFan },
+      unread: !fromFan && fan.id && senderOf(last) ? 0 : unreadOf(c, cid, fan.id, last), type: str(c.type || ""), since: c.createdAt || null, online: c.isOnline === true, subscribed: typeof c.isFanSubscribed === "boolean" ? c.isFanSubscribed : null, tags: (c.tags || []).map(t => str(t.name || t.label || t)).filter(Boolean) };
   }
   function msg(m, fanId) {
     // promo Twizz : active si elle n'a pas de fin ou si sa fin n'est pas passée (sinon le prix redevient le prix normal), comme dans l'appli Twizz
