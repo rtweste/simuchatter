@@ -656,6 +656,22 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
 
   /* ---------- la boucle : toutes les 20 s ; chaque créatrice relue au plus toutes les 40 s ---------- */
   const POLLED = new Map(); let busy = false;
+  // une conversation qui échoue ne bloque plus les autres : elle attend un peu (2, 4, 8… min), et après 3 échecs de suite elle est laissée à l'équipe
+  const FAILS = new Map();
+  async function safely(r, cr, c, C, relance) {
+    const k = r.id + ":" + c.id, f = FAILS.get(k); if (f && now() < f.until) return false;
+    try { const ok = await handle(r, cr, c, C, relance); FAILS.delete(k); return ok; }
+    catch (e) {
+      const n = (f ? f.n : 0) + 1, msg = `${c.fan.name || "un fan"} : ${str(e.message)}`.slice(0, 240);
+      FAILS.set(k, { n, until: now() + Math.min(30, 2 ** n) * 60e3 });
+      db.prepare("UPDATE twizz_ai_runs SET last_error = ?, last_at = ? WHERE id = ?").run(msg, now(), r.id); console.error("IA de secours", cr.label, msg);
+      if (n >= 3) { FAILS.delete(k);
+        db.prepare("INSERT INTO twizz_ai_convs (run_id, conv_id, fan_id, fan_name, blocked, at) VALUES (?,?,?,?,?,?) ON CONFLICT(run_id, conv_id) DO UPDATE SET blocked = excluded.blocked, at = excluded.at")
+          .run(r.id, c.id, c.fan.id, c.fan.name, `L'IA n'arrive pas à lui répondre (${str(e.message).slice(0, 120)}) : à reprendre par un chatter`, now());
+        ping(`🤖 ${cr.label} : un fan à reprendre`, `${c.fan.name || "Un fan"} : l'IA n'arrive pas à lui répondre`, "ai-leave-" + c.id); }
+      return false;
+    }
+  }
   const parisHour = () => +new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Paris", hour: "2-digit", hourCycle: "h23" }).format(new Date());
   const quiet = C => { const h = parisHour(); return C.quietFrom === C.quietTo ? false : C.quietFrom < C.quietTo ? h >= C.quietFrom && h < C.quietTo : h >= C.quietFrom || h < C.quietTo; };
   const ago = ms => { const m = Math.round(ms / 60e3); return m < 60 ? `${m} min` : `${Math.round(m / 60)} h`; };
@@ -699,8 +715,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
         }
         // les gros payeurs d'abord, puis ceux qui attendent depuis le plus longtemps
         L.sort((a, b) => (b.value - a.value) || (a.t - b.t));
-        for (const x of L.slice(0, 3)) { if (!runOf(cr.id)) break; await handle(r, cr, x.c, C); await sleep(2500 + Math.random() * 2500); }
-        if (L.length < 3 && RL.length && runOf(cr.id)) { RL.sort((a, b) => (b.value - a.value) || (a.t - b.t)); const x = RL[0]; await handle(r, cr, x.c, C, { since: ago(x.age) }); }
+        const ready = x => !((FAILS.get(r.id + ":" + x.c.id) || {}).until > now());   // celles qui viennent d'échouer attendent leur tour
+        const LQ = L.filter(ready), RQ = RL.filter(ready);
+        for (const x of LQ.slice(0, 3)) { if (!runOf(cr.id)) break; await safely(r, cr, x.c, C); await sleep(2500 + Math.random() * 2500); }
+        if (LQ.length < 3 && RQ.length && runOf(cr.id)) { RQ.sort((a, b) => (b.value - a.value) || (a.t - b.t)); const x = RQ[0]; await safely(r, cr, x.c, C, { since: ago(x.age) }); }
       } catch (e) { db.prepare("UPDATE twizz_ai_runs SET last_error = ?, last_at = ? WHERE id = ?").run(str(e.message).slice(0, 240), now(), r.id); console.error("IA de secours", cr.label, e.message); }
     }
   }
