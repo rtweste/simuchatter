@@ -392,6 +392,7 @@ function tabVente(c, M, G) {
         <div><span class="n">${ico("shield", 15, 2.4)}</span><div><b>Toujours des garde-fous</b><small>Appliqués par le site, quoi que Grok veuille faire.</small></div></div>
       </div></div>
     <div class="lay"><div class="mn">
+      <div class="pn">${head("pulse", "g", "Ce qui <em>vend</em>", "Médias payants envoyés par l'IA et achetés (achats vus dans les conversations)", `<select class="inp pill" id="stD" aria-label="Période"><option value="7">7 jours</option><option value="30" selected>30 jours</option><option value="90">90 jours</option></select>`)}<div id="stats"><div class="emp">Chargement…</div></div></div>
       <div class="pn">${head("doc", "b", "Ses scripts <em>de vente</em>", "Un script déjà reçu par un fan ne lui est jamais renvoyé", `<a class="btn w sm" href="/scripts">${ico("plus", 14, 2.8)}Nouveau script</a>`)}
         <div class="scs">${c.scripts.length ? c.scripts.map(x => scHtml(x, G)).join("") : `<div class="nos">Aucun script IA pour ${esc(c.label)} : elle vend avec le coffre. Crée au moins 2 scripts dans Scripts et coche « L'IA peut vendre avec ce script ».</div>`}</div></div>
       <div class="pn">${head("box", "n", "Coffre <em>en secours</em>", "Ici, c'est elle qui choisit le média et le prix")}
@@ -409,6 +410,7 @@ function tabVente(c, M, G) {
         ${row("Cam d'une heure", "", stp('data-n="camHour"', "Cam d'une heure, prix", M.camHour, 5, 2000, "€", 5), `data-if="tk" ${M.tk ? "" : "hidden"}`)}
         ${row("Vidéo custom", "De 3 à 5 minutes.", stp('data-n="customPrice"', "Vidéo custom, prix", M.customPrice, 5, 2000, "€", 5), `data-if="tk" ${M.tk ? "" : "hidden"}`)}
         ${row("Média du ticket", "Pris au hasard dans cet album (un média soft, de préférence).", `<select class="inp" id="tkAlb" aria-label="Album des tickets"><option value="">Albums autorisés</option></select>`, `data-if="tk" ${M.tk ? "" : "hidden"}`)}
+        <div class="row bl" data-if="tk" ${M.tk ? "" : "hidden"}><div class="t"><b>Créneaux pour les cams</b><small>Facultatif. Si tu les connais, elle propose un de ces créneaux une fois la cam payée ; sinon elle demande ses dispos et vous calez l'heure ensuite.</small></div><input class="inp" id="camDispo" maxlength="300" style="width:100%" placeholder="ex. ce soir 22 h à 23 h, demain après 20 h" value="${esc(M.camDispo || "")}"></div>
       </div></div>
       <aside class="as"><div class="pn">${head("shield", "g", "Garde-<em>fous</em>", `Pour ${esc(c.label)}, appliqués par le site`)}
         ${row("Messages avant le premier média", "Elle fait connaissance : aucun média ni allusion avant.", stp('data-n="minMsgs"', "Messages avant le premier média", M.minMsgs, 0, 40))}
@@ -503,6 +505,7 @@ function tabRegl(G, F) { const lockT = F ? "" : " · réglé par le fondateur";
         ${row("Fans qui ont écrit dans les dernières", "Plus ancien, elle ne répond pas.", stp('data-g="fanWindow"', "Fans qui ont écrit dans les dernières heures", G.fanWindow, 1, 72, "h"))}
         ${row("Réponses maximum par fan", "Par séance.", stp('data-g="perFan"', "Réponses maximum par fan", G.perFan, 1, 300, "", 5))}
         ${row("Durée maximum d'une séance", "Elle s'arrête toute seule au bout de ce temps.", stp('data-g="maxHours"', "Durée maximum d'une séance", G.maxHours, 1, 24, "h"))}
+        ${row("Alerte gros payeur", "Les managers reçoivent une notification quand un fan qui a dépensé au moins ce montant écrit pendant une séance de l'IA (0 = jamais). Ils sont aussi prévenus si l'IA enchaîne les erreurs.", stp('data-g="vipAlert"', "Alerte gros payeur", G.vipAlert ?? 300, 0, 100000, "€", 50))}
       </div></div>
       <aside class="as">
         <div class="pn">${head("chip", "b", "Modèle <em>Grok</em>", "Le cerveau qui écrit ses réponses")}
@@ -568,7 +571,9 @@ async function paintBody() {
   $("tryGo").onclick = tryIt; $("tryIn").onkeydown = e => { if (e.key === "Enter") tryIt(); };
   $("tryR").onclick = () => { CHAT[CID] = []; TST[CID] = null; paintChat(); };
   document.querySelectorAll("[data-fan]").forEach(b => b.onclick = () => { FAN[CID] = b.dataset.fan; document.querySelectorAll("[data-fan]").forEach(x => x.setAttribute("aria-pressed", x === b)); $("fanX").textContent = FANX[FAN[CID]]; });
-  loadInfo().then(tkAlbums); loadCmp();
+  loadInfo().then(tkAlbums); loadCmp(); loadStats();
+  $("stD").onchange = loadStats;
+  $("camDispo").onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { camDispo: $("camDispo").value })) notify("Créneaux enregistrés", "", "ok"); };
   $("tkAlb").onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { tkAlbum: $("tkAlb").value })) notify("Album des tickets enregistré", "", "ok"); };
   $("cmpD").onchange = loadCmp;
 }
@@ -600,6 +605,16 @@ function phTag(k, reset) {
 function paintIdc() {
   const c = cur(); if (!c || !$("idc")) return; $("idc").innerHTML = idHead(c);
   GRP.forEach(([, , , keys], gi) => { const e = document.querySelector(`[data-gc="${gi}"]`); if (e) e.textContent = gcount(keys, c.cfg.details || {}); });
+}
+// ce qui vend : par étape de script, par ticket, et le coffre
+async function loadStats() {
+  const cid = CID, box = $("stats"); if (!box) return; let R;
+  try { R = await api(`/api/twizz/ai/stats/${enc(cid)}?days=${$("stD").value}`, { fresh: true }); } catch (e) { box.innerHTML = `<div class="emp">${esc(e.message)}</div>`; return; }
+  if (cid !== CID || !$("stats")) return;
+  const pc = (p, n) => n ? Math.round(p / n * 100) + " %" : "—", ln = (l, x, sub) => `<div class="row"><div class="t"><b>${l}</b>${sub ? `<small>${sub}</small>` : ""}</div><span class="unit">${pl(x.sent, "envoyé", "envoyés")} · ${pl(x.paid, "acheté", "achetés")} (${pc(x.paid, x.sent)})</span><b style="min-width:84px;text-align:right">${eur(x.net)}</b></div>`;
+  const sc = R.scripts.map(S => `<div class="row bl"><div class="t"><b>${esc(S.title)}</b></div>${S.steps.map(k => ln(`Étape ${k.step + 1}`, k, k.floorSent ? `dont prix plancher : ${pl(k.floorSent, "envoyé", "envoyés")}, ${pl(k.floorPaid, "acheté", "achetés")}` : "")).join("")}</div>`).join("");
+  const tk = R.tickets.filter(x => x.sent).map(x => ln(`Ticket ${x.label}`, x)).join(""), cf = R.coffre.sent ? ln("Coffre", R.coffre) : "";
+  box.innerHTML = sc + tk + cf || `<div class="emp">Rien de vendu par l'IA sur ${R.days} jours pour l'instant.</div>`;
 }
 async function loadCmp() {
   const cid = CID, box = $("cmp"); if (!box) return; let R;
