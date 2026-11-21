@@ -494,6 +494,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const NOTE_RE = /\[\s*(?:m[ée]dia|photo|vid[ée]o|le fan|image|vocal|fichier)[^\]\n]{0,90}\]?/gi;
   function unleak(out) {
     if (!out) return out; let seen = false, junk = false;
+    // « laisser » vide, false, « non », « null »… : ce n'est pas une raison de laisser le fan à l'équipe
+    { const v = typeof out.laisser === "string" ? out.laisser.trim() : ""; out.laisser = !v || /^(false|faux|non|no|none|null|undefined|aucune?|rien|0|-)\.?$/i.test(v) || v.length < 4 ? "" : v; }
     const fix = x => { if (str(x).length > 500) junk = true; const P = str(x).split(new RegExp(TEASE_TAG.source, "i")); let t = P[0];
       if (P.length > 1) { if (!seen) t += " " + P[1]; seen = true; }
       const before = t; t = t.replace(NOTE_RE, " ").replace(/\[\s*$/, ""); if (t !== before) junk = true;
