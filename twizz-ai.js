@@ -133,10 +133,13 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     ping(`IA de secours arrêtée sur ${c.label}`, `${why} · ${recap}`, "ai-" + r.creator_id);
     return true;
   }
-  // un chatter ouvre la messagerie de cette créatrice : il reprend la main (appelé par la messagerie)
+  // un chatter en shift sur cette créatrice ouvre sa messagerie : il reprend la main (appelé par la messagerie).
+  // Hors de son shift (il passe parler à un fan perso), l'IA continue : elle laisse les conversations qu'il ouvre ou où il vient d'écrire.
   app.locals.aiHuman = (cid, user) => {
     if (!user || !["chatter", "tl"].includes(user.rk)) return false;
-    const r = runOf(cid); return r ? end(r, user.id, `${user.username} a ouvert la messagerie`) : false;
+    const r = runOf(cid); if (!r) return false;
+    const c = crOf(cid), on = c && c.model_id && db.prepare("SELECT 1 FROM clocks WHERE user_id = ? AND model_id = ? AND end_at IS NULL").get(user.id, c.model_id);
+    return on ? end(r, user.id, `${user.username} a ouvert la messagerie`) : false;
   };
   // un chatter a pointé sur la créatrice depuis le lancement
   const backOf = r => r.model_id ? db.prepare(`SELECT u.id, u.username FROM clocks c JOIN users u ON u.id = c.user_id
