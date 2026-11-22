@@ -399,6 +399,7 @@ function tabVente(c, M, G) {
         <div class="row bl"><div class="t"><b>Albums qu'elle peut vendre</b><small>Aucun choisi = tous les albums photo et vidéo du coffre.</small></div><div class="chips" id="albs"><span class="hint">Chargement du coffre…</span></div></div>
         <div class="row bl"><div class="t"><b>Ce qu'il y a dans chaque album</b><small>En quelques mots : elle s'en sert pour savoir ce qu'elle vend et faire monter l'envie (en plus de l'analyse du coffre).</small></div><div id="anotes"></div></div>
         ${row("Prix maximum d'un média", "Elle suit le catalogue de la fiche, sans jamais dépasser ce prix.", stp('data-n="maxPrice"', "Prix maximum d'un média", M.maxPrice, 3, 500, "€"))}
+        <div class="row bl"><div class="t"><b>Paliers de prix</b><small>Quand le fan ne demande rien de précis : son 1er média acheté part au 1er prix (le plus soft), le 2e au 2e prix, etc. Le dernier prix sert ensuite. Vide = elle fixe le prix elle-même.</small></div><input class="inp" id="ladder" maxlength="60" style="width:100%" placeholder="ex. 6, 12, 18, 25" value="${esc((M.ladder || []).join(", "))}"></div>
         ${row("Remises", "Quand il hésite ou n'a pas acheté, elle peut refaire une proposition moins chère (promo Twizz). Jamais à la première proposition.", sw(M.promo, 'data-m="promo"', "Remises"))}
         ${row("Remise maximum", "", stp('data-n="maxDiscount"', "Remise maximum", M.maxDiscount, 5, 90, "%", 5) + `<select class="inp" id="mPromoH" aria-label="Durée de la remise">${[6, 12, 24, 48].map(h => `<option value="${h}" ${M.promoHours === h ? "selected" : ""}>pendant ${h} h</option>`).join("")}</select>`, `data-if="promo" ${M.promo ? "" : "hidden"}`)}
         ${row("Voir les médias", `Grok regarde chaque média du coffre une fois et le décrit : elle choisit le média qui colle à ce qu'il veut et en parle comme si elle l'avait sous les yeux. Elle voit aussi les photos que le fan envoie. <b id="medN">${pl(c.media, "média décrit", "médias décrits")}</b>${scanNote(c)}`, `<button type="button" class="btn sm" id="scanB">${c.scan && c.scan.running ? `Analyse… ${c.scan.done}/${c.scan.total}` : "Analyser le coffre"}</button>${sw(M.vision, 'data-m="vision"', "Voir les médias")}`)}
@@ -589,6 +590,7 @@ async function paintBody() {
   document.querySelectorAll("[data-fan]").forEach(b => b.onclick = () => { FAN[CID] = b.dataset.fan; document.querySelectorAll("[data-fan]").forEach(x => x.setAttribute("aria-pressed", x === b)); $("fanX").textContent = FANX[FAN[CID]]; });
   loadInfo().then(tkAlbums); loadCmp(); loadStats();
   $("stD").onchange = loadStats;
+  $("ladder").onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { ladder: $("ladder").value })) notify("Paliers enregistrés", "", "ok"); };
   $("camDispo").onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { camDispo: $("camDispo").value })) notify("Créneaux enregistrés", "", "ok"); };
   $("tkAlb").onchange = async () => { if (await save(`/api/twizz/ai/cfg/${enc(CID)}`, { tkAlbum: $("tkAlb").value })) notify("Album des tickets enregistré", "", "ok"); };
   $("cmpD").onchange = loadCmp;
