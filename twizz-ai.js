@@ -713,9 +713,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const row = db.prepare("SELECT * FROM twizz_ai_convs WHERE run_id = ? AND conv_id = ?").get(r.id, c.id) || {};
     const j = await G(`/messages/find-all-messages?conversationId=${enc(c.id)}&creatorId=${enc(cr.id)}&page=1`, 0);
     const L = ((j && j.data && j.data.data) || []).map(m => msg(m, c.fan.id)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(-30);
-    whatOf(L);   // ce que contenaient les médias qu'elle a envoyés
     const last = L[L.length - 1]; if (!last) return false;
     if (relance ? last.fromFan : (!last.fromFan || last.id === row.last_fan_msg)) return false;   // le fan a réécrit, ou déjà répondu
+    whatOf(L);   // ce que contenaient les médias qu'elle a envoyés
     // achats vus dans la conversation : pour « Ce qui vend »
     { const ok = L.filter(m => !m.fromFan && m.status === "accepted" && m.price > 0); if (ok.length) { const u = db.prepare("UPDATE twizz_ai_sold SET paid_at = ? WHERE msg_id = ? AND paid_at IS NULL"); ok.forEach(m => u.run(Date.parse(m.at) || now(), m.id)); } }
     // un gros payeur écrit pendant la séance : les managers sont prévenus (une fois par séance)
