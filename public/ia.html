@@ -515,6 +515,17 @@ function tabRegl(G, F) { const lockT = F ? "" : " · réglé par le fondateur";
           <div class="mdl">${D.models.map(m => { const L = MDL[m.id] || [m.label, ""]; return `<button type="button" data-model="${esc(m.id)}" aria-pressed="${G.model === m.id}"><span class="rd"></span><span class="t"><b>${esc(L[0])}</b>${L[2] ? ` <span class="bdg g">${L[2]}</span>` : ""}<small>${esc(L[1])}</small></span></button>`; }).join("")}</div>
           ${row("Mémoire des fans", "Toutes les 3 réponses, elle complète la fiche du fan (prénom, ville, goûts, résumé) : elle et les chatters s'en souviendront.", sw(G.memory, 'id="gMem"', "Mémoire des fans"))}
         </div>
+        ${(() => { const U = D.usage || { week: 0, today: 0, budget: G.budget, byCreator: {}, byKind: {} }, B = +G.budget || 0, pc = B ? Math.min(100, Math.round(100 * U.week / B)) : 0, $ = v => (v || 0).toFixed(2).replace(".", ",") + " $";
+          const crs = D.creators.map(c => [c.label, U.byCreator[c.id] || 0]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]), KL = { reponse: "Réponses", memoire: "Mémoire des fans", medias: "Analyse du coffre", essai: "Essais", autre: "Autre" };
+          return `<div class="pn">${head("pulse", "b", "Coût <em>Grok</em>", "Sur les 7 derniers jours")}
+          <div style="padding:2px 2px 10px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><b style="font-size:22px">${$(U.week)}</b><span class="mut" style="font-size:12.5px">${B ? "sur " + B + " $ / semaine" : "pas de budget"}</span></div>
+            ${B ? `<div style="height:7px;border-radius:9px;background:rgba(255,255,255,.08);margin-top:8px;overflow:hidden"><div style="height:100%;width:${pc}%;background:${pc >= 100 ? "#ff6b6b" : pc >= 80 ? "#f0b45a" : "#5fd3a2"}"></div></div>` : ""}
+            ${U.over ? `<div class="warn" style="margin-top:10px">Budget atteint : l'IA est en pause jusqu'à ce que la dépense des 7 derniers jours redescende sous le budget.</div>` : ""}
+            <small class="mut" style="display:block;margin-top:8px;line-height:1.5">Aujourd'hui ${$(U.today)}${U.perReply ? ` · environ ${(U.perReply * 100).toFixed(2).replace(".", ",")} centime par réponse` : ""}</small>
+            ${crs.length ? `<small class="mut" style="display:block;margin-top:4px;line-height:1.5">${crs.map(x => `${esc(x[0])} ${$(x[1])}`).join(" · ")}</small>` : ""}
+            ${Object.keys(U.byKind).length ? `<small class="mut" style="display:block;margin-top:4px;line-height:1.5">${Object.entries(U.byKind).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${KL[k] || k} ${$(v)}`).join(" · ")}</small>` : ""}</div>
+          ${row("Budget par semaine", "Au-delà, l'IA se met en pause et les managers sont prévenus (0 = pas de limite).", stp('data-g="budget"', "Budget Grok par semaine", G.budget ?? 20, 0, 500, "$", 5))}
+        </div>`; })()}
         <div class="pn">${head("shield", "a", "Prévenir <em>le fan</em>", "Au moins un des deux reste allumé")}
           ${row(`Message « c'est l'IA »${lockT}`, G.notice ? "Sa première réponse commence par ce texte." : "Coupé : seul le 🤖 à la fin de chaque message signale l'IA.", sw(G.notice, `id="gNotice" ${F ? "" : "disabled"}`, "Message c'est l'IA"))}
           <div data-gif="notice" ${G.notice ? "" : "hidden"}>
