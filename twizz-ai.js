@@ -302,8 +302,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   // où en est le teasing de cette conversation : annoncé quand, et le fan a-t-il répondu depuis ?
   function teaseOf(cr, convId, L) {
     const t = convId ? db.prepare("SELECT at FROM twizz_ai_tease WHERE creator_id = ? AND conv_id = ?").get(cr.id, convId) : null; if (!t) return null;
-    return { at: t.at, answered: L.some(m => m.fromFan && (Date.parse(m.at) || 0) > t.at) };
+    // live : il répond à ce teasing et elle n'a rien écrit depuis sa réponse → elle envoie, même si sa réponse arrive après le délai
+    const i = L.findIndex(m => m.fromFan && (Date.parse(m.at) || 0) > t.at), live = i >= 0 && !L.slice(i).some(m => !m.fromFan);
+    return { at: t.at, answered: i >= 0, live };
   }
+  const teaseOk = (tz, M) => !!tz && (tz.live || now() - tz.at < M.teaseWindow * 60e3);
   async function sellable(cr, M, L, convId, tz) {
     if (!M.sell) return { albums: [], note: "la vente de médias est coupée pour cette créatrice" };
     // 1. échauffement : pas de média tant que la conversation n'a pas assez de messages
@@ -314,7 +317,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     // 2. teasing obligatoire : annoncer et faire désirer d'abord, envoyer seulement après sa réponse
     const lastFan = [...L].reverse().find(m => m.fromFan), tease = tz !== undefined ? tz : teaseOf(cr, convId, L);
     const skip = M.askSkip && lastFan && asks(lastFan.text);
-    if (M.tease && !skip && !(tease && tease.answered && now() - tease.at < M.teaseWindow * 60e3)) {
+    if (M.tease && !skip && !(tease && tease.answered && teaseOk(tease, M))) {
       const what = await peek();
       return { albums: [], teaseNow: true, note: tease && !tease.answered ? "tu viens de lui teaser un média : attends sa réponse, continue de le chauffer sans rien envoyer"
         : `avant tout média, tu dois d'abord le teaser : fais-lui envie de ce que tu pourrais lui montrer (sans l'envoyer, sans prix), fais monter la tension. Un seul teasing, court, comme un vrai message. Coche le champ teaser de l'outil (ne l'écris jamais dans ton message). Tu pourras l'envoyer seulement après sa réponse${what ? `. Ce que tu peux teaser : ${what}` : ""}` }; }
@@ -683,7 +686,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (plan && plan.endNow) scEnd(cr.id, c.fan.id, plan.endNow.why, plan.endNow.full, plan.endNow.at);
     // le coffre : sans script IA, quand il a déjà reçu tous les scripts, ou s'il réclame un contenu précis (jamais pendant un script)
     // (un média du coffre déjà teasé reste possible au message suivant du fan, même s'il ne le réclame pas mot pour mot)
-    const tz0 = teaseOf(cr, c.id, L), teased = !!(tz0 && now() - tz0.at < M.teaseWindow * 60e3), busy = !relance && !!lastFan && BUSY.test(lastFan.text);
+    const tz0 = teaseOf(cr, c.id, L), teased = teaseOk(tz0, M), busy = !relance && !!lastFan && BUSY.test(lastFan.text);
     const hot = !relance && !busy && hotOf(L), coffre = !busy && (!plan || plan.coffre || (plan.coffreAsk && lastFan && (asks(lastFan.text) || teased || hot)));
     const sell = coffre ? await sellable(cr, M, L, c.id) : { albums: [], note: "" };
     const mark0 = (patch) => db.prepare(`INSERT INTO twizz_ai_convs (run_id, conv_id, fan_id, fan_name, notified, replies, last_fan_msg, blocked, at, relances, relance_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)
@@ -981,19 +984,19 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     // la fausse conversation : un message par minute ; les médias de script gardent leur prix et « acheté » si on a cliqué « Il achète »
     const LL = raw.map((m, i) => { const fm = m && m.price != null && isFinite(+m.price); return { id: str(m && m.id) || "t" + i, fromFan: !!(m && m.fan), text: str(m && m.text).slice(0, 1000),
       medias: fm ? [{ keys: [] }] : [], type: fm ? "FILE" : "TEXT", price: fm ? +m.price : null, status: m && m.paid ? "accepted" : "", at: new Date(now() - (raw.length - i) * 60e3).toISOString(), teaser: !!(m && m.teaser) }; });
-    const ti = LL.map(m => !m.fromFan && m.teaser).lastIndexOf(true), tz = ti < 0 ? null : { at: Date.parse(LL[ti].at), answered: LL.slice(ti + 1).some(m => m.fromFan) };
+    const ti = LL.map(m => !m.fromFan && m.teaser).lastIndexOf(true), tz = ti < 0 ? null : (() => { const R = LL.slice(ti + 1), i = R.findIndex(m => m.fromFan); return { at: Date.parse(LL[ti].at), answered: i >= 0, live: i >= 0 && !R.slice(i).some(m => !m.fromFan) }; })();
     const T0 = b.state && b.state.script_id ? b.state : null, atId = id => { const i = LL.findIndex(m => m.id === id); return i >= 0 ? Date.parse(LL[i].at) : now(); };
     const S0 = T0 ? { script_id: +T0.script_id, step: +T0.step || 0, sent_at: atId(T0.sentId), lock_msg: T0.lockId || null, lock_price: T0.lock_price || null, floor_used: T0.floor_used ? 1 : 0, relanced: 0,
       state: T0.state || "open", ended_at: T0.state && T0.state !== "open" ? atId(T0.endedId) : null, full: T0.full ? 1 : 0 } : null;
     const burned = new Set((Array.isArray(b.burned) ? b.burned : []).map(Number).filter(Number.isFinite)), lastFan = LL[LL.length - 1];
     const busy = BUSY.test(lastFan.text), plan = planOf(c, M, LL, "essai", { S: S0, burned });
-    const hot = !busy && hotOf(LL), coffre = !busy && (!plan || plan.coffre || (plan.coffreAsk && (asks(lastFan.text) || hot || !!(tz && now() - tz.at < M.teaseWindow * 60e3))));
+    const hot = !busy && hotOf(LL), coffre = !busy && (!plan || plan.coffre || (plan.coffreAsk && (asks(lastFan.text) || hot || teaseOk(tz, M))));
     let sell = { albums: [], note: "" }; if (coffre) try { sell = await sellable(c, M, LL, null, tz); } catch (e) {} const albums = sell.albums;
     const KN = { new: {}, reg: { prenom: "Thomas", ville: "Lyon" }, big: { prenom: "Thomas", metier: "chef d'entreprise" } };
     // le ticket de l'essai : l'écran le garde et le renvoie ; payé quand on a cliqué « Il achète » sur son média
     let TK0 = b.ticket && TK[b.ticket.kind] ? { kind: b.ticket.kind, minutes: +b.ticket.minutes || null, price: +b.ticket.price || 0, msg_id: str(b.ticket.id), state: ["sent", "paid", "done"].includes(b.ticket.state) ? b.ticket.state : "sent" } : null;
     if (TK0 && TK0.state === "sent" && LL.some(m => m.id === TK0.msg_id && m.status === "accepted")) TK0.state = "paid";
-    const canSell = sell.albums.length > 0 || !!sell.teaseNow || !!(plan && plan.launch.length), push = hot && canSell && !(tz && now() - tz.at < M.teaseWindow * 60e3) && !(plan && plan.S && plan.S.state === "open") && pushOf(LL);
+    const canSell = sell.albums.length > 0 || !!sell.teaseNow || !!(plan && plan.launch.length), push = hot && canSell && !teaseOk(tz, M) && !(plan && plan.S && plan.S.state === "open") && pushOf(LL);
     const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell, hot), rules: rulesOf(M, LL, { known: KN[b.fan] || {}, plan, busy, ticket: TK0, hot: hot && canSell, push }) };
     const FANS = { new: "pseudo : Thomas ; n'a encore jamais rien acheté", reg: "pseudo : Thomas ; prénom : Thomas ; ville : Lyon ; a déjà dépensé 150 € avec elle en 8 achats ; tags de l'équipe : Vidéos",
       big: "pseudo : Thomas ; prénom : Thomas ; métier : chef d'entreprise ; a déjà dépensé 850 € avec elle en 30 achats ; tags de l'équipe : Spender ; résumé de l'équipe : achète vite quand on le chauffe, aime qu'on se souvienne de lui" };
