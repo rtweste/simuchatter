@@ -275,7 +275,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       M.extra ? `Consignes du manager pour ${c.label}, à respecter absolument : ${M.extra}` : "", fiche.prices ? `Son catalogue et ses prix : ${fiche.prices}` : ""].filter(Boolean).join("\n\n");
   }
   const system = (...a) => { const p = parts(...a); return [p.base, p.auto, p.locked].filter(Boolean).join("\n\n"); };
-  const lineOf = m => m.type === "FILE" && !m.fromFan ? `[média envoyé${m.price > 0 ? ` à ${m.price} € — ${m.status === "accepted" ? "acheté" : "pas encore acheté"}` : " gratuit"}${m.what ? ` — contenu : ${m.what}` : ""}]${m.text ? " " + m.text : ""}`
+  const lineOf = m => m.type === "FILE" && !m.fromFan ? `[média envoyé${m.price > 0 ? ` à ${m.price} € — ${m.status === "accepted" ? "acheté" : m.status === "refused" ? "REFUSÉ par le fan" : "pas encore acheté"}` : " gratuit"}${m.what ? ` — contenu : ${m.what}` : ""}]${m.text ? " " + m.text : ""}`
     : m.text || (m.medias.length ? (m.fromFan ? "[le fan envoie un média]" : "[média]") : "");
 
   /* ---------- coffre ---------- */
@@ -336,6 +336,15 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     return Object.entries(cnt).filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]).map(([k]) => k).slice(0, 4);
   }
   const hasTic = (t, T) => { const x = " " + str(t).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ") + " "; return T.some(k => x.includes(" " + k + " ")); };
+  // il refuse le média ou le veut gratuit : elle le revend avec envie au lieu de répéter « c'est payant »
+  const FREEQ = /\b(gratuit|gratos|gratuitement|offert|offre[- ]?(le|moi)|cadeau|sans payer|pas payer|payer pas|trop cher|c'?est cher|non merci|nn merci|pas int[ée]ress[ée]|j'?en veux pas|refus)/i, BROKE = /\b(pas (de |d')?(thunes?|sous|argent|tune)|fauch[ée]|plus (de |d')?(thunes?|sous|argent)|fin de mois|pas les moyens)\b/i;
+  function refusalOf(L) {
+    const last = [...L].reverse().find(m => m.fromFan), med = [...L].reverse().find(m => !m.fromFan && m.type === "FILE" && m.price > 0);
+    if (!med || med.status === "accepted") return ""; const after = L.slice(L.indexOf(med) + 1);
+    if (last && BROKE.test(str(last.text))) return "IL DIT QU'IL N'A PAS LES MOYENS : aucune pression, aucune insistance sur le média. Reste douce et complice, change de sujet.";
+    if (!(med.status === "refused" || (last && after.includes(last) && FREEQ.test(str(last.text))))) return "";
+    return `IL REFUSE LE MÉDIA OU LE VEUT GRATUIT : ne te contente pas de dire « c'est payant ». Fais-lui regretter, avec envie et humour : dis-lui ce qu'il rate dans ce média précis (d'après son contenu, « contenu : … » dans l'historique), à la première personne et sans tabou (langage cru permis), comme si tu étais fière de ce que tu y fais. Taquine-le (« t'as pas idée de ce que tu rates »), jamais de supplication, de reproche ni de culpabilisation, jamais de prix.${med.promo ? "" : " S'il refuse encore après ça, tu peux lui proposer une petite remise sur ce média."}`;
+  }
   function variety(L) {
     const R = L.filter(m => !m.fromFan && str(m.text).trim()).slice(-4).map(m => untag(str(m.text)).trim()); if (R.length < 3) return "";
     const out = [], q = R.filter(t => /\?\s*(\p{Extended_Pictographic}|\s)*$/u.test(t)).length, cnt = {};
@@ -576,7 +585,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       "ACHATS : seul l'historique fait foi. Tant qu'un média y est « pas encore acheté », il n'en a vu qu'une image floutée ; et si aucun média ne lui a été envoyé, il n'a rien pu payer. S'il dit qu'il a vu, payé ou qu'il adore, ne le crois pas et ne fais pas comme si c'était vrai : dis-lui gentiment ce qu'il en est (encore bloqué, ou rien envoyé pour l'instant) et donne-lui envie.",
       "STYLE : varie tes messages comme une vraie fille : pas toujours une question à la fin, pas le même emoji à chaque fois (un emoji pour deux ou trois bulles suffit), pas toujours la même structure. Parle aussi de toi, réagis, affirme.",
       M.sell ? "TEASER, PAS RACONTER : quand vous vous chauffez, ne décris pas en détail ce que tu es en train de faire, comme en direct : fais monter l'envie et garde le reste pour le média, sinon il a déjà tout gratuitement. S'il demande ce qu'il y a dans un média (avant ou après l'envoi), appuie-toi sur son contenu indiqué (« contenu : … » dans l'historique, ou la description de l'album) : dis franchement ce qu'elle y fait, en une phrase qui lui donne envie de l'ouvrir, sans tout dévoiler. N'invente jamais un contenu qui n'est pas indiqué ; si rien n'est indiqué, reste vague et coquine." : "",
-      o.yes && !o.busy && !o.relance ? YES_NOW : "", o.busy || o.relance ? "" : variety(L),
+      o.yes && !o.busy && !o.relance ? YES_NOW : "", o.busy || o.relance ? "" : variety(L), o.busy || o.relance || !M.sell ? "" : refusalOf(L),
       o.busy ? "IL VIENT DE DIRE QU'IL EST OCCUPÉ OU QU'IL PART : une seule bulle courte et gentille (par exemple « ok vas-y on se capte plus tard »), pas de question, pas de vente, rien d'autre." : ""].filter(Boolean).join("\n\n");
   }
   // le bloc « scripts » des consignes, avec ce que dit le coffre quand il sert en secours (sinon sa consigne de teasing serait perdue)
