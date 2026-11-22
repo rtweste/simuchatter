@@ -941,7 +941,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   }
 
   /* ---------- la boucle : toutes les 20 s ; chaque créatrice relue au plus toutes les 40 s ---------- */
-  const POLLED = new Map(); let busy = false;
+  const POLLED = new Map(), WORKING = new Set(); let busy = false;
   // une conversation qui échoue ne bloque plus les autres : elle attend un peu (2, 4, 8… min), et après 3 échecs de suite elle est laissée à l'équipe
   const FAILS = new Map(), RUNERR = new Map();
   async function safely(r, cr, c, C, relance) {
@@ -975,7 +975,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (!sendOn() || !XAI()) continue;   // en pause : rien ne peut partir
       if (now() - (POLLED.get(r.id) || 0) < 40e3) continue; POLLED.set(r.id, now());
       const cr = crOf(r.creator_id); if (!cr) { end(r, null, "Créatrice introuvable"); continue; }
-      try {
+      // chaque créatrice a sa propre file, en parallèle des autres (une seule à la fois par créatrice)
+      if (WORKING.has(r.id)) continue; WORKING.add(r.id);
+      (async () => { try {
         const M = mcfg(cr.id), skip = new Set(M.skipTags);
         const j = await G(`/conversations/user/${enc(cr.id)}?page=1&type=GENERAL&creatorId=${enc(cr.id)}`, 20e3);
         const human = db.prepare("SELECT 1 FROM twizz_sent WHERE conv_id = ? AND COALESCE(via, '') <> 'ia' AND user_id IS NOT NULL AND at > ?");
@@ -1006,9 +1008,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
         L.sort((a, b) => (b.value - a.value) || (a.t - b.t));
         const ready = x => !((FAILS.get(r.id + ":" + x.c.id) || {}).until > now());   // celles qui viennent d'échouer attendent leur tour
         const LQ = L.filter(ready), RQ = RL.filter(ready);
-        for (const x of LQ.slice(0, 3)) { if (!runOf(cr.id)) break; await safely(r, cr, x.c, C); await sleep(2500 + Math.random() * 2500); }
+        // jusqu'à 3 conversations traitées en même temps (Grok écrit pendant qu'une autre réponse part) ; 6 par tour quand beaucoup de fans attendent
+        const take = LQ.slice(0, LQ.length > 6 ? 6 : 3); let ix = 0;
+        await Promise.all([0, 1, 2].map(async w => { await sleep(w * 1500); while (ix < take.length && runOf(cr.id)) { const x = take[ix++]; await safely(r, cr, x.c, C); await sleep(1500 + Math.random() * 2000); } }));
         if (LQ.length < 3 && RQ.length && runOf(cr.id)) { RQ.sort((a, b) => (b.value - a.value) || (a.t - b.t)); const x = RQ[0]; await safely(r, cr, x.c, C, { since: ago(x.age) }); }
-      } catch (e) { db.prepare("UPDATE twizz_ai_runs SET last_error = ?, last_at = ? WHERE id = ?").run(str(e.message).slice(0, 240), now(), r.id); console.error("IA de secours", cr.label, e.message); }
+      } catch (e) { db.prepare("UPDATE twizz_ai_runs SET last_error = ?, last_at = ? WHERE id = ?").run(str(e.message).slice(0, 240), now(), r.id); console.error("IA de secours", cr.label, e.message); } })().finally(() => WORKING.delete(r.id));
     }
   }
   setInterval(() => { if (busy) return; busy = true; loop().catch(e => console.error("IA de secours", e.message)).finally(() => { busy = false; }); }, 20e3);
