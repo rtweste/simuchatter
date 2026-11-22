@@ -941,7 +941,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   }
 
   /* ---------- la boucle : toutes les 20 s ; chaque créatrice relue au plus toutes les 40 s ---------- */
-  const POLLED = new Map(), WORKING = new Set(); let busy = false;
+  const POLLED = new Map(); let busy = false;
   // une conversation qui échoue ne bloque plus les autres : elle attend un peu (2, 4, 8… min), et après 3 échecs de suite elle est laissée à l'équipe
   const FAILS = new Map(), RUNERR = new Map();
   async function safely(r, cr, c, C, relance) {
@@ -964,6 +964,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const parisHour = () => +new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Paris", hour: "2-digit", hourCycle: "h23" }).format(new Date());
   const quiet = C => { const h = parisHour(); return C.quietFrom === C.quietTo ? false : C.quietFrom < C.quietTo ? h >= C.quietFrom && h < C.quietTo : h >= C.quietFrom || h < C.quietTo; };
   const ago = ms => { const m = Math.round(ms / 60e3); return m < 60 ? `${m} min` : `${Math.round(m / 60)} h`; };
+  const WORKING = new Set();   // créatrices dont la file tourne en ce moment
   async function loop() {
     const runs = active(); if (!runs.length) return;
     if (!aiOn()) { runs.forEach(r => end(r, null, "IA coupée par le fondateur")); return; }
