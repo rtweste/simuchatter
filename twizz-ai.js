@@ -406,6 +406,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   // elle tourne en rond : au moins 6 messages d'elle depuis le dernier média ou teasing, et ça reste coquin → c'est le moment de proposer, même si le fan n'écrit plus de mots chauds
   const loopOf = L => { let i = -1; L.forEach((m, k) => { if (!m.fromFan && (m.type === "FILE" || m.price > 0 || m.teaser)) i = k; }); const R = L.slice(i + 1);
     return R.filter(m => !m.fromFan && str(m.text).trim()).length >= 6 && R.filter(m => HOTW.test(str(m.text))).length >= 3; };
+  const streak = L => { let i = -1; L.forEach((m, k) => { if (!m.fromFan && (m.type === "FILE" || m.price > 0 || m.teaser)) i = k; }); return L.slice(i + 1).filter(m => !m.fromFan && str(m.text).trim()).length; };
+  const TEASES = ["attends j'ai un truc qui va te rendre fou, tu veux voir ? 😏", "tu veux que je te montre ce que je fais en vrai quand je suis comme ça ?", "j'ai une vidéo qui colle trop à ce qu'on se dit… tu veux la voir ?", "ça te dirait de voir ce que ça me fait en vrai ? 🥵"];
   const PUSH_NOW = "Tu tournes en rond depuis plusieurs messages : dans cette réponse, propose-lui de voir quelque chose, en une phrase courte qui donne envie (« tu veux que je te montre ? 😏 »). Coche teaser (ou lance le script qui colle). Ne décris plus ce que tu fais.";
   const pushOf = L => { const R = L.slice(-12); if (R.some(m => !m.fromFan && (m.type === "FILE" || m.price > 0 || m.teaser))) return false; return R.filter(m => HOTW.test(str(m.text))).length >= 6; };
   // une bulle qui annonce un prix (« 5 € », « 20 euros ») : jamais, le prix s'affiche sur le média
@@ -742,7 +744,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const mark = patch => { mark0(patch); if (!relance) db.prepare("UPDATE twizz_ai_convs SET busy = ?, fan_at = ? WHERE run_id = ? AND conv_id = ?").run(busy ? 1 : 0, Date.parse(lastFan ? lastFan.at : last.at) || now(), r.id, c.id); };
     // « ok » juste après avoir dit qu'il partait : pas de réponse, on le laisse partir
     if (!relance && row.busy && lastFan && ACK.test(lastFan.text)) { mark0({}); await readOnTwizz(cr.id, c, L); return false; }
-    const tell = needNotice(cr, c, row, C), tail = C.mark ? " 🤖" : "", who = prenomOf(cr, c), pre = tell ? noticeOf(cr, C) + "\n\n" : "";
+    const tell = needNotice(cr, c, row, C), tail = C.mark ? " 🤖" : "", who = prenomOf(cr, c), pre = tell && noticeOf(cr, C).trim() ? noticeOf(cr, C).trim() + "\n\n" : "";
     const told = () => { if (tell) db.prepare("INSERT INTO twizz_ai_told (creator_id, fan_id, at) VALUES (?,?,?) ON CONFLICT(creator_id, fan_id) DO UPDATE SET at = excluded.at").run(cr.id, c.fan.id, now()); };
     // relance d'un média de script pas acheté : la relance écrite dans l'étape, telle quelle, une fois
     if (relance && plan && plan.lock && str(plan.cur.relance).trim() && !plan.S.relanced) {
@@ -802,6 +804,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     // c'est le moment de proposer et Grok continue de décrire : une seconde chance pour qu'il teasse
     if (push && !yes && !act && !out.teaser && !str(out.ticket) && !okAlb(out)) { let again = null; try { again = unleak(await grok(msgs.concat([{ role: "system", content: PUSH_NOW }]))); } catch (e) {}
       if (again && !str(again.laisser).trim() && (again.teaser || +again.lancer) && bubbles(again).length) { out = again; if (plan && plan.launch.length && +out.lancer) { const sc = plan.launch.find(x => x.id === +out.lancer); if (sc) act = { kind: "step", sc, k: 0 }; } } }
+    // toujours rien proposé après une longue série de messages chauds (10 d'elle depuis le dernier média ou teasing) : le site ajoute lui-même un teasing court
+    if (push && !yes && !act && !out.teaser && !str(out.ticket) && !okAlb(out) && streak(L) >= 10) { out.bulles = bubbles(out).slice(0, 1).concat([TEASES[Math.floor(Math.random() * TEASES.length)]]); out.teaser = true; }
     let tk = null, tkInfo = "";
     if (M.tk && M.sell && !relance && !busy && !act) {
       if (tkFree(T) && TK[str(out.ticket)] && tkAsked(str(out.ticket), L)) { tk = tkPlan(M, str(out.ticket), out.prix, out.duree); tk.f = await tkMedia(cr, M, c, L); if (!tk.f) { tk = null; db.prepare("UPDATE twizz_ai_runs SET last_error = ? WHERE id = ?").run(`${c.fan.name || "un fan"} : ticket impossible, aucun média dans le coffre`, r.id); } }
@@ -1075,6 +1079,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (okAlb(again) && !str(again.laisser).trim()) out = again; else if (plan && plan.launch.length) act = { kind: "step", sc: plan.launch[0], k: 0 }; }
     if (push && !yes && !act && !out.teaser && !str(out.ticket) && !okAlb(out)) { let again = null; try { again = unleak(await grok(TM.concat([{ role: "system", content: PUSH_NOW }]))); } catch (e) {}
       if (again && !str(again.laisser).trim() && (again.teaser || +again.lancer) && bubbles(again).length) { out = again; if (plan && plan.launch.length && +out.lancer) { const sc = plan.launch.find(x => x.id === +out.lancer); if (sc) act = { kind: "step", sc, k: 0 }; } } }
+    if (push && !yes && !act && !out.teaser && !str(out.ticket) && !okAlb(out) && streak(LL) >= 10) { out.bulles = bubbles(out).slice(0, 1).concat([TEASES[Math.floor(Math.random() * TEASES.length)]]); out.teaser = true; }
     let tk = null, studio = null;
     if (M.tk && M.sell && !busy && !act) {
       if (tkFree(TK0) && TK[str(out.ticket)] && tkAsked(str(out.ticket), LL)) { tk = tkPlan(M, str(out.ticket), out.prix, out.duree); tk.id = "k" + now(); TK0 = { ...tk, msg_id: tk.id, state: "sent" }; }
