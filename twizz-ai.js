@@ -394,9 +394,13 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const ACK = /^\s*(?:ok+|oki|okay|d'?acc?(?:ord)?|dac|ouais|oui|oklm|[çc]a marche|top|cool|👍|👌)\s*[.!]*\s*$/i;
   const SEXY = /\b(?:nue?s?|[àa] poil|band(?:e|er)|chaud(?:e)?|excit|sexe|sexy|seins?|cul|fesses|nichons|branl|jouir|mouill|suc(?:e|er)|baiser|coquin|hot|nudes?|lingerie|string)\b/i;
   // la conversation chauffe vraiment : plusieurs messages coquins récents, dont au moins un du fan (pour qu'elle prenne l'initiative de proposer un média)
-  const HOTW = /(?:^|[^a-zà-ÿ])(?:nue?s?\b|[àa] poil|band|chaud|excit|sexe|sexy|seins?\b|cul\b|fesses|nichon|branl|jouir|joui|mouill|suc[eé]|baise|coquin|hot\b|nudes?\b|lingerie|string|doigt|caress|g[eé]mi|envie de toi|t'?es bonne)/i;
+  const HOTW = /(?:^|[^a-zà-ÿ])(?:nue?s?\b|[àa] poil|band|chaud|excit|sexe|sexy|seins?\b|cul\b|fesses|nichon|branl|jouir|joui|mouill|suc[eé]|baise|coquin|hot\b|nudes?\b|lingerie|string|doigt|bites?\b|queue\b|durci|caress|g[eé]mi|envie de toi|t'?es bonne)/i;
   const hotOf = L => { const R = L.slice(-6), fan = R.filter(m => m.fromFan && HOTW.test(str(m.text))).length, all = R.filter(m => HOTW.test(str(m.text))).length; return fan >= 2 || (fan >= 1 && all >= 3); };
   // ils se chauffent depuis plusieurs messages et rien n'a été proposé (ni média, ni teasing) : c'est le moment de proposer
+  // elle tourne en rond : au moins 6 messages d'elle depuis le dernier média ou teasing, et ça reste coquin → c'est le moment de proposer, même si le fan n'écrit plus de mots chauds
+  const loopOf = L => { let i = -1; L.forEach((m, k) => { if (!m.fromFan && (m.type === "FILE" || m.price > 0 || m.teaser)) i = k; }); const R = L.slice(i + 1);
+    return R.filter(m => !m.fromFan && str(m.text).trim()).length >= 6 && R.filter(m => HOTW.test(str(m.text))).length >= 3; };
+  const PUSH_NOW = "Tu tournes en rond depuis plusieurs messages : dans cette réponse, propose-lui de voir quelque chose, en une phrase courte qui donne envie (« tu veux que je te montre ? 😏 »). Coche teaser (ou lance le script qui colle). Ne décris plus ce que tu fais.";
   const pushOf = L => { const R = L.slice(-12); if (R.some(m => !m.fromFan && (m.type === "FILE" || m.price > 0 || m.teaser))) return false; return R.filter(m => HOTW.test(str(m.text))).length >= 6; };
   // une bulle qui annonce un prix (« 5 € », « 20 euros ») : jamais, le prix s'affiche sur le média
   const PRICED = t => /\d+(?:[.,]\d+)?\s*(?:€|eur\b|euros?\b|balles\b)/i.test(str(t));
@@ -732,7 +736,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       mark({ notified: tell || row.notified ? 1 : 0, replies: (row.replies || 0) + 1 }); drop(c.id, `/conversations/user/${enc(cr.id)}`); return true;
     }
     const T = tkOf(cr, c.fan.id, L);
-    const canSell = sell.albums.length > 0 || !!sell.teaseNow || !!(plan && plan.launch.length), push = hot && canSell && !teased && !(plan && plan.S && plan.S.state === "open") && pushOf(L);
+    const canSell = sell.albums.length > 0 || !!sell.teaseNow || !!(plan && plan.launch.length), push = canSell && !teased && !(plan && plan.S && plan.S.state === "open") && (hot && pushOf(L) || !relance && !busy && loopOf(L));
     const yes = !relance && !busy && sell.albums.length > 0 && saidYes(tz0, lastFan);
     const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell, hot), rules: rulesOf(M, L, { known: knownOf(cr, c.fan.id), plan, relance: !!relance, busy, ticket: T, hot: hot && canSell, push, yes }) };
     if (relance) opt.relance = { since: relance.since, unbought: sell.open ? sell.open.price : plan && plan.lock ? plan.lock.price : null };
@@ -778,6 +782,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const okAlb = o => o && o.album && sell.albums.some(a => a.id === str(o.album)) && cents(o.prix) >= 3;
     if (yes && !act && !str(out.ticket) && !okAlb(out)) { let again = null; try { again = unleak(await grok(msgs.concat([{ role: "system", content: YES_NOW }]))); } catch (e) {}
       if (okAlb(again) && !str(again.laisser).trim()) out = again; else if (plan && plan.launch.length) act = { kind: "step", sc: plan.launch[0], k: 0 }; }
+    // c'est le moment de proposer et Grok continue de décrire : une seconde chance pour qu'il teasse
+    if (push && !yes && !act && !out.teaser && !str(out.ticket) && !okAlb(out)) { let again = null; try { again = unleak(await grok(msgs.concat([{ role: "system", content: PUSH_NOW }]))); } catch (e) {}
+      if (again && !str(again.laisser).trim() && (again.teaser || +again.lancer) && bubbles(again).length) { out = again; if (plan && plan.launch.length && +out.lancer) { const sc = plan.launch.find(x => x.id === +out.lancer); if (sc) act = { kind: "step", sc, k: 0 }; } } }
     let tk = null, tkInfo = "";
     if (M.tk && M.sell && !relance && !busy && !act) {
       if (tkFree(T) && TK[str(out.ticket)]) { tk = tkPlan(M, str(out.ticket), out.prix, out.duree); tk.f = await tkMedia(cr, M, c, L); if (!tk.f) { tk = null; db.prepare("UPDATE twizz_ai_runs SET last_error = ? WHERE id = ?").run(`${c.fan.name || "un fan"} : ticket impossible, aucun média dans le coffre`, r.id); } }
@@ -1028,7 +1035,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     // le ticket de l'essai : l'écran le garde et le renvoie ; payé quand on a cliqué « Il achète » sur son média
     let TK0 = b.ticket && TK[b.ticket.kind] ? { kind: b.ticket.kind, minutes: +b.ticket.minutes || null, price: +b.ticket.price || 0, msg_id: str(b.ticket.id), state: ["sent", "paid", "done"].includes(b.ticket.state) ? b.ticket.state : "sent" } : null;
     if (TK0 && TK0.state === "sent" && LL.some(m => m.id === TK0.msg_id && m.status === "accepted")) TK0.state = "paid";
-    const canSell = sell.albums.length > 0 || !!sell.teaseNow || !!(plan && plan.launch.length), push = hot && canSell && !teaseOk(tz, M) && !(plan && plan.S && plan.S.state === "open") && pushOf(LL);
+    const canSell = sell.albums.length > 0 || !!sell.teaseNow || !!(plan && plan.launch.length), push = canSell && !teaseOk(tz, M) && !(plan && plan.S && plan.S.state === "open") && (hot && pushOf(LL) || !busy && loopOf(LL));
     const yes = !busy && albums.length > 0 && saidYes(tz, lastFan);
     const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell, hot), rules: rulesOf(M, LL, { known: KN[b.fan] || {}, plan, busy, ticket: TK0, hot: hot && canSell, push, yes }) };
     const FANS = { new: "pseudo : Thomas ; n'a encore jamais rien acheté", reg: "pseudo : Thomas ; prénom : Thomas ; ville : Lyon ; a déjà dépensé 150 € avec elle en 8 achats ; tags de l'équipe : Vidéos",
@@ -1046,6 +1053,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const okAlb = o => o && o.album && albums.some(a => a.id === str(o.album)) && cents(o.prix) >= 3;
     if (yes && !act && !str(out.ticket) && !okAlb(out)) { let again = null; try { again = unleak(await grok(TM.concat([{ role: "system", content: YES_NOW }]))); } catch (e) {}
       if (okAlb(again) && !str(again.laisser).trim()) out = again; else if (plan && plan.launch.length) act = { kind: "step", sc: plan.launch[0], k: 0 }; }
+    if (push && !yes && !act && !out.teaser && !str(out.ticket) && !okAlb(out)) { let again = null; try { again = unleak(await grok(TM.concat([{ role: "system", content: PUSH_NOW }]))); } catch (e) {}
+      if (again && !str(again.laisser).trim() && (again.teaser || +again.lancer) && bubbles(again).length) { out = again; if (plan && plan.launch.length && +out.lancer) { const sc = plan.launch.find(x => x.id === +out.lancer); if (sc) act = { kind: "step", sc, k: 0 }; } } }
     let tk = null, studio = null;
     if (M.tk && M.sell && !busy && !act) {
       if (tkFree(TK0) && TK[str(out.ticket)]) { tk = tkPlan(M, str(out.ticket), out.prix, out.duree); tk.id = "k" + now(); TK0 = { ...tk, msg_id: tk.id, state: "sent" }; }
