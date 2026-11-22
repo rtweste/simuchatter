@@ -314,7 +314,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const teaseOk = (tz, M) => !!tz && (tz.live || now() - tz.at < M.teaseWindow * 60e3);
   // il vient de dire oui au teasing (« oh ouais vas-y », « montre ») : le média part dans cette réponse, sans le faire attendre
   const YES = /\b(oui|ouii+|ouais|ouai|wesh|vas[- ]?y|vasy|go|grave|carr[ée]ment|[ée]videmment|bien s[uû]r|ok|okay|d'?acc|envoie|envoi|montre|fais voir|je veux|j'?veux|stp|please|avec plaisir|trop)\b/i, NOPE = /\b(non|nan|pas maintenant|plus tard|pas ce soir|j'?ai pas (de )?(thunes|sous|argent)|pas d'?argent)\b/i;
-  const saidYes = (tz, last) => !!tz && tz.live && !!last && !NOPE.test(str(last.text)) && (YES.test(str(last.text)) || asks(last.text));
+  const TEASE_ASK = /\b(tu veux (que je te (le |la |les )?montre|voir|que je t'?en montre)|[çc]a te dirait de (voir|que je te montre)|je te montre\s*\?|t'?as envie de voir|tu veux (une )?(petite )?(photo|vid[ée]o))/i;
+  const saidYes = (tz, last, M) => !!tz && (tz.live || (M && teaseOk(tz, M))) && !!last && !NOPE.test(str(last.text)) && (YES.test(str(last.text)) || asks(last.text));
   const YES_NOW = "IL VIENT DE DIRE OUI À TON TEASING : envoie le média MAINTENANT, dans cette réponse. Remplis album et prix (et media si tu en vois un qui colle), avec une seule phrase courte qui donne envie (« tiens, regarde 😏 »). Ne le fais pas attendre, ne le taquine pas encore, ne décris pas ce qu'il va voir.";
   // style : ses derniers messages finissent tous par une question, ou portent tous le même emoji → on le lui dit pour cette réponse
   const EMO = /\p{Extended_Pictographic}/gu;
@@ -341,7 +342,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const n = L.filter(m => m.text || m.medias.length).length;
     const peek = async () => { let A = []; try { A = await albumsOf(cr.id); } catch (e) {} if (M.albums.length) A = A.filter(a => M.albums.includes(a.id)); const N = M.albumNotes || {};
       return A.slice(0, 8).map(a => a.name + (N[a.id] ? ` (${N[a.id]})` : "")).join(", "); };
-    if (M.minMsgs && n < M.minMsgs) return { albums: [], note: `la conversation vient de commencer (${n} message${n > 1 ? "s" : ""} sur les ${M.minMsgs} nécessaires avant tout média) : apprends à le connaître, crée du lien, fais-le parler de lui. Ne propose aucun média, n'en parle même pas encore` };
+    if (M.minMsgs && n < M.minMsgs) return { albums: [], note: `la conversation vient de commencer (${n} message${n > 1 ? "s" : ""} sur les ${M.minMsgs} nécessaires avant tout média) : apprends à le connaître, crée du lien, fais-le parler de lui. Ne propose aucun média toi-même. S'il te demande si tu as des photos ou des vidéos, réponds-lui quand même franchement que oui et que tu lui montreras quand vous vous connaîtrez un peu plus (sans prix), puis relance la discussion` };
     // 2. teasing obligatoire : annoncer et faire désirer d'abord, envoyer seulement après sa réponse
     const lastFan = [...L].reverse().find(m => m.fromFan), tease = tz !== undefined ? tz : teaseOf(cr, convId, L);
     const skip = M.askSkip && lastFan && asks(lastFan.text);
@@ -395,11 +396,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const factsOf = M => { const D = M.details || {}, L = DETAILS.filter(([k]) => str(D[k]).trim()).map(([k, l]) => `${l} : ${str(D[k]).trim()}`);
     return L.length ? `FAITS SUR ELLE (donne-les comme des faits, ne te contredis jamais) : ${L.join(" ; ")}.` : ""; };
   // fan occupé ou sur le départ ; petite réponse sans suite ; message qui chauffe (pour la pause sans sexualisation)
-  const BUSY = /(?:^|[^a-zà-ÿ])(?:je (?:dois|vais|v) (?:y aller|bosser|travailler|dormir|me coucher|manger|partir|filer)|j'?(?:y )?vais (?:au taf|au boulot|bosser|travailler|dormir|me coucher|manger)|jvais (?:au taf|au boulot|bosser|dormir|manger)|(?:au|je suis au|chui au|jsuis au) (?:taf|boulot|travail)|je (?:bosse|travaille|conduis|mange)\b|en (?:voiture|route|réunion|reunion|cours)\b|[àa] (?:plus|toute|tout [àa] l'?heure|demain)\b|a\+|bonne nuit|dodo\b|je file|je te laisse|occup[ée]e?\b|pas le temps)/i;
+  const BUSY = /(?:^|[^a-zà-ÿ])(?:je (?:dois|vais|v) (?:y aller|bosser|travailler|dormir|me coucher|manger|partir|filer)|j'?(?:y )?vais (?:au taf|au boulot|bosser|travailler|dormir|me coucher|manger)|jvais (?:au taf|au boulot|bosser|dormir|manger)|(?:au|je suis au|chui au|jsuis au) (?:taf|boulot|travail)|je (?:bosse|travaille|conduis|mange)\b(?! (?:dans|comme|chez|en tant|pour|depuis|en |au |à |a |avec|de nuit|le ))|en (?:voiture|route|réunion|reunion|cours)\b|[àa] (?:plus|toute|tout [àa] l'?heure|demain)\b|a\+|bonne nuit|dodo\b|je file|je te laisse|occup[ée]e?\b|pas le temps)/i;
   const ACK = /^\s*(?:ok+|oki|okay|d'?acc?(?:ord)?|dac|ouais|oui|oklm|[çc]a marche|top|cool|👍|👌)\s*[.!]*\s*$/i;
   const SEXY = /\b(?:nue?s?|[àa] poil|band(?:e|er)|chaud(?:e)?|excit|sexe|sexy|seins?|cul|fesses|nichons|branl|jouir|mouill|suc(?:e|er)|baiser|coquin|hot|nudes?|lingerie|string)\b/i;
   // la conversation chauffe vraiment : plusieurs messages coquins récents, dont au moins un du fan (pour qu'elle prenne l'initiative de proposer un média)
-  const HOTW = /(?:^|[^a-zà-ÿ])(?:nue?s?\b|[àa] poil|band|chaud|excit|sexe|sexy|seins?\b|cul\b|fesses|nichon|branl|jouir|joui|mouill|suc[eé]|baise|coquin|hot\b|nudes?\b|lingerie|string|doigt|bites?\b|queue\b|durci|caress|g[eé]mi|envie de toi|t'?es bonne)/i;
+  const HOTW = /(?:^|[^a-zà-ÿ])(?:nue?s?\b|[àa] poil|band|chaud|excit|sexe|sexy|seins?\b|cul\b|fesses|nichon|branl|jouir|joui|mouill|suc[eé]|baise|coquin|hot\b|nudes?\b|lingerie|string|doigt|bites?\b|queue\b|durci|chauff|tout dur|bien dur|trop dur|t'?es (?:trop )?bonne|caress|g[eé]mi|envie de toi|t'?es bonne)/i;
   const hotOf = L => { const R = L.slice(-6), fan = R.filter(m => m.fromFan && HOTW.test(str(m.text))).length, all = R.filter(m => HOTW.test(str(m.text))).length; return fan >= 2 || (fan >= 1 && all >= 3); };
   // ils se chauffent depuis plusieurs messages et rien n'a été proposé (ni média, ni teasing) : c'est le moment de proposer
   // elle tourne en rond : au moins 6 messages d'elle depuis le dernier média ou teasing, et ça reste coquin → c'est le moment de proposer, même si le fan n'écrit plus de mots chauds
@@ -543,7 +544,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const tkAsked = (kind, L) => !!TKASK[kind] && L.filter(m => m.fromFan).slice(-6).some(m => TKASK[kind].test(str(m.text)));
   function tkNote(M, T) {
     if (!M.tk || !M.sell) return "";
-    if (T && T.state === "sent") return `TICKET ${tkLabel(T).toUpperCase()} À ${eurs(T.price)} ENVOYÉ, PAS ENCORE PAYÉ : tu peux le lui rappeler gentiment, sans baisser le prix ni rien envoyer d'autre pour ça. Ne lui demande rien tant qu'il n'a pas payé.`;
+    if (T && T.state === "sent") return `TICKET ${tkLabel(T).toUpperCase()} À ${eurs(T.price)} ENVOYÉ, PAS ENCORE PAYÉ : tu peux le lui rappeler une seule fois, gentiment (si tu l'as déjà rappelé, n'en reparle plus tant qu'il n'en parle pas), sans baisser le prix ni rien envoyer d'autre pour ça. Ne lui demande rien tant qu'il n'a pas payé.`;
     if (T && T.state === "paid") return T.kind === "snap" ? `TICKET SNAP PAYÉ : remercie-le et demande-lui son pseudo Snap. Quand il te l'a donné, remplis snap avec ce pseudo et dis-lui que tu l'ajoutes très vite.`
       : T.kind === "cam" ? (M.camDispo ? `TICKET ${tkLabel(T).toUpperCase()} PAYÉ : remercie-le, demande-lui ce qu'il aimerait pendant la cam et propose-lui un de ces créneaux : ${M.camDispo}. Quand il a répondu et choisi, remplis demande (ce qu'il veut et le créneau choisi) et confirme-lui le créneau.`
         : `TICKET ${tkLabel(T).toUpperCase()} PAYÉ : remercie-le, demande-lui ce qu'il aimerait pendant la cam et quand il est disponible. Quand il a répondu, remplis demande (ce qu'il veut et ses dispos) et dis-lui que tu reviens vers lui pour caler l'heure.`)
@@ -752,7 +753,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     }
     const T = tkOf(cr, c.fan.id, L);
     const canSell = sell.albums.length > 0 || !!sell.teaseNow || !!(plan && plan.launch.length), push = canSell && !teased && !(plan && plan.S && plan.S.state === "open") && (hot && pushOf(L) || !relance && !busy && loopOf(L));
-    const yes = !relance && !busy && sell.albums.length > 0 && saidYes(tz0, lastFan);
+    const yes = !relance && !busy && sell.albums.length > 0 && saidYes(tz0, lastFan, M);
     const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell, hot), rules: rulesOf(M, L, { known: knownOf(cr, c.fan.id), plan, relance: !!relance, busy, ticket: T, hot: hot && canSell, push, yes }) };
     if (relance) opt.relance = { since: relance.since, unbought: sell.open ? sell.open.price : plan && plan.lock ? plan.lock.price : null };
     const msgs = [{ role: "system", content: system(cr, M, ficheOf(cr), sell.albums, sell.note, fanInfo, C, opt) }];
@@ -847,6 +848,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
         .run(cr.id, c.fan.id, c.id, tk.kind, tk.minutes, tk.price, id, now()); }
     if (tkInfo) toStudio(r, cr, c, T, tkInfo);
     told();
+    if (!f && !act && !tk && !out.teaser && B.some(t => TEASE_ASK.test(t))) out.teaser = true;   // « tu veux que je te montre ? » sans cocher teaser : c'est un teasing, le « oui » du fan fera partir le média
     if (f) teaseClear(cr, c); else if (out.teaser && (sell.teaseNow || sell.albums.length)) teaseSet(cr, c);   // un média envoyé : il faudra re-teaser pour le suivant
     db.prepare("UPDATE twizz_ai_runs SET replies = replies + 1, last_at = ?, last_error = NULL WHERE id = ?").run(now(), r.id);
     mark({ notified: tell || row.notified ? 1 : 0, replies: (row.replies || 0) + 1 });
@@ -1052,7 +1054,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     let TK0 = b.ticket && TK[b.ticket.kind] ? { kind: b.ticket.kind, minutes: +b.ticket.minutes || null, price: +b.ticket.price || 0, msg_id: str(b.ticket.id), state: ["sent", "paid", "done"].includes(b.ticket.state) ? b.ticket.state : "sent" } : null;
     if (TK0 && TK0.state === "sent" && LL.some(m => m.id === TK0.msg_id && m.status === "accepted")) TK0.state = "paid";
     const canSell = sell.albums.length > 0 || !!sell.teaseNow || !!(plan && plan.launch.length), push = canSell && !teaseOk(tz, M) && !(plan && plan.S && plan.S.state === "open") && (hot && pushOf(LL) || !busy && loopOf(LL));
-    const yes = !busy && albums.length > 0 && saidYes(tz, lastFan);
+    const yes = !busy && albums.length > 0 && saidYes(tz, lastFan, M);
     const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell, hot), rules: rulesOf(M, LL, { known: KN[b.fan] || {}, plan, busy, ticket: TK0, hot: hot && canSell, push, yes }) };
     const FANS = { new: "pseudo : Thomas ; n'a encore jamais rien acheté", reg: "pseudo : Thomas ; prénom : Thomas ; ville : Lyon ; a déjà dépensé 150 € avec elle en 8 achats ; tags de l'équipe : Vidéos",
       big: "pseudo : Thomas ; prénom : Thomas ; métier : chef d'entreprise ; a déjà dépensé 850 € avec elle en 30 achats ; tags de l'équipe : Spender ; résumé de l'équipe : achète vite quand on le chauffe, aime qu'on se souvienne de lui" };
@@ -1087,6 +1089,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (!str(again.laisser).trim()) B = fresh(oneQ(bubbles(again)), said).filter(t => act || al || !fakeSend(t)); } catch (e) {} } }
     B = shape(B, LL);
     const pct = Math.round(+out.remise || 0);
+    if (!al && !act && !tk && B.some(t => TEASE_ASK.test(t))) out.teaser = true;   // « tu veux que je te montre ? » : c'est un teasing
     // l'état du script après cette réponse : l'écran le garde et le renvoie au prochain message
     let state = T0, step = null, floor = null, ended = null;
     if (plan && plan.endNow) { state = { ...(T0 || {}), state: plan.endNow.full ? "done" : "quit", full: !!plan.endNow.full, endedId: lastFan.id }; ended = plan.endNow.why; }
