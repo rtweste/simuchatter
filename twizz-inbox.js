@@ -10,6 +10,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   if (!db.prepare("PRAGMA table_info(twizz_sent)").all().some(x => x.name === "promo")) db.exec("ALTER TABLE twizz_sent ADD COLUMN promo TEXT");
   // envoyé par un script ou à la main (les médias offerts par un script ne sont pas signalés au manager)
   if (!db.prepare("PRAGMA table_info(twizz_sent)").all().some(x => x.name === "via")) db.exec("ALTER TABLE twizz_sent ADD COLUMN via TEXT");
+  if (!db.prepare("PRAGMA table_info(twizz_sent)").all().some(x => x.name === "text")) db.exec("ALTER TABLE twizz_sent ADD COLUMN text TEXT");
   // scripts : messages tout prêts, pour toutes les créatrices (creator_id vide) ou une seule
   db.exec("CREATE TABLE IF NOT EXISTS twizz_scripts (id INTEGER PRIMARY KEY, creator_id TEXT, cat TEXT, title TEXT, body TEXT, uses INTEGER DEFAULT 0, user_id INTEGER, at INTEGER)");
   for (const [c, t] of [["updated_at", "INTEGER"], ["updated_by", "INTEGER"], ["source", "TEXT"], ["ext_id", "TEXT"], ["pinned", "INTEGER DEFAULT 0"], ["media", "TEXT"], ["price", "REAL"], ["steps", "TEXT"],
@@ -150,6 +151,14 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   // qui a envoyé chaque message depuis le site (les messages envoyés directement sur Twizz n'ont pas d'auteur connu)
   const authors = ids => { const out = {}; const L = ids.filter(Boolean); if (!L.length) return out;
     db.prepare(`SELECT s.msg_id, u.username, s.via FROM twizz_sent s LEFT JOIN users u ON u.id = s.user_id WHERE s.msg_id IN (${L.map(() => "?").join(",")})`).all(...L).forEach(r => { const n = r.via === "ia" ? "🤖 IA" : r.username; if (n) out[r.msg_id] = n; }); return out; };
+  // l'identifiant renvoyé par Twizz à l'envoi d'un texte ne correspond pas toujours au message : on retrouve alors l'auteur par la conversation, le texte et l'heure (2 min)
+  function byText(conv, L) {
+    const miss = L.filter(m => !m.fromFan && !m.by && m.type === "TEXT" && m.text); if (!miss.length) return;
+    const R = db.prepare("SELECT s.msg_id, s.text, s.via, s.at, u.username FROM twizz_sent s LEFT JOIN users u ON u.id = s.user_id WHERE s.conv_id = ? AND s.text IS NOT NULL AND s.at > ?").all(conv, Math.min(...miss.map(m => Date.parse(m.at) || 0)) - 180e3);
+    const used = new Set(), norm = t => str(t).replace(/\s+/g, " ").trim();
+    miss.forEach(m => { const t = Date.parse(m.at) || 0, r = R.find(x => !used.has(x) && norm(x.text) === norm(m.text) && Math.abs(x.at - t) < 120e3); if (r) { used.add(r); m.by = r.via === "ia" ? "🤖 IA" : r.username || null; } });
+  }
+  const sentId = j => { const d = (j && j.data) || j || {}; return str((d.message && d.message._id) || (d.newMessage && d.newMessage._id) || d._id || (j && j._id) || ""); };
   const creatorOk = cid => { if (!db.prepare("SELECT 1 FROM twizz_creators WHERE twizz_id = ?").get(cid)) throw bad("Créatrice inconnue : teste d'abord la connexion Twizz"); return cid; };
   const sendOn = () => !!S.get("twizz_inbox_send", false);
   const mustSend = req => { if (!sendOn()) throw bad(req && req.acc && !req.acc.founder ? "L'envoi est coupé pour le moment par le fondateur" : "L'envoi est coupé : active « Envoi activé » en haut de la messagerie");
@@ -359,6 +368,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     const j = await G(path, 15e3);
     const d = (j && j.data) || {}, L = (d.data || []).map(m => msg(m, fanId)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
     const by = authors(L.filter(m => !m.fromFan).map(m => m.id)); L.forEach(m => { if (!m.fromFan) m.by = by[m.id] || null; });
+    byText(str(req.params.conv), L);
     const PS = L.filter(m => m.promo && !m.promo.kind); if (PS.length) { const q = db.prepare("SELECT promo FROM twizz_sent WHERE msg_id = ? AND promo IS NOT NULL");
       PS.forEach(m => { const r = q.get(m.id); try { const x = r && JSON.parse(r.promo); if (x) Object.assign(m.promo, { kind: x.type === "pct" ? "pct" : "eur", value: +x.value || null }); } catch (e) {} }); }
     if (fanId) try { keepMedia(cid, str(req.params.conv), L); setDepth(str(req.params.conv), page, d.totalPages || 1); } catch (e) {}
@@ -763,7 +773,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     mustSend(req); const cid = creatorOk(req.params.cid), text = String(req.body?.text || "").trim().slice(0, 4000), conversationId = str(req.body?.conversationId);
     if (!text || !conversationId) throw bad("Message vide");
     const j = await call("POST", "/messages/send-message", { temp_id: `temp_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`, conversationId, type: "TEXT", text, creatorId: cid }, true);
-    if (j && j.data && j.data._id) db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at) VALUES (?,?,?,?,?,?,?)").run(str(j.data._id), conversationId, str(req.body?.fan), cid, req.user.id, null, Date.now());
+    db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at, text) VALUES (?,?,?,?,?,?,?,?)").run(sentId(j) || null, conversationId, str(req.body?.fan), cid, req.user.id, null, Date.now(), text);
     await readConv(cid, conversationId);   // répondu depuis le site : lu aussi chez Twizz
     drop(conversationId, `/conversations/user/${enc(cid)}`);
     return { ok: true, message: j && j.data ? msg(j.data, str(req.body?.fan)) : null };
