@@ -365,7 +365,14 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const boughtOf = (cr, fanId, L) => Math.max(L.filter(m => !m.fromFan && m.type === "FILE" && m.price > 0 && m.status === "accepted").length,
     (db.prepare("SELECT COUNT(*) n FROM twizz_ai_sold WHERE creator_id = ? AND fan_id = ? AND paid_at IS NOT NULL AND kind IN ('coffre', 'step', 'floor') AND at > ?").get(cr.id, fanId, now() - 30 * 864e5) || {}).n || 0);
   const ladderOf = (M, k, last, free) => { const P = (M.ladder || []).filter(x => x >= 3); if (!P.length || (last && asks(last.text) && SPECIFIC.test(str(last.text)))) return null; return { k, free: !!free, price: Math.min(P[Math.min(k, P.length - 1)], M.maxPrice) }; };
-  const LADDER_NOTE = l => `PRIX PROGRESSIF : ce sera son ${l.k ? l.k + 1 + "e" : "1er"} média acheté dans cette conversation. Mets prix = ${l.price} et choisis dans le coffre un média du niveau qui va avec : ${(l.free ? ["plus dénudé que la photo lingerie qu'il a eue en cadeau (pas de lingerie seule)", "plus chaud", "encore plus chaud", "très explicite"] : ["le plus soft (lingerie, tenue, aguicheur)", "un cran au-dessus (plus dénudé)", "plus chaud", "encore plus chaud", "très explicite"])[l.k] || "le plus explicite"}, d'après les descriptions.`;
+  // niveau d'un média d'après sa description, la description de l'album et son nom : 0 soft (lingerie, tenue), 1 nu, 2 acte solo, 3 acte avec partenaire / sextape
+  const LV3 = /(p[ée]n[ée]tr|levrette|sexe avec|rapport|fellation|\bsuce|sucer|\bpipe\b|avec un (homme|mec|gar[çc]on|partenaire)|partenaire|sex-?tape|\bbaise|chevauch|[ée]jacul|sperme|couple|plan [àa] (deux|trois)|duo)/i;
+  const LV2 = /(doigt|masturb|se touche|caresse (sa|son|ses) (chatte|sexe|clito)|jouet|\bgode|vibro|squirt|orgasm|g[ée]mi)/i;
+  const LV1 = /(\bnue?s?\b|[àa] poil|seins? nus|topless|t[ée]tons?|poitrine (nue|d[ée]couverte)|fesses nues|cul nu|quatre pattes|sexe visible|chatte)/i;
+  const levelOfText = (t, video) => { const x = str(t); const l = LV3.test(x) ? 3 : LV2.test(x) ? 2 : LV1.test(x) ? 1 : 0; return video && l === 1 ? 2 : l; };   // une vidéo dénudée vaut plus qu'une photo
+  const tierLevel = l => l.free ? [1, 2, 3][Math.min(l.k, 2)] : [0, 1, 2, 3][Math.min(l.k, 3)];
+  const floorFor = (M, lvl) => { const P = (M.ladder || []).filter(x => x >= 3); return P.length ? P[Math.min([0, 1, 3, 4][lvl], P.length - 1)] : 0; };
+  const LADDER_NOTE = l => `PRIX PROGRESSIF : ce sera son ${l.k ? l.k + 1 + "e" : "1er"} média acheté dans cette conversation. Mets prix = ${l.price} et choisis dans le coffre un média du niveau qui va avec : ${(l.free ? ["plus dénudé que la photo lingerie qu'il a eue en cadeau (pas de lingerie seule)", "plus chaud", "encore plus chaud", "très explicite"] : ["le plus soft (lingerie, tenue, aguicheur)", "un cran au-dessus (plus dénudé)", "plus chaud", "encore plus chaud", "très explicite"])[l.k] || "le plus explicite"}, d'après les descriptions. Jamais une sextape ou un média très explicite à ce prix-là.`;
   // il insiste pour savoir (« dis-moi », « alors ? », « réponds ») : elle répond ou propose, elle n'esquive plus
   const INSIST = /\b(dis[- ]?moi|dis le|r[ée]ponds|alors\s*\?|tu me dis|tu r[ée]ponds|vas[- ]y dis|c'?est quoi alors)\b/i;
   const insistOf = L => { const i = L.map(m => !m.fromFan).lastIndexOf(true), R = L.slice(Math.max(0, i - 6)).filter(m => m.fromFan); return R.filter(m => INSIST.test(str(m.text))).length >= 2; };
@@ -944,6 +951,17 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (M.promo && pct >= 5 && (sell.requirePromo || hesit)) promo = { pct: Math.min(pct, M.maxDiscount), hours: M.promoHours };
       if (!promo && sell.requirePromo && M.promo && M.maxDiscount >= 5) promo = { pct: Math.min(M.maxDiscount, 20), hours: M.promoHours };   // remise obligatoire oubliée par Grok : le site la met (20 %) au lieu de ne rien envoyer
       if (!sell.requirePromo || promo) { try { f = await pickMedia(cr.id, str(out.album), c.id, L, str(out.media).replace(/^m:/, "")); } catch (e) { f = null; } }
+      // le contenu doit coller au prix : un média trop explicite pour son palier est échangé contre un plus soft, sinon son prix remonte (jamais une sextape à 6 €)
+      if (f && lad) { const N = M.albumNotes || {}, want = tierLevel(lad), alOf = id => sell.albums.find(a => a.id === id) || {};
+        const lvOf = (id, albumId, d) => { const a = alOf(albumId), txt = [d, N[albumId], a.name].filter(Boolean).join(" "); return txt.trim() ? levelOfText(txt, /^vid[ée]o|vid[ée]o/i.test(str(d)) || /vid[ée]o/i.test(str(a.name))) : 1; };
+        let lvl = lvOf(f.id, str(out.album), descrOf(cr.id, [f.id]).get(f.id));
+        if (lvl > want) { const C = sell.albums.flatMap(a => (a.items || []).map(x => ({ id: x.id, albumId: a.id, lv: lvOf(x.id, a.id, x.descr) }))).filter(x => x.id !== f.id && x.lv <= want).sort((a, b) => b.lv - a.lv);
+          const best = C.filter(x => x.lv === C[0]?.lv); if (best.length) { const x = best[Math.floor(Math.random() * best.length)]; f = { id: x.id }; out.album = x.albumId; lvl = x.lv;
+            // la phrase décrivait l'autre média : Grok la réécrit pour celui qui part vraiment
+            const d = [descrOf(cr.id, [x.id]).get(x.id), N[x.albumId]].filter(Boolean).join(" ; ");
+            try { const again = unleak(await grok(msgs.concat([{ role: "system", content: `Le média qui part avec ta réponse est finalement celui-ci : ${d || alOf(x.albumId).name || "un média plus soft"}. Réécris ta réponse pour ce média-là (sans prix), avec la phrase qui le vend.` }])));
+              const B2 = again && !str(again.laisser).trim() ? fresh(oneQ(bubbles(again)), said).filter(t => !PRICED(t)) : []; if (B2.length) B = B2; } catch (e) {} } }
+        price = Math.min(Math.max(price, floorFor(M, lvl)), M.maxPrice); }
     }
     // aucun média ne part avec la réponse : pas de « je te l'envoie », « et voilà »… (une seconde chance, puis on retire la bulle)
     if (!act && !f && !tk && B.some(fakeSend)) { guarded = true;
@@ -1029,7 +1047,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     CTX.run({ cid, kind: "medias" }, async () => {
       for (const { f, a } of todo.slice(0, 300)) {
         try { const img = await toImage(f.thumb || f.url);
-          const x = await grok([{ role: "user", content: [{ type: "text", text: `${/video/i.test(str(f.mime || f.type || f.kind)) ? "C'est une image tirée d'une vidéo. " : ""}Décris ce média en 20 mots maximum, pour aider à le vendre : ce qu'elle fait (pose, ou action si elle se touche, se masturbe, joue avec un jouet…), tenue, niveau de nudité (habillée, lingerie, seins nus, nue), cadrage, lieu, et si le visage est visible. Termes simples et factuels. Réponds seulement la description.` },
+          const x = await grok([{ role: "user", content: [{ type: "text", text: `${/video/i.test(str(f.mime || f.type || f.kind)) ? "C'est une image tirée d'une vidéo. " : ""}Décris ce média en 20 mots maximum, pour aider à le vendre : ce qu'elle fait (pose, ou action si elle se touche, se masturbe, joue avec un jouet, ou s'il y a un partenaire ou un acte sexuel : dis « sextape » ou l'acte), tenue, niveau de nudité (habillée, lingerie, seins nus, nue), cadrage, lieu, et si le visage est visible. Termes simples et factuels. Réponds seulement la description.` },
             { type: "image_url", image_url: { url: img } }] }], { tool: null, model: XVISION(), temp: 0.3, max: 80 });
           const d = str(x.text).replace(/\s+/g, " ").trim().slice(0, 160);
           db.prepare("INSERT INTO twizz_ai_media (creator_id, file_id, album_id, kind, descr, err, at) VALUES (?,?,?,?,?,NULL,?) ON CONFLICT(creator_id, file_id) DO UPDATE SET descr = excluded.descr, err = NULL, at = excluded.at")
