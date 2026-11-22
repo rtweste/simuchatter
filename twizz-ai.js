@@ -32,6 +32,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     CREATE TABLE IF NOT EXISTS twizz_ai_told (creator_id TEXT NOT NULL, fan_id TEXT NOT NULL, at INTEGER, PRIMARY KEY (creator_id, fan_id));
     CREATE TABLE IF NOT EXISTS twizz_ai_media (creator_id TEXT NOT NULL, file_id TEXT NOT NULL, album_id TEXT, kind TEXT, descr TEXT, err TEXT, at INTEGER, PRIMARY KEY (creator_id, file_id));`);
   // teasing : l'IA a annoncé un média sans l'envoyer ; elle ne peut l'envoyer qu'après une réponse du fan
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_sentwhat (msg_id TEXT PRIMARY KEY, what TEXT NOT NULL, at INTEGER NOT NULL)");
+  // ce que contient chaque média envoyé par l'IA (album, description de l'équipe, analyse du coffre) : Grok le revoit dans l'historique et sait le décrire au fan
+  const whatOf = L => { const ids = L.filter(m => !m.fromFan && m.type === "FILE" && m.id).map(m => str(m.id)); if (!ids.length) return;
+    const W = new Map(db.prepare(`SELECT msg_id, what FROM twizz_ai_sentwhat WHERE msg_id IN (${ids.map(() => "?").join(",")})`).all(...ids).map(r => [r.msg_id, r.what]));
+    L.forEach(m => { if (W.has(str(m.id))) m.what = W.get(str(m.id)); }); };
   db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_tease (creator_id TEXT NOT NULL, conv_id TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (creator_id, conv_id))");
   // tickets (Snap, cam, vidéo custom) : un média payant du coffre avec « Ticket … » en texte ; une fois payé, la demande part au Studio
   db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_ticket (creator_id TEXT NOT NULL, fan_id TEXT NOT NULL, conv_id TEXT, kind TEXT, minutes INTEGER, price REAL, msg_id TEXT, state TEXT, at INTEGER, paid_at INTEGER, custom_id INTEGER, PRIMARY KEY (creator_id, fan_id))");
@@ -270,7 +275,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       M.extra ? `Consignes du manager pour ${c.label}, à respecter absolument : ${M.extra}` : "", fiche.prices ? `Son catalogue et ses prix : ${fiche.prices}` : ""].filter(Boolean).join("\n\n");
   }
   const system = (...a) => { const p = parts(...a); return [p.base, p.auto, p.locked].filter(Boolean).join("\n\n"); };
-  const lineOf = m => m.type === "FILE" && !m.fromFan ? `[média envoyé${m.price > 0 ? ` à ${m.price} € — ${m.status === "accepted" ? "acheté" : "pas encore acheté"}` : " gratuit"}]${m.text ? " " + m.text : ""}`
+  const lineOf = m => m.type === "FILE" && !m.fromFan ? `[média envoyé${m.price > 0 ? ` à ${m.price} € — ${m.status === "accepted" ? "acheté" : "pas encore acheté"}` : " gratuit"}${m.what ? ` — contenu : ${m.what}` : ""}]${m.text ? " " + m.text : ""}`
     : m.text || (m.medias.length ? (m.fromFan ? "[le fan envoie un média]" : "[média]") : "");
 
   /* ---------- coffre ---------- */
@@ -553,7 +558,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       o.push && !o.busy && !o.relance ? "C'EST LE MOMENT : vous vous chauffez depuis plusieurs messages et tu ne lui as encore rien proposé. Dans cette réponse, arrête de décrire et propose-lui de voir quelque chose : lance le script qui colle (lancer) ou, sinon, fais un teasing (teaser = true). Une phrase courte et naturelle, du genre « ça te dirait de voir ça ? »." : "",
       o.hot && !o.busy && !o.relance ? "INITIATIVE : la conversation est vraiment chaude et vous vous connaissez déjà. N'attends pas qu'il réclame : c'est toi qui proposes, dans le fil de ce que vous vous dites. D'abord un teasing (tu fais monter l'envie et tu lui demandes s'il veut voir, sans rien envoyer), puis le média après sa réponse. Une seule proposition, naturelle ; s'il ne suit pas, n'insiste pas et continue la discussion. Jamais à froid, jamais pour forcer." : "",
       "STYLE : varie tes messages comme une vraie fille : pas toujours une question à la fin, pas le même emoji à chaque fois (un emoji pour deux ou trois bulles suffit), pas toujours la même structure. Parle aussi de toi, réagis, affirme.",
-      M.sell ? "TEASER, PAS RACONTER : quand vous vous chauffez, ne décris pas en détail ce que tu es en train de faire, comme en direct : fais monter l'envie et garde le reste pour le média, sinon il a déjà tout gratuitement. S'il demande ce qu'il y a dans un média avant de l'acheter, dis-le-lui franchement en une phrase (tenue, ambiance, ce qu'on voit), sans tout dévoiler." : "",
+      M.sell ? "TEASER, PAS RACONTER : quand vous vous chauffez, ne décris pas en détail ce que tu es en train de faire, comme en direct : fais monter l'envie et garde le reste pour le média, sinon il a déjà tout gratuitement. S'il demande ce qu'il y a dans un média (avant ou après l'envoi), appuie-toi sur son contenu indiqué (« contenu : … » dans l'historique, ou la description de l'album) : dis franchement ce qu'elle y fait, en une phrase qui lui donne envie de l'ouvrir, sans tout dévoiler. N'invente jamais un contenu qui n'est pas indiqué ; si rien n'est indiqué, reste vague et coquine." : "",
       o.yes && !o.busy && !o.relance ? YES_NOW : "", o.busy || o.relance ? "" : variety(L),
       o.busy ? "IL VIENT DE DIRE QU'IL EST OCCUPÉ OU QU'IL PART : une seule bulle courte et gentille (par exemple « ok vas-y on se capte plus tard »), pas de question, pas de vente, rien d'autre." : ""].filter(Boolean).join("\n\n");
   }
@@ -655,6 +660,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       .run(str(nm._id), c.id, c.fan.id, cid, paidNow, now(), JSON.stringify(F.map(x => x.id)), pt ? JSON.stringify({ type: "pct", value: promo.pct, time: pt[2] }) : null);
     if (meta && paidNow > 0) db.prepare("INSERT OR IGNORE INTO twizz_ai_sold (msg_id, creator_id, fan_id, conv_id, kind, script_id, step, tk_kind, price, at, paid_at) VALUES (?,?,?,?,?,?,?,?,?,?,NULL)")
       .run(str(nm._id), cid, c.fan.id, c.id, meta.kind, meta.script_id ?? null, meta.step ?? null, meta.tk_kind || null, paidNow, now());
+    try { const ids = F.map(x => x.id), D = descrOf(cid, ids), AN = mcfg(cid).albumNotes || {}, al = meta && meta.album;
+      const albs = new Set(ids.length ? db.prepare(`SELECT DISTINCT album_id FROM twizz_ai_media WHERE creator_id = ? AND album_id IS NOT NULL AND file_id IN (${ids.map(() => "?").join(",")})`).all(cid, ...ids).map(r => r.album_id) : []); if (al && al.id) albs.add(al.id);
+      const what = [al && al.name ? `album « ${al.name} »` : "", ...[...albs].map(a => AN[a]).filter(Boolean), ...ids.map(i => D.get(i)).filter(Boolean).slice(0, 3)].filter(Boolean).join(" ; ").slice(0, 400);
+      if (what) db.prepare("INSERT OR REPLACE INTO twizz_ai_sentwhat (msg_id, what, at) VALUES (?,?,?)").run(str(nm._id), what, now()); } catch (e) {}
     return str(nm._id);
   }
   // le message « c'est l'IA » : coupé, une fois par séance, ou une fois par fan (puis tous les N jours)
@@ -703,7 +712,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const M = mcfg(cr.id);
     const row = db.prepare("SELECT * FROM twizz_ai_convs WHERE run_id = ? AND conv_id = ?").get(r.id, c.id) || {};
     const j = await G(`/messages/find-all-messages?conversationId=${enc(c.id)}&creatorId=${enc(cr.id)}&page=1`, 0);
-    const L = ((j && j.data && j.data.data) || []).map(m => msg(m, c.fan.id)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(-30);
+    const L = ((j && j.data && j.data.data) || []).map(m => msg(m, c.fan.id)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(-30); whatOf(L);
     const last = L[L.length - 1]; if (!last) return false;
     if (relance ? last.fromFan : (!last.fromFan || last.id === row.last_fan_msg)) return false;   // le fan a réécrit, ou déjà répondu
     // achats vus dans la conversation : pour « Ce qui vend »
@@ -817,7 +826,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     for (let i = 0; i < B.length; i++) {
       if (i) { if (!runOf(cr.id)) break; await sleep(Math.min(9000, 1800 + B[i].length * 70 + Math.random() * 1500)); }
       const body = (usedPre ? "" : pre) + B[i] + tail, lastB = i === B.length - 1; usedPre = true;
-      if (f && lastB) { await sendMedia(cr.id, c, f, price, body, promo, { kind: "coffre" }); db.prepare("UPDATE twizz_ai_runs SET medias = medias + 1 WHERE id = ?").run(r.id); }
+      if (f && lastB) { await sendMedia(cr.id, c, f, price, body, promo, { kind: "coffre", album: sell.albums.find(a => a.id === str(out.album)) || null }); db.prepare("UPDATE twizz_ai_runs SET medias = medias + 1 WHERE id = ?").run(r.id); }
       else if (floor && lastB) await runFloor(r, cr, c, act.sc, act.k, body);
       else await sendText(cr.id, c, body);
     }
@@ -882,7 +891,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     (async () => {
       for (const { f, a } of todo.slice(0, 300)) {
         try { const img = await toImage(f.thumb || f.url);
-          const x = await grok([{ role: "user", content: [{ type: "text", text: "Décris ce média en 15 mots maximum, pour aider à le vendre : tenue, pose, cadrage, lieu, ambiance, niveau de nudité (habillée, lingerie, seins nus, nue) et si le visage est visible. Réponds seulement la description." },
+          const x = await grok([{ role: "user", content: [{ type: "text", text: `${/video/i.test(str(f.mime || f.type || f.kind)) ? "C'est une image tirée d'une vidéo. " : ""}Décris ce média en 20 mots maximum, pour aider à le vendre : ce qu'elle fait (pose, ou action si elle se touche, se masturbe, joue avec un jouet…), tenue, niveau de nudité (habillée, lingerie, seins nus, nue), cadrage, lieu, et si le visage est visible. Termes simples et factuels. Réponds seulement la description.` },
             { type: "image_url", image_url: { url: img } }] }], { tool: null, model: XVISION(), temp: 0.3, max: 80 });
           const d = str(x.text).replace(/\s+/g, " ").trim().slice(0, 160);
           db.prepare("INSERT INTO twizz_ai_media (creator_id, file_id, album_id, kind, descr, err, at) VALUES (?,?,?,?,?,NULL,?) ON CONFLICT(creator_id, file_id) DO UPDATE SET descr = excluded.descr, err = NULL, at = excluded.at")
