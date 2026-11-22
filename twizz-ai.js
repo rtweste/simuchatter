@@ -537,6 +537,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       db.prepare("UPDATE twizz_ai_ticket SET state = 'paid', paid_at = ? WHERE creator_id = ? AND fan_id = ?").run(T.paid_at, cr.id, fanId); } }
     return T;
   }
+  // un ticket ne part que si le fan l'a vraiment demandé (dans ses derniers messages) : Grok cochait « snap » pour un simple « oui » à un teasing
+  const TKASK = { snap: /\b(snap|snapchat|sc|ton snap|ajoute[- ]?moi)\b/i, cam: /\b(cam|webcam|visio|facetime|appel vid[ée]o|en live|live)\b/i,
+    custom: /\b(perso|personnalis[ée]e?s?|custom|sur mesure|rien que pour moi|juste pour moi|avec mon (pr[ée]nom|nom)|dis mon (pr[ée]nom|nom))\b/i };
+  const tkAsked = (kind, L) => !!TKASK[kind] && L.filter(m => m.fromFan).slice(-6).some(m => TKASK[kind].test(str(m.text)));
   function tkNote(M, T) {
     if (!M.tk || !M.sell) return "";
     if (T && T.state === "sent") return `TICKET ${tkLabel(T).toUpperCase()} À ${eurs(T.price)} ENVOYÉ, PAS ENCORE PAYÉ : tu peux le lui rappeler gentiment, sans baisser le prix ni rien envoyer d'autre pour ça. Ne lui demande rien tant qu'il n'a pas payé.`;
@@ -790,6 +794,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (push && !act && !out.teaser && plan && plan.launch.length) act = { kind: "step", sc: plan.launch[0], k: 0 };
     // il a dit oui au teasing et Grok le fait encore attendre : une seconde chance, puis le premier script disponible
     const okAlb = o => o && o.album && sell.albums.some(a => a.id === str(o.album)) && cents(o.prix) >= 3;
+    if (str(out.ticket) && !tkAsked(str(out.ticket), L)) out.ticket = "";   // ticket pas demandé par le fan : ignoré
     if (yes && !act && !str(out.ticket) && !okAlb(out)) { let again = null; try { again = unleak(await grok(msgs.concat([{ role: "system", content: YES_NOW }]))); } catch (e) {}
       if (okAlb(again) && !str(again.laisser).trim()) out = again; else if (plan && plan.launch.length) act = { kind: "step", sc: plan.launch[0], k: 0 }; }
     // c'est le moment de proposer et Grok continue de décrire : une seconde chance pour qu'il teasse
@@ -797,7 +802,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (again && !str(again.laisser).trim() && (again.teaser || +again.lancer) && bubbles(again).length) { out = again; if (plan && plan.launch.length && +out.lancer) { const sc = plan.launch.find(x => x.id === +out.lancer); if (sc) act = { kind: "step", sc, k: 0 }; } } }
     let tk = null, tkInfo = "";
     if (M.tk && M.sell && !relance && !busy && !act) {
-      if (tkFree(T) && TK[str(out.ticket)]) { tk = tkPlan(M, str(out.ticket), out.prix, out.duree); tk.f = await tkMedia(cr, M, c, L); if (!tk.f) { tk = null; db.prepare("UPDATE twizz_ai_runs SET last_error = ? WHERE id = ?").run(`${c.fan.name || "un fan"} : ticket impossible, aucun média dans le coffre`, r.id); } }
+      if (tkFree(T) && TK[str(out.ticket)] && tkAsked(str(out.ticket), L)) { tk = tkPlan(M, str(out.ticket), out.prix, out.duree); tk.f = await tkMedia(cr, M, c, L); if (!tk.f) { tk = null; db.prepare("UPDATE twizz_ai_runs SET last_error = ? WHERE id = ?").run(`${c.fan.name || "un fan"} : ticket impossible, aucun média dans le coffre`, r.id); } }
       else if (T && T.state === "paid") { const v = (T.kind === "snap" ? str(out.snap).replace(/^@/, "") : str(out.demande)).trim(); if (v.length >= 2) tkInfo = v; }
     }
     let B = oneQ(bubbles(out)), price = cents(out.prix), f = null, promo = null, guarded = false; if (busy) B = B.slice(0, 1);
@@ -1061,13 +1066,14 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (!act && plan.lock && plan.floor && out.plancher) act = { kind: "floor", sc: plan.sc, k: plan.S.step }; }
     if (push && !act && !out.teaser && plan && plan.launch.length) act = { kind: "step", sc: plan.launch[0], k: 0 };
     const okAlb = o => o && o.album && albums.some(a => a.id === str(o.album)) && cents(o.prix) >= 3;
+    if (str(out.ticket) && !tkAsked(str(out.ticket), LL)) out.ticket = "";
     if (yes && !act && !str(out.ticket) && !okAlb(out)) { let again = null; try { again = unleak(await grok(TM.concat([{ role: "system", content: YES_NOW }]))); } catch (e) {}
       if (okAlb(again) && !str(again.laisser).trim()) out = again; else if (plan && plan.launch.length) act = { kind: "step", sc: plan.launch[0], k: 0 }; }
     if (push && !yes && !act && !out.teaser && !str(out.ticket) && !okAlb(out)) { let again = null; try { again = unleak(await grok(TM.concat([{ role: "system", content: PUSH_NOW }]))); } catch (e) {}
       if (again && !str(again.laisser).trim() && (again.teaser || +again.lancer) && bubbles(again).length) { out = again; if (plan && plan.launch.length && +out.lancer) { const sc = plan.launch.find(x => x.id === +out.lancer); if (sc) act = { kind: "step", sc, k: 0 }; } } }
     let tk = null, studio = null;
     if (M.tk && M.sell && !busy && !act) {
-      if (tkFree(TK0) && TK[str(out.ticket)]) { tk = tkPlan(M, str(out.ticket), out.prix, out.duree); tk.id = "k" + now(); TK0 = { ...tk, msg_id: tk.id, state: "sent" }; }
+      if (tkFree(TK0) && TK[str(out.ticket)] && tkAsked(str(out.ticket), LL)) { tk = tkPlan(M, str(out.ticket), out.prix, out.duree); tk.id = "k" + now(); TK0 = { ...tk, msg_id: tk.id, state: "sent" }; }
       else if (TK0 && TK0.state === "paid") { const v = (TK0.kind === "snap" ? str(out.snap).replace(/^@/, "") : str(out.demande)).trim();
         if (v.length >= 2) { studio = `${tkLabel(TK0)} · ${TK0.kind === "snap" ? "Snap du fan : " : ""}${v} · ticket payé ${eurs(TK0.price)}`; TK0 = { ...TK0, state: "done" }; } }
     }
