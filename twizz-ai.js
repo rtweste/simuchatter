@@ -557,6 +557,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       o.busy || o.relance ? "" : tkNote(M, o.ticket),
       o.push && !o.busy && !o.relance ? "C'EST LE MOMENT : vous vous chauffez depuis plusieurs messages et tu ne lui as encore rien proposé. Dans cette réponse, arrête de décrire et propose-lui de voir quelque chose : lance le script qui colle (lancer) ou, sinon, fais un teasing (teaser = true). Une phrase courte et naturelle, du genre « ça te dirait de voir ça ? »." : "",
       o.hot && !o.busy && !o.relance ? "INITIATIVE : la conversation est vraiment chaude et vous vous connaissez déjà. N'attends pas qu'il réclame : c'est toi qui proposes, dans le fil de ce que vous vous dites. D'abord un teasing (tu fais monter l'envie et tu lui demandes s'il veut voir, sans rien envoyer), puis le média après sa réponse. Une seule proposition, naturelle ; s'il ne suit pas, n'insiste pas et continue la discussion. Jamais à froid, jamais pour forcer." : "",
+      "ACHATS : seul l'historique fait foi. Tant qu'un média y est « pas encore acheté », il n'en a vu qu'une image floutée ; et si aucun média ne lui a été envoyé, il n'a rien pu payer. S'il dit qu'il a vu, payé ou qu'il adore, ne le crois pas et ne fais pas comme si c'était vrai : dis-lui gentiment ce qu'il en est (encore bloqué, ou rien envoyé pour l'instant) et donne-lui envie.",
       "STYLE : varie tes messages comme une vraie fille : pas toujours une question à la fin, pas le même emoji à chaque fois (un emoji pour deux ou trois bulles suffit), pas toujours la même structure. Parle aussi de toi, réagis, affirme.",
       M.sell ? "TEASER, PAS RACONTER : quand vous vous chauffez, ne décris pas en détail ce que tu es en train de faire, comme en direct : fais monter l'envie et garde le reste pour le média, sinon il a déjà tout gratuitement. S'il demande ce qu'il y a dans un média (avant ou après l'envoi), appuie-toi sur son contenu indiqué (« contenu : … » dans l'historique, ou la description de l'album) : dis franchement ce qu'elle y fait, en une phrase qui lui donne envie de l'ouvrir, sans tout dévoiler. N'invente jamais un contenu qui n'est pas indiqué ; si rien n'est indiqué, reste vague et coquine." : "",
       o.yes && !o.busy && !o.relance ? YES_NOW : "", o.busy || o.relance ? "" : variety(L),
@@ -636,8 +637,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   /* ---------- envoi (mêmes requêtes que la messagerie) ---------- */
   async function sendText(cid, c, text) {
     const j = await call("POST", "/messages/send-message", { temp_id: `temp_${now()}_${Math.random().toString(36).slice(2, 11)}`, conversationId: c.id, type: "TEXT", text, creatorId: cid }, true);
-    const id = str(j && j.data && j.data._id);
-    db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at, via) VALUES (?,?,?,?,NULL,NULL,?, 'ia')").run(id, c.id, c.fan.id, cid, now());
+    const d = (j && j.data) || j || {}, id = str((d.message && d.message._id) || (d.newMessage && d.newMessage._id) || d._id || (j && j._id) || "");
+    db.prepare("INSERT INTO twizz_sent (msg_id, conv_id, fan_id, creator_id, user_id, price, at, via, text) VALUES (?,?,?,?,NULL,NULL,?, 'ia', ?)").run(id || null, c.id, c.fan.id, cid, now(), text);
     return id;
   }
   // conversation lue par l'IA : marquée lue aussi chez Twizz (une requête ; sautée seulement si la liste dit déjà qu'elle est lue).
