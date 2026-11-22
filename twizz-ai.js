@@ -55,7 +55,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     relance: true, relanceAfter: 45, relanceMax: 1, quietFrom: 1, quietTo: 9, memory: true, vipAlert: 300, budget: 20 };
   const M_DEF = { ok: false, sell: true, maxPrice: 100, gap: 20, pile: true, albums: [], albumNotes: {}, skipTags: [], extra: "", profile: "", scripts: true, promo: true, maxDiscount: 30, promoHours: 24, vision: true,
     minMsgs: 8, tease: true, teaseWindow: 90, askSkip: false, cooldownH: 6, coolFull: false, sexDays: 1, details: {},
-    tk: true, snapMin: 50, snapMax: 100, camMin: 130, camMax: 200, camHour: 300, customPrice: 150, tkAlbum: "", camDispo: "", ladder: [6, 12, 18, 25] };
+    tk: true, snapMin: 50, snapMax: 100, camMin: 130, camMax: 200, camHour: 300, customPrice: 150, tkAlbum: "", camDispo: "", ladder: [6, 12, 18, 25, 35, 50] };
   const gcfg = () => { const o = { ...G_DEF, ...(S.get("twizz_ai_cfg", {}) || {}) }; if (!o.notice && !o.mark) o.mark = true; return o; };   // jamais les deux coupés
   const mcfg = cid => ({ ...M_DEF, ...(S.get("twizz_ai_m:" + cid, {}) || {}) });
   const int = (v, a, b, name) => { const n = parseInt(v, 10); if (!Number.isFinite(n) || n < a || n > b) throw fail(`${name} : entre ${a} et ${b}`); return n; };
@@ -350,7 +350,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const boughtOf = (cr, fanId, L) => Math.max(L.filter(m => !m.fromFan && m.type === "FILE" && m.price > 0 && m.status === "accepted").length,
     (db.prepare("SELECT COUNT(*) n FROM twizz_ai_sold WHERE creator_id = ? AND fan_id = ? AND paid_at IS NOT NULL AND kind IN ('coffre', 'step', 'floor') AND at > ?").get(cr.id, fanId, now() - 30 * 864e5) || {}).n || 0);
   const ladderOf = (M, k, last) => { const P = (M.ladder || []).filter(x => x >= 3); if (!P.length || (last && asks(last.text) && SPECIFIC.test(str(last.text)))) return null; return { k, price: Math.min(P[Math.min(k, P.length - 1)], M.maxPrice) }; };
-  const LADDER_NOTE = l => `PRIX PROGRESSIF : ce sera son ${l.k ? l.k + 1 + "e" : "1er"} média acheté dans cette conversation. Mets prix = ${l.price} et choisis dans le coffre un média du niveau qui va avec : ${["le plus soft (lingerie, tenue, aguicheur)", "un cran au-dessus (plus dénudé)", "plus chaud"][l.k] || "le plus explicite"}, d'après les descriptions.`;
+  const LADDER_NOTE = l => `PRIX PROGRESSIF : ce sera son ${l.k ? l.k + 1 + "e" : "1er"} média acheté dans cette conversation. Mets prix = ${l.price} et choisis dans le coffre un média du niveau qui va avec : ${["le plus soft (lingerie, tenue, aguicheur)", "un cran au-dessus (plus dénudé)", "plus chaud", "encore plus chaud", "très explicite"][l.k] || "le plus explicite"}, d'après les descriptions.`;
   // il insiste pour savoir (« dis-moi », « alors ? », « réponds ») : elle répond ou propose, elle n'esquive plus
   const INSIST = /\b(dis[- ]?moi|dis le|r[ée]ponds|alors\s*\?|tu me dis|tu r[ée]ponds|vas[- ]y dis|c'?est quoi alors)\b/i;
   const insistOf = L => { const i = L.map(m => !m.fromFan).lastIndexOf(true), R = L.slice(Math.max(0, i - 6)).filter(m => m.fromFan); return R.filter(m => INSIST.test(str(m.text))).length >= 2; };
