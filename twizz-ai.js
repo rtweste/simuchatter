@@ -658,6 +658,15 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     } finally { delivering = false; }
   }
   setInterval(() => { deliver().catch(e => console.error("IA de secours, livraison", e.message)); }, 120e3);
+  // une notification au fondateur à chaque vente de l'IA (lu dans les ventes Twizz déjà synchronisées : aucune requête en plus vers Twizz)
+  const TXL = { privatemedia: "média", mediapush: "média", collection: "collection", monthly_subscription: "abonnement", tip: "pourboire" };
+  if (!S.get("twizz_ai_salenotif_at", 0)) S.set("twizz_ai_salenotif_at", Date.now());
+  setInterval(() => { try {
+    const since = S.get("twizz_ai_salenotif_at", Date.now()), R = db.prepare("SELECT id, creator_id, fan_name, net, type, seen_at FROM twizz_tx WHERE ai = 1 AND refund = 0 AND net > 0 AND seen_at > ? ORDER BY seen_at LIMIT 20").all(since); if (!R.length) return;
+    S.set("twizz_ai_salenotif_at", R[R.length - 1].seen_at);
+    const F = db.prepare("SELECT id FROM users WHERE active = 1 AND deleted_at IS NULL AND grade = 'founder'").all().map(u => u.id); if (!F.length) return;
+    R.forEach(t => { const cr = crOf(t.creator_id); try { notify.pushMany(F, null, { title: `💰 L'IA a vendu · ${cr ? cr.label : "créatrice"}`, body: `${t.fan_name || "Un fan"} : ${TXL[t.type] || "achat"}, +${(Math.round(t.net * 100) / 100).toString().replace(".", ",")} € net`, url: "/ia", tag: "ai-sale-" + t.id }); } catch (e) {} });
+  } catch (e) { console.error("IA de secours, notif vente", e.message); } }, 60e3);
 
   /* ---------- envoi (mêmes requêtes que la messagerie) ---------- */
   async function sendText(cid, c, text) {
