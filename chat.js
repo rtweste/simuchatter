@@ -172,7 +172,7 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
   }
   app.get("/api/chat/boot", auth, noTrainee, (req, res) => {
     const users = db.prepare(req.user.role === "trainee" ? "SELECT id, username, role, grade, display_name, color FROM users WHERE active = 1 AND role IN ('trainee','admin') ORDER BY username" : "SELECT id, username, role, grade, display_name, color FROM users WHERE active = 1 AND role <> 'trainee' ORDER BY username").all().map(u => pubUser(u));
-    res.json({ me: { id: req.user.id, username: req.user.username, role: req.user.role, muted: muted(req.user.id) }, channels: channelsFor(req.user), users, quick: QUICK });
+    res.json({ me: { id: req.user.id, username: req.user.username, role: req.user.role, founder: req.user.role === "admin" && req.user.grade === "founder", muted: muted(req.user.id) }, channels: channelsFor(req.user), users, quick: QUICK });
   });
   app.get("/api/chat/unread", auth, (req, res) => {
     const cs = channelsFor(req.user); res.json({ n: cs.reduce((t, c) => t + c.unread, 0), mentions: cs.reduce((t, c) => t + c.mentions, 0) });
@@ -270,6 +270,14 @@ module.exports = function mount(app, db, auth, admin, { dataDir, gest, planning 
     db.prepare("UPDATE chat_messages SET deleted_at = ?, deleted_by = ?, pinned = 0 WHERE id = ?").run(now(), req.user.id, m.id);
     if (m.user_id !== req.user.id) { const a = user(m.user_id); log(req.user.id, "a", `a supprimé un message de **${a ? a.username : "?"}** dans le chat`, m.body.slice(0, 120)); }
     bump(m.id); res.json({ ok: true });
+  });
+  // message supprimé : le fondateur peut en relire le texte (salons qu'il voit) ; chaque consultation est notée dans le journal de gestion
+  app.get("/api/chat/m/:id/deleted", auth, (req, res) => {
+    if (req.user.role !== "admin" || req.user.grade !== "founder") return res.status(403).json({ error: "Réservé au fondateur" });
+    const m = db.prepare("SELECT m.*, u.username, d.username del_by FROM chat_messages m LEFT JOIN users u ON u.id = m.user_id LEFT JOIN users d ON d.id = m.deleted_by WHERE m.id = ?").get(+req.params.id), ch = m && chOf(m.channel_id);
+    if (!m || !m.deleted_at || !canSee(ch, req.user)) return res.status(404).json({ error: "Message introuvable" });
+    log(req.user.id, "a", `a relu un message supprimé de **${m.username || "?"}** dans le chat`, `#${ch.name}`);
+    res.json({ body: m.body, kind: m.kind, meta: J(m.meta, {}), created_at: m.created_at, deleted_at: m.deleted_at, deleted_by: m.del_by || null, username: m.username, channel: ch.name });
   });
   app.post("/api/chat/m/:id/hide", auth, admin, (req, res) => { const m = msgFor(req, res); if (!m) return; db.prepare("UPDATE chat_messages SET hidden = ? WHERE id = ?").run(m.hidden ? 0 : 1, m.id); bump(m.id); res.json({ ok: true, hidden: !m.hidden }); });
   app.post("/api/chat/mute", auth, admin, (req, res) => {

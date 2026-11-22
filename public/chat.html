@@ -9,6 +9,10 @@
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/chat.css">
 <link rel="stylesheet" href="/pcard.css">
+<style>
+.ct-delv{border:0;background:none;padding:0;color:#5fd3a2;font:inherit;font-weight:700;cursor:pointer;text-decoration:underline}
+.ct-delt{margin-top:4px;padding:8px 10px;border-radius:10px;background:rgba(240,180,90,.08);border:1px solid rgba(240,180,90,.25);color:#f3d9b0;font-style:normal;white-space:pre-wrap;word-break:break-word}
+</style>
 </head>
 <body>
 <div class="shell">
@@ -192,7 +196,7 @@ function msgHTML(m, prev, inThread) {
     ${m.deleted ? "" : actions(m, inThread)}</div>`;
 }
 function body(m) {
-  if (m.deleted) return `<div class="ct-del">${m.deletedByMod ? "Message supprimé par un manager" : "Message supprimé"}</div>`;
+  if (m.deleted) return `<div class="ct-del" data-delbox="${m.id}">${m.deletedByMod ? "Message supprimé par un manager" : "Message supprimé"}${B.me.founder ? ` <button type="button" class="ct-delv" data-delv="${m.id}">· Voir le message</button>` : ""}</div>`;
   if (m.hidden && B.me.role !== "admin") return `<div class="ct-del">Message masqué par un manager</div>`;
   const tx = m.body ? `<div class="ct-tx ${onlyEmoji(m.body) ? "big" : ""}">${fmt(m.body)}${m.edited_at ? `<span class="ct-ed">(modifié)</span>` : ""}</div>` : "";
   switch (m.kind) {
@@ -572,6 +576,17 @@ function dmSheet() {
   const q = +new URLSearchParams(location.search).get("c"); const first = q && chan(q) ? q : (B.channels.find(c => c.slug === "informations" && c.unread) || B.channels.find(c => c.slug === (me.role === "trainee" ? "formation" : "general")) || B.channels[0]).id;
   if (!MOB() || q) openCh(first);
 })();
+</script>
+<script>
+// fondateur : relire un message supprimé (la consultation est notée dans le journal de gestion)
+document.addEventListener("click", async e => { const b = e.target.closest("[data-delv]"); if (!b) return; e.preventDefault(); e.stopPropagation(); b.disabled = true;
+  try { const r = await fetch(`/api/chat/m/${b.dataset.delv}/deleted`), j = await r.json(); if (!r.ok) throw new Error(j.error || "Impossible de lire ce message");
+    const box = b.closest("[data-delbox]"), d = document.createElement("div"); d.className = "ct-delt";
+    const when = t => new Date(t).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    d.textContent = (j.body || (j.kind === "image" ? "📷 photo" : j.kind === "voice" ? "🎤 message vocal" : j.kind === "file" ? "📎 fichier" : "(vide)")) + `\n— écrit par ${j.username || "?"} le ${when(j.created_at)}, supprimé ${j.deleted_by ? "par " + j.deleted_by + " " : ""}le ${when(j.deleted_at)}`;
+    if (j.meta && j.meta.file) { const a = document.createElement("a"); a.href = "/api/chat/file/" + encodeURIComponent(j.meta.file); a.target = "_blank"; a.textContent = " Ouvrir le fichier"; a.style.color = "#5fd3a2"; d.appendChild(a); }
+    box.appendChild(d); b.remove(); }
+  catch (err) { b.disabled = false; b.textContent = err.message; } }, true);
 </script>
 </body>
 </html>
