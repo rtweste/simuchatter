@@ -357,6 +357,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       .filter(r => (!M.albums.length || M.albums.includes(r.album_id)) && !sent.has(r.file_id) && (LING.test(r.descr) || LING.test(str(N[r.album_id]))) && !NAKED.test(r.descr) && !NAKED.test(str(N[r.album_id])));
     return R.length ? R[Math.floor(Math.random() * R.length)] : null;
   }
+  const SAFE_BLOCK = /(mineur|moins de 18|\b1[0-7] ?ans\b|lyc[ée]e|coll[èe]ge|\bmajeur\b|d[ée]tresse|suicid|se faire du mal|automutil|d[ée]pense plus|ne peut plus payer|endett)/i;
   const MEET = /\b(rencontr|rendez[- ]?vous|rdv|se voir|vous voir|te voir en vrai|en vrai|irl|venir chez|chez (elle|toi|moi)|adresse|se capter|boire un verre|sortir avec)/i;
   const SAFE_LEAVE = /\b(mineur|moins de 18|\d{1,2} ?ans|lyc[ée]e|coll[èe]ge|d[ée]tresse|suicid|se faire du mal|mal[- ]?être|d[ée]pens|argent|rembours|plainte|humain)/i;
   const meetOnly = r => MEET.test(str(r)) && !SAFE_LEAVE.test(str(r));   // les raisons de sécurité (mineur, détresse, dépenses…) passent toujours avant
@@ -1107,6 +1108,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
         const tagged = db.prepare("SELECT tag_id FROM twizz_fan_tags WHERE creator_id = ? AND fan_id = ?");
         const spend = db.prepare("SELECT spend FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?");
         const fanOff = db.prepare("SELECT 1 FROM twizz_ai_fanoff WHERE creator_id = ? AND fan_id = ?"), RP = strat().points;
+        const unsafe = db.prepare("SELECT blocked FROM twizz_ai_convs WHERE fan_id = ? AND blocked IS NOT NULL AND at > ? ORDER BY at DESC LIMIT 30");
         const L = [], RL = [];
         // 1re page du fil + toutes les conversations non lues (filtre « Non lus » de Twizz) : aucun fan qui attend n'est oublié
         let unread = []; try { unread = unreadConvs ? await unreadConvs(cr.id) : []; } catch (e) {}
@@ -1116,6 +1118,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
           // un fan qui attend une réponse : dans la fenêtre réglée ; une relance : jusqu'à 24 h après son dernier message
           if (!c.fan.id || row.blocked || (age > C.fanWindow * 3600e3 && (c.last.fromFan || age > 24 * 3600e3)) || hereOf(c.id, -1).length || (C.teamPause && human.get(c.id, now() - C.teamPause * 60e3))) continue;
           if (fanOff.get(cr.id, c.fan.id)) continue;   // IA coupée pour ce fan
+          // un fan laissé à l'équipe pour une raison de sécurité (mineur, détresse…) chez une autre créatrice l'est aussi ici : même compte Twizz
+          { const g = unsafe.all(c.fan.id, now() - 60 * 864e5).find(x => SAFE_BLOCK.test(str(x.blocked)) && !/^Signalé chez une autre/.test(str(x.blocked))); if (g) { db.prepare("INSERT INTO twizz_ai_convs (run_id, conv_id, fan_id, fan_name, blocked, at) VALUES (?,?,?,?,?,?) ON CONFLICT(run_id, conv_id) DO UPDATE SET blocked = excluded.blocked, at = excluded.at")
+            .run(r.id, c.id, c.fan.id, c.fan.name, ("Signalé chez une autre créatrice : " + str(g.blocked)).slice(0, 200), now()); continue; } }
           if (skip.size) { const tg = tagged.all(cr.id, c.fan.id).find(x => skip.has(x.tag_id));
             if (tg) { const nm = (db.prepare("SELECT name FROM twizz_tags WHERE id = ?").get(tg.tag_id) || {}).name || "tag";
               db.prepare("INSERT INTO twizz_ai_convs (run_id, conv_id, fan_id, fan_name, blocked, at) VALUES (?,?,?,?,?,?) ON CONFLICT(run_id, conv_id) DO UPDATE SET blocked = excluded.blocked, at = excluded.at")
