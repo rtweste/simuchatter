@@ -21,7 +21,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const buf = Buffer.from(await r.arrayBuffer()), ct = str(r.headers.get("content-type")).split(";")[0];
     if (/^image\/(jpeg|png)$/i.test(ct) && buf.length < 8e6) return `data:${ct};base64,${buf.toString("base64")}`;
     if (!sharp) throw fail("Conversion d'image impossible : module sharp absent");
-    const out = await sharp(buf).rotate().resize(1024, 1024, { fit: "inside", withoutEnlargement: true }).jpeg({ quality: 82 }).toBuffer();
+    const out = await sharp(buf).rotate().resize(640, 640, { fit: "inside", withoutEnlargement: true }).jpeg({ quality: 82 }).toBuffer();
     return "data:image/jpeg;base64," + out.toString("base64");
   }
 
@@ -47,7 +47,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const MODELS = { fast: ["grok-4-1-fast-non-reasoning", "Rapide"], smart: ["grok-4-1-fast-reasoning", "Plus réfléchi (un peu plus lent)"] };
   const G_DEF = { notice: true, mark: false, base: "", locked: "", noticeText: "Petite précision : c'est l'IA de {creatrice} qui te répond en ce moment 😊", noticeFreq: "run", noticeDays: 30,
     waitMin: 35, waitMax: 80, teamPause: 15, fanWindow: 12, perFan: 40, maxHours: 12, model: "fast",
-    relance: true, relanceAfter: 45, relanceMax: 1, quietFrom: 1, quietTo: 9, memory: true, vipAlert: 300 };
+    relance: true, relanceAfter: 45, relanceMax: 1, quietFrom: 1, quietTo: 9, memory: true, vipAlert: 300, budget: 20 };
   const M_DEF = { ok: false, sell: true, maxPrice: 100, gap: 20, pile: true, albums: [], albumNotes: {}, skipTags: [], extra: "", profile: "", scripts: true, promo: true, maxDiscount: 30, promoHours: 24, vision: true,
     minMsgs: 8, tease: true, teaseWindow: 90, askSkip: false, cooldownH: 6, coolFull: false, sexDays: 1, details: {},
     tk: true, snapMin: 50, snapMax: 100, camMin: 130, camMax: 200, camHour: 300, customPrice: 150, tkAlbum: "", camDispo: "" };
@@ -61,6 +61,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (!o.notice && !o.mark) throw fail("Garde au moins un des deux : le message « c'est l'IA » ou le 🤖 à la fin des messages. Sinon le fan ne saurait jamais que c'est une IA.");
     if (b.noticeText != null) { const t = str(b.noticeText).trim().slice(0, 240); if (t.length < 0) throw fail("Message IA trop court"); o.noticeText = t; }
     if (b.noticeFreq != null) { if (!["run", "fan"].includes(b.noticeFreq)) throw fail("Fréquence inconnue"); o.noticeFreq = b.noticeFreq; }
+    if (b.budget != null) o.budget = int(b.budget, 0, 500, "Budget Grok par semaine");
     if (b.noticeDays != null) o.noticeDays = int(b.noticeDays, 1, 365, "Jours avant de redire que c'est une IA");
     if (b.waitMin != null) o.waitMin = int(b.waitMin, 5, 600, "Délai minimum");
     if (b.waitMax != null) o.waitMax = int(b.waitMax, 5, 900, "Délai maximum");
@@ -117,6 +118,27 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   }
   const aiOn = () => !!S.get("twizz_ai_on", false);
   const XAI = () => str(process.env.XAI_API_KEY).trim();
+  // ce que coûte Grok : chaque appel est compté (jetons et dollars, par jour, créatrice et usage) ; au-delà du budget de la semaine, l'IA se met en pause
+  const { AsyncLocalStorage } = require("async_hooks"), CTX = new AsyncLocalStorage();
+  const PRICE = { in: +process.env.XAI_PRICE_IN || 0.20, cached: +process.env.XAI_PRICE_CACHED || 0.05, out: +process.env.XAI_PRICE_OUT || 0.50 };   // $ par million de jetons
+  db.exec(`CREATE TABLE IF NOT EXISTS twizz_ai_usage (day TEXT NOT NULL, creator_id TEXT NOT NULL DEFAULT '', kind TEXT NOT NULL DEFAULT '', calls INTEGER NOT NULL DEFAULT 0,
+    tin INTEGER NOT NULL DEFAULT 0, tcached INTEGER NOT NULL DEFAULT 0, tout INTEGER NOT NULL DEFAULT 0, cost REAL NOT NULL DEFAULT 0, PRIMARY KEY (day, creator_id, kind))`);
+  const dayOf = t => new Date(t).toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" });
+  function count(u) { if (!u) return; const x = CTX.getStore() || {}, tin = +u.prompt_tokens || 0, tc = +((u.prompt_tokens_details || {}).cached_tokens) || 0, to = (+u.completion_tokens || 0) + (+((u.completion_tokens_details || {}).reasoning_tokens) || 0);
+    const cost = ((tin - tc) * PRICE.in + tc * PRICE.cached + to * PRICE.out) / 1e6;
+    try { db.prepare(`INSERT INTO twizz_ai_usage (day, creator_id, kind, calls, tin, tcached, tout, cost) VALUES (?,?,?,1,?,?,?,?) ON CONFLICT(day, creator_id, kind) DO UPDATE SET
+      calls = calls + 1, tin = tin + excluded.tin, tcached = tcached + excluded.tcached, tout = tout + excluded.tout, cost = cost + excluded.cost`).run(dayOf(Date.now()), x.cid || "", x.kind || "autre", tin, tc, to, cost); } catch (e) {} }
+  const spent7 = () => { const d = []; for (let i = 0; i < 7; i++) d.push(dayOf(Date.now() - i * 864e5)); return db.prepare(`SELECT COALESCE(SUM(cost), 0) c FROM twizz_ai_usage WHERE day IN (${d.map(() => "?").join(",")})`).get(...d).c; };
+  const overBudget = () => { const b = gcfg().budget; return b > 0 && spent7() >= b; };
+  function usage() {
+    const days = []; for (let i = 6; i >= 0; i--) days.push(dayOf(Date.now() - i * 864e5));
+    const R = db.prepare(`SELECT * FROM twizz_ai_usage WHERE day IN (${days.map(() => "?").join(",")})`).all(...days), sum = f => R.filter(f).reduce((a, r) => a + r.cost, 0);
+    const by = k => { const o = {}; R.forEach(r => { o[r[k]] = (o[r[k]] || 0) + r.cost; }); return o; };
+    const calls = R.reduce((a, r) => a + r.calls, 0), rep = R.filter(r => r.kind === "reponse");
+    return { week: sum(() => true), today: sum(r => r.day === days[6]), budget: gcfg().budget, over: overBudget(), days: days.map(d => ({ day: d, cost: sum(r => r.day === d) })),
+      byCreator: by("creator_id"), byKind: by("kind"), calls, perReply: rep.length ? rep.reduce((a, r) => a + r.cost, 0) / Math.max(1, rep.reduce((a, r) => a + r.calls, 0)) : 0,
+      cachedPct: R.reduce((a, r) => a + r.tin, 0) ? Math.round(100 * R.reduce((a, r) => a + r.tcached, 0) / R.reduce((a, r) => a + r.tin, 0)) : 0 };
+  }
   const XBASE = () => str(process.env.XAI_BASE || "https://api.x.ai/v1").replace(/\/+$/, "");
   const XMODEL = () => str(process.env.XAI_MODEL || (MODELS[gcfg().model] || MODELS.fast)[0]);
   const managers = () => db.prepare("SELECT id FROM users WHERE active = 1 AND deleted_at IS NULL AND role = 'admin' AND COALESCE(grade, '') <> 'assistant'").all().map(r => r.id);
@@ -183,11 +205,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   async function grok(messages, o = {}) {
     const tool = o.tool === undefined ? TOOL : o.tool, body = { model: o.model || XMODEL(), messages, temperature: o.temp ?? (tool === TOOL ? 0.75 : 0.9), max_tokens: o.max || (tool === TOOL ? 500 : 900) };
     if (tool) { body.tools = [tool]; body.tool_choice = { type: "function", function: { name: tool.function.name } }; }
-    let r; try { r = await fetch(XBASE() + "/chat/completions", { method: "POST", headers: { Authorization: "Bearer " + XAI(), "Content-Type": "application/json" },
+    let r; try { r = await fetch(XBASE() + "/chat/completions", { method: "POST", headers: { Authorization: "Bearer " + XAI(), "Content-Type": "application/json", ...((CTX.getStore() || {}).conv ? { "x-grok-conv-id": CTX.getStore().conv } : {}) },
       body: JSON.stringify(body), signal: AbortSignal.timeout(60000) }); }
     catch (e) { throw fail("Grok ne répond pas : " + e.message); }
     const j = await r.json().catch(() => null);
     if (!r.ok) { const e = fail(`Grok a refusé la demande (code ${r.status})${j && j.error ? " : " + str(j.error.message || j.error).slice(0, 160) : ""}`); e.status = r.status; throw e; }
+    count(j && j.usage);
     const m = j && j.choices && j.choices[0] && j.choices[0].message; if (!m) throw fail("Réponse de Grok vide");
     if (!tool) return { text: str(m.content).trim() };
     const tc = (m.tool_calls || []).find(x => x && x.function && x.function.name === tool.function.name);
@@ -673,7 +696,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const M = mcfg(cr.id);
     const row = db.prepare("SELECT * FROM twizz_ai_convs WHERE run_id = ? AND conv_id = ?").get(r.id, c.id) || {};
     const j = await G(`/messages/find-all-messages?conversationId=${enc(c.id)}&creatorId=${enc(cr.id)}&page=1`, 0);
-    const L = ((j && j.data && j.data.data) || []).map(m => msg(m, c.fan.id)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(-30);
+    const L = ((j && j.data && j.data.data) || []).map(m => msg(m, c.fan.id)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(-20);
     const last = L[L.length - 1]; if (!last) return false;
     if (relance ? last.fromFan : (!last.fromFan || last.id === row.last_fan_msg)) return false;   // le fan a réécrit, ou déjà répondu
     // achats vus dans la conversation : pour « Ce qui vend »
@@ -711,7 +734,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (relance) opt.relance = { since: relance.since, unbought: sell.open ? sell.open.price : plan && plan.lock ? plan.lock.price : null };
     const msgs = [{ role: "system", content: system(cr, M, ficheOf(cr), sell.albums, sell.note, fanInfo, C, opt) }];
     // la dernière photo envoyée par le fan : Grok la regarde (les autres restent en texte)
-    const lastPic = [...L].reverse().find(m => m.fromFan && m.medias.some(isImg)); let picUrl = null;
+    const lastPic = L.slice(-4).reverse().find(m => m.fromFan && m.medias.some(isImg)); let picUrl = null;   // seulement une photo toute récente : sinon elle repartirait à chaque réponse
     if (lastPic) { const x = lastPic.medias.find(isImg); try { picUrl = await toImage(x.thumb || x.url); } catch (e) { picUrl = null; } }
     L.forEach(m => { const t = m.fromFan ? lineOf(m) : untag(lineOf(m)); if (!t) return;
       const pic = m === lastPic && picUrl;
@@ -800,7 +823,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     // mémoire : toutes les 3 réponses, au plus toutes les 30 min par fan, l'IA complète la fiche du fan
     if (C.memory && ((row.replies || 0) + 1) % 3 === 0 && now() - (row.mem_at || 0) > 30 * 60e3) {
       db.prepare("UPDATE twizz_ai_convs SET mem_at = ? WHERE run_id = ? AND conv_id = ?").run(now(), r.id, c.id);
-      remember(cr, c, L.concat(B.map(b => ({ fromFan: false, text: b, medias: [], type: "TEXT" })))).catch(e => console.error("IA de secours, mémoire", e.message));
+      CTX.run({ cid: cr.id, kind: "memoire" }, () => remember(cr, c, L.concat(B.map(b => ({ fromFan: false, text: b, medias: [], type: "TEXT" }))))).catch(e => console.error("IA de secours, mémoire", e.message));
     }
     return true;
   }
@@ -840,7 +863,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       : !st.files ? "les albums sont vides ou Twizz n'a renvoyé aucun média" : st.already === st.files ? "tous les médias sont déjà décrits" : "aucun média n'a de vignette à regarder";
     console.log("IA de secours, analyse du coffre", c.label, JSON.stringify({ ...st, todo: todo.length }));
     const S2 = SCAN[cid] = { running: true, done: 0, total: Math.min(todo.length, 300), errors: 0, at: now(), ...st, note };
-    (async () => {
+    CTX.run({ cid, kind: "medias" }, async () => {
       for (const { f, a } of todo.slice(0, 300)) {
         try { const img = await toImage(f.thumb || f.url);
           const x = await grok([{ role: "user", content: [{ type: "text", text: "Décris ce média en 15 mots maximum, pour aider à le vendre : tenue, pose, cadrage, lieu, ambiance, niveau de nudité (habillée, lingerie, seins nus, nue) et si le visage est visible. Réponds seulement la description." },
@@ -853,17 +876,17 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       }
       S2.running = false; S2.end = now();
       log(by || 0, "a", `L'IA de secours a analysé le coffre de **${c.label}**`, `${S2.done - S2.errors} média${S2.done - S2.errors > 1 ? "s" : ""} décrit${S2.done - S2.errors > 1 ? "s" : ""}${S2.errors ? ` · ${S2.errors} erreur${S2.errors > 1 ? "s" : ""}` : ""}`);
-    })().catch(e => { S2.running = false; S2.error = e.message; });
+    }).catch(e => { S2.running = false; S2.error = e.message; });
     return S2;
   }
 
   /* ---------- la boucle : toutes les 20 s ; chaque créatrice relue au plus toutes les 40 s ---------- */
-  const POLLED = new Map(); let busy = false;
+  const POLLED = new Map(); let busy = false, BUDGET_PING = 0;
   // une conversation qui échoue ne bloque plus les autres : elle attend un peu (2, 4, 8… min), et après 3 échecs de suite elle est laissée à l'équipe
   const FAILS = new Map(), RUNERR = new Map();
   async function safely(r, cr, c, C, relance) {
     const k = r.id + ":" + c.id, f = FAILS.get(k); if (f && now() < f.until) return false;
-    try { const ok = await handle(r, cr, c, C, relance); FAILS.delete(k); RUNERR.delete(r.id); return ok; }
+    try { const ok = await CTX.run({ cid: cr.id, kind: "reponse", conv: `${cr.id}:${c.id}` }, () => handle(r, cr, c, C, relance)); FAILS.delete(k); RUNERR.delete(r.id); return ok; }
     catch (e) {
       // plusieurs erreurs de suite dans la séance (tous fans confondus) : les managers sont prévenus, au plus toutes les 30 min
       { const E = RUNERR.get(r.id) || { n: 0, ping: 0 }; E.n++; RUNERR.set(r.id, E); if (E.n >= 3 && now() - E.ping > 30 * 60e3) { E.ping = now();
@@ -890,6 +913,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       const back = backOf(r); if (back) { end(r, back.id, `${back.username} a pointé`); continue; }
       if (!mcfg(r.creator_id).ok) { end(r, null, "Accord de la créatrice retiré"); continue; }
       if (!sendOn() || !XAI()) continue;   // en pause : rien ne peut partir
+      if (overBudget()) { if (!BUDGET_PING || now() - BUDGET_PING > 6 * 3600e3) { BUDGET_PING = now(); ping("🤖 Budget Grok de la semaine atteint", `${spent7().toFixed(2)} $ dépensés sur 7 jours (budget ${C.budget} $). L'IA ne répond plus jusqu'à ce que ça redescende, ou monte le budget dans la page IA.`, "ai-budget"); } continue; }
       if (now() - (POLLED.get(r.id) || 0) < 40e3) continue; POLLED.set(r.id, now());
       const cr = crOf(r.creator_id); if (!cr) { end(r, null, "Créatrice introuvable"); continue; }
       try {
@@ -945,7 +969,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     creators: mapped().map(c => ({ id: c.id, label: c.label, model_id: c.model_id, model: c.model, cfg: mcfg(c.id), fiche: ficheFilled(c), run: view(runOf(c.id)),
       media: db.prepare("SELECT COUNT(*) n FROM twizz_ai_media WHERE creator_id = ? AND descr IS NOT NULL").get(c.id).n, scan: SCAN[c.id] || null,
       scripts: aiScripts(c.id).map(x => ({ id: x.id, title: x.title, steps: x.steps.length, first: x.first, desc: !!x.desc, when: clip(x.desc, 160), timeout: x.timeout, ladder: ladder(x), path: x.steps.map(stepPath) })) })),
-    strat: strat(), stratDef: STRAT_DEF,
+    strat: strat(), stratDef: STRAT_DEF, usage: usage(),
     recent: db.prepare("SELECT * FROM twizz_ai_runs WHERE ended_at IS NOT NULL ORDER BY ended_at DESC LIMIT 12").all().map(r => ({ ...view(r), cid: r.creator_id, label: (crOf(r.creator_id) || {}).label || "?" })) });
   app.get("/api/twizz/ai", auth, mgr, wrap(async req => state(req)));
   app.post("/api/twizz/ai/switch", auth, founder, wrap(async req => { const b = req.body || {};
@@ -976,7 +1000,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     return { albums, tags, base: C.base || BASE_DEF, baseDefault: BASE_DEF, custom: !!C.base, profile: M.profile || P.gen, profileCustom: !!M.profile, live: P.live, locked: P.locked, lockedDefault: LOCKED_DEF, customLocked: !!C.locked }; }));
   // essayer l'IA sans rien envoyer : une fausse conversation, la réponse de Grok s'affiche seulement
   const TRIED = new Map();
-  app.post("/api/twizz/ai/try/:cid", auth, mgr, wrap(async req => { const c = okC(req.params.cid), M = mcfg(c.id);
+  app.post("/api/twizz/ai/try/:cid", auth, mgr, wrap(async req => CTX.run({ cid: req.params.cid, kind: "essai" }, async () => { const c = okC(req.params.cid), M = mcfg(c.id);
     if (!XAI()) throw fail("Clé Grok manquante : ajoute la variable XAI_API_KEY dans Railway");
     if (now() - (TRIED.get(req.user.id) || 0) < 3000) throw fail("Doucement : attends quelques secondes"); TRIED.set(req.user.id, now());
     const b = req.body || {}, raw = (Array.isArray(b.messages) ? b.messages : []).slice(-30);
@@ -1038,7 +1062,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     return { bulles: B, step, floor, state, burned: [...burned], ended, mode, guarded, redit, ticket: tk ? { id: tk.id, kind: tk.kind, minutes: tk.minutes, price: tk.price, text: tk.text } : null,
       tkState: TK0 ? { id: TK0.msg_id, kind: TK0.kind, minutes: TK0.minutes, price: TK0.price, state: TK0.state } : null, studio, album: al ? al.name : null, media: it ? it.descr : null, prix: al ? Math.min(cents(out.prix), M.maxPrice) : null,
       remise: al && M.promo && pct >= 5 ? Math.min(pct, M.maxDiscount) : null, laisser: null, teaser: !al && !act && !!out.teaser && !!(sell.teaseNow || albums.length), gate: plan ? "" : albums.length ? "" : sell.note };
-  }));
+  })));
   // ce qui vend : médias payants envoyés par l'IA et achetés, par étape de script, ticket et coffre (achats vus dans les conversations)
   app.get("/api/twizz/ai/stats/:cid", auth, mgr, wrap(async req => { const c = okC(req.params.cid), days = [7, 30, 90].includes(+req.query.days) ? +req.query.days : 30;
     const R = db.prepare("SELECT kind, script_id, step, tk_kind, COUNT(*) sent, SUM(paid_at IS NOT NULL) paid, COALESCE(SUM(CASE WHEN paid_at IS NOT NULL THEN price END), 0) net FROM twizz_ai_sold WHERE creator_id = ? AND at > ? GROUP BY kind, script_id, step, tk_kind").all(c.id, now() - days * 864e5);
