@@ -326,7 +326,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     db.prepare(`SELECT file_id, descr FROM twizz_ai_media WHERE creator_id = ? AND descr IS NOT NULL AND file_id IN (${ids.map(() => "?").join(",")})`).all(cid, ...ids).forEach(r => m.set(r.file_id, r.descr)); return m; };
   // ce que l'IA peut vendre à ce fan maintenant (réglages de la créatrice + ce qu'il a déjà reçu)
   // le fan réclame lui-même un média (seulement si le réglage le permet)
-  const asks = t => /\b(envoie|envoi|montre|fais (moi )?voir|je (veux|voudrais) (voir|une?)|t'as (une?|des)|tu as (une?|des)|photo|vid[ée]o|pic|nude)\b/i.test(str(t));
+  const asks = t => /\b(envoie|envoi|montre|fais (moi )?voir|je (veux|voudrais) (voir|une?)|t'as (une?|des)|tu as (une?|des)|photo|vid[ée]o|pic|nude)\b/i.test(str(t))
+    || /\b(tes|ta|ton) (seins|nichons|t[ée]tons|fesses|cul|chatte|corps|pieds|lingerie|string|culotte|soutif)\b/i.test(str(t)) && !/\?/.test(str(t));   // « tes seins en premier » : il dit ce qu'il veut voir
   // où en est le teasing de cette conversation : annoncé quand, et le fan a-t-il répondu depuis ?
   function teaseOf(cr, convId, L) {
     const t = convId ? db.prepare("SELECT at FROM twizz_ai_tease WHERE creator_id = ? AND conv_id = ?").get(cr.id, convId) : null; if (!t) return null;
@@ -551,7 +552,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const relFirstOf = (cid, fan, C, p0) => { const S0 = scGet(cid, fan); if (!S0 || S0.state !== "open" || !S0.lock_msg || S0.relanced) return p0;
     const sc = aiScripts(cid).find(x => x.id === S0.script_id), st = sc && sc.steps[S0.step]; return st && str(st.relance).trim() && st.relanceMin ? st.relanceMin : C.relanceAfter; };
   // jamais « je te l'envoie », « et voilà »… si aucun média ne part avec le message
-  const DELIV = [/(?:^|[^a-zà-ÿ])(?:je|j'?|jvais|je vais|vais)\s*(?:te|t'|t)\s*(?:l'|la |le |les |l )?\s*envoi(?:e|er|es)?\b/i, /\bjt'?envoi/i, /\bet voil[aà]\b/i, /\bc'?est parti\b/i, /\bregarde bien\b/i, /^\s*tiens\b/i, /\bvoil[aà] pour toi\b/i,
+  const DELIV = [/(?:^|[^a-zà-ÿ])(?:je|j'?|jvais|je vais|vais)\s*(?:te|t'|t)\s*(?:l'|la |le |les |l )?\s*envoi(?:e|er|es)?\b/i, /\bjt'?envoi/i, /\bet voil[aà]\b/i, /\bc'?est parti\b/i, /\bregarde bien\b/i, /(?:^|[^a-zà-ÿ])(?:je|j'?)\s*(?:te\s*)?(?:les|la|le|l')\s*sors\b/i, /(?:^|[^a-zà-ÿ])(?:je|j'?)\s*te\s*(?:les|la|le|l')\s*montre\b(?!\s*\?)/i, /^\s*tiens\b/i, /\bvoil[aà] pour toi\b/i,
     /(?:^|[^a-zà-ÿ])(?:je|j'?)\s*te\s*(?:la |le |les )?pr[ée]par/i, /\bjte pr[ée]par/i, /\btu vas voir\b/i, /(?:^|[^a-zà-ÿ])(?:je|j'?)\s*te\s*r[ée]serv/i, /\bjte r[ée]serv/i];
   const fakeSend = t => DELIV.some(x => x.test(str(t)));
   // ce que le site sait déjà du fan (pour savoir si la découverte est finie)
