@@ -374,7 +374,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const SAFE_LEAVE = /\b(mineur|moins de 18|\d{1,2} ?ans|lyc[ée]e|coll[èe]ge|d[ée]tresse|suicid|se faire du mal|mal[- ]?être|d[ée]pens|argent|rembours|plainte|humain)/i;
   const meetOnly = r => MEET.test(str(r)) && !SAFE_LEAVE.test(str(r));   // les raisons de sécurité (mineur, détresse, dépenses…) passent toujours avant
   // « pas encore acheté », « album: photos »… ne sont pas des raisons de laisser un fan à l'équipe : elle continue de lui parler
-  const junkLeave = r => { const t = str(r).trim(); return !!t && !SAFE_LEAVE.test(t) && !/personnalis|custom|sur mesure/i.test(t) && (/\b(achet|album|photos?|vid[ée]os?|m[ée]dias?|teas|prix|palier|coffre|ouvert)/i.test(t) || t.split(/\s+/).length < 3); };
+  const junkLeave = r => { const t = str(r).trim(); return !!t && !SAFE_LEAVE.test(t) && !/personnalis|custom|sur mesure/i.test(t) && (/\b(achet|album|photos?|vid[ée]os?|m[ée]dias?|teas|prix|palier|coffre|ouvert|gratuit|aper[çc]u|free)/i.test(t) || t.split(/\s+/).length < 3); };
   // elle n'évoque jamais une rencontre d'elle-même : la bulle est retirée (s'il en reste une autre)
   const MEETSELF = /\bun jour (si|quand|peut|on)|si tu passes|quand (on se verra|tu viens|tu passes)|passe me voir|viens me voir|on se (voit|verra|capte)/i;
   const noMeet = B => { const B2 = B.filter(t => !MEETSELF.test(t)); return B2.length ? B2 : B; };
@@ -550,7 +550,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const loopOf = L => { let i = -1; L.forEach((m, k) => { if (!m.fromFan && (m.type === "FILE" || m.price > 0 || m.teaser)) i = k; }); const R = L.slice(i + 1);
     return R.filter(m => !m.fromFan && str(m.text).trim()).length >= 6 && R.filter(m => HOTW.test(str(m.text))).length >= 3; };
   const streak = L => { let i = -1; L.forEach((m, k) => { if (!m.fromFan && (m.type === "FILE" || m.price > 0 || m.teaser)) i = k; }); return L.slice(i + 1).filter(m => !m.fromFan && str(m.text).trim()).length; };
-  const TEASES = ["attends j'ai un truc qui va te rendre fou, tu veux voir ? 😏", "tu veux que je te montre ce que je fais en vrai quand je suis comme ça ?", "j'ai une vidéo qui colle trop à ce qu'on se dit… tu veux la voir ?", "ça te dirait de voir ce que ça me fait en vrai ? 🥵"];
+  const TEASES = ["attends j'ai un truc qui va te rendre fou, tu veux voir ? 😏", "tu veux que je te montre ce que je fais en vrai quand je suis comme ça ?", "j'ai une vidéo qui colle trop à ce qu'on se dit… tu veux la voir ?", "ça te dirait de voir ce que ça me fait en vrai ? 🥵", "j'ai un truc que j'ose pas trop montrer d'habitude… tu veux voir ?", "tu veux que je te montre à quoi je ressemble là, tout de suite ?", "attends, j'ai exactement ce qu'il te faut… je te montre ?", "j'ai gardé un truc pour quelqu'un comme toi, tu veux voir ?", "si je te montre, tu me dis ce que t'en penses ? tu veux voir ?"];
   const PUSH_NOW = "Tu tournes en rond depuis plusieurs messages : dans cette réponse, propose-lui de voir quelque chose, en une phrase courte qui donne envie (« tu veux que je te montre ? 😏 »). Coche teaser (ou lance le script qui colle). Ne décris plus ce que tu fais.";
   const pushOf = L => { const R = L.slice(-12); if (R.some(m => !m.fromFan && (m.type === "FILE" || m.price > 0 || m.teaser))) return false; return R.filter(m => HOTW.test(str(m.text))).length >= 6; };
   // une bulle qui annonce un prix (« 5 € », « 20 euros ») : jamais, le prix s'affiche sur le média
@@ -955,7 +955,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       log(0, "a", `L'IA de secours laisse **${c.fan.name || "un fan"}** (${cr.label}) à l'équipe`, leave.slice(0, 160));
       return true;
     }
-    const pend = !relance && !busy && !sell.albums.length ? pendOf(M, L) : null, lft = str(lastFan && lastFan.text);
+    const pend0 = !relance && !busy ? pendOf(M, L) : null, told2 = pend0 ? L.slice(L.indexOf(pend0) + 1).filter(m => !m.fromFan).length : 0;
+    const pend = pend0 && (!sell.albums.length || told2 < 1) ? pend0 : null, lft = str(lastFan && lastFan.text);
     if (pend && lastFan && !NOPE.test(lft) && (asks(lft) || PEND_Q.test(lft))) { let again = null;
       try { again = unleak(await grok(msgs.concat([{ role: "system", content: PEND_YES(pend.price) }]))); } catch (e) {}
       if (again && !str(again.laisser).trim() && bubbles(again).length) out = again;
@@ -1043,12 +1044,13 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const consent = yes || asked || wantSee || priceAsk || (!!lastFan && (asks(str(lastFan.text)) || HOTFAN.test(str(lastFan.text))));
     if (f && !free0 && M.tease && !consent && !act && !tk) { f = null; promo = null; B = B.filter(t => !fakeSend(t)); if (!askedRecently && !B.some(t => TEASE_ASK.test(t))) B.push(TEASES[Math.floor(Math.random() * TEASES.length)]); if (!B.length) B.push("t'es pas prêt pour ce que j'ai en tête"); out.teaser = true; }
     // le média part : la phrase le vend, ce n'est plus une question « tu veux voir ? »
-    if (f && B.length && TEASE_ASK.test(B[B.length - 1])) { let again = null;
+    const weakCap = t => TEASE_ASK.test(t) || /\?\s*[\p{Extended_Pictographic}\s]*$/u.test(t) || str(t).replace(/[\p{Extended_Pictographic}]/gu, "").trim().split(/\s+/).length < 4;
+    if (f && B.length && weakCap(B[B.length - 1])) { let again = null;
       try { again = unleak(await grok(msgs.concat([{ role: "system", content: "Ton média part avec cette réponse : la dernière bulle doit le vendre (ce que tu y fais, avec envie), pas demander « tu veux voir ? »." }]))); } catch (e) {}
-      const B2 = again && !str(again.laisser).trim() ? fresh(oneQ(bubbles(again)), said).filter(t => !PRICED(t) && !TEASE_ASK.test(t)) : []; B = B2.length ? shape(B2, L) : B.filter(t => !TEASE_ASK.test(t)); if (!B.length) B = ["regarde ce que je t'ai gardé"]; }
+      const B2 = again && !str(again.laisser).trim() ? fresh(oneQ(bubbles(again)), said).filter(t => !PRICED(t) && !weakCap(t)) : []; B = B2.length ? shape(B2, L) : B.filter(t => !weakCap(t)); if (!B.length) B = ["regarde ce que je t'ai gardé"]; }
     // son teasing part avec une photo lingerie offerte (une fois par fan, avant tout achat) : la lingerie ne se vend pas, elle donne envie de la suite
     let free = null;
-    if (M.freeLing && M.sell && !coldNow && (out.teaser || B.some(t => TEASE_ASK.test(t))) && !f && !act && !tk && !relance && !busy && B.length && !freebieOf(cr, c.fan.id) && !boughtOf(cr, c.fan.id, L)) { const x = lingerieFile(cr, M, c.id); if (x) { free = x; f = { id: x.file_id }; price = 0; promo = null; } }
+    if (M.freeLing && M.sell && !coldNow && (out.teaser || B.some(t => TEASE_ASK.test(t))) && !f && !act && !tk && !relance && !busy && B.length && !freebieOf(cr, c.fan.id) && !boughtOf(cr, c.fan.id, L) && !L.some(m => !m.fromFan && m.type === "FILE" && m.price > 0) && !(lastFan && (NOPE.test(str(lastFan.text)) || /gratuit|gratos|free|offert|cadeau|demain|plus tard|la semaine/i.test(str(lastFan.text))))) { const x = lingerieFile(cr, M, c.id); if (x) { free = x; f = { id: x.file_id }; price = 0; promo = null; } }
     if (!B.length && !act && !tk) { if (relance || guarded || rep) mark({}); if (!relance && (guarded || rep)) await readOnTwizz(cr.id, c, L); return false; }   // rien d'utile à envoyer
     B = B.map(fem);
     // le prix suit aussi ce que dit sa phrase : si elle annonce un contenu explicite, le prix remonte au minimum de ce niveau
@@ -1195,7 +1197,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
         // un fan avec deux conversations : elle ne répond que dans la plus récente
         const byFan = new Map(); all.forEach(c => { if (!c.fan.id) return; const p = byFan.get(c.fan.id); if (!p || (Date.parse(c.last.at) || 0) > (Date.parse(p.last.at) || 0)) byFan.set(c.fan.id, c); });
         const prevRow = db.prepare("SELECT blocked, replies, relances, relance_at, busy, fan_at FROM twizz_ai_convs WHERE conv_id = ? AND run_id <> ? AND at > ? ORDER BY at DESC LIMIT 1");
-        const paidLast = db.prepare("SELECT 1 FROM twizz_sent WHERE msg_id = ? AND via = 'ia' AND price > 0");
+        const paidRecent = db.prepare("SELECT 1 FROM twizz_sent WHERE conv_id = ? AND via = 'ia' AND price > 0 AND at > ? AND at >= ? LIMIT 1");   // un payant envoyé par l'IA depuis son dernier message (moins de 3 h)
         for (const c of all) {
           if (c.fan.id && byFan.get(c.fan.id) !== c) continue;
           const t = Date.parse(c.last.at) || 0, age = now() - t, row = db.prepare("SELECT blocked, replies, last_fan_msg, relances, relance_at, busy, fan_at FROM twizz_ai_convs WHERE run_id = ? AND conv_id = ?").get(r.id, c.id) || {};
@@ -1214,9 +1216,17 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
           } else if (C.relance && !quiet(C)) {
             // suivie dans une séance précédente (moins de 24 h) : la relance part quand même ; son payant pas encore ouvert est relancé après le délai réglé (pas 3 h)
             const rr = row.relances != null ? row : (prevRow.get(c.id, r.id, now() - 24 * 3600e3) || {}); if (!rr.replies || rr.busy || rr.blocked) continue;
-            const k = rr.relances || 0, since = now() - (rr.fan_at || t), first = c.last.id && paidLast.get(str(c.last.id)) ? Math.min(C.relanceAfter, RP[0]) : relFirstOf(cr.id, c.fan.id, C, RP[0]);
+            const k = rr.relances || 0, since = now() - (rr.fan_at || t), first = paidRecent.get(c.id, now() - 3 * 3600e3, (rr.fan_at || 0) - 60e3) ? Math.min(C.relanceAfter, RP[0]) : relFirstOf(cr.id, c.fan.id, C, RP[0]);
             if (k < RP.length && since >= (k ? RP[k] : first) * 60e3 && since < 24 * 3600e3 && now() - (rr.relance_at || 0) >= 5 * 60e3) RL.push({ c, value, t, age: since }); }
         }
+        // un payant pas ouvert dans une conversation sortie de la 1re page du fil (séance chargée) : elle est relancée quand même, d'après ce que l'IA a envoyé (aucune requête de plus vers Twizz)
+        if (C.relance && !quiet(C)) { const seen = new Set();
+          db.prepare("SELECT x.conv_id, x.fan_id, x.fan_name, x.run_id, x.replies, x.relances, x.relance_at, x.busy, x.fan_at, x.blocked, x.at FROM twizz_ai_convs x JOIN twizz_ai_runs u ON u.id = x.run_id WHERE u.creator_id = ? AND x.at > ? ORDER BY x.at DESC").all(cr.id, now() - 3 * 3600e3).forEach(x => {
+            if (seen.has(x.conv_id)) return; seen.add(x.conv_id);   // la ligne la plus récente de chaque conversation
+            if (ids.has(x.conv_id) || !x.fan_id || !x.replies || x.busy || x.blocked || byFan.has(x.fan_id) || fanOff.get(cr.id, x.fan_id) || hereOf(x.conv_id, -1).length || (C.teamPause && human.get(x.conv_id, now() - C.teamPause * 60e3))) return;
+            const since = now() - (x.fan_at || x.at), k = x.run_id === r.id ? x.relances || 0 : 0;
+            if (k === 0 && paidRecent.get(x.conv_id, now() - 3 * 3600e3, (x.fan_at || 0) - 60e3) && since >= Math.min(C.relanceAfter, RP[0]) * 60e3 && now() - (x.relance_at || 0) >= 5 * 60e3)
+              RL.push({ c: { id: x.conv_id, fan: { id: x.fan_id, name: x.fan_name || "" }, last: { id: "", at: null, fromFan: false } }, value: (spend.get(cr.id, x.fan_id) || {}).spend || 0, t: x.fan_at || x.at, age: since }); }); }
         // les gros payeurs d'abord, puis ceux qui attendent depuis le plus longtemps
         L.sort((a, b) => (b.value - a.value) || (a.t - b.t));
         const ready = x => !((FAILS.get(r.id + ":" + x.c.id) || {}).until > now());   // celles qui viennent d'échouer attendent leur tour
@@ -1307,7 +1317,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     try { out = unleak(await grok(TM)); } catch (e) { if (e.status !== 403) throw e; out = unleak(await grok(soften(TM))); }   // refus du filtre : une seconde chance, adoucie
     if (meetOnly(out.laisser) || junkLeave(out.laisser)) { let again = null; try { again = unleak(await grok(TM.concat([{ role: "system", content: meetOnly(out.laisser) ? MEET_NOTE : STAY_NOTE }]))); } catch (e) {} if (again && !str(again.laisser).trim() && bubbles(again).length) out = again; else out.laisser = ""; }
     if (str(out.laisser).trim()) return { bulles: [], laisser: str(out.laisser).trim(), state: T0, burned: [...burned] };
-    const pend = !busy && !albums.length ? pendOf(M, LL) : null, lft = str(lastFan.text);   // même règle qu'en vrai : un payant attend, il dit oui → il est juste au-dessus
+    const pend0 = !busy ? pendOf(M, LL) : null, pend = pend0 && (!albums.length || LL.slice(LL.indexOf(pend0) + 1).filter(m => !m.fromFan).length < 1) ? pend0 : null, lft = str(lastFan.text);   // même règle qu'en vrai : un payant attend, il dit oui → il est juste au-dessus
     if (pend && !NOPE.test(lft) && (asks(lft) || PEND_Q.test(lft))) { let again = null; try { again = unleak(await grok(TM.concat([{ role: "system", content: PEND_YES(pend.price) }]))); } catch (e) {}
       if (again && !str(again.laisser).trim() && bubbles(again).length) out = again;
       out.bulles = bubbles(out).filter(t => !TEASE_ASK.test(t) && !fakeSend(t)); out.teaser = false; out.album = ""; out.ticket = ""; if (!out.bulles.length) out.bulles = ["il est juste au-dessus, je l'ai fait pour toi"]; }
@@ -1341,9 +1351,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (redit) { B = fresh(B, said); if (!B.length && !act) { try { const again = unleak(await grok([{ role: "system", content: system(c, M, ficheOf(c), albums, sell.note, FANS[b.fan] || "", gcfg(), opt) }, ...L, { role: "system", content: REDIT(bubbles(out)) }]));
       if (!str(again.laisser).trim()) B = fresh(oneQ(bubbles(again)), said).filter(t => act || al || !fakeSend(t)); } catch (e) {} } }
     B = shape(B, LL);
-    if (al && B.length && TEASE_ASK.test(B[B.length - 1])) { let again = null;   // même règle qu'en vrai : le média part, la phrase le vend
+    const weakCap = t => TEASE_ASK.test(t) || /\?\s*[\p{Extended_Pictographic}\s]*$/u.test(t) || str(t).replace(/[\p{Extended_Pictographic}]/gu, "").trim().split(/\s+/).length < 4;
+    if (al && B.length && weakCap(B[B.length - 1])) { let again = null;   // même règle qu'en vrai : le média part, la phrase le vend
       try { again = unleak(await grok(TM.concat([{ role: "system", content: "Ton média part avec cette réponse : la dernière bulle doit le vendre (ce que tu y fais, avec envie), pas demander « tu veux voir ? »." }]))); } catch (e) {}
-      const B2 = again && !str(again.laisser).trim() ? fresh(oneQ(bubbles(again)), said).filter(t => !PRICED(t) && !TEASE_ASK.test(t)) : []; B = B2.length ? shape(B2, LL) : B.filter(t => !TEASE_ASK.test(t)); if (!B.length) B = ["regarde ce que je t'ai gardé"]; }
+      const B2 = again && !str(again.laisser).trim() ? fresh(oneQ(bubbles(again)), said).filter(t => !PRICED(t) && !weakCap(t)) : []; B = B2.length ? shape(B2, LL) : B.filter(t => !weakCap(t)); if (!B.length) B = ["regarde ce que je t'ai gardé"]; }
     const pct = Math.round(+out.remise || 0);
     if (!al && !act && !tk && B.some(t => TEASE_ASK.test(t))) out.teaser = true;   // « tu veux que je te montre ? » : c'est un teasing
     // l'état du script après cette réponse : l'écran le garde et le renvoie au prochain message
