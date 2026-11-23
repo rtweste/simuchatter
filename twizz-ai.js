@@ -128,7 +128,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const XAI = () => str(process.env.XAI_API_KEY).trim();
   // ce que coûte Grok : chaque appel est compté (jetons et dollars, par jour, créatrice et usage) ; au-delà du budget de la semaine, l'IA se met en pause
   const { AsyncLocalStorage } = require("async_hooks"), CTX = new AsyncLocalStorage();
-  const PRICE = { in: +process.env.XAI_PRICE_IN || 0.20, cached: +process.env.XAI_PRICE_CACHED || 0.05, out: +process.env.XAI_PRICE_OUT || 0.50 };   // $ par million de jetons
+  // tarifs réels relevés sur la console xAI (grok-4-1-fast, nov. 2026) : $ par million de jetons ; un refus pour « usage guidelines » est facturé à part
+  const PRICE = { in: +process.env.XAI_PRICE_IN || 1.25, cached: +process.env.XAI_PRICE_CACHED || 0.20, out: +process.env.XAI_PRICE_OUT || 2.50, refusal: +process.env.XAI_PRICE_REFUSAL || 0.05 };
   db.exec(`CREATE TABLE IF NOT EXISTS twizz_ai_usage (day TEXT NOT NULL, creator_id TEXT NOT NULL DEFAULT '', kind TEXT NOT NULL DEFAULT '', calls INTEGER NOT NULL DEFAULT 0,
     tin INTEGER NOT NULL DEFAULT 0, tcached INTEGER NOT NULL DEFAULT 0, tout INTEGER NOT NULL DEFAULT 0, cost REAL NOT NULL DEFAULT 0, PRIMARY KEY (day, creator_id, kind))`);
   const dayOf = t => new Date(t).toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" });
@@ -136,6 +137,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const cost = ((tin - tc) * PRICE.in + tc * PRICE.cached + to * PRICE.out) / 1e6;
     try { db.prepare(`INSERT INTO twizz_ai_usage (day, creator_id, kind, calls, tin, tcached, tout, cost) VALUES (?,?,?,1,?,?,?,?) ON CONFLICT(day, creator_id, kind) DO UPDATE SET
       calls = calls + 1, tin = tin + excluded.tin, tcached = tcached + excluded.tcached, tout = tout + excluded.tout, cost = cost + excluded.cost`).run(dayOf(Date.now()), x.cid || "", x.kind || "autre", tin, tc, to, cost); } catch (e) {} }
+  // une fois : le coût déjà compté est recalculé aux vrais tarifs (l'ancien compteur sous-estimait la dépense d'environ 6 fois)
+  if (!S.get("twizz_ai_usage_reprice_1", 0)) { try { db.prepare("UPDATE twizz_ai_usage SET cost = ((tin - tcached) * ? + tcached * ? + tout * ?) / 1e6 WHERE kind <> 'refus'").run(PRICE.in, PRICE.cached, PRICE.out); S.set("twizz_ai_usage_reprice_1", Date.now()); } catch (e) {} }
+  function countRefusal() { const x = CTX.getStore() || {}; try { db.prepare(`INSERT INTO twizz_ai_usage (day, creator_id, kind, calls, tin, tcached, tout, cost) VALUES (?,?,?,1,0,0,0,?) ON CONFLICT(day, creator_id, kind) DO UPDATE SET calls = calls + 1, cost = cost + excluded.cost`).run(dayOf(Date.now()), x.cid || "", "refus", PRICE.refusal); } catch (e) {} }
   const spent7 = () => { const d = []; for (let i = 0; i < 7; i++) d.push(dayOf(Date.now() - i * 864e5)); return db.prepare(`SELECT COALESCE(SUM(cost), 0) c FROM twizz_ai_usage WHERE day IN (${d.map(() => "?").join(",")})`).get(...d).c; };
   const overBudget = () => { const b = gcfg().budget; return b > 0 && spent7() >= b; };
   function usage() {
@@ -211,12 +215,14 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     demande: { type: "string", description: "Quand il a payé un ticket cam ou vidéo custom et t'a dit ce qu'il veut : sa demande, avec tous les détails (et ses dispos pour une cam)." }
   } } } };
   async function grok(messages, o = {}) {
+    { const x = CTX.getStore(); if (x && x.kind === "reponse") { x.n = (x.n || 0) + 1; if (x.n > 3) throw fail("Limite de 3 appels à Grok pour cette réponse"); } }   // jamais plus de 3 appels (réponse + relances) par réponse
     const tool = o.tool === undefined ? TOOL : o.tool, body = { model: o.model || XMODEL(), messages, temperature: o.temp ?? (tool === TOOL ? 0.75 : 0.9), max_tokens: o.max || (tool === TOOL ? 500 : 900) };
     if (tool) { body.tools = [tool]; body.tool_choice = { type: "function", function: { name: tool.function.name } }; }
     let r; try { r = await fetch(XBASE() + "/chat/completions", { method: "POST", headers: { Authorization: "Bearer " + XAI(), "Content-Type": "application/json", ...((CTX.getStore() || {}).conv ? { "x-grok-conv-id": CTX.getStore().conv } : {}) },
       body: JSON.stringify(body), signal: AbortSignal.timeout(60000) }); }
     catch (e) { throw fail("Grok ne répond pas : " + e.message); }
     const j = await r.json().catch(() => null);
+    if (r.status === 403) countRefusal();
     if (!r.ok) { const e = fail(`Grok a refusé la demande (code ${r.status})${j && j.error ? " : " + str(j.error.message || j.error).slice(0, 160) : ""}`); e.status = r.status; throw e; }
     count(j && j.usage);
     const m = j && j.choices && j.choices[0] && j.choices[0].message; if (!m) throw fail("Réponse de Grok vide");
@@ -1067,7 +1073,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const FAILS = new Map(), RUNERR = new Map();
   async function safely(r, cr, c, C, relance) {
     const k = r.id + ":" + c.id, f = FAILS.get(k); if (f && now() < f.until) return false;
-    try { const ok = await CTX.run({ cid: cr.id, kind: "reponse", conv: `${cr.id}:${c.id}` }, () => handle(r, cr, c, C, relance)); FAILS.delete(k); RUNERR.delete(r.id); return ok; }
+    try { const ok = await CTX.run({ cid: cr.id, kind: "reponse", conv: `${cr.id}` }, () => handle(r, cr, c, C, relance)); FAILS.delete(k); RUNERR.delete(r.id); return ok; }
     catch (e) {
       // plusieurs erreurs de suite dans la séance (tous fans confondus) : les managers sont prévenus, au plus toutes les 30 min
       { const E = RUNERR.get(r.id) || { n: 0, ping: 0 }; E.n++; RUNERR.set(r.id, E); if (E.n >= 3 && now() - E.ping > 30 * 60e3) { E.ping = now();

@@ -518,7 +518,7 @@ function tabRegl(G, F) { const lockT = F ? "" : " · réglé par le fondateur";
           ${row("Mémoire des fans", "Toutes les 3 réponses, elle complète la fiche du fan (prénom, ville, goûts, résumé) : elle et les chatters s'en souviendront.", sw(G.memory, 'id="gMem"', "Mémoire des fans"))}
         </div>
         ${(() => { const U = D.usage || { week: 0, today: 0, budget: G.budget, byCreator: {}, byKind: {} }, B = +G.budget || 0, pc = B ? Math.min(100, Math.round(100 * U.week / B)) : 0, $ = v => (v || 0).toFixed(2).replace(".", ",") + " $";
-          const crs = D.creators.map(c => [c.label, U.byCreator[c.id] || 0]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]), KL = { reponse: "Réponses", memoire: "Mémoire des fans", medias: "Analyse du coffre", essai: "Essais", autre: "Autre" };
+          const crs = D.creators.map(c => [c.label, U.byCreator[c.id] || 0]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]), KL = { reponse: "Réponses", memoire: "Mémoire des fans", medias: "Analyse du coffre", essai: "Essais", refus: "Refus de Grok", autre: "Autre" };
           return `<div class="pn">${head("pulse", "b", "Coût <em>Grok</em>", "Sur les 7 derniers jours")}
           <div style="padding:2px 2px 10px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><b style="font-size:22px">${$(U.week)}</b><span class="mut" style="font-size:12.5px">${B ? "sur " + B + " $ / semaine" : "pas de budget"}</span></div>
             ${B ? `<div style="height:7px;border-radius:9px;background:rgba(255,255,255,.08);margin-top:8px;overflow:hidden"><div style="height:100%;width:${pc}%;background:${pc >= 100 ? "#ff6b6b" : pc >= 80 ? "#f0b45a" : "#5fd3a2"}"></div></div>` : ""}
