@@ -59,23 +59,49 @@ const TRAINEE = window.TRAINEE = (() => {
       const head = `<div class="tr-eb">EXERCICE ${g.n} / ${parts.length} · ${esc(g.title).toUpperCase()}</div>`;
       let Q; el.innerHTML = head + `<div class="qz-ld">Chargement…</div>`;
       try { Q = await api(`/api/course/${v0.id}/quiz/${g.id}`); } catch (e) { el.innerHTML = head + `<div class="qz-ld">${esc(e.message)}</div><div class="qz-bt"><button class="co-gh" data-rt>Réessayer</button></div>`; el.querySelector("[data-rt]").onclick = () => { shut(); quiz(g); }; return; }
-      const run = () => { const ans = []; let k = 0;
-        const ask = () => { const q = Q.qs[k], order = shuffle(q.opts.map((t, i) => i));
-          el.innerHTML = head + `<div class="qz-dots">${Q.qs.map((_, i) => `<i class="${i < k ? "d" : i === k ? "c" : ""}"></i>`).join("")}</div><div class="qz-q">${esc(q.q)}</div>
-            <div class="qz-os">${order.map(i => `<button class="qz-o" data-i="${i}">${esc(q.opts[i])}</button>`).join("")}</div><div class="qz-ft">Question ${k + 1} sur ${Q.qs.length} · il faut tout réussir pour continuer</div>`;
-          el.querySelectorAll(".qz-o").forEach(b => b.onclick = () => { ans[k] = +b.dataset.i; k++; k < Q.qs.length ? ask() : check(); }); };
+      // chaque exercice mélange plusieurs formes : choix, trouver l'erreur, remettre dans l'ordre, associer, réponse écrite
+      const ans = [], UP = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14l6-6 6 6"/></svg>';
+      const run = todo => { let n = 0;
+        const next = () => { n++; n < todo.length ? ask() : check(); };
+        const ask = () => { const k = todo[n], q = Q.qs[k], T = q.type || "qcm";
+          const top = head + `<div class="qz-dots">${todo.map((_, i) => `<i class="${i < n ? "d" : i === n ? "c" : ""}"></i>`).join("")}</div><div class="qz-q">${esc(q.q)}</div>`;
+          const foot = `<div class="qz-ft">Question ${n + 1} sur ${todo.length} · il faut tout réussir pour continuer</div>`, okBtn = `<div class="qz-er" role="alert"></div><div class="qz-bt" style="justify-content:flex-start"><button class="co-go" data-ok>Valider</button></div>`;
+          const err = t => { el.querySelector(".qz-er").textContent = t; };
+          if (T === "spot") {
+            el.innerHTML = top + `<div class="qz-ch">${q.msgs.map((m, i) => m.who === "me" ? `<button class="qz-m me" data-i="${i}">${m.lock ? `<span class="qz-lk">${LOCK} Média payant · ${esc(m.lock)}</span>` : esc(m.t)}</button>` : `<div class="qz-m fan">${esc(m.t)}</div>`).join("")}</div><div class="qz-ft">Clique sur le message du chatter qui pose problème.</div>` + foot;
+            el.querySelectorAll("button.qz-m").forEach(b => b.onclick = () => { ans[k] = +b.dataset.i; next(); });
+          } else if (T === "order") {
+            let ord = shuffle(q.items.map((_, i) => i));
+            const draw = () => { el.querySelector(".qz-or").innerHTML = ord.map((it, p) => `<div class="qz-oi"><span class="qz-on">${p + 1}</span><b>${esc(q.items[it])}</b><button data-u="${p}" aria-label="Monter" ${p ? "" : "disabled"}>${UP}</button><button data-d="${p}" aria-label="Descendre" ${p < ord.length - 1 ? "" : "disabled"} style="transform:rotate(180deg)">${UP}</button></div>`).join("");
+              el.querySelectorAll("[data-u]").forEach(b => b.onclick = () => { const p = +b.dataset.u; [ord[p - 1], ord[p]] = [ord[p], ord[p - 1]]; draw(); });
+              el.querySelectorAll("[data-d]").forEach(b => b.onclick = () => { const p = +b.dataset.d; [ord[p + 1], ord[p]] = [ord[p], ord[p + 1]]; draw(); }); };
+            el.innerHTML = top + `<div class="qz-or"></div>` + okBtn + foot; draw();
+            el.querySelector("[data-ok]").onclick = () => { ans[k] = ord.slice(); next(); };
+          } else if (T === "match") {
+            const R = shuffle(q.right.map((_, i) => i));
+            el.innerHTML = top + `<div class="qz-mt">${q.left.map((l, i) => `<label class="qz-ml"><b>${esc(l)}</b><select data-l="${i}"><option value="">Choisis la relance…</option>${R.map(r => `<option value="${r}">${esc(q.right[r])}</option>`).join("")}</select></label>`).join("")}</div>` + okBtn + foot;
+            el.querySelectorAll("select").forEach(x => x.onchange = () => err(""));
+            el.querySelector("[data-ok]").onclick = () => { const v = [...el.querySelectorAll("select")].map(x => x.value);
+              if (v.some(x => x === "")) return err("Choisis une relance pour chaque durée."); if (new Set(v).size < v.length) return err("Chaque relance ne sert qu'une fois."); ans[k] = v.map(Number); next(); };
+          } else if (T === "write") {
+            el.innerHTML = top + `<div class="qz-cx">${esc(q.ctx)}</div><textarea class="qz-ta" maxlength="300" rows="3" placeholder="Écris ta phrase comme tu l'enverrais au fan">${esc(typeof ans[k] === "string" ? ans[k] : "")}</textarea>` + okBtn + `<div class="qz-ft">Ta phrase est corrigée par l'IA d'après les règles de la vidéo.</div>` + foot;
+            const ta = el.querySelector("textarea"); ta.oninput = () => err(""); ta.focus();
+            el.querySelector("[data-ok]").onclick = () => { const v = ta.value.trim(); if (v.length < 12) return err("Écris d'abord ta phrase."); ans[k] = v; next(); };
+          } else { const order = shuffle(q.opts.map((t, i) => i));
+            el.innerHTML = top + `<div class="qz-os">${order.map(i => `<button class="qz-o" data-i="${i}">${esc(q.opts[i])}</button>`).join("")}</div>` + foot;
+            el.querySelectorAll(".qz-o").forEach(b => b.onclick = () => { ans[k] = +b.dataset.i; next(); }); } };
         const check = async () => { el.innerHTML = head + `<div class="qz-ld">Correction…</div>`; let R;
           try { R = await api(`/api/course/${v0.id}/quiz/${g.id}`, { body: { answers: ans } }); } catch (e) { el.innerHTML = head + `<div class="qz-ld">${esc(e.message)}</div><div class="qz-bt"><button class="co-gh" data-rt>Réessayer</button></div>`; el.querySelector("[data-rt]").onclick = check; return; }
           if (R.passed) { g.passed = true; const last = !gate();
             el.innerHTML = head + `<div class="co-ok">${CHECK}</div><div class="qz-q" style="text-align:center">Exercice réussi</div><div class="qz-ft" style="text-align:center">${last ? "Tous les exercices sont validés. Place à la conclusion." : "Le chapitre suivant est débloqué."}</div><div class="qz-bt"><button class="co-go" data-go>Continuer la vidéo →</button></div>`;
             burst(el.querySelector(".co-ok")); el.querySelector("[data-go]").onclick = () => { shut(); v.play().catch(() => {}); }; return; }
-          const bad = R.results.filter(r => !r.ok).length;
-          el.innerHTML = head + `<div class="qz-q">${bad} erreur${bad > 1 ? "s" : ""} : on reprend</div><div class="qz-rs">${Q.qs.map((q, i) => `<div class="qz-r${R.results[i].ok ? " ok" : ""}"><span>${R.results[i].ok ? "✓" : "✕"}</span><div><b>${esc(q.q)}</b>${R.results[i].ok ? "" : `<small>${esc(R.results[i].why)}</small>`}</div></div>`).join("")}</div>
-            <div class="qz-bt"><button class="co-gh" data-rev>Revoir le chapitre</button><button class="co-go" data-rt>Refaire l'exercice</button></div>`;
-          el.querySelector("[data-rt]").onclick = run;
+          const wrong = R.results.map((r, i) => r.ok ? -1 : i).filter(i => i >= 0), bad = wrong.length;
+          el.innerHTML = head + `<div class="qz-q">${bad} erreur${bad > 1 ? "s" : ""} : on reprend</div><div class="qz-rs">${Q.qs.map((q, i) => `<div class="qz-r${R.results[i].ok ? " ok" : ""}"><span>${R.results[i].ok ? "✓" : "✕"}</span><div><b>${esc(q.q)}</b>${R.results[i].ok ? "" : `<small>${esc(R.results[i].why || "")}</small>`}</div></div>`).join("")}</div>
+            <div class="qz-bt"><button class="co-gh" data-rev>Revoir le chapitre</button><button class="co-go" data-rt>Refaire ${bad > 1 ? "les questions ratées" : "la question ratée"}</button></div>`;
+          el.querySelector("[data-rt]").onclick = () => run(wrong);
           el.querySelector("[data-rev]").onclick = () => { shut(); v.currentTime = Math.max(0, g.from || 0); v.play().catch(() => {}); }; };
         ask(); };
-      run();
+      run(Q.qs.map((_, i) => i));
     }
     const send = (force) => { if (replay || !v.duration) return; const now = Date.now(); if (!force && now - lastSent < 5000) return; lastSent = now;
       return api(`/api/course/${v0.id}/progress`, { body: { pos: Math.min(maxT, v.duration), dur: v.duration } }).catch(() => null); };
