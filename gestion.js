@@ -12,7 +12,30 @@ const COURSE = [
   { id: "tw3", title: "Prix et négo", file: "messagerie-03-prix-nego.mp4" },
   { id: "tw4", title: "Connaître son fan", file: "messagerie-04-connaitre-son-fan.mp4" },
   { id: "tw5", title: "Répondre vite", file: "messagerie-05-repondre-vite.mp4" },
-  { id: "tw6", title: "Le shift", file: "messagerie-06-shift.mp4" }];
+  { id: "tw6", title: "Le shift", file: "messagerie-06-shift.mp4" },
+  { id: "tw7", title: "Vendre au bon moment", file: "vente-01-bon-moment.mp4" }];
+// Exercices obligatoires : la vidéo s'arrête à la fin de chaque chapitre (at, en secondes) ; il faut tout réussir pour continuer. ok = la bonne réponse (jamais envoyée au navigateur)
+const QUIZ = { tw7: [
+  { id: "p1", at: 151.3, from: 28, title: "Le bon moment", qs: [
+    { q: "Un fan vient d'arriver et t'écrit « Salut, ça va ? ». Que fais-tu ?", opts: ["Je crée le lien : je lui réponds et je lui pose une question", "Je lui propose un PPV tout de suite", "Je lui envoie la liste de mes prix"], ok: 0, why: "C'est un fan froid : il découvre. Ton objectif, c'est de créer le lien, pas de vendre." },
+    { q: "Il répond vite, te pose des questions, complimente ton sourire, puis écrit « T'as des photos plus sexy ? ».", opts: ["J'attends encore quelques jours", "C'est le moment : « J'en ai, oui… tu veux voir ? »", "Je change de sujet"], ok: 1, why: "Plusieurs signaux d'engagement, puis un signal d'intention clair : c'est le bon moment pour proposer." },
+    { q: "À ta question « ça va ? », le fan répond juste « oui ». Est-ce un signal d'achat ?", opts: ["Oui, il est d'accord", "Oui, s'il répond vite", "Non, un simple « oui » n'est pas un signal"], ok: 2, why: "Un fan qui répond n'est pas un fan qui veut acheter. Cherche de vrais signes d'intérêt." },
+    { q: "Combien de signaux forts te faut-il avant de proposer un PPV ?", opts: ["Aucun : dès qu'il répond", "Un seul suffit", "Au moins deux ou trois"], ok: 2, why: "La règle : au moins 2 à 3 signaux forts. Plusieurs signaux ensemble sont plus fiables qu'un seul." }] },
+  { id: "p2", at: 262.6, from: 151.5, title: "Le post-follow", qs: [
+    { q: "Le post-follow, c'est quoi ?", opts: ["La relance après l'envoi du PPV", "Le message juste avant le PPV, pour créer l'envie", "Une promo sur le prix"], ok: 1, why: "Post-follow = avant l'envoi, tu crées l'attente. Follow-up = après l'envoi." },
+    { q: "Tu vas envoyer une vidéo où le son n'a rien de spécial. Quelle phrase choisis-tu ?", opts: ["« Petit conseil : pas en silencieux »", "« Le son fait toute la différence sur celle-là »", "« J'hésite encore à te montrer ça… »"], ok: 2, why: "Tu ne parles du son que s'il y a vraiment quelque chose à entendre. Ce que tu annonces doit exister." },
+    { q: "Le fan répond peu, hésite et change de sujet. Que fais-tu ?", opts: ["Je ralentis et je reprends la conversation", "J'envoie le PPV quand même", "J'enchaîne trois teasings pour le chauffer"], ok: 0, why: "S'il répond peu ou change de sujet, tu ralentis. Un signal d'intérêt justifie une proposition, jamais une insistance." },
+    { q: "Quelle phrase accompagne correctement l'envoi d'un PPV ?", opts: ["« Dépêche-toi, je le supprime dans 5 minutes »", "« Voilà ce que je te disais. C'est 15 €, dis-moi si tu le veux »", "« Cadeau pour toi »… alors qu'il est payant"], ok: 1, why: "Le fan doit savoir que c'est payant et connaître le prix. Jamais de fausse urgence ni de faux gratuit." }] },
+  { id: "p3", at: 359.8, from: 262.8, title: "Le follow-up", qs: [
+    { q: "Le PPV est parti, le fan n'a pas réagi. Quel follow-up envoies-tu ?", opts: ["« Tu me fais patienter alors que je t'ai envoyé du premium »", "Le même message, trois fois de suite", "« Le meilleur moment, c'est vers le milieu »… si c'est vrai"], ok: 2, why: "Un bon follow-up rappelle le média avec un détail réel, sans culpabiliser et sans répéter." },
+    { q: "Ta vidéo ne contient aucun gros plan. Peux-tu écrire « le passage avec le gros plan… » ?", opts: ["Oui, ça donne envie", "Non : je choisis un détail qui est vraiment dans la vidéo", "Oui, s'il ne l'a pas encore achetée"], ok: 1, why: "Tu ne promets que ce que le contenu montre vraiment. Un fan trompé n'achète pas deux fois." },
+    { q: "Le fan répond « non merci, pas ce soir ». Que fais-tu ?", opts: ["« Si tu tenais à moi, tu l'ouvrirais »", "J'insiste : « allez, juste celle-là »", "J'accepte et je reprends la conversation"], ok: 2, why: "Un refus s'accepte tout de suite. Pas de relance après un refus, jamais de culpabilisation." },
+    { q: "Le fan vient d'acheter. Et maintenant ?", opts: ["Je relance la conversation, naturellement", "Je ne réponds plus : la vente est faite", "J'envoie un autre PPV sans un mot"], ok: 0, why: "Après l'achat, tu restes là et tu relances la conversation : c'est ce qui le fait revenir." }] },
+  { id: "p4", at: 453.0, from: 360, title: "Le fan qui disparaît", qs: [
+    { q: "En plein script, le fan ne répond plus… puis revient 4 minutes après. Que fais-tu ?", opts: ["J'envoie directement l'offre payante", "« Heyy, t'as disparu d'un coup… on continue ? »", "Je reprends le script comme si de rien n'était"], ok: 1, why: "Tu vérifies d'abord qu'il a toujours envie de continuer, avec une relance adaptée à son absence." },
+    { q: "Il a disparu plus de 15 minutes. Quelle relance ?", opts: ["« T'es toujours chaud, ou on garde ça pour plus tard ? »", "« Pourquoi tu m'ignores ? »", "Trois relances à la suite"], ok: 0, why: "Après une longue absence, tu confirmes son envie. Une seule relance à la fois, sans supposer pourquoi il est parti." },
+    { q: "Il répond « oui je suis là, vas-y ». Où reprends-tu ?", opts: ["Je recommence le script depuis le début", "Je passe à un autre script", "À l'étape exacte où je m'étais arrêté"], ok: 2, why: "Il est toujours intéressé : tu reprends le script exactement là où tu en étais." },
+    { q: "Il répond « je suis plus trop dans le mood ». Que fais-tu ?", opts: ["J'envoie le PPV quand même, au cas où", "Je respecte et je propose de reprendre plus tard", "J'insiste jusqu'à ce qu'il change d'avis"], ok: 1, why: "Tu respectes sa réponse, sans insister. Le Follow-up Script sert à vérifier son envie, pas à forcer une vente." }] }] };
 const COURSE_DIR = require("path").join(__dirname, "public", "video", "twizz");
 const courseList = () => COURSE.filter(v => { try { return require("fs").existsSync(require("path").join(COURSE_DIR, v.file)); } catch (e) { return false; } });
 const SRC_LBL = { abo: "Abonnements", live: "Live", coll: "Collections", push: "Média push" };
@@ -221,11 +244,16 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   db.exec("CREATE TABLE IF NOT EXISTS training_ready (user_id INTEGER PRIMARY KEY, at INTEGER NOT NULL)");
   db.exec("CREATE TABLE IF NOT EXISTS training_bypass (user_id INTEGER PRIMARY KEY, level TEXT NOT NULL, at INTEGER NOT NULL)");
   db.exec("CREATE TABLE IF NOT EXISTS course_progress (user_id INTEGER NOT NULL, video_id TEXT NOT NULL, max_pos REAL NOT NULL DEFAULT 0, dur REAL, upd INTEGER, done_at INTEGER, PRIMARY KEY (user_id, video_id))");
+  db.exec("CREATE TABLE IF NOT EXISTS course_quiz (user_id INTEGER NOT NULL, video_id TEXT NOT NULL, part TEXT NOT NULL, tries INTEGER NOT NULL DEFAULT 0, passed_at INTEGER, PRIMARY KEY (user_id, video_id, part))");
   function course(uid, unlocked) {
     const rows = {}; db.prepare("SELECT video_id, max_pos, dur, done_at FROM course_progress WHERE user_id = ?").all(uid).forEach(r => rows[r.video_id] = r);
+    const qp = new Set(db.prepare("SELECT video_id, part FROM course_quiz WHERE user_id = ? AND passed_at IS NOT NULL").all(uid).map(r => r.video_id + ":" + r.part));
     let prevDone = true;
-    const videos = courseList().map((v, i) => { const r = rows[v.id] || {}, done = !!r.done_at, locked = !unlocked || !prevDone; prevDone = prevDone && done;
-      return { id: v.id, n: i + 1, title: v.title, src: "/video/twizz/" + v.file, done, locked, pos: done ? 0 : Math.max(0, r.max_pos || 0), dur: r.dur || null }; });
+    const videos = courseList().map((v, i) => { const r = rows[v.id] || {};
+      // exercices : la vidéo n'est validée que si tous sont réussis
+      const quiz = QUIZ[v.id] ? QUIZ[v.id].map((p, k) => ({ id: p.id, n: k + 1, at: p.at, from: p.from, title: p.title, count: p.qs.length, passed: qp.has(v.id + ":" + p.id) })) : null;
+      const done = !!r.done_at && (!quiz || quiz.every(p => p.passed)), locked = !unlocked || !prevDone; prevDone = prevDone && done;
+      return { id: v.id, n: i + 1, title: v.title, src: "/video/twizz/" + v.file, done, locked, pos: done ? 0 : Math.max(0, r.max_pos || 0), dur: r.dur || null, quiz }; });
     const done = videos.filter(v => v.done).length;
     return { unlocked, videos, done, total: videos.length, complete: videos.length > 0 && done === videos.length, next: videos.find(v => !v.done && !v.locked) || null };
   }
@@ -316,7 +344,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     if (!["sim", "all", "reset"].includes(mode)) return res.status(400).json({ error: "Action inconnue" });
     const now = Date.now();
     if (mode === "reset") {
-      db.prepare("DELETE FROM training_bypass WHERE user_id = ?").run(u.id); db.prepare("DELETE FROM course_progress WHERE user_id = ?").run(u.id);
+      db.prepare("DELETE FROM training_bypass WHERE user_id = ?").run(u.id); db.prepare("DELETE FROM course_progress WHERE user_id = ?").run(u.id); db.prepare("DELETE FROM course_quiz WHERE user_id = ?").run(u.id);
       db.prepare("DELETE FROM training_ready WHERE user_id = ?").run(u.id); db.prepare("UPDATE users SET intro_seen = 0 WHERE id = ?").run(u.id);
       db.prepare("DELETE FROM trainee_deadline WHERE user_id = ?").run(u.id); db.prepare("DELETE FROM interviews WHERE user_id = ?").run(u.id);
       log(req.user.id, "a", `Test : formation de **${u.username}** remise à zéro`, "Critères forcés, vidéos, présentation, délai de 24 h et entretien réinitialisés");
@@ -324,6 +352,8 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       db.prepare("INSERT INTO training_bypass (user_id, level, at) VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET level = excluded.level, at = excluded.at").run(u.id, mode, now);
       if (mode === "all") { const ins = db.prepare("INSERT INTO course_progress (user_id, video_id, max_pos, dur, upd, done_at) VALUES (?,?,?,?,?,?) ON CONFLICT(user_id, video_id) DO UPDATE SET done_at = COALESCE(course_progress.done_at, excluded.done_at)");
         courseList().forEach(v => ins.run(u.id, v.id, 0, null, now, now));
+        const iq = db.prepare("INSERT INTO course_quiz (user_id, video_id, part, tries, passed_at) VALUES (?,?,?,0,?) ON CONFLICT(user_id, video_id, part) DO UPDATE SET passed_at = COALESCE(course_quiz.passed_at, excluded.passed_at)");
+        Object.keys(QUIZ).forEach(id => QUIZ[id].forEach(p => iq.run(u.id, id, p.id, now)));
         const A = { _test: true }; IV_QUESTIONS.forEach(q => A[q.id] = q.type === "slots" ? { v: agency().slots.slice(0, 2).map(x => x[0]), note: "" } : q.type === "rating" ? { v: 4, note: "" } : { v: "ok", note: "" });
         db.prepare("INSERT INTO interviews (user_id, by_id, started_at, updated_at, done_at, decision, answers) VALUES (?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET answers = excluded.answers, done_at = excluded.done_at, decision = excluded.decision, updated_at = excluded.updated_at")
           .run(u.id, req.user.id, now, now, now, "review", JSON.stringify(A)); }
@@ -419,13 +449,30 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     if (!isFinite(pos) || pos < 0 || !isFinite(dur) || dur <= 0 || dur > 3600) return res.status(400).json({ error: "Position invalide" });
     const now = Date.now(), r = db.prepare("SELECT max_pos, upd FROM course_progress WHERE user_id = ? AND video_id = ?").get(uid, v.id);
     const prev = r ? r.max_pos : 0, el = r && r.upd ? (now - r.upd) / 1000 : 0;
-    const max = Math.max(prev, Math.min(pos, prev + el * 1.25 + 6, dur));
+    const gate = (v.quiz || []).find(p => !p.passed);   // exercice pas encore réussi : la vidéo ne va pas plus loin
+    const max = Math.min(Math.max(prev, Math.min(pos, prev + el * 1.25 + 6, dur)), gate ? gate.at : Infinity);
     const done = max >= dur - 1.5;
     db.prepare("INSERT INTO course_progress (user_id, video_id, max_pos, dur, upd, done_at) VALUES (?,?,?,?,?,?) ON CONFLICT(user_id, video_id) DO UPDATE SET max_pos = excluded.max_pos, dur = excluded.dur, upd = excluded.upd, done_at = COALESCE(course_progress.done_at, excluded.done_at)")
       .run(uid, v.id, max, dur, now, done ? now : null);
     if (done) { const u = db.prepare("SELECT username FROM users WHERE id = ?").get(uid); log(uid, "a", `**${u ? u.username : "?"}** a terminé la vidéo ${v.n} de la formation messagerie`, v.title); }
     res.json({ ok: true, done, max, training: done ? training(uid) : undefined });
   });
+  // exercices d'une vidéo : questions sans les réponses, puis correction côté serveur (tout juste pour passer)
+  const quizOf = (req, res) => { const uid = req.user.id, T = training(uid), v = T.course.videos.find(x => x.id === req.params.id), P = v && (QUIZ[v.id] || []).find(p => p.id === req.params.part);
+    if (!v || !P) return void res.status(404).json({ error: "Exercice introuvable" });
+    if (v.locked) return void res.status(403).json({ error: "Cette vidéo n'est pas encore débloquée" });
+    const r = db.prepare("SELECT max_pos FROM course_progress WHERE user_id = ? AND video_id = ?").get(uid, v.id), part = v.quiz.find(p => p.id === P.id);
+    if (!part.passed && (!r || r.max_pos < P.at - 2)) return void res.status(403).json({ error: "Regarde d'abord le chapitre jusqu'au bout" });
+    return { uid, v, P, part }; };
+  app.get("/api/course/:id/quiz/:part", auth, (req, res) => { const x = quizOf(req, res); if (!x) return;
+    res.json({ id: x.P.id, n: x.part.n, total: x.v.quiz.length, title: x.P.title, qs: x.P.qs.map(q => ({ q: q.q, opts: q.opts })) }); });
+  app.post("/api/course/:id/quiz/:part", auth, (req, res) => { const x = quizOf(req, res); if (!x) return;
+    const A = Array.isArray(req.body.answers) ? req.body.answers : [], results = x.P.qs.map((q, i) => ({ ok: Number(A[i]) === q.ok, why: q.why })), passed = results.every(r => r.ok), now = Date.now();
+    db.prepare("INSERT INTO course_quiz (user_id, video_id, part, tries, passed_at) VALUES (?,?,?,1,?) ON CONFLICT(user_id, video_id, part) DO UPDATE SET tries = tries + (CASE WHEN course_quiz.passed_at IS NULL THEN 1 ELSE 0 END), passed_at = COALESCE(course_quiz.passed_at, excluded.passed_at)")
+      .run(x.uid, x.v.id, x.P.id, passed ? now : null);
+    if (passed && !x.part.passed) { const u = db.prepare("SELECT username FROM users WHERE id = ?").get(x.uid), t = (db.prepare("SELECT tries FROM course_quiz WHERE user_id = ? AND video_id = ? AND part = ?").get(x.uid, x.v.id, x.P.id) || {}).tries || 1;
+      log(x.uid, "a", `**${u ? u.username : "?"}** a réussi l'exercice ${x.part.n} de « ${x.v.title} »`, `${x.P.title} · ${t === 1 ? "du premier coup" : "au " + t + "e essai"}`); }
+    res.json({ passed, results, training: passed ? training(x.uid) : undefined }); });
   app.post("/api/admin/users/:id/promote", auth, admin, (req, res) => {
     const u = db.prepare("SELECT id, role FROM users WHERE id = ?").get(parseInt(req.params.id, 10));
     if (!u || u.role !== "trainee") return res.status(400).json({ error: "Ce compte n'est pas en formation" });

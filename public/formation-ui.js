@@ -27,7 +27,7 @@ const TRAINEE = window.TRAINEE = (() => {
       <div class="tr-mut" style="margin-top:4px">${C.total} vidéos pour maîtriser la plateforme. Elles se débloquent quand tes critères du simulateur sont verts (${simDone} / ${simTotal}).</div></div></section>`;
     const pct = Math.round(C.done / C.total * 100);
     const list = C.videos.map(v => `<button class="co-v${v.done ? " ok" : ""}${v.locked ? " lk" : ""}${C.next && C.next.id === v.id ? " nx" : ""}" data-v="${v.id}" ${v.locked ? "disabled" : ""}>
-      <span class="co-n">${v.done ? CHECK : v.locked ? LOCK : v.n}</span><span class="co-t"><b>${esc(v.title)}</b><small>${v.done ? "Vue jusqu'au bout · revoir" : v.locked ? "Termine la vidéo précédente" : v.pos > 3 ? `Reprendre à ${fmt(v.pos)}` : "À regarder"}</small></span>
+      <span class="co-n">${v.done ? CHECK : v.locked ? LOCK : v.n}</span><span class="co-t"><b>${esc(v.title)}</b><small>${v.done ? "Vue jusqu'au bout · revoir" : v.locked ? "Termine la vidéo précédente" : v.pos > 3 ? `Reprendre à ${fmt(v.pos)}` : v.quiz ? `À regarder · ${v.quiz.length} exercices` : "À regarder"}</small></span>
       <span class="co-pl">${v.locked ? "" : PLAY}</span></button>`).join("");
     return `<section class="tr-card co-card" style="--d:.08s"><div class="tr-ch"><h3>Formation <em>messagerie</em></h3><span class="tr-tag${C.complete ? " g" : ""}">${C.complete ? "Terminée ✓" : `${C.done} / ${C.total} vidéos`}</span></div>
       <div class="co-bar"><i style="width:${pct}%"></i></div>
@@ -45,19 +45,49 @@ const TRAINEE = window.TRAINEE = (() => {
         <div class="co-cv off" data-end><div class="co-ok">${CHECK}</div><b style="font-size:22px">${idx + 1 < C.total ? "Vidéo terminée" : "Formation messagerie terminée"}</b><small>${idx + 1 < C.total ? `La vidéo ${idx + 2} est débloquée.` : "Ton manager va être prévenu."}</small>
           <div style="display:flex;gap:10px;margin-top:6px"><button class="co-gh" data-close>Fermer</button>${idx + 1 < C.total ? `<button class="co-go" data-next>Vidéo suivante →</button>` : ""}</div></div>
         <div class="co-cv off" data-err><b>La vidéo ne se charge pas</b><small>Vérifie ta connexion et réessaie.</small><button class="co-gh" data-close>Fermer</button></div></div>
-      <div class="co-ft"><span class="co-tb"><i></i></span><span class="co-tm">—</span></div>${replay ? "" : `<div class="co-note">${LOCK}Pas d'avance rapide : regarde jusqu'au bout pour débloquer la suite.</div>`}</div>`;
+      <div class="co-ft"><span class="co-tb"><i></i></span><span class="co-tm">—</span></div>${replay ? "" : `<div class="co-note">${LOCK}Pas d'avance rapide : regarde jusqu'au bout pour débloquer la suite.${v0.quiz ? " Un exercice à réussir à la fin de chaque chapitre." : ""}</div>`}</div>`;
     document.body.appendChild(ov); document.body.style.overflow = "hidden"; requestAnimationFrame(() => ov.classList.add("on"));
     const v = ov.querySelector("video"), bar = ov.querySelector(".co-tb i"), tm = ov.querySelector(".co-tm"), ps = ov.querySelector(".co-ps");
-    let maxT = replay ? 1e9 : v0.pos, started = false, lastSent = 0, finished = false, nextVid = null;
+    let maxT = replay ? 1e9 : v0.pos, started = false, lastSent = 0, finished = false, nextVid = null, qzOpen = false;
+    // exercices : la vidéo s'arrête à la fin de chaque chapitre tant que son exercice n'est pas réussi
+    const parts = replay ? [] : (v0.quiz || []).map(p => ({ ...p })), gate = () => parts.find(p => !p.passed), box = ov.querySelector(".co-vd");
+    const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    async function quiz(g) {
+      if (qzOpen) return; qzOpen = true; v.pause(); ps.classList.remove("on"); await send(true);
+      const el = document.createElement("div"); el.className = "co-qz"; box.appendChild(el); box.classList.add("qz");
+      const shut = () => { el.remove(); box.classList.remove("qz"); qzOpen = false; };
+      const head = `<div class="tr-eb">EXERCICE ${g.n} / ${parts.length} · ${esc(g.title).toUpperCase()}</div>`;
+      let Q; el.innerHTML = head + `<div class="qz-ld">Chargement…</div>`;
+      try { Q = await api(`/api/course/${v0.id}/quiz/${g.id}`); } catch (e) { el.innerHTML = head + `<div class="qz-ld">${esc(e.message)}</div><div class="qz-bt"><button class="co-gh" data-rt>Réessayer</button></div>`; el.querySelector("[data-rt]").onclick = () => { shut(); quiz(g); }; return; }
+      const run = () => { const ans = []; let k = 0;
+        const ask = () => { const q = Q.qs[k], order = shuffle(q.opts.map((t, i) => i));
+          el.innerHTML = head + `<div class="qz-dots">${Q.qs.map((_, i) => `<i class="${i < k ? "d" : i === k ? "c" : ""}"></i>`).join("")}</div><div class="qz-q">${esc(q.q)}</div>
+            <div class="qz-os">${order.map(i => `<button class="qz-o" data-i="${i}">${esc(q.opts[i])}</button>`).join("")}</div><div class="qz-ft">Question ${k + 1} sur ${Q.qs.length} · il faut tout réussir pour continuer</div>`;
+          el.querySelectorAll(".qz-o").forEach(b => b.onclick = () => { ans[k] = +b.dataset.i; k++; k < Q.qs.length ? ask() : check(); }); };
+        const check = async () => { el.innerHTML = head + `<div class="qz-ld">Correction…</div>`; let R;
+          try { R = await api(`/api/course/${v0.id}/quiz/${g.id}`, { body: { answers: ans } }); } catch (e) { el.innerHTML = head + `<div class="qz-ld">${esc(e.message)}</div><div class="qz-bt"><button class="co-gh" data-rt>Réessayer</button></div>`; el.querySelector("[data-rt]").onclick = check; return; }
+          if (R.passed) { g.passed = true; const last = !gate();
+            el.innerHTML = head + `<div class="co-ok">${CHECK}</div><div class="qz-q" style="text-align:center">Exercice réussi</div><div class="qz-ft" style="text-align:center">${last ? "Tous les exercices sont validés. Place à la conclusion." : "Le chapitre suivant est débloqué."}</div><div class="qz-bt"><button class="co-go" data-go>Continuer la vidéo →</button></div>`;
+            burst(el.querySelector(".co-ok")); el.querySelector("[data-go]").onclick = () => { shut(); v.play().catch(() => {}); }; return; }
+          const bad = R.results.filter(r => !r.ok).length;
+          el.innerHTML = head + `<div class="qz-q">${bad} erreur${bad > 1 ? "s" : ""} : on reprend</div><div class="qz-rs">${Q.qs.map((q, i) => `<div class="qz-r${R.results[i].ok ? " ok" : ""}"><span>${R.results[i].ok ? "✓" : "✕"}</span><div><b>${esc(q.q)}</b>${R.results[i].ok ? "" : `<small>${esc(R.results[i].why)}</small>`}</div></div>`).join("")}</div>
+            <div class="qz-bt"><button class="co-gh" data-rev>Revoir le chapitre</button><button class="co-go" data-rt>Refaire l'exercice</button></div>`;
+          el.querySelector("[data-rt]").onclick = run;
+          el.querySelector("[data-rev]").onclick = () => { shut(); v.currentTime = Math.max(0, g.from || 0); v.play().catch(() => {}); }; };
+        ask(); };
+      run();
+    }
     const send = (force) => { if (replay || !v.duration) return; const now = Date.now(); if (!force && now - lastSent < 5000) return; lastSent = now;
       return api(`/api/course/${v0.id}/progress`, { body: { pos: Math.min(maxT, v.duration), dur: v.duration } }).catch(() => null); };
     v.addEventListener("loadedmetadata", () => { if (!replay && v0.pos > 3 && v0.pos < v.duration - 2) v.currentTime = v0.pos; });
     const start = () => { ov.querySelector("[data-start]").classList.add("off"); started = true; v.play().catch(() => {}); };
     ov.querySelector("[data-start]").onclick = start;
-    v.addEventListener("timeupdate", () => { if (!v.seeking) maxT = Math.max(replay ? 0 : maxT, v.currentTime); bar.style.width = (v.currentTime / (v.duration || 1) * 100) + "%"; tm.textContent = v.duration ? `${fmt(v.duration - v.currentTime)} restantes` : "—"; send(false); });
+    v.addEventListener("timeupdate", () => { const g = gate();
+      if (g && v.currentTime >= g.at) { if (!v.seeking) maxT = Math.max(maxT, g.at); if (!qzOpen) { v.pause(); if (Math.abs(v.currentTime - g.at) > .05) v.currentTime = g.at; if (started) quiz(g); } return; }
+      if (!v.seeking) maxT = Math.max(replay ? 0 : maxT, v.currentTime); bar.style.width = (v.currentTime / (v.duration || 1) * 100) + "%"; tm.textContent = v.duration ? `${fmt(v.duration - v.currentTime)} restantes` : "—"; send(false); });
     v.addEventListener("seeking", () => { if (!replay && v.currentTime > maxT + .5) v.currentTime = maxT; });
-    v.addEventListener("click", () => { if (!started) return; v.paused ? v.play() : v.pause(); });
-    v.addEventListener("pause", () => { if (!v.ended) { ps.classList.add("on"); send(true); } }); v.addEventListener("play", () => ps.classList.remove("on"));
+    v.addEventListener("click", () => { if (!started || qzOpen) return; v.paused ? v.play() : v.pause(); });
+    v.addEventListener("pause", () => { if (!v.ended && !qzOpen) { ps.classList.add("on"); send(true); } }); v.addEventListener("play", () => { if (qzOpen) return void v.pause(); ps.classList.remove("on"); });
     v.addEventListener("ended", async () => { if (finished) return; finished = true; maxT = v.duration;
       const r = replay ? null : await send(true); const T = r && r.training; if (T && T.course) nextVid = T.course.videos[idx + 1] || null; else nextVid = C.videos[idx + 1] || null;
       ov.querySelector("[data-end]").classList.remove("off"); burst(ov.querySelector(".co-ok")); });
@@ -65,7 +95,7 @@ const TRAINEE = window.TRAINEE = (() => {
     const close = (then) => { v.pause(); if (!finished) send(true); ov.classList.remove("on"); setTimeout(() => ov.remove(), 400); document.body.style.overflow = ""; document.removeEventListener("keydown", key); onClose(then); };
     ov.querySelectorAll(".co-x,[data-close]").forEach(b => b.onclick = () => close());
     const nb = ov.querySelector("[data-next]"); if (nb) nb.onclick = () => close(nextVid && !nextVid.locked ? nextVid.id : C.videos[idx + 1].id);
-    const key = e => { if (e.key === "Escape") close(); else if (e.key === " " && started) { e.preventDefault(); v.paused ? v.play() : v.pause(); } };
+    const key = e => { if (e.key === "Escape") close(); else if (e.key === " " && started && !qzOpen) { e.preventDefault(); v.paused ? v.play() : v.pause(); } };
     document.addEventListener("keydown", key);
   }
   function burst(el) { if (!el || reduce) return; const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
