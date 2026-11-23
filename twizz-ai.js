@@ -186,6 +186,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   }
   // un chatter en shift sur cette créatrice ouvre sa messagerie : il reprend la main (appelé par la messagerie).
   // Hors de son shift (il passe parler à un fan perso), l'IA continue : elle laisse les conversations qu'il ouvre ou où il vient d'écrire.
+  // correction d'une réponse écrite de la formation : un petit appel à Grok (modèle rapide), compté dans le budget ; rien si la clé manque ou si le budget de la semaine est dépassé
+  app.locals.aiGrade = (system, user) => CTX.run({ kind: "formation" }, async () => { if (!XAI() || overBudget()) return null;
+    const r = await grok([{ role: "system", content: system }, { role: "user", content: user }], { tool: null, temp: 0.2, max: 160, model: MODELS.fast[0] }); return r.text; });
   app.locals.aiHuman = (cid, user) => {
     if (!user || !["chatter", "tl"].includes(user.rk)) return false;
     const r = runOf(cid); if (!r) return false;
