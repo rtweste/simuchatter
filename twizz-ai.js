@@ -374,11 +374,13 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const SAFE_LEAVE = /\b(mineur|moins de 18|\d{1,2} ?ans|lyc[ée]e|coll[èe]ge|d[ée]tresse|suicid|se faire du mal|mal[- ]?être|d[ée]pens|argent|rembours|plainte|humain)/i;
   const meetOnly = r => MEET.test(str(r)) && !SAFE_LEAVE.test(str(r));   // les raisons de sécurité (mineur, détresse, dépenses…) passent toujours avant
   // « pas encore acheté », « album: photos »… ne sont pas des raisons de laisser un fan à l'équipe : elle continue de lui parler
-  const junkLeave = r => { const t = str(r).trim(); return !!t && !SAFE_LEAVE.test(t) && !/personnalis|custom|sur mesure/i.test(t) && (/\b(achet|album|photos?|vid[ée]os?|m[ée]dias?|teas|prix|palier|coffre|ouvert|gratuit|aper[çc]u|free)/i.test(t) || t.split(/\s+/).length < 3); };
+  // seules de vraies raisons laissent un fan à l'équipe : sécurité (mineur, détresse, dépenses), remboursement, plainte, menace, ou il veut un humain. Tout le reste (contenu qu'elle n'a pas, média pas acheté, gratuit, « je ne sais pas »…) : elle continue de lui parler
+  const LEAVE_OK = /\b(menac|harc[eè]l|violen|agress|ill[ée]gal|police|avocat|arnaqu|signal)/i, SYS_LEAVE = /^(L'IA n'arrive pas|Grok refuse|Fan tagué)/;
+  const junkLeave = r => { const t = str(r).trim(); return !!t && !SYS_LEAVE.test(t) && !SAFE_LEAVE.test(t) && !LEAVE_OK.test(t); };
   // elle n'évoque jamais une rencontre d'elle-même : la bulle est retirée (s'il en reste une autre)
   const MEETSELF = /\bun jour (si|quand|peut|on)|si tu passes|quand (on se verra|tu viens|tu passes)|passe me voir|viens me voir|on se (voit|verra|capte)/i;
   const noMeet = B => { const B2 = B.filter(t => !MEETSELF.test(t)); return B2.length ? B2 : B; };
-  const STAY_NOTE = "Ce n'est PAS une raison de le laisser à l'équipe (laisse « laisser » vide) : un média pas encore acheté ou un album ne t'empêche pas de lui parler. Réponds-lui toi-même, dans le fil de ce qu'il vient d'écrire.";
+  const STAY_NOTE = "Ce n'est PAS une raison de le laisser à l'équipe (laisse « laisser » vide). Réponds-lui toi-même, dans le fil de ce qu'il vient d'écrire. S'il demande un contenu que tu n'as pas : ne promets rien et ne l'invente pas, dis-le avec légèreté et propose-lui ce que tu as de plus proche dans ton coffre. Un média pas encore acheté ou une demande de gratuit ne t'empêche pas non plus de lui parler.";
   const MEET_NOTE = "Il veut te rencontrer : ce n'est PAS une raison de le laisser à l'équipe (laisse « laisser » vide). Réponds-lui toi-même : refuse gentiment et avec humour, sans promettre de rencontre ni donner d'adresse, garde-le chaud et ramène-le vers ce que tu peux lui montrer ici.";
   const SPECIFIC = /\b(doigt|masturb|branl|nue?s?\b|[àa] poil|seins|nichons|t[ée]tons|cul\b|fesses|chatte|jouet|gode|vibro|douche|bain|lingerie|string|culotte|pieds|anal|squirt|g[ée]mi|en train de|o[uù] tu)/i;
   const boughtOf = (cr, fanId, L) => Math.max(L.filter(m => !m.fromFan && m.type === "FILE" && m.price > 0 && m.status === "accepted").length,
@@ -1201,7 +1203,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
         for (const c of all) {
           if (c.fan.id && byFan.get(c.fan.id) !== c) continue;
           const t = Date.parse(c.last.at) || 0, age = now() - t, row = db.prepare("SELECT blocked, replies, last_fan_msg, relances, relance_at, busy, fan_at FROM twizz_ai_convs WHERE run_id = ? AND conv_id = ?").get(r.id, c.id) || {};
-          if (row.blocked && junkLeave(row.blocked)) { db.prepare("UPDATE twizz_ai_convs SET blocked = NULL WHERE run_id = ? AND conv_id = ?").run(r.id, c.id); row.blocked = null; }   // mis de côté pour « pas encore acheté » : elle reprend
+          if (row.blocked && junkLeave(row.blocked)) { db.prepare("UPDATE twizz_ai_convs SET blocked = NULL, last_fan_msg = NULL WHERE run_id = ? AND conv_id = ?").run(r.id, c.id); row.blocked = null; row.last_fan_msg = null; }   // mis de côté sans vraie raison : elle reprend la conversation tout de suite, sans attendre qu'il réécrive
           // un fan qui attend une réponse : dans la fenêtre réglée ; une relance : jusqu'à 24 h après son dernier message
           if (!c.fan.id || row.blocked || (age > C.fanWindow * 3600e3 && (c.last.fromFan || age > 24 * 3600e3)) || hereOf(c.id, -1).length || (C.teamPause && human.get(c.id, now() - C.teamPause * 60e3))) continue;
           if (fanOff.get(cr.id, c.fan.id)) continue;   // IA coupée pour ce fan
