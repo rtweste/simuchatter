@@ -143,7 +143,18 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
   }
 
   /* ---------- ventes ---------- */
-  const keep = () => { const f = Number(S.get("platform_fee", 25)); return f < 100 ? 1 - f / 100 : 1; };
+  // part que Twizz reverse sur le prix payé par le fan (5 € payés → 3,76 € net) : sert à retrouver le vrai prix d'une vente Twizz.
+  // À ne pas confondre avec les « frais de plateforme » de la Compta (ex. 37,5 %), qui servent à calculer le net des commissions.
+  const keep = () => { const k = Number(process.env.TWIZZ_KEEP || S.get("twizz_keep", 0.752)); return k > 0.3 && k <= 1 ? k : 0.752; };
+  // une fois : les ventes Twizz déjà importées (périodes non clôturées) sont recalculées au vrai prix payé par le fan
+  try { if (!S.get("twizz_amount_fix_1", 0)) {
+    const per = ms => { const [y, m, d] = new Date(ms).toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" }).split("-"); return `${y}-${m}-${+d <= 15 ? "A" : "B"}`; };
+    const locked = new Set(db.prepare("SELECT period FROM period_locks").all().map(r => r.period)); let n = 0;
+    db.prepare("SELECT s.id, s.sold_at, t.net FROM sales s JOIN twizz_tx t ON t.id = s.twizz_id WHERE s.source = 'twizz' AND t.net > 0").all().forEach(r => {
+      if (locked.has(per(r.sold_at))) return; const a = Math.round(r.net / keep() * 100) / 100;
+      n += db.prepare("UPDATE sales SET amount = ?, declared_amount = ? WHERE id = ? AND amount <> ?").run(a, a, r.id, a).changes; });
+    S.set("twizz_amount_fix_1", Date.now()); if (n) console.log(`Ventes Twizz recalculées au vrai prix : ${n}`);
+  } } catch (e) { console.error("Ventes Twizz, recalcul", e.message); }
   // qui était sur cette créatrice à ce moment-là (shift principal d'abord ; 10 min de tolérance après la fin)
   function whoSold(modelId, at) {
     const L = db.prepare(`SELECT c.user_id, c.reinforce, c.start_at FROM clocks c JOIN users u ON u.id = c.user_id
@@ -151,7 +162,7 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     return L.length ? L[0].user_id : null;
   }
   function makeSale(t, userId) {
-    const amount = r2(t.net / keep());   // montant ramené en brut : la compta retrouve exactement le net Twizz
+    const amount = r2(t.net / keep());   // le prix payé par le fan (3,76 € net Twizz → 5 €), comme une déclaration de chatter
     const info = db.prepare(`INSERT INTO sales (user_id, model_id, amount, declared_amount, sold_at, note, status, reviewed_at, created_at, source, twizz_id)
       VALUES (?,?,?,?,?,?, 'validated', ?, ?, 'twizz', ?)`).run(userId, t.model_id, amount, amount, t.at, `Twizz · ${TYPES[t.type] || t.type} · ${String(r2(t.net).toFixed(2)).replace(".", ",")} € net`, now(), now(), t.id);
     db.prepare("UPDATE twizz_tx SET state = 'imported', sale_id = ?, user_id = ? WHERE id = ?").run(info.lastInsertRowid, userId, t.id);
