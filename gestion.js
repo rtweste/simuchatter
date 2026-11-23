@@ -12,8 +12,14 @@ const COURSE = [
   { id: "tw3", title: "Prix et négo", file: "messagerie-03-prix-nego.mp4" },
   { id: "tw4", title: "Connaître son fan", file: "messagerie-04-connaitre-son-fan.mp4" },
   { id: "tw5", title: "Répondre vite", file: "messagerie-05-repondre-vite.mp4" },
-  { id: "tw6", title: "Le shift", file: "messagerie-06-shift.mp4" },
-  { id: "tw7", title: "Vendre au bon moment", file: "vente-01-bon-moment.mp4" }];
+  { id: "tw6", title: "Le shift", file: "messagerie-06-shift.mp4" }];
+// Formation continue (onglet Formation) : réservée aux chatters, après la formation de base
+const ADV = [
+  { id: "tw7", title: "Vendre au bon moment", file: "vente-01-bon-moment.mp4", sub: "Les signaux, le post-follow, le follow-up, le fan qui disparaît" }];
+// Vidéos à revoir librement
+const EXTRA = [
+  { id: "x-pres", title: "Présentation de StellADS", src: "/video/presentation-v4.mp4" },
+  { id: "x-simu", title: "Le Simu Chatter", src: "/video/simu-chatter.mp4" }];
 // Exercices obligatoires : la vidéo s'arrête à la fin de chaque chapitre (at, en secondes) ; il faut tout réussir pour continuer. ok = la bonne réponse (jamais envoyée au navigateur)
 const QUIZ = { tw7: [
   { id: "p1", at: 151.3, from: 28, title: "Le bon moment", qs: [
@@ -37,6 +43,8 @@ const QUIZ = { tw7: [
     { q: "Il répond « oui je suis là, vas-y ». Où reprends-tu ?", opts: ["Je recommence le script depuis le début", "Je passe à un autre script", "À l'étape exacte où je m'étais arrêté"], ok: 2, why: "Il est toujours intéressé : tu reprends le script exactement là où tu en étais." },
     { q: "Il répond « je suis plus trop dans le mood ». Que fais-tu ?", opts: ["J'envoie le PPV quand même, au cas où", "Je respecte et je propose de reprendre plus tard", "J'insiste jusqu'à ce qu'il change d'avis"], ok: 1, why: "Tu respectes sa réponse, sans insister. Le Follow-up Script sert à vérifier son envie, pas à forcer une vente." }] }] };
 const COURSE_DIR = require("path").join(__dirname, "public", "video", "twizz");
+const exists = f => { try { return require("fs").existsSync(f); } catch (e) { return false; } };
+const advList = () => ADV.filter(v => exists(require("path").join(COURSE_DIR, v.file)));
 const courseList = () => COURSE.filter(v => { try { return require("fs").existsSync(require("path").join(COURSE_DIR, v.file)); } catch (e) { return false; } });
 const SRC_LBL = { abo: "Abonnements", live: "Live", coll: "Collections", push: "Média push" };
 
@@ -245,18 +253,27 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   db.exec("CREATE TABLE IF NOT EXISTS training_bypass (user_id INTEGER PRIMARY KEY, level TEXT NOT NULL, at INTEGER NOT NULL)");
   db.exec("CREATE TABLE IF NOT EXISTS course_progress (user_id INTEGER NOT NULL, video_id TEXT NOT NULL, max_pos REAL NOT NULL DEFAULT 0, dur REAL, upd INTEGER, done_at INTEGER, PRIMARY KEY (user_id, video_id))");
   db.exec("CREATE TABLE IF NOT EXISTS course_quiz (user_id INTEGER NOT NULL, video_id TEXT NOT NULL, part TEXT NOT NULL, tries INTEGER NOT NULL DEFAULT 0, passed_at INTEGER, PRIMARY KEY (user_id, video_id, part))");
-  function course(uid, unlocked) {
+  function course(uid, unlocked, list) {
     const rows = {}; db.prepare("SELECT video_id, max_pos, dur, done_at FROM course_progress WHERE user_id = ?").all(uid).forEach(r => rows[r.video_id] = r);
     const qp = new Set(db.prepare("SELECT video_id, part FROM course_quiz WHERE user_id = ? AND passed_at IS NOT NULL").all(uid).map(r => r.video_id + ":" + r.part));
     let prevDone = true;
-    const videos = courseList().map((v, i) => { const r = rows[v.id] || {};
+    const videos = (list || courseList()).map((v, i) => { const r = rows[v.id] || {};
       // exercices : la vidéo n'est validée que si tous sont réussis
       const quiz = QUIZ[v.id] ? QUIZ[v.id].map((p, k) => ({ id: p.id, n: k + 1, at: p.at, from: p.from, title: p.title, count: p.qs.length, passed: qp.has(v.id + ":" + p.id) })) : null;
       const done = !!r.done_at && (!quiz || quiz.every(p => p.passed)), locked = !unlocked || !prevDone; prevDone = prevDone && done;
-      return { id: v.id, n: i + 1, title: v.title, src: "/video/twizz/" + v.file, done, locked, pos: done ? 0 : Math.max(0, r.max_pos || 0), dur: r.dur || null, quiz }; });
+      return { id: v.id, n: i + 1, title: v.title, src: "/video/twizz/" + v.file, done, locked, pos: done ? 0 : Math.max(0, r.max_pos || 0), dur: r.dur || null, quiz, sub: v.sub || "" }; });
     const done = videos.filter(v => v.done).length;
     return { unlocked, videos, done, total: videos.length, complete: videos.length > 0 && done === videos.length, next: videos.find(v => !v.done && !v.locked) || null };
   }
+  // onglet Formation : les bases (les 6 vidéos de la messagerie), la formation continue (chatters), les vidéos à revoir
+  function library(user) {
+    const tr = user.role === "trainee", base = tr ? training(user.id, true).course : course(user.id, true), adv = course(user.id, !tr, advList());
+    if (!tr) base.videos.forEach(v => { v.free = true; v.locked = false; });   // un chatter revoit les bases librement
+    const extra = EXTRA.filter(x => exists(require("path").join(__dirname, "public", x.src))).map(x => ({ id: x.id, n: 0, title: x.title, src: x.src, done: true, free: true, locked: false, pos: 0 }));
+    return { trainee: tr, base, adv, extra };
+  }
+  const vidOf = (user, id) => { const L = library(user), v = L.base.videos.find(x => x.id === id), a = L.adv.videos.find(x => x.id === id); return v ? { v, adv: false } : a ? { v: a, adv: true } : null; };
+  app.get("/api/formation", auth, (req, res) => res.json(library(req.user)));
   /* Délai de formation : 24 h à partir de la première connexion de l'élève pour remplir tous les critères */
   const DEADLINE_H = 24;
   db.exec("CREATE TABLE IF NOT EXISTS trainee_deadline (user_id INTEGER PRIMARY KEY, started_at INTEGER NOT NULL, deadline_at INTEGER NOT NULL, met_at INTEGER, rejected_at INTEGER)");
@@ -441,10 +458,10 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   });
   // Avancement d'une vidéo : on ne peut pas sauter de passage (la position ne peut avancer que du temps réellement écoulé)
   app.post("/api/course/:id/progress", auth, (req, res) => {
-    const uid = req.user.id, T = training(uid), v = T.course.videos.find(x => x.id === req.params.id);
+    const uid = req.user.id, X = vidOf(req.user, req.params.id), v = X && X.v, tr = req.user.role === "trainee";
     if (!v) return res.status(404).json({ error: "Vidéo introuvable" });
     if (v.locked) return res.status(403).json({ error: "Cette vidéo n'est pas encore débloquée" });
-    if (v.done) return res.json({ ok: true, done: true, training: T });
+    if (v.done) return res.json({ ok: true, done: true, training: tr ? training(uid) : undefined });
     const pos = Number(req.body.pos), dur = Number(req.body.dur);
     if (!isFinite(pos) || pos < 0 || !isFinite(dur) || dur <= 0 || dur > 3600) return res.status(400).json({ error: "Position invalide" });
     const now = Date.now(), r = db.prepare("SELECT max_pos, upd FROM course_progress WHERE user_id = ? AND video_id = ?").get(uid, v.id);
@@ -454,11 +471,11 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const done = max >= dur - 1.5;
     db.prepare("INSERT INTO course_progress (user_id, video_id, max_pos, dur, upd, done_at) VALUES (?,?,?,?,?,?) ON CONFLICT(user_id, video_id) DO UPDATE SET max_pos = excluded.max_pos, dur = excluded.dur, upd = excluded.upd, done_at = COALESCE(course_progress.done_at, excluded.done_at)")
       .run(uid, v.id, max, dur, now, done ? now : null);
-    if (done) { const u = db.prepare("SELECT username FROM users WHERE id = ?").get(uid); log(uid, "a", `**${u ? u.username : "?"}** a terminé la vidéo ${v.n} de la formation messagerie`, v.title); }
-    res.json({ ok: true, done, max, training: done ? training(uid) : undefined });
+    if (done) { const u = db.prepare("SELECT username FROM users WHERE id = ?").get(uid); log(uid, "a", X.adv ? `**${u ? u.username : "?"}** a terminé la formation « ${v.title} »` : `**${u ? u.username : "?"}** a terminé la vidéo ${v.n} de la formation messagerie`, X.adv ? "Vidéo et exercices validés" : v.title); }
+    res.json({ ok: true, done, max, training: done && tr ? training(uid) : undefined });
   });
   // exercices d'une vidéo : questions sans les réponses, puis correction côté serveur (tout juste pour passer)
-  const quizOf = (req, res) => { const uid = req.user.id, T = training(uid), v = T.course.videos.find(x => x.id === req.params.id), P = v && (QUIZ[v.id] || []).find(p => p.id === req.params.part);
+  const quizOf = (req, res) => { const uid = req.user.id, X = vidOf(req.user, req.params.id), v = X && X.v, P = v && (QUIZ[v.id] || []).find(p => p.id === req.params.part);
     if (!v || !P) return void res.status(404).json({ error: "Exercice introuvable" });
     if (v.locked) return void res.status(403).json({ error: "Cette vidéo n'est pas encore débloquée" });
     const r = db.prepare("SELECT max_pos FROM course_progress WHERE user_id = ? AND video_id = ?").get(uid, v.id), part = v.quiz.find(p => p.id === P.id);
@@ -472,7 +489,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       .run(x.uid, x.v.id, x.P.id, passed ? now : null);
     if (passed && !x.part.passed) { const u = db.prepare("SELECT username FROM users WHERE id = ?").get(x.uid), t = (db.prepare("SELECT tries FROM course_quiz WHERE user_id = ? AND video_id = ? AND part = ?").get(x.uid, x.v.id, x.P.id) || {}).tries || 1;
       log(x.uid, "a", `**${u ? u.username : "?"}** a réussi l'exercice ${x.part.n} de « ${x.v.title} »`, `${x.P.title} · ${t === 1 ? "du premier coup" : "au " + t + "e essai"}`); }
-    res.json({ passed, results, training: passed ? training(x.uid) : undefined }); });
+    res.json({ passed, results }); });
   app.post("/api/admin/users/:id/promote", auth, admin, (req, res) => {
     const u = db.prepare("SELECT id, role FROM users WHERE id = ?").get(parseInt(req.params.id, 10));
     if (!u || u.role !== "trainee") return res.status(400).json({ error: "Ce compte n'est pas en formation" });

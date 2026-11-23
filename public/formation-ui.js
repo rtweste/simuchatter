@@ -37,13 +37,13 @@ const TRAINEE = window.TRAINEE = (() => {
   /* lecteur : pas d'avance rapide, progression enregistrée côté serveur */
   function player(C, id, onClose) {
     const idx = C.videos.findIndex(v => v.id === id), v0 = C.videos[idx]; if (!v0 || v0.locked) return;
-    const replay = v0.done, ov = document.createElement("div"); ov.className = "co-ov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-label", v0.title);
-    ov.innerHTML = `<div class="co-w"><div class="co-hd"><div><div class="tr-eb">FORMATION MESSAGERIE · VIDÉO ${v0.n} / ${C.total}</div><div class="co-ti">${esc(v0.title)}</div></div><button class="co-x" aria-label="Fermer">✕</button></div>
+    const replay = v0.done || v0.free, ov = document.createElement("div"), LBL = C.label || "FORMATION MESSAGERIE", solo = !v0.n; ov.className = "co-ov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-label", v0.title);
+    ov.innerHTML = `<div class="co-w"><div class="co-hd"><div><div class="tr-eb">${solo ? LBL : `${LBL} · VIDÉO ${v0.n} / ${C.total}`}</div><div class="co-ti">${esc(v0.title)}</div></div><button class="co-x" aria-label="Fermer">✕</button></div>
       <div class="co-vd"><video playsinline preload="auto" src="${v0.src}"></video>
         <div class="co-ps"><svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></div>
         <div class="co-cv" data-start><button class="co-play" aria-label="Lancer la vidéo">${PLAY}</button><b>${v0.pos > 3 ? `Reprendre à ${fmt(v0.pos)}` : "Lancer la vidéo"}</b><small>Monte le son 🔊</small></div>
-        <div class="co-cv off" data-end><div class="co-ok">${CHECK}</div><b style="font-size:22px">${idx + 1 < C.total ? "Vidéo terminée" : "Formation messagerie terminée"}</b><small>${idx + 1 < C.total ? `La vidéo ${idx + 2} est débloquée.` : "Ton manager va être prévenu."}</small>
-          <div style="display:flex;gap:10px;margin-top:6px"><button class="co-gh" data-close>Fermer</button>${idx + 1 < C.total ? `<button class="co-go" data-next>Vidéo suivante →</button>` : ""}</div></div>
+        <div class="co-cv off" data-end><div class="co-ok">${CHECK}</div><b style="font-size:22px">${idx + 1 < C.total || solo ? "Vidéo terminée" : C.endTitle || "Formation messagerie terminée"}</b><small>${solo || v0.free ? "" : idx + 1 < C.total ? `La vidéo ${idx + 2} est débloquée.` : C.endText || "Ton manager va être prévenu."}</small>
+          <div style="display:flex;gap:10px;margin-top:6px"><button class="co-gh" data-close>Fermer</button>${idx + 1 < C.total && !solo ? `<button class="co-go" data-next>Vidéo suivante →</button>` : ""}</div></div>
         <div class="co-cv off" data-err><b>La vidéo ne se charge pas</b><small>Vérifie ta connexion et réessaie.</small><button class="co-gh" data-close>Fermer</button></div></div>
       <div class="co-ft"><span class="co-tb"><i></i></span><span class="co-tm">—</span></div>${replay ? "" : `<div class="co-note">${LOCK}Pas d'avance rapide : regarde jusqu'au bout pour débloquer la suite.${v0.quiz ? " Un exercice à réussir à la fin de chaque chapitre." : ""}</div>`}</div>`;
     document.body.appendChild(ov); document.body.style.overflow = "hidden"; requestAnimationFrame(() => ov.classList.add("on"));
@@ -133,5 +133,5 @@ const TRAINEE = window.TRAINEE = (() => {
     if (reduce) { root.querySelectorAll(".tr-ring .arc,.tr-spk .sp").forEach(a => a.style.transition = "none"); go(); } else setTimeout(go, 250);
     return T;
   }
-  return { render };
+  return { render, player, icons: { CHECK, PLAY, LOCK }, fmt };
 })();

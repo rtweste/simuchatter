@@ -76,6 +76,8 @@ const MODULES = [
     desc: "Entraînez-vous face à un fan simulé par l'IA et recevez une évaluation détaillée." },
   { id: "tests", label: "Tests d'aptitude", short: "Tests", href: "/tests", icon: "gauge", section: "Formation", roles: ["admin", "trainee"], hide: ["assistant"],
     desc: "Test de débit de connexion et test de vitesse de frappe." },
+  { id: "formation", label: "Formation", href: "/formation", icon: "film", section: "Formation", roles: ["admin", "chatter", "trainee"], hide: ["assistant"],
+    desc: "Toutes les vidéos de formation, avec leurs exercices." },
   { id: "planning", label: "Planning", href: "/planning", icon: "calendar", section: "Organisation", roles: ["admin", "chatter"],
     desc: "Créneaux de la semaine et pointage des shifts." },
   { id: "ventes", label: "Ventes", href: "/ventes", icon: "receipt", section: "Organisation", roles: ["admin", "chatter"], hide: ["assistant"],
@@ -124,7 +126,7 @@ const MGR_GROUPS = {
   "g-ventes": { label: "Ventes", icon: "receipt", tabs: [["ventes", "Ventes"], ["compta", "Compta"]] },
   "g-msg": { label: "Messagerie", short: "Twizz", icon: "bubbles", tabs: [["messagerie", "Conversations"], ["scripts", "Scripts"], ["tags", "Tags"], ["ia", "IA de secours"]] },
   "g-crea": { label: "Créatrices", icon: "spark", nodock: 1, tabs: [["creatrices", "Fiches"], ["publications", "Publications"], ["admin#crea", "Gestion des créatrices"]] },
-  "g-form": { label: "Formation", icon: "gauge", nodock: 1, tabs: [["simu", "Simu Chatter"], ["tests", "Tests d'aptitude"]] },
+  "g-form": { label: "Formation", icon: "gauge", nodock: 1, tabs: [["simu", "Simu Chatter"], ["tests", "Tests d'aptitude"], ["formation", "Vidéos"]] },
   "g-motiv": { label: "Motivation", icon: "flag", nodock: 1, tabs: [["defis", "Défis"], ["admin#stel", "Stella's"], ["boutique", "Boutique"], ["parrainage", "Parrainage"]] },
   "g-reg": { label: "Réglages agence", short: "Réglages", icon: "crown", nodock: 1, tabs: [["admin#reg", "Agence"], ["fondateur", "Fondateur"]] }
 };
@@ -298,7 +300,7 @@ function renderShell(active, me) {
     addEventListener("unhandledrejection", e => { if (e.reason && e.reason.redirect) e.preventDefault(); });
     go("/home"); throw Object.assign(new Error("Redirection vers l'accueil"), { redirect: true }); }
   // un stagiaire n'a accès qu'à l'accueil et au simulateur
-  if (me && me.role === "trainee" && !["home", "simu", "tests", "chat"].includes(active)) {
+  if (me && me.role === "trainee" && !["home", "simu", "tests", "chat", "formation"].includes(active)) {
     addEventListener("unhandledrejection", e => { if (e.reason && e.reason.redirect) e.preventDefault(); });
     go("/home"); throw Object.assign(new Error("Redirection vers l'accueil"), { redirect: true }); }
   // présence : un petit signal toutes les 45 s tant que la page est ouverte et visible (le manager voit qui est en ligne)

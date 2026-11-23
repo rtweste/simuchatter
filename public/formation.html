@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Formation — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/formation.css">
+<style>
+.fo-sub{color:#9a9a9a;font-size:14.5px;line-height:1.5;margin-top:10px;max-width:640px}
+.fo-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:24px;align-items:start}
+.fo-col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.fo-lk{display:flex;gap:10px;align-items:center;margin-top:10px;padding:12px 14px;border-radius:13px;border:1px dashed #2a2a2a;color:#9a9a9a;font-size:13px;font-weight:600;line-height:1.4}
+.fo-lk svg{width:16px;height:16px;flex:none}
+.fo-qz{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 2px}
+.fo-qz span{font-size:11.5px;font-weight:800;padding:5px 10px;border-radius:99px;border:1px solid #2a2a2a;color:#9a9a9a}
+.fo-qz span.ok{border-color:rgba(95,211,162,.5);color:#5fd3a2;background:rgba(95,211,162,.08)}
+.co-v .co-t small i{font-style:normal;color:#6f6f6f}
+@media(max-width:900px){.fo-g{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area">
+<div class="wrap" id="root"></div>
+</main>
+</div>
+<script src="/common.js"></script>
+<script src="/formation-ui.js"></script>
+<script>
+(() => {
+  const root = document.getElementById("root"), { CHECK, PLAY, LOCK } = TRAINEE.icons, fmt = TRAINEE.fmt;
+  // une liste de vidéos : terminée, à reprendre, verrouillée
+  const rows = (C, key) => C.videos.map(v => `<button class="co-v${v.done && !v.free ? " ok" : ""}${v.locked ? " lk" : ""}${C.next && C.next.id === v.id ? " nx" : ""}" data-k="${key}" data-v="${v.id}" ${v.locked ? "disabled" : ""}>
+    <span class="co-n">${v.locked ? LOCK : v.done && v.n ? CHECK : v.n || PLAY}</span><span class="co-t"><b>${esc(v.title)}</b><small>${v.locked ? esc(C.lockText || "Termine la vidéo précédente") : v.free ? (v.done && v.n ? "Vue · à revoir quand tu veux" : "À revoir quand tu veux")
+      : v.done ? "Terminée · revoir" : v.pos > 3 ? `Reprendre à ${fmt(v.pos)}` : v.quiz ? `À regarder · ${v.quiz.length} exercices` : "À regarder"}${v.sub ? ` <i>· ${esc(v.sub)}</i>` : ""}</small></span>
+    <span class="co-pl">${v.locked ? "" : PLAY}</span></button>`).join("");
+  async function render(openId, openKey) {
+    let L; try { L = await api("/api/formation"); } catch (e) { root.innerHTML = `<div class="tr"><div class="tr-ld">${esc(e.message)}</div></div>`; return; }
+    const B = L.base, A = L.adv, X = { videos: L.extra, total: L.extra.length, label: "À REVOIR" };
+    B.label = "FORMATION MESSAGERIE"; A.label = "FORMATION CONTINUE"; A.endTitle = "Formation terminée"; A.endText = "Vidéo et exercices validés. Bravo.";
+    A.lockText = L.trainee ? "Débloquée quand tu deviens chatter" : "Termine la vidéo précédente";
+    if (!L.trainee) B.next = null;
+    const qz = A.videos.filter(v => v.quiz && !v.locked && !v.done).map(v => `<div class="fo-qz">${v.quiz.map(p => `<span class="${p.passed ? "ok" : ""}">${p.passed ? "✓ " : ""}Exercice ${p.n} · ${esc(p.title)}</span>`).join("")}</div>`).join("");
+    root.innerHTML = `<div class="tr"><div class="tr-eb">FORMATION</div><h1 class="tr-ttl">Tes <em>vidéos.</em></h1>
+      <div class="fo-sub">${L.trainee ? "Commence par les bases de la messagerie. La formation continue se débloque quand ton manager te passe chatter." : "Les bases à revoir quand tu veux, et la formation continue : chaque chapitre se termine par un exercice à réussir."}</div>
+      <div class="fo-g"><div class="fo-col">
+        <section class="tr-card co-card"><div class="tr-ch"><h3>Formation <em>continue</em></h3><span class="tr-tag${A.complete ? " g" : ""}">${A.total ? (A.complete ? "Terminée ✓" : `${A.done} / ${A.total}`) : "Bientôt"}</span></div>
+          <div class="tr-mut" style="margin:8px 0 4px">${L.trainee ? "Réservée aux chatters." : "La vidéo s'arrête à la fin de chaque chapitre : il faut réussir l'exercice pour continuer."}</div>
+          <div class="co-list">${rows(A, "adv") || `<div class="tr-mut">Aucune vidéo pour l'instant.</div>`}</div>${qz}
+          ${L.trainee ? `<div class="fo-lk">${LOCK}<span>Termine ta formation de base et ton entretien : ces vidéos s'ouvriront dès que tu seras chatter.</span></div>` : ""}</section>
+        ${X.total ? `<section class="tr-card co-card" style="--d:.1s"><div class="tr-ch"><h3>À <em>revoir</em></h3></div><div class="co-list" style="margin-top:10px">${rows(X, "extra")}</div></section>` : ""}
+      </div><div class="fo-col">
+        <section class="tr-card co-card" style="--d:.05s"><div class="tr-ch"><h3>Les bases : la <em>messagerie</em></h3><span class="tr-tag${B.complete ? " g" : ""}">${L.trainee ? (B.complete ? "Terminée ✓" : `${B.done} / ${B.total} vidéos`) : `${B.total} vidéos`}</span></div>
+          <div class="tr-mut" style="margin:8px 0 4px">${!L.trainee ? "Les 6 vidéos de ta formation de base." : B.unlocked ? "Regarde chaque vidéo jusqu'au bout pour débloquer la suivante." : "Elles se débloquent quand tes critères du simulateur sont verts."}</div>
+          <div class="co-list">${rows(B, "base")}</div></section>
+      </div></div></div>`;
+    const SETS = { base: B, adv: A, extra: X };
+    const open = (k, id) => TRAINEE.player(SETS[k], id, next => render(next, k));
+    root.querySelectorAll(".co-v[data-v]").forEach(b => b.onclick = () => open(b.dataset.k, b.dataset.v));
+    if (openId && SETS[openKey]) { const v = SETS[openKey].videos.find(x => x.id === openId); if (v && !v.locked) open(openKey, openId); }
+  }
+  (async () => { const ME = await api("/api/me"); renderShell("formation", ME); root.innerHTML = `<div class="tr"><div class="tr-ld">Chargement…</div></div>`; await render(); })();
+})();
+</script>
+</body>
+</html>
