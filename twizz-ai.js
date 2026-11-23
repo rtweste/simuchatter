@@ -353,8 +353,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const TEASE_ASK = /\b(tu veux (que je te (le |la |les )?montre|voir|que je t'?en montre)|[çc]a te dirait de (voir|que je te montre)|je te montre\s*\?|t'?as envie de voir|tu veux (une )?(petite )?(photo|vid[ée]o))/i;
   // il répond oui à une proposition qu'elle vient de faire (« tu veux voir ? », « tu kiffes ma tenue ? ») ou réagit au média qu'on vient de lui envoyer
   const PEND_Q = /c['’ ]?est quoi|qu['’ ]?est[- ]ce que c['’ ]?est|y a quoi|il y a quoi|on voit quoi|tu fais quoi dessus|dedans|\b(oui|ouais|ouii+|vas[- ]?y|vasy|go|envoie|envoi|montre|fais voir|je veux|j'?veux|pourquoi pas|carr[ée]ment|grave)\b/i;
-  const PEND_TTL = 24 * 3600e3, stale = m => now() - (Date.parse(m.at) || 0) > PEND_TTL, isTk = m => /^\s*ticket\b/i.test(untag(str(m.text)));
-  const pendOf = (M, L) => { if (!M.sell || !M.pile) return null; const P = L.filter(m => !m.fromFan && m.type === "FILE" && m.price > 0), x = P[P.length - 1]; return x && x.status !== "accepted" && x.status !== "refused" && !stale(x) && !isTk(x) ? x : null; };   // le dernier payant, ni acheté ni refusé, de moins de 24 h (un vieux média ou un ticket ne compte pas)   // le dernier payant, ni acheté ni refusé
+  const PEND_TTL = 30 * 60e3, stale = m => now() - (Date.parse(m.at) || 0) > PEND_TTL, isTk = m => /^\s*ticket\b/i.test(untag(str(m.text)));
+  const pendOf = (M, L) => { if (!M.sell || !M.pile) return null; const P = L.filter(m => !m.fromFan && m.type === "FILE" && m.price > 0), x = P[P.length - 1]; return x && x.status !== "accepted" && x.status !== "refused" && !stale(x) && !isTk(x) ? x : null; };   // le dernier payant, ni acheté ni refusé, de moins de 30 min (un vieux média ou un ticket ne compte pas)   // le dernier payant, ni acheté ni refusé
   const PEND_YES = p => `IL DIT OUI OU DEMANDE CE QU'IL Y A : le média payant${p ? ` à ${p} €` : ""} lui a DÉJÀ été envoyé, juste au-dessus dans la conversation : il n'a qu'à l'ouvrir. Dis-lui qu'il l'attend là, et décris avec envie et sans tabou ce qu'il va y voir (d'après « contenu : … » dans l'historique). Interdit : demander « tu veux voir ? », promettre un autre média, dire que tu vas l'envoyer.`;
   const yesToAsk = L => { const i = L.map(m => !m.fromFan).lastIndexOf(true); if (i < 0) return false; const me = L[i], after = L.slice(i + 1).filter(m => m.fromFan);
     const mt = untag(str(me.text)); return after.length > 0 && after.length <= 2 && (TEASE_ASK.test(mt) || HOTW.test(mt) && /\?\s*[\p{Extended_Pictographic}\s]*$/u.test(mt)) && after.some(m => YES.test(str(m.text)) && !NOPE.test(str(m.text))); };
@@ -379,7 +379,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const junkLeave = r => { const t = str(r).trim(); return !!t && !SYS_LEAVE.test(t) && !SAFE_LEAVE.test(t) && !LEAVE_OK.test(t); };
   // elle n'évoque jamais une rencontre d'elle-même : la bulle est retirée (s'il en reste une autre)
   const MEETSELF = /\bun jour (si|quand|peut|on)|si tu passes|quand (on se verra|tu viens|tu passes)|passe me voir|viens me voir|on se (voit|verra|capte)/i;
-  const noMeet = B => { const B2 = B.filter(t => !MEETSELF.test(t)); return B2.length ? B2 : B; };
+  // jamais « gratuit » avec un payant, jamais de reproche sur l'argent
+  const FREEW = /gratuit|gratos|offert|cadeau|\bfree\b|sans payer/i, BLAME = /tu veux pas payer|t['’ ]?as pas (d['’ ]?argent|de sous|de thunes)|radin|pince|si tu tenais|apr[èe]s tout ce que je/i;
+  const noMeet = (B, paid) => { const B2 = B.filter(t => !MEETSELF.test(t) && !BLAME.test(t) && !(paid && FREEW.test(t))); return B2.length ? B2 : B; };
   const STAY_NOTE = "Ce n'est PAS une raison de le laisser à l'équipe (laisse « laisser » vide). Réponds-lui toi-même, dans le fil de ce qu'il vient d'écrire. S'il demande un contenu que tu n'as pas : ne promets rien et ne l'invente pas, dis-le avec légèreté et propose-lui ce que tu as de plus proche dans ton coffre. Un média pas encore acheté ou une demande de gratuit ne t'empêche pas non plus de lui parler.";
   const MEET_NOTE = "Il veut te rencontrer : ce n'est PAS une raison de le laisser à l'équipe (laisse « laisser » vide). Réponds-lui toi-même : refuse gentiment et avec humour, sans promettre de rencontre ni donner d'adresse, garde-le chaud et ramène-le vers ce que tu peux lui montrer ici.";
   const SPECIFIC = /\b(doigt|masturb|branl|nue?s?\b|[àa] poil|seins|nichons|t[ée]tons|cul\b|fesses|chatte|jouet|gode|vibro|douche|bain|lingerie|string|culotte|pieds|anal|squirt|g[ée]mi|en train de|o[uù] tu)/i;
@@ -389,7 +391,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   // niveau d'un média d'après sa description, la description de l'album et son nom : 0 soft (lingerie, tenue), 1 nu, 2 acte solo, 3 acte avec partenaire / sextape
   const LV3 = /(p[ée]n[ée]tr|levrette|sexe avec|rapport|fellation|\bsuce|sucer|\bpipe\b|avec un (homme|mec|gar[çc]on|partenaire)|partenaire|sex-?tape|\bbaise|chevauch|[ée]jacul|sperme|couple|plan [àa] (deux|trois)|duo)/i;
   const LV2 = /(doigt|masturb|se touche|caresse (sa|son|ses) (chatte|sexe|clito)|jouet|\bgode|vibro|squirt|orgasm|g[ée]mi)/i;
-  const LV1 = /(\bnue?s?\b|[àa] poil|seins? nus|topless|t[ée]tons?|poitrine (nue|d[ée]couverte)|fesses nues|cul nu|quatre pattes|sexe visible|chatte)/i;
+  const LV1 = /(\bnue?s?\b|[àa] poil|seins? nus|seins? [àa] l'?air|rien en haut|sans (le |mon )?haut|sans (soutif|soutien|culotte|rien)|torse nu|d[ée]shabill|topless|t[ée]tons?|poitrine (nue|d[ée]couverte)|fesses nues|cul nu|quatre pattes|sexe visible|chatte)/i;
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_filelv (creator_id TEXT NOT NULL, file_id TEXT NOT NULL, lv INTEGER NOT NULL, PRIMARY KEY (creator_id, file_id))");
   const levelOfText = (t, video) => { const x = str(t); const l = LV3.test(x) ? 3 : LV2.test(x) ? 2 : LV1.test(x) ? 1 : 0; return video && l === 1 ? 2 : l; };   // une vidéo dénudée vaut plus qu'une photo
   const tierLevel = l => l.free ? [1, 2, 3][Math.min(l.k, 2)] : [0, 1, 2, 3][Math.min(l.k, 3)];
   const floorFor = (M, lvl) => { const P = (M.ladder || []).filter(x => x >= 3); return P.length ? P[Math.min([0, 1, 3, 4][lvl], P.length - 1)] : 0; };
@@ -494,7 +497,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       return { albums: [], teaseNow: true, note: tease && !tease.answered ? "tu viens de lui teaser un média : attends sa réponse, continue de le chauffer sans rien envoyer"
         : `avant tout média, tu dois d'abord le teaser : fais-lui envie de ce que tu pourrais lui montrer (sans l'envoyer, sans prix), fais monter la tension. Un seul teasing, court, comme un vrai message. Coche le champ teaser de l'outil (ne l'écris jamais dans ton message). Tu pourras l'envoyer seulement après sa réponse${what ? `. Ce que tu peux teaser : ${what}` : ""}` }; }
     const gone = new Set(convId ? db.prepare("SELECT msg_id FROM twizz_ai_ticket WHERE conv_id = ? AND state = 'expired'").all(convId).map(x => x.msg_id) : []);   // ticket expiré : il ne bloque plus le coffre
-    const paid = L.filter(m => !m.fromFan && m.type === "FILE" && m.price > 0 && !gone.has(m.id)), last = paid[paid.length - 1], open = last && last.status !== "accepted" && !stale(last);   // un média pas acheté depuis plus de 24 h ne bloque plus : elle peut proposer autre chose
+    const paid = L.filter(m => !m.fromFan && m.type === "FILE" && m.price > 0 && !gone.has(m.id)), last = paid[paid.length - 1], open = last && last.status !== "accepted" && !stale(last);   // un média pas acheté depuis plus de 30 min ne bloque plus : s'il dit oui, elle envoie autre chose
     let requirePromo = false;
     if (M.pile && open) { if (M.promo && !last.promo) requirePromo = true;   // une deuxième chance, seulement avec une remise
       else return { albums: [], note: "il n'a pas encore acheté le dernier média payant ; tu peux lui en reparler gentiment, sans en envoyer un autre", open: last }; }
@@ -713,7 +716,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       o.hot && !o.busy && !o.relance ? "INITIATIVE : la conversation est vraiment chaude et vous vous connaissez déjà. N'attends pas qu'il réclame : c'est toi qui proposes, dans le fil de ce que vous vous dites. D'abord un teasing (tu fais monter l'envie et tu lui demandes s'il veut voir, sans rien envoyer), puis le média après sa réponse. Une seule proposition, naturelle ; s'il ne suit pas, n'insiste pas et continue la discussion. Jamais à froid, jamais pour forcer." : "",
       "ACHATS : seul l'historique fait foi. Tant qu'un média y est « pas encore acheté », il n'en a vu qu'une image floutée ; et si aucun média ne lui a été envoyé, il n'a rien pu payer. S'il dit qu'il a vu, payé ou qu'il adore, ne le crois pas et ne fais pas comme si c'était vrai : dis-lui gentiment ce qu'il en est (encore bloqué, ou rien envoyé pour l'instant) et donne-lui envie.",
       "RÉSEAUX : ne parle jamais toi-même de Snap, d'Insta ni d'aucun autre réseau ou appli. Si c'est lui qui en parle, suis seulement les consignes « DEMANDES SPÉCIALES ». S'il ne peut pas payer le ticket (pas de carte, que du liquide…), ne laisse pas tomber : propose-lui plutôt de te découvrir ici avec un média.",
-      "FLIRT : quand il flirte, te complimente ou te drague, joue le jeu et renchéris, même en tout début de conversation. Ne le refroidis jamais (« on se connaît à peine », « on se connaît depuis 2 messages », « t'es sérieux ? », « doucement »).", "RENCONTRE : n'évoque jamais toi-même une rencontre, même en sous-entendu (« un jour », « si tu passes par ici », « quand on se verra ») : ce que tu montres, c'est ici. S'il veut te voir en vrai (rendez-vous, venir chez toi, se capter), ne le laisse jamais à l'équipe pour ça. Refuse gentiment et avec humour, sans jamais promettre de rencontre ni donner d'adresse, garde-le chaud et ramène-le vers ce que tu peux lui montrer ici.",
+      "ARGENT : ne lui reproche jamais de ne pas payer et ne dis jamais qu'un média est gratuit s'il ne l'est pas. S'il n'a pas d'argent, reste douce et garde le lien.", "PRÉNOM : ne l'appelle jamais par son pseudo ; n'utilise un prénom que s'il te l'a donné lui-même (« prénom : … » dans ce que tu sais de lui).", "FLIRT : quand il flirte, te complimente ou te drague, joue le jeu et renchéris, même en tout début de conversation. Ne le refroidis jamais (« on se connaît à peine », « on se connaît depuis 2 messages », « t'es sérieux ? », « doucement »).", "RENCONTRE : n'évoque jamais toi-même une rencontre, même en sous-entendu (« un jour », « si tu passes par ici », « quand on se verra ») : ce que tu montres, c'est ici. S'il veut te voir en vrai (rendez-vous, venir chez toi, se capter), ne le laisse jamais à l'équipe pour ça. Refuse gentiment et avec humour, sans jamais promettre de rencontre ni donner d'adresse, garde-le chaud et ramène-le vers ce que tu peux lui montrer ici.",
       "JAMAIS : ne demande jamais au fan de t'envoyer une photo ou de se montrer, et ne lui demande pas s'il a aimé ou « kiffé » un média qu'il n'a pas acheté. S'il dit qu'il veut voir, montre-lui (média), ne lui redemande pas ce qu'il veut voir.",
       "STYLE : varie tes messages comme une vraie fille : pas toujours une question à la fin, pas le même emoji à chaque fois (un emoji pour deux ou trois bulles suffit), pas toujours la même structure. Parle aussi de toi, réagis, affirme. Tu es une femme : accorde toujours au féminin (« curieuse », « contente », « prête »). Ne reprends pas sa phrase sans rien ajouter. « mdrrr » au début, un message sur trois au plus. Ne ferme jamais la discussion par une réponse plate (« ouais c'est ça mdr ») : laisse-lui toujours de quoi rebondir (une taquinerie, une envie, une question de temps en temps). S'il te tend une perche (« invite-moi », « viens », « t'es où »), saisis-la et chauffe.",
       M.sell ? "TEASER, PAS RACONTER : quand vous vous chauffez, ne décris pas en détail ce que tu es en train de faire, comme en direct : fais monter l'envie et garde le reste pour le média, sinon il a déjà tout gratuitement. S'il demande ce qu'il y a dans un média (avant ou après l'envoi), appuie-toi sur son contenu indiqué (« contenu : … » dans l'historique, ou la description de l'album) : dis franchement ce qu'elle y fait, en une phrase qui lui donne envie de l'ouvrir, sans tout dévoiler. N'invente jamais un contenu qui n'est pas indiqué ; si rien n'est indiqué, reste vague et coquine." : "",
@@ -958,7 +961,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       return true;
     }
     const pend0 = !relance && !busy ? pendOf(M, L) : null, told2 = pend0 ? L.slice(L.indexOf(pend0) + 1).filter(m => !m.fromFan).length : 0;
-    const pend = pend0 && (!sell.albums.length || told2 < 1) ? pend0 : null, lft = str(lastFan && lastFan.text);
+    const pend = pend0 && told2 < 1 ? pend0 : null, lft = str(lastFan && lastFan.text);
     if (pend && lastFan && !NOPE.test(lft) && (asks(lft) || PEND_Q.test(lft))) { let again = null;
       try { again = unleak(await grok(msgs.concat([{ role: "system", content: PEND_YES(pend.price) }]))); } catch (e) {}
       if (again && !str(again.laisser).trim() && bubbles(again).length) out = again;
@@ -978,7 +981,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const okAlb = o => o && o.album && sell.albums.some(a => a.id === str(o.album)) && cents(o.prix) >= 3;
     if (str(out.ticket) && !tkAsked(str(out.ticket), L)) out.ticket = "";   // ticket pas demandé par le fan : ignoré
     if (yes && !act && !str(out.ticket) && !okAlb(out)) { let again = null; try { again = unleak(await grok(msgs.concat([{ role: "system", content: YES_NOW }]))); } catch (e) {}
-      if (okAlb(again) && !str(again.laisser).trim()) out = again; else if (plan && plan.launch.length) act = { kind: "step", sc: plan.launch[0], k: 0 }; }
+      if (okAlb(again) && !str(again.laisser).trim()) out = again; else if (plan && plan.launch.length) act = { kind: "step", sc: plan.launch[0], k: 0 };
+      else { const m2 = wk.length ? matchItems(sell.albums, wk)[0] : null, A = sell.albums.filter(a => (a.items || []).length), a = m2 ? { id: m2.albumId } : A[Math.floor(Math.random() * A.length)];   // Grok le fait encore attendre : le site choisit lui-même le média (ce qu'il a demandé, sinon un média décrit)
+        if (a) { out.album = a.id; out.media = m2 ? "m:" + m2.id : ""; out.prix = lad ? lad.price : ((M.ladder || []).find(x => x >= 3) || 6); out.teaser = false; } } }
     if (asked && !yes && !act && !okAlb(out) && plan && plan.launch.length) act = { kind: "step", sc: plan.launch[0], k: 0 };   // oui à sa proposition, pas de coffre : le script part
     // c'est le moment de proposer et Grok continue de décrire : une seconde chance pour qu'il teasse
     if (push && !yes && !act && !out.teaser && !str(out.ticket) && !okAlb(out)) { let again = null; try { again = unleak(await grok(msgs.concat([{ role: "system", content: PUSH_NOW }]))); } catch (e) {}
@@ -990,9 +995,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (tkFree(T) && TK[str(out.ticket)] && tkAsked(str(out.ticket), L)) { tk = tkPlan(M, str(out.ticket), out.prix, out.duree); tk.f = await tkMedia(cr, M, c, L); if (!tk.f) { tk = null; db.prepare("UPDATE twizz_ai_runs SET last_error = ? WHERE id = ?").run(`${c.fan.name || "un fan"} : ticket impossible, aucun média dans le coffre`, r.id); } }
       else if (T && T.state === "paid") { const v = (T.kind === "snap" ? str(out.snap).replace(/^@/, "") : str(out.demande)).trim(); if (v.length >= 2) tkInfo = v; }
     }
-    let B = noMeet(oneQ(bubbles(out))), price = cents(out.prix), f = null, promo = null, guarded = false; if (busy) B = B.slice(0, 1);
+    let B = noMeet(oneQ(bubbles(out)), !!str(out.album)), price = cents(out.prix), f = null, promo = null, guarded = false; if (busy) B = B.slice(0, 1);
     // jamais deux fois la même bulle à ce fan : les redites sont retirées ; si toute la réponse est redite, on redemande une fois à Grok
-    const said = saidOf(L); let rep = false;
+    const said = saidOf(L).concat(lastFan && nrm(lastFan.text).includes(" ") ? [nrm(lastFan.text)] : []); let rep = false;   // recopier son message compte comme une redite
     if (fresh(B, said).length < B.length) { B = fresh(B, said);
       if (!B.length && !act) { let again = null; try { again = unleak(await grok(msgs.concat([{ role: "system", content: REDIT(bubbles(out)) }]))); } catch (e) {}
         B = again && !str(again.laisser).trim() ? fresh(oneQ(bubbles(again)), said) : []; if (busy) B = B.slice(0, 1); }
@@ -1053,13 +1058,20 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     // son teasing part avec une photo lingerie offerte (une fois par fan, avant tout achat) : la lingerie ne se vend pas, elle donne envie de la suite
     let free = null;
     if (M.freeLing && M.sell && !coldNow && (out.teaser || B.some(t => TEASE_ASK.test(t))) && !f && !act && !tk && !relance && !busy && B.length && !freebieOf(cr, c.fan.id) && !boughtOf(cr, c.fan.id, L) && !L.some(m => !m.fromFan && m.type === "FILE" && m.price > 0) && !(lastFan && (NOPE.test(str(lastFan.text)) || /gratuit|gratos|free|offert|cadeau|demain|plus tard|la semaine/i.test(str(lastFan.text))))) { const x = lingerieFile(cr, M, c.id); if (x) { free = x; f = { id: x.file_id }; price = 0; promo = null; } }
+    { const cut = (rx) => { const B2 = B.filter(t => !rx.test(t)); if (B2.length || f) B = B2; };
+      if (!free) cut(FREEW); cut(BLAME);
+      if (free) { cut(/vid[ée]o/i); cut(LV2); if (!B.length) B = ["tiens, un petit aperçu rien que pour toi"]; }
+      if (f && !B.length) B = ["regarde ce que je t'ai gardé"];
+      if (B.length > 2) B = [B[0], B[B.length - 1]]; }
     if (!B.length && !act && !tk) { if (relance || guarded || rep) mark({}); if (!relance && (guarded || rep)) await readOnTwizz(cr.id, c, L); return false; }   // rien d'utile à envoyer
     B = B.map(fem);
     // le prix suit aussi ce que dit sa phrase : si elle annonce un contenu explicite, le prix remonte au minimum de ce niveau
     if (f && !free && (M.ladder || []).length) { const dd = str(descrOf(cr.id, [f.id]).get(f.id)), kd = (db.prepare("SELECT kind FROM twizz_ai_media WHERE creator_id = ? AND file_id = ?").get(cr.id, f.id) || {}).kind, vid = /vid[ée]o/i.test(dd) || /video/i.test(str(kd));
       let lvB = levelOfText(B.join(" ") + " " + dd, vid);
+      { const sv = db.prepare("SELECT lv FROM twizz_ai_filelv WHERE creator_id = ? AND file_id = ?").get(cr.id, f.id); if (sv) lvB = Math.max(lvB, sv.lv); }   // déjà vendu à un niveau plus haut : il garde ce niveau
       if (vid) lvB = Math.max(lvB, L.slice(-8).some(m => HOTW.test(str(m.text))) ? 2 : 1);   // une vidéo n'est jamais au 1er palier ; en plein échange chaud, c'est le prix d'un acte solo
-      price = Math.min(Math.max(price, floorFor(M, lvB)), M.maxPrice); if (promo) promo.min = Math.max(promo.min || 0, floorFor(M, lvB)); }
+      price = Math.min(Math.max(price, floorFor(M, lvB)), M.maxPrice); if (promo) promo.min = Math.max(promo.min || 0, floorFor(M, lvB));
+      try { db.prepare("INSERT INTO twizz_ai_filelv (creator_id, file_id, lv) VALUES (?,?,?) ON CONFLICT(creator_id, file_id) DO UPDATE SET lv = MAX(lv, excluded.lv)").run(cr.id, f.id, lvB); } catch (e) {} }
     // plusieurs bulles : envoyées à la suite, le temps de les taper ; un média du coffre ou le prix plancher part avec la dernière, l'étape du script après
     let usedPre = false; const floor = act && act.kind === "floor";
     for (let i = 0; i < B.length; i++) {
@@ -1319,7 +1331,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     try { out = unleak(await grok(TM)); } catch (e) { if (e.status !== 403) throw e; out = unleak(await grok(soften(TM))); }   // refus du filtre : une seconde chance, adoucie
     if (meetOnly(out.laisser) || junkLeave(out.laisser)) { let again = null; try { again = unleak(await grok(TM.concat([{ role: "system", content: meetOnly(out.laisser) ? MEET_NOTE : STAY_NOTE }]))); } catch (e) {} if (again && !str(again.laisser).trim() && bubbles(again).length) out = again; else out.laisser = ""; }
     if (str(out.laisser).trim()) return { bulles: [], laisser: str(out.laisser).trim(), state: T0, burned: [...burned] };
-    const pend0 = !busy ? pendOf(M, LL) : null, pend = pend0 && (!albums.length || LL.slice(LL.indexOf(pend0) + 1).filter(m => !m.fromFan).length < 1) ? pend0 : null, lft = str(lastFan.text);   // même règle qu'en vrai : un payant attend, il dit oui → il est juste au-dessus
+    const pend0 = !busy ? pendOf(M, LL) : null, pend = pend0 && LL.slice(LL.indexOf(pend0) + 1).filter(m => !m.fromFan).length < 1 ? pend0 : null, lft = str(lastFan.text);   // même règle qu'en vrai : un payant attend, il dit oui → il est juste au-dessus
     if (pend && !NOPE.test(lft) && (asks(lft) || PEND_Q.test(lft))) { let again = null; try { again = unleak(await grok(TM.concat([{ role: "system", content: PEND_YES(pend.price) }]))); } catch (e) {}
       if (again && !str(again.laisser).trim() && bubbles(again).length) out = again;
       out.bulles = bubbles(out).filter(t => !TEASE_ASK.test(t) && !fakeSend(t)); out.teaser = false; out.album = ""; out.ticket = ""; if (!out.bulles.length) out.bulles = ["il est juste au-dessus, je l'ai fait pour toi"]; }
@@ -1332,7 +1344,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const okAlb = o => o && o.album && albums.some(a => a.id === str(o.album)) && cents(o.prix) >= 3;
     if (str(out.ticket) && !tkAsked(str(out.ticket), LL)) out.ticket = "";
     if (yes && !act && !str(out.ticket) && !okAlb(out)) { let again = null; try { again = unleak(await grok(TM.concat([{ role: "system", content: YES_NOW }]))); } catch (e) {}
-      if (okAlb(again) && !str(again.laisser).trim()) out = again; else if (plan && plan.launch.length) act = { kind: "step", sc: plan.launch[0], k: 0 }; }
+      if (okAlb(again) && !str(again.laisser).trim()) out = again; else if (plan && plan.launch.length) act = { kind: "step", sc: plan.launch[0], k: 0 };
+      else { const A = albums.filter(a => (a.items || []).length), a = A[Math.floor(Math.random() * A.length)]; if (a) { out.album = a.id; out.media = ""; out.prix = lad ? lad.price : ((M.ladder || []).find(x => x >= 3) || 6); out.teaser = false; } } }
     if (push && !yes && !act && !out.teaser && !str(out.ticket) && !okAlb(out)) { let again = null; try { again = unleak(await grok(TM.concat([{ role: "system", content: PUSH_NOW }]))); } catch (e) {}
       if (again && !str(again.laisser).trim() && (again.teaser || +again.lancer) && bubbles(again).length) { out = again; if (plan && plan.launch.length && +out.lancer) { const sc = plan.launch.find(x => x.id === +out.lancer); if (sc) act = { kind: "step", sc, k: 0 }; } } }
     if (push && !yes && !act && !out.teaser && !str(out.ticket) && !okAlb(out) && streak(LL) >= 10) { out.bulles = bubbles(out).slice(0, 1).concat([TEASES[Math.floor(Math.random() * TEASES.length)]]); out.teaser = true; }
@@ -1346,10 +1359,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     // même règle qu'en vrai : après un teasing, le payant attend son accord
     const consent = yes || WANTSEE.test(str(lastFan.text)) || asks(str(lastFan.text)) || HOTFAN.test(str(lastFan.text)) || yesToAsk(LL);
     let held = false; if (al && M.tease && !consent) { al = null; it = null; held = true; }
-    let B = noMeet(oneQ(bubbles(out))), guarded = false; if (held) { B = B.filter(t => !fakeSend(t)); if (!B.some(t => TEASE_ASK.test(t))) B.push(TEASES[Math.floor(Math.random() * TEASES.length)]); } if (busy) B = B.slice(0, 1); if (!act && !al && !tk && B.some(fakeSend)) { B = B.filter(t => !fakeSend(t)); guarded = true; }
+    let B = noMeet(oneQ(bubbles(out)), !!al), guarded = false; if (held) { B = B.filter(t => !fakeSend(t)); if (!B.some(t => TEASE_ASK.test(t))) B.push(TEASES[Math.floor(Math.random() * TEASES.length)]); } if (busy) B = B.slice(0, 1); if (!act && !al && !tk && B.some(fakeSend)) { B = B.filter(t => !fakeSend(t)); guarded = true; }
     if (B.some(PRICED)) { try { const again = unleak(await grok([{ role: "system", content: system(c, M, ficheOf(c), albums, sell.note, FANS[b.fan] || "", gcfg(), opt) }, ...L, { role: "system", content: NOPRICE }]));
       if (!str(again.laisser).trim()) B = oneQ(bubbles(again)); } catch (e) {} B = B.filter(t => !PRICED(t)); }
-    const said = saidOf(LL), redit = fresh(B, said).length < B.length;
+    const said = saidOf(LL).concat(nrm(lastFan.text).includes(" ") ? [nrm(lastFan.text)] : []), redit = fresh(B, said).length < B.length;
     if (redit) { B = fresh(B, said); if (!B.length && !act) { try { const again = unleak(await grok([{ role: "system", content: system(c, M, ficheOf(c), albums, sell.note, FANS[b.fan] || "", gcfg(), opt) }, ...L, { role: "system", content: REDIT(bubbles(out)) }]));
       if (!str(again.laisser).trim()) B = fresh(oneQ(bubbles(again)), said).filter(t => act || al || !fakeSend(t)); } catch (e) {} } }
     B = shape(B, LL);
