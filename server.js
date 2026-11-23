@@ -222,7 +222,7 @@ function auth(req, res, next) {
   if (req.cookies.st_as && row.rk === "founder") {
     const as = db.prepare("SELECT id, username, role, active, grade, team_lead FROM users WHERE id = ? AND role = 'chatter' AND active = 1 AND deleted_at IS NULL").get(parseInt(req.cookies.st_as, 10));
     if (as) { as.rk = PERM.rk(as); req.realUser = row; req.viewAs = true; req.user = as;
-      if (req.method !== "GET" && !/^\/api\/(view-as|logout)(\/|$)/.test(req.path)) return res.status(403).json({ error: `Aperçu : tu vois le site comme ${as.username}, rien n'est enregistré` }); }
+      if (req.method !== "GET" && !/^\/api\/(view-as|logout)(\/|$)/.test(req.path) && !/^\/api\/course\/[\w-]+\/quiz\/[\w-]+$/.test(req.path)) return res.status(403).json({ error: `Aperçu : tu vois le site comme ${as.username}, rien n'est enregistré` }); }
   }
   if (row.grade === "assistant" && req.path === "/api/home") PERM.stripMargin(res);
   if (row.role === "trainee" && TRAINEE_BLOCK.test(req.path)) return res.status(403).json({ error: "Réservé aux chatters : termine ta formation d'abord" });

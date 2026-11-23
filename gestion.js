@@ -479,12 +479,13 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     if (!v || !P) return void res.status(404).json({ error: "Exercice introuvable" });
     if (v.locked) return void res.status(403).json({ error: "Cette vidéo n'est pas encore débloquée" });
     const r = db.prepare("SELECT max_pos FROM course_progress WHERE user_id = ? AND video_id = ?").get(uid, v.id), part = v.quiz.find(p => p.id === P.id);
-    if (!part.passed && (!r || r.max_pos < P.at - 2)) return void res.status(403).json({ error: "Regarde d'abord le chapitre jusqu'au bout" });
+    if (!part.passed && !req.viewAs && (!r || r.max_pos < P.at - 2)) return void res.status(403).json({ error: "Regarde d'abord le chapitre jusqu'au bout" });
     return { uid, v, P, part }; };
   app.get("/api/course/:id/quiz/:part", auth, (req, res) => { const x = quizOf(req, res); if (!x) return;
     res.json({ id: x.P.id, n: x.part.n, total: x.v.quiz.length, title: x.P.title, qs: x.P.qs.map(q => ({ q: q.q, opts: q.opts })) }); });
   app.post("/api/course/:id/quiz/:part", auth, (req, res) => { const x = quizOf(req, res); if (!x) return;
     const A = Array.isArray(req.body.answers) ? req.body.answers : [], results = x.P.qs.map((q, i) => ({ ok: Number(A[i]) === q.ok, why: q.why })), passed = results.every(r => r.ok), now = Date.now();
+    if (req.viewAs) return res.json({ passed, results });   // aperçu « vue chatter » : l'exercice se corrige, rien n'est enregistré
     db.prepare("INSERT INTO course_quiz (user_id, video_id, part, tries, passed_at) VALUES (?,?,?,1,?) ON CONFLICT(user_id, video_id, part) DO UPDATE SET tries = tries + (CASE WHEN course_quiz.passed_at IS NULL THEN 1 ELSE 0 END), passed_at = COALESCE(course_quiz.passed_at, excluded.passed_at)")
       .run(x.uid, x.v.id, x.P.id, passed ? now : null);
     if (passed && !x.part.passed) { const u = db.prepare("SELECT username FROM users WHERE id = ?").get(x.uid), t = (db.prepare("SELECT tries FROM course_quiz WHERE user_id = ? AND video_id = ? AND part = ?").get(x.uid, x.v.id, x.P.id) || {}).tries || 1;
