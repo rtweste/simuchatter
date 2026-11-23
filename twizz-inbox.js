@@ -264,7 +264,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   app.get("/api/twizz/inbox/:cid/snaps", auth, inbox, wrap(async req => {
     const cid = creatorOk(req.params.cid), fans = [...new Set(String(req.query.fans || "").split(",").map(str).filter(Boolean))].slice(0, 60), out = []; let tries = 0;
     for (const f of fans) { let c = snapOf(cid, f);
-      if (!c && tries < 4) { const nm = (db.prepare("SELECT name FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, f) || {}).name;
+      if (!c && tries < 4) { const nm = (db.prepare("SELECT name FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, f) || {}).name || (fans.length === 1 ? str(req.query.name).trim() : "");   // un seul fan demandé (lien d'une notification d'achat) : son pseudo peut venir du lien
         if (nm) { tries++; try { const L = arr(await G(`/conversations/user/${enc(cid)}/search?search=${enc(nm.slice(0, 40))}`, 60e3)).map(x => conv(x, cid)); snapSave(cid, L); c = L.find(x => x.fan.id === f) || null; } catch (e) {} } }
       if (c) { const h = hereOf(c.id, req.user.id); if (h.length) c.here = h.map(x => x.name); out.push(c); } }
     return { items: out };
@@ -823,5 +823,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     await call("PATCH", "/messages/read-all-messages", { conversationId: str(req.body?.conversationId), creatorId: cid }, true); drop(str(req.body?.conversationId), `/conversations/user/${enc(cid)}`); return { ok: true };
   }));
   // pour l'IA de secours : mêmes lectures et mêmes formats que la messagerie
-  return { conv, msg, arr, file, hereOf, G, drop, mapped, sendOn, unreadConvs };
+  // cette personne peut-elle ouvrir la messagerie de cette créatrice ? (lien « Voir la conversation » des notifications d'achat)
+  const canOpen = (user, cid) => { const a = accessOf({ user }); return !!a && (a.all || a.cids.has(cid)); };
+  return { conv, msg, arr, file, hereOf, G, drop, mapped, sendOn, unreadConvs, canOpen };
 };

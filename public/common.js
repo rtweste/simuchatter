@@ -323,6 +323,11 @@ function renderShell(active, me) {
     const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/announce.css"; document.head.appendChild(l);
     const sc = document.createElement("script"); sc.src = "/announce-ui.js"; sc.onload = () => { try { ANNOUNCE.mount(me, active); } catch (e) {} }; document.body.appendChild(sc);
   }
+  // achats des fans : carte avec le nom du fan et un bouton vers la conversation (chatters, et managers qui envoient des médias)
+  if (me && (me.role === "chatter" || me.role === "admin") && !me.viewAs && !EMBED && !window.PAIDUI) {
+    const l = document.createElement("link"); l.rel = "stylesheet"; l.href = "/paid.css"; document.head.appendChild(l);
+    const sc = document.createElement("script"); sc.src = "/paid-ui.js"; sc.onload = () => { try { PAIDUI.mount(me, active); } catch (e) {} }; document.body.appendChild(sc);
+  }
   // chat : compteur de messages non lus dans le menu
   if (me && active !== "chat") { const cu = () => api("/api/chat/unread").then(c => updateBadge(c.n, "chat")).catch(() => {}); setTimeout(cu, 800); setInterval(() => { if (!document.hidden) cu(); }, 30e3); }
   const el = document.getElementById("sidebar"); if (!el) return;
