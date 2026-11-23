@@ -385,7 +385,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const INSIST_NOTE = "IL INSISTE POUR SAVOIR : il t'a déjà demandé plusieurs fois. Réponds-lui clairement maintenant, ou propose-lui de voir (teasing). N'esquive plus et ne refais pas la même réponse.";
   // ça ne chauffe jamais : plusieurs échanges sans rien de coquin → elle glisse vers un compliment ou un sous-entendu, puis vers un teasing
   const coldOf = L => { const R = L.slice(-12), mine = R.filter(m => !m.fromFan && str(m.text).trim()).length; return mine >= 5 && !R.some(m => HOTW.test(str(m.text))) && !R.some(m => m.type === "FILE" && m.price > 0); };
-  const COLD_NOTE = "ÇA NE CHAUFFE PAS : vous parlez de tout et de rien depuis plusieurs messages. Dans cette réponse, glisse doucement vers le flirt : un compliment sur lui, un sous-entendu coquin, ce que tu portes ou ce que tu fais là en ce moment. Si ça prend, au message suivant propose-lui de voir quelque chose (teasing).";
+  const COLD_NOTE = "ÇA NE CHAUFFE PAS : vous parlez de tout et de rien depuis plusieurs messages. Réponds d'abord vraiment à ce qu'il vient de dire (même sujet), puis glisse en douceur une petite touche de flirt qui part de ce sujet (un compliment sur lui, un sous-entendu léger). Ne parle PAS encore de photo ni de vidéo et ne propose rien : tu ne proposeras de voir quelque chose qu'une fois qu'il aura répondu sur le même ton.";
   // il demande le prix : elle n'esquive pas (« achète d'abord », « tu verras ») : elle lui envoie le média, le prix s'affiche dessus
   const PRICEQ = /\b(combien|c'?est quoi le prix|quel prix|le prix|ton prix|tarifs?|[çc]a co[uû]te|c'?est cher|c'?est combien)\b/i;
   const WANTSEE = /\b(je (veux|voudrais) (tout |te |la |le )?voir|montre[- ]moi|fais[- ]moi voir|vas[- ]y montre|envoie[- ]moi|j'?ai envie de (te )?voir|je veux la suite|montre la suite)\b/i;
@@ -994,9 +994,14 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     { const T = [...new Set(tics(L).concat(crossTics(cr.id), BANNED, L.some(m => !m.fromFan && hasTic(untag(str(m.text)), RATE)) ? RATE : []))]; if (T.length && B.some(t => hasTic(t, T)) && !f && !act && !tk) { let again = null;   // encore un de ses tics : une seconde chance, sinon la bulle qui le contient est retirée (s'il en reste une)
       try { again = unleak(await grok(msgs.concat([{ role: "system", content: `Ta réponse reprend encore ${T.map(k => "« " + k + " »").join(", ")}, que tu as déjà écrit plusieurs fois. Réécris-la avec d'autres mots et une autre idée.` }]))); } catch (e) {}
       const B2 = again && !str(again.laisser).trim() ? shape(fresh(oneQ(bubbles(again)), said), L) : []; if (B2.length && !B2.some(t => hasTic(t, T))) B = B2; else { const K = B.filter(t => !hasTic(t, T)); if (K.length) B = K; } } }
+    // la discussion est encore froide (aucun mot coquin récemment) : pas de teasing de média ni de cadeau, même si Grok en propose un
+    const coldNow = !relance && !busy && !L.slice(-8).some(m => HOTW.test(str(m.text))) && !asks(str(lastFan && lastFan.text));
+    if (coldNow && (out.teaser || B.some(t => TEASE_ASK.test(t) || /\b(vid[ée]o|photo|pic|nude)s?\b/i.test(t))) && !f && !act && !tk) {
+      let again = null; try { again = unleak(await grok(msgs.concat([{ role: "system", content: "Vous parliez d'autre chose : ne propose aucune photo ni vidéo maintenant. Réponds à ce qu'il vient de dire, sur le même sujet, avec au plus une petite touche de flirt légère." }]))); } catch (e) {}
+      const B2 = again && !str(again.laisser).trim() ? fresh(oneQ(bubbles(again)), said).filter(t => !PRICED(t) && !TEASE_ASK.test(t)) : []; if (B2.length) B = shape(B2, L); else B = B.filter(t => !TEASE_ASK.test(t) && !/\b(vid[ée]o|photo|pic|nude)s?\b/i.test(t)); out.teaser = false; }
     // son teasing part avec une photo lingerie offerte (une fois par fan, avant tout achat) : la lingerie ne se vend pas, elle donne envie de la suite
     let free = null;
-    if (M.freeLing && M.sell && (out.teaser || B.some(t => TEASE_ASK.test(t))) && !f && !act && !tk && !relance && !busy && B.length && !freebieOf(cr, c.fan.id) && !boughtOf(cr, c.fan.id, L)) { const x = lingerieFile(cr, M, c.id); if (x) { free = x; f = { id: x.file_id }; price = 0; promo = null; } }
+    if (M.freeLing && M.sell && !coldNow && (out.teaser || B.some(t => TEASE_ASK.test(t))) && !f && !act && !tk && !relance && !busy && B.length && !freebieOf(cr, c.fan.id) && !boughtOf(cr, c.fan.id, L)) { const x = lingerieFile(cr, M, c.id); if (x) { free = x; f = { id: x.file_id }; price = 0; promo = null; } }
     if (!B.length && !act && !tk) { if (relance || guarded || rep) mark({}); if (!relance && (guarded || rep)) await readOnTwizz(cr.id, c, L); return false; }   // rien d'utile à envoyer
     B = B.map(fem);
     // le prix suit aussi ce que dit sa phrase : si elle annonce un contenu explicite, le prix remonte au minimum de ce niveau
