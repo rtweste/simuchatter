@@ -150,8 +150,11 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
   try { if (!S.get("twizz_amount_fix_1", 0)) {
     const per = ms => { const [y, m, d] = new Date(ms).toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" }).split("-"); return `${y}-${m}-${+d <= 15 ? "A" : "B"}`; };
     const locked = new Set(db.prepare("SELECT period FROM period_locks").all().map(r => r.period)); let n = 0;
-    db.prepare("SELECT s.id, s.sold_at, t.net FROM sales s JOIN twizz_tx t ON t.id = s.twizz_id WHERE s.source = 'twizz' AND t.net > 0").all().forEach(r => {
-      if (locked.has(per(r.sold_at))) return; const a = Math.round(r.net / keep() * 100) / 100;
+    // seulement les ventes encore au montant calculé automatiquement (ancien taux : frais Compta actuels, ou 25 % par défaut) : une vente corrigée à la main n'est jamais touchée
+    const fee = Number(S.get("platform_fee", 25)), olds = [...new Set([fee, 25, 37.5].filter(f => f > 0 && f < 100))].map(f => 1 - f / 100), r2 = x => Math.round(x * 100) / 100;
+    db.prepare("SELECT s.id, s.sold_at, s.amount, s.declared_amount, t.net FROM sales s JOIN twizz_tx t ON t.id = s.twizz_id WHERE s.source = 'twizz' AND t.net > 0").all().forEach(r => {
+      if (locked.has(per(r.sold_at))) return; const a = r2(r.net / keep());
+      if (!olds.some(k => Math.abs(r.amount - r2(r.net / k)) < 0.011 && Math.abs((r.declared_amount ?? r.amount) - r2(r.net / k)) < 0.011)) return;   // modifiée à la main : on n'y touche pas
       n += db.prepare("UPDATE sales SET amount = ?, declared_amount = ? WHERE id = ? AND amount <> ?").run(a, a, r.id, a).changes; });
     S.set("twizz_amount_fix_1", Date.now()); if (n) console.log(`Ventes Twizz recalculées au vrai prix : ${n}`);
   } } catch (e) { console.error("Ventes Twizz, recalcul", e.message); }
