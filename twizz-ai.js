@@ -528,6 +528,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const ACK = /^\s*(?:ok+|oki|okay|d'?acc?(?:ord)?|dac|ouais|oui|oklm|[çc]a marche|top|cool|👍|👌)\s*[.!]*\s*$/i;
   const SEXY = /\b(?:nue?s?|[àa] poil|band(?:e|er)|chaud(?:e)?|excit|sexe|sexy|seins?|cul|fesses|nichons|branl|jouir|mouill|suc(?:e|er)|baiser|coquin|hot|nudes?|lingerie|string)\b/i;
   // la conversation chauffe vraiment : plusieurs messages coquins récents, dont au moins un du fan (pour qu'elle prenne l'initiative de proposer un média)
+  const HOTFAN = /(?:^|[^a-zà-ÿ])(?:envie de toi|trop envie|je band|j['’ ]?bande|ça me fait bander|tu me fais bander|excit[ée]|tout dur|bien dur|trop dur|je durcis|mouill|branl|jouir|je me touche|chauff[ée]|t['’ ]?es trop bonne|j['’ ]?en peux plus)/i;   // fan très chaud : vaut un oui
   const HOTW = /(?:^|[^a-zà-ÿ])(?:nue?s?\b|[àa] poil|band|chaud|excit|sexe|sexy|seins?\b|cul\b|fesses|nichon|branl|jouir|joui|mouill|suc[eé]|baise|coquin|hot\b|nudes?\b|lingerie|string|doigt|bites?\b|queue\b|durci|chauff|tout dur|bien dur|trop dur|t'?es (?:trop )?bonne|caress|g[eé]mi|envie de toi|t'?es bonne)/i;
   const hotOf = L => { const R = L.slice(-6), fan = R.filter(m => m.fromFan && HOTW.test(str(m.text))).length, all = R.filter(m => HOTW.test(str(m.text))).length; return fan >= 2 || (fan >= 1 && all >= 3); };
   // ils se chauffent depuis plusieurs messages et rien n'a été proposé (ni média, ni teasing) : c'est le moment de proposer
@@ -1014,7 +1015,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       let again = null; try { again = unleak(await grok(msgs.concat([{ role: "system", content: "Vous parliez d'autre chose : ne propose aucune photo ni vidéo maintenant. Réponds à ce qu'il vient de dire, sur le même sujet, avec au plus une petite touche de flirt légère." }]))); } catch (e) {}
       const B2 = again && !str(again.laisser).trim() ? fresh(oneQ(bubbles(again)), said).filter(t => !PRICED(t) && !TEASE_ASK.test(t)) : []; if (B2.length) B = shape(B2, L); else B = B.filter(t => !TEASE_ASK.test(t) && !/\b(vid[ée]o|photo|pic|nude)s?\b/i.test(t)); out.teaser = false; }
     // un média payant du coffre ne part qu'avec son accord : un « oui » à sa proposition, une demande, le prix demandé… sinon elle teasse encore et attend
-    const consent = yes || asked || wantSee || priceAsk || (!!lastFan && asks(str(lastFan.text)));
+    const consent = yes || asked || wantSee || priceAsk || (!!lastFan && (asks(str(lastFan.text)) || HOTFAN.test(str(lastFan.text))));
     if (f && !free0 && M.tease && !consent && !act && !tk) { f = null; promo = null; B = B.filter(t => !fakeSend(t)); if (!B.some(t => TEASE_ASK.test(t))) B.push(TEASES[Math.floor(Math.random() * TEASES.length)]); out.teaser = true; }
     // le média part : la phrase le vend, ce n'est plus une question « tu veux voir ? »
     if (f && B.length && TEASE_ASK.test(B[B.length - 1])) { let again = null;
@@ -1293,7 +1294,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     }
     let al = !act && !tk && out.album ? albums.find(a => a.id === str(out.album)) : null, it = al && (al.items || []).find(x => x.id === str(out.media).replace(/^m:/, ""));
     // même règle qu'en vrai : après un teasing, le payant attend son accord
-    const consent = yes || WANTSEE.test(str(lastFan.text)) || asks(str(lastFan.text)) || yesToAsk(LL);
+    const consent = yes || WANTSEE.test(str(lastFan.text)) || asks(str(lastFan.text)) || HOTFAN.test(str(lastFan.text)) || yesToAsk(LL);
     let held = false; if (al && M.tease && !consent) { al = null; it = null; held = true; }
     let B = oneQ(bubbles(out)), guarded = false; if (held) { B = B.filter(t => !fakeSend(t)); if (!B.some(t => TEASE_ASK.test(t))) B.push(TEASES[Math.floor(Math.random() * TEASES.length)]); } if (busy) B = B.slice(0, 1); if (!act && !al && !tk && B.some(fakeSend)) { B = B.filter(t => !fakeSend(t)); guarded = true; }
     if (B.some(PRICED)) { try { const again = unleak(await grok([{ role: "system", content: system(c, M, ficheOf(c), albums, sell.note, FANS[b.fan] || "", gcfg(), opt) }, ...L, { role: "system", content: NOPRICE }]));
