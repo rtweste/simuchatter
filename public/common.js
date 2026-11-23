@@ -76,7 +76,7 @@ const MODULES = [
     desc: "Entraînez-vous face à un fan simulé par l'IA et recevez une évaluation détaillée." },
   { id: "tests", label: "Tests d'aptitude", short: "Tests", href: "/tests", icon: "gauge", section: "Formation", roles: ["admin", "trainee"], hide: ["assistant"],
     desc: "Test de débit de connexion et test de vitesse de frappe." },
-  { id: "formation", label: "Formation", href: "/formation", icon: "film", section: "Formation", roles: ["admin", "chatter", "trainee"], hide: ["assistant"],
+  { id: "formation", label: "Formation", href: "/formation", icon: "film", section: "Formation", roles: ["admin", "chatter", "trainee"], hide: ["assistant"], nodock: ["admin", "chatter", "tl"],
     desc: "Toutes les vidéos de formation, avec leurs exercices." },
   { id: "planning", label: "Planning", href: "/planning", icon: "calendar", section: "Organisation", roles: ["admin", "chatter"],
     desc: "Créneaux de la semaine et pointage des shifts." },
