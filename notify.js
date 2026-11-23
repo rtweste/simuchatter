@@ -30,14 +30,14 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:contact@stellads.fr", VAPID.publicKey, VAPID.privateKey);
     } catch (e) { console.error("VAPID", e.message); VAPID = null; }
   }
-  const KINDS = { dm: "Messages privés", mention: "Mentions dans le chat", announce: "Annonces de #informations", shift: "Rappels de shift", help: "Demandes de renfort", coach: "Conseils et entraînements", sales: "Ventes validées ou refusées", studio: "Studio : Snap et contenus perso" };
+  const KINDS = { dm: "Messages privés", mention: "Mentions dans le chat", announce: "Annonces de #informations", shift: "Rappels de shift", help: "Demandes de renfort", coach: "Conseils et entraînements", sales: "Ventes validées ou refusées", paid: "Achats des fans (média payé)", studio: "Studio : Snap et contenus perso" };
   const prefsOf = uid => { const r = db.prepare("SELECT prefs FROM push_prefs WHERE user_id = ?").get(uid); let p = {}; try { p = r ? JSON.parse(r.prefs) : {}; } catch (e) {} const o = {}; for (const k in KINDS) o[k] = p[k] !== false; return o; };
   const once = key => { try { db.prepare("INSERT INTO push_sent (key, at) VALUES (?,?)").run(key, Date.now()); return true; } catch (e) { return false; } };
   async function push(uid, kind, payload) {
     if (!webpush || !VAPID || !uid) return 0;
     if (kind && !prefsOf(uid)[kind]) return 0;
     const subs = db.prepare("SELECT * FROM push_subs WHERE user_id = ?").all(uid); let n = 0;
-    const body = JSON.stringify({ kind, tag: payload.tag || kind, url: payload.url || "/home", title: payload.title, body: payload.body || "", urgent: !!payload.urgent });
+    const body = JSON.stringify({ kind, tag: payload.tag || kind, url: payload.url || "/home", title: payload.title, body: payload.body || "", urgent: !!payload.urgent, inapp: !!payload.inapp });
     await Promise.all(subs.map(async s => {
       try { await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body, { TTL: payload.ttl || 3600, urgency: payload.urgent ? "high" : "normal" });
         db.prepare("UPDATE push_subs SET last_ok = ?, fails = 0 WHERE id = ?").run(Date.now(), s.id); n++; }
@@ -116,6 +116,8 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     });
     if (has("sales")) { db.prepare("SELECT s.id, s.user_id, s.amount, s.com_amount, s.com_reason, s.status, s.reason, s.reviewed_at, m.name model FROM sales s JOIN models m ON m.id = s.model_id WHERE s.reviewed_at > ? AND s.status IN ('validated','refused') ORDER BY s.reviewed_at").all(C.rev).forEach(s => {
       C.rev = Math.max(C.rev, s.reviewed_at); if (!once("sale:" + s.id + ":" + s.status)) return;
+      // vente Twizz automatique : le chatter vient déjà d'être prévenu de l'achat (nom du fan, lien vers la conversation), pas de seconde notification
+      try { if (s.status === "validated" && has("paid_notifs") && db.prepare("SELECT 1 FROM paid_notifs p JOIN twizz_tx t ON t.id = p.tx_id WHERE t.sale_id = ? AND p.user_id = ?").get(s.id, s.user_id)) return; } catch (e) {}
       push(s.user_id, "sales", s.status === "validated" && s.com_amount != null ? { title: s.com_amount > 0 ? `Vente validée · ${eur(s.com_amount)} pour toi` : "Vente validée · hors commission", body: `${s.model} · ${eur(s.amount)} au CA${s.com_reason ? " · " + cut(s.com_reason, 90) : ""}`, url: "/ventes", tag: "sale-" + s.id }
         : s.status === "validated" ? { title: `Vente validée · +${eur(s.amount)}`, body: `${s.model} · elle compte dans ta paie`, url: "/ventes", tag: "sale-" + s.id }
         : { title: "Vente refusée", body: `${s.model} · ${eur(s.amount)}${s.reason ? " · " + cut(s.reason, 90) : ""}`, url: "/ventes", tag: "sale-" + s.id }).catch(() => {}); }); }

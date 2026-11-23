@@ -203,6 +203,7 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
       if (!uid && modelId) uid = whoSold(modelId, at);
       if (uid) makeSale(t, uid); else db.prepare("UPDATE twizz_tx SET state = 'ca_only' WHERE id = ?").run(id);   // personne à qui la relier : CA de l'agence, sans commission
     }
+    try { if (app.locals.paidNotif) app.locals.paidNotif(id); } catch (e) {}   // achat d'un fan : le chatter concerné est prévenu (paid.js)
     return 1;
   }
   /* ---------- demandes Studio (Snap, contenu perso) : on retrouve la vente Twizz qui correspond ----------

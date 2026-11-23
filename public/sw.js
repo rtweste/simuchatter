@@ -10,6 +10,9 @@ self.addEventListener("push", e => {
   e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
     // déjà sur la bonne page et l'appli au premier plan : pas besoin de notifier (sauf urgence)
     if (!d.urgent && list.some(c => c.focused && c.visibilityState === "visible" && new URL(c.url).pathname + new URL(c.url).search === url)) return;
+    // achat d'un fan : si le site est ouvert au premier plan, il affiche lui-même sa carte (avec le bouton vers la conversation)
+    const front = d.inapp ? list.filter(c => c.focused && c.visibilityState === "visible") : [];
+    if (front.length) { front.forEach(c => { try { c.postMessage({ paid: 1 }); } catch (_) {} }); return; }
     return self.registration.showNotification(d.title || "StellADS", { body: d.body || "", icon: "/icon-192.png", badge: "/badge-96.png", tag: d.tag || undefined, renotify: !!d.tag,
       requireInteraction: !!d.urgent, vibrate: d.urgent ? [200, 100, 200, 100, 300] : [120, 60, 120], data: { url } });
   }));

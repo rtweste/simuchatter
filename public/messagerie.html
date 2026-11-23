@@ -1289,6 +1289,25 @@ async function showDeep() { const d = DEEP; if (!d || d.busy || !CUR || CUR.id !
   await new Promise(r => requestAnimationFrame(r));
   DEEPPIN = { id: m.id, until: Date.now() + 6000 }; pinDeep(); [300, 900, 1800].forEach(t => setTimeout(pinDeep, t));
   const el = document.querySelector(`[data-ppv="${CSS.escape(m.id)}"]`); if (el) { el.classList.add("deep"); setTimeout(() => el.classList.remove("deep"), 4200); } }
+// ouvre la conversation d'un lien direct ou d'une notification d'achat : la bonne créatrice, le fan, et la vente à montrer
+async function goDeep(dl) {
+  if (!ST || !dl || !dl.fan || !ST.creators.some(c => c.id === dl.cr)) return false;
+  if (dl.cr !== CID) { CID = dl.cr; try { localStorage.setItem("mx:cid", CID); } catch (e) {} CUR = null; QDONE.clear(); QTREATED = 0; $("mx").classList.remove("open"); top(); thread(); fanCard(); if (TYPE === "GENERAL" && !Q) loadList(); }
+  if (TYPE !== "GENERAL" || Q) { Q = ""; $("q").value = ""; setType("GENERAL"); }
+  let c = null;
+  if (!dl.conv) {   // média push : la vente ne dit pas dans quelle conversation, on la retrouve avec le fan
+    const cid = CID; try { const r = await api2(`/snaps?fans=${enc(dl.fan)}&name=${enc(dl.name || "")}`); c = (r.items || [])[0] || null; if (c) fixFan(c.fan); } catch (e) {}
+    if (cid !== CID) return true;
+    if (!c) { Q = dl.name && dl.name !== "Fan" ? dl.name : ""; $("q").value = Q; if (Q) loadList(); notify("Conversation à retrouver", Q ? `Je cherche ${Q} dans la liste` : "Cherche le fan dans la liste", "info"); return true; }
+    dl = { ...dl, conv: c.id };
+  }
+  DEEP = dl; const L = LISTS[lkey("GENERAL")]; c = c || (L && L.items.find(x => x.id === dl.conv));
+  openConv(c || { id: dl.conv, fan: fixFan({ id: dl.fan, name: dl.name, avatar: "" }), last: { at: null, text: "", fromFan: false, type: "" }, unread: 0, online: false });
+  return true;
+}
+// bouton « Voir la conversation » d'une notification d'achat, quand la messagerie est déjà ouverte : pas de rechargement
+window.addEventListener("paid:open", e => { const d = e.detail || {}; if (!ST || !d.cr || !d.fan || !ST.creators.some(c => c.id === d.cr)) return; e.preventDefault();
+  goDeep({ cr: d.cr, conv: d.conv || "", fan: d.fan, name: d.name || "Fan", msg: d.msg || "", amt: +d.amt || 0, at: +d.at || 0 }); });
 // la vente reste au centre quelques secondes, même si des images finissent de charger ou que le fil se redessine (sauf si tu fais défiler toi-même)
 let DEEPPIN = null;
 const deepOn = () => DEEPPIN && Date.now() < DEEPPIN.until;
@@ -2130,11 +2149,11 @@ document.addEventListener("keydown", e => { if (e.key !== "ArrowDown" || e.metaK
   let saved = null, ty = null; try { saved = localStorage.getItem("mx:cid"); ty = localStorage.getItem("mx:ty"); } catch (e) {}
   CID = ST.creators.some(c => c.id === saved) ? saved : (ST.creators[0] || {}).id || null;
   // lien direct vers une conversation (depuis « À vérifier » dans Ventes) : la créatrice, le fan, et la vente à montrer
-  const Q0 = new URLSearchParams(location.search), dl = Q0.get("conv") && Q0.get("fan") && ST.creators.some(c => c.id === Q0.get("cr")) ? { cr: Q0.get("cr"), conv: Q0.get("conv"), fan: Q0.get("fan"), name: Q0.get("name") || "Fan", msg: Q0.get("msg") || "", amt: +Q0.get("amt") || 0, at: +Q0.get("at") || 0 } : null;
+  // (notification d'achat d'un média push : la conversation n'est pas toujours connue, on la retrouve avec le fan et son pseudo)
+  const Q0 = new URLSearchParams(location.search), dl = (Q0.get("conv") || Q0.get("name")) && Q0.get("fan") && ST.creators.some(c => c.id === Q0.get("cr")) ? { cr: Q0.get("cr"), conv: Q0.get("conv") || "", fan: Q0.get("fan"), name: Q0.get("name") || "Fan", msg: Q0.get("msg") || "", amt: +Q0.get("amt") || 0, at: +Q0.get("at") || 0 } : null;
   if (dl) { CID = dl.cr; ty = "GENERAL"; history.replaceState(null, "", location.pathname); }
   top(); unreads(); aiLoad(); setInterval(() => { if (!document.hidden) unreads(); }, 120e3); liveUi(); thread(); fanCard(); setType(["QUEUE", "GENERAL"].includes(ty) ? ty : "QUEUE"); if (CID) stream();
-  if (dl) { DEEP = dl; const L = LISTS[lkey("GENERAL")], c = L && L.items.find(x => x.id === dl.conv);
-    openConv(c || { id: dl.conv, fan: fixFan({ id: dl.fan, name: dl.name, avatar: "" }), last: { at: null, text: "", fromFan: false, type: "" }, unread: 0, online: false }); }
+  if (dl) goDeep(dl);
 })();
 })();
 </script>
