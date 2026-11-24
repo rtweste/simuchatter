@@ -138,11 +138,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   function count(u) { if (!u) return; const x = CTX.getStore() || {}, tin = +u.prompt_tokens || 0, tc = +((u.prompt_tokens_details || {}).cached_tokens) || 0, to = (+u.completion_tokens || 0) + (+((u.completion_tokens_details || {}).reasoning_tokens) || 0);
     const cost = ((tin - tc) * PRICE.in + tc * PRICE.cached + to * PRICE.out) / 1e6;
     try { db.prepare(`INSERT INTO twizz_ai_usage (day, creator_id, kind, calls, tin, tcached, tout, cost) VALUES (?,?,?,1,?,?,?,?) ON CONFLICT(day, creator_id, kind) DO UPDATE SET
-      calls = calls + 1, tin = tin + excluded.tin, tcached = tcached + excluded.tcached, tout = tout + excluded.tout, cost = cost + excluded.cost`).run(dayOf(Date.now()), x.cid || "", x.kind || "autre", tin, tc, to, cost); } catch (e) {} }
+      calls = calls + 1, tin = tin + excluded.tin, tcached = tcached + excluded.tcached, tout = tout + excluded.tout, cost = cost + excluded.cost`).run(dayOf(Date.now()), x.cid || "", x.kind || "autre", tin, tc, to, cost); } catch (e) {}
+    if (x.kind === "reponse") try { db.prepare("INSERT INTO twizz_ai_msgday (day, calls, tin, tcached, cost) VALUES (?,1,?,?,?) ON CONFLICT(day) DO UPDATE SET calls = calls + 1, tin = tin + excluded.tin, tcached = tcached + excluded.tcached, cost = cost + excluded.cost").run(dayOf(Date.now()), tin, tc, cost); } catch (e) {} }
   // une fois : le coût déjà compté est recalculé aux vrais tarifs (l'ancien compteur sous-estimait la dépense d'environ 6 fois)
   if (!S.get("twizz_ai_usage_reprice_1", 0)) { try { db.prepare("UPDATE twizz_ai_usage SET cost = ((tin - tcached) * ? + tcached * ? + tout * ?) / 1e6 WHERE kind <> 'refus'").run(PRICE.in, PRICE.cached, PRICE.out); S.set("twizz_ai_usage_reprice_1", Date.now()); } catch (e) {} }
   function countRefusal() { const x = CTX.getStore() || {}; try { db.prepare(`INSERT INTO twizz_ai_usage (day, creator_id, kind, calls, tin, tcached, tout, cost) VALUES (?,?,?,1,0,0,0,?) ON CONFLICT(day, creator_id, kind) DO UPDATE SET calls = calls + 1, cost = cost + excluded.cost`).run(dayOf(Date.now()), x.cid || "", "refus", PRICE.refusal); } catch (e) {} }
-  db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_sentday (day TEXT PRIMARY KEY, n INTEGER NOT NULL DEFAULT 0)");
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_msgday (day TEXT PRIMARY KEY, n INTEGER NOT NULL DEFAULT 0, calls INTEGER NOT NULL DEFAULT 0, tin INTEGER NOT NULL DEFAULT 0, tcached INTEGER NOT NULL DEFAULT 0, cost REAL NOT NULL DEFAULT 0)");
   // fans sans argent : ceux que l'équipe a tagués « peux pas payer », et ceux qui viennent de le dire (24 h). S'ils n'ont jamais rien acheté, l'IA leur répond après 10 min au lieu d'une minute,
   // 8 fois au plus par 24 h, et ne les relance pas : chaque réponse coûte, autant la garder pour ceux qui peuvent acheter
   db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_slow (creator_id TEXT NOT NULL, fan_id TEXT NOT NULL, at INTEGER NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (creator_id, fan_id))");
@@ -170,7 +171,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const slowSaid = (cid, fan) => { try { const r = slowRow(cid, fan); if (!r || now() - r.at >= SLOW_TTL) db.prepare("INSERT INTO twizz_ai_slow (creator_id, fan_id, at, n) VALUES (?,?,?,0) ON CONFLICT(creator_id, fan_id) DO UPDATE SET at = excluded.at, n = 0").run(cid, fan, now()); } catch (e) {}
     if (slowFan(cid, fan)) tagBroke(cid, fan); };   // jamais acheté : le tag de l'équipe est posé
   const slowCount = (cid, fan) => { try { const r = slowRow(cid, fan); if (r && now() - r.at < SLOW_TTL) db.prepare("UPDATE twizz_ai_slow SET n = n + 1 WHERE creator_id = ? AND fan_id = ?").run(cid, fan); else db.prepare("INSERT INTO twizz_ai_slow (creator_id, fan_id, at, n) VALUES (?,?,?,1) ON CONFLICT(creator_id, fan_id) DO UPDATE SET at = excluded.at, n = 1").run(cid, fan, now()); } catch (e) {} };
-  const sentOn = d => (db.prepare("SELECT n FROM twizz_ai_sentday WHERE day = ?").get(d) || {}).n || 0, sentMark = () => { try { db.prepare("INSERT INTO twizz_ai_sentday (day, n) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET n = n + 1").run(dayOf(Date.now())); } catch (e) {} };
+  const msgDay = d => db.prepare("SELECT * FROM twizz_ai_msgday WHERE day = ?").get(d) || { n: 0, calls: 0, tin: 0, tcached: 0, cost: 0 }, sentMark = () => { try { db.prepare("INSERT INTO twizz_ai_msgday (day, n) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET n = n + 1").run(dayOf(Date.now())); } catch (e) {} };
   const spent7 = () => { const d = []; for (let i = 0; i < 7; i++) d.push(dayOf(Date.now() - i * 864e5)); return db.prepare(`SELECT COALESCE(SUM(cost), 0) c FROM twizz_ai_usage WHERE day IN (${d.map(() => "?").join(",")})`).get(...d).c; };
   const overBudget = () => { const b = gcfg().budget; return b > 0 && spent7() >= b; };
   function usage() {
@@ -182,8 +183,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       byCreator: by("creator_id"), byKind: by("kind"), calls, perReply: rep.length ? rep.reduce((a, r) => a + r.cost, 0) / Math.max(1, rep.reduce((a, r) => a + r.calls, 0)) : 0,
       cachedPct: R.reduce((a, r) => a + r.tin, 0) ? Math.round(100 * R.reduce((a, r) => a + r.tcached, 0) / R.reduce((a, r) => a + r.tin, 0)) : 0,
       // par jour : ce que coûte une réponse réellement envoyée (appels de réécriture compris), le nombre d'appels par réponse et la part en cache
-      daily: days.map(d => { const X = R.filter(r => r.day === d && r.kind === "reponse"), c = X.reduce((a, r) => a + r.cost, 0), n = X.reduce((a, r) => a + r.calls, 0), ti = X.reduce((a, r) => a + r.tin, 0), tc = X.reduce((a, r) => a + r.tcached, 0), sent = sentOn(d);
-        return { day: d, cost: c, calls: n, sent, perMsg: sent ? c / sent : 0, callsPerMsg: sent ? n / sent : 0, cachedPct: ti ? Math.round(100 * tc / ti) : 0 }; }) };
+      daily: days.map(d => { const m = msgDay(d); return { day: d, cost: m.cost, calls: m.calls, sent: m.n, perMsg: m.n ? m.cost / m.n : 0, callsPerMsg: m.n ? m.calls / m.n : 0, cachedPct: m.tin ? Math.round(100 * m.tcached / m.tin) : 0 }; }) };
   }
   const XBASE = () => str(process.env.XAI_BASE || "https://api.x.ai/v1").replace(/\/+$/, "");
   const XMODEL = () => str(process.env.XAI_MODEL || (MODELS[gcfg().model] || MODELS.fast)[0]);
