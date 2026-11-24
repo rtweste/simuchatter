@@ -52,7 +52,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const MODELS = { fast: ["grok-4-1-fast-non-reasoning", "Rapide"], smart: ["grok-4-1-fast-reasoning", "Plus réfléchi (un peu plus lent)"] };
   const G_DEF = { notice: true, mark: false, base: "", locked: "", noticeText: "Petite précision : c'est l'IA de {creatrice} qui te répond en ce moment 😊", noticeFreq: "run", noticeDays: 30,
     waitMin: 35, waitMax: 80, teamPause: 15, fanWindow: 12, perFan: 40, maxHours: 12, model: "fast",
-    relance: true, relanceAfter: 45, relanceMax: 1, quietFrom: 1, quietTo: 9, memory: true, vipAlert: 300, budget: 20, hourCap: 1 };
+    relance: true, relanceAfter: 45, relanceMax: 1, quietFrom: 1, quietTo: 9, memory: true, vipAlert: 300, budget: 20, hourCap: 1, nv: false };
   const M_DEF = { ok: false, sell: true, maxPrice: 100, gap: 20, pile: true, albums: [], albumNotes: {}, skipTags: [], extra: "", profile: "", scripts: true, promo: true, maxDiscount: 30, promoHours: 24, vision: true,
     minMsgs: 8, tease: true, teaseWindow: 90, askSkip: false, cooldownH: 6, coolFull: false, sexDays: 1, details: {},
     tk: true, snapMin: 50, snapMax: 100, camMin: 130, camMax: 200, camHour: 300, customPrice: 150, tkAlbum: "", camDispo: "", ladder: [6, 12, 18, 25, 35, 50], freeLing: true };
@@ -78,6 +78,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (b.maxHours != null) o.maxHours = int(b.maxHours, 1, 24, "Durée maximum d'une séance");
     if (b.model != null) { if (!MODELS[b.model]) throw fail("Modèle Grok inconnu"); o.model = b.model; }
     if (typeof b.relance === "boolean") o.relance = b.relance;
+    if (typeof b.nv === "boolean") o.nv = b.nv;   // nouvelle version des réponses : en ligne ou non
     if (typeof b.memory === "boolean") o.memory = b.memory;
     if (b.relanceAfter != null) o.relanceAfter = int(b.relanceAfter, 10, 720, "Relance après");
     if (b.relanceMax != null) o.relanceMax = int(b.relanceMax, 1, 5, "Relances maximum par fan");
@@ -130,7 +131,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   // ce que coûte Grok : chaque appel est compté (jetons et dollars, par jour, créatrice et usage) ; au-delà du budget de la semaine, l'IA se met en pause
   const { AsyncLocalStorage } = require("async_hooks"), CTX = new AsyncLocalStorage();
   // nouvelle version de ses réponses (plusieurs bulles, demandes mieux comprises, pas de payant à un fan sans argent…) : d'abord dans l'essai seulement
-  const LIVE_NV = false, nv = () => LIVE_NV || !!(CTX.getStore() || {}).nv;
+  const nv = () => !!gcfg().nv || !!(CTX.getStore() || {}).nv;   // en ligne quand le réglage « Nouvelle version des réponses » est allumé ; dans l'essai avec « preview »
   // tarifs réels relevés sur la console xAI (grok-4-1-fast, nov. 2026) : $ par million de jetons ; un refus pour « usage guidelines » est facturé à part
   const PRICE = { in: +process.env.XAI_PRICE_IN || 1.25, cached: +process.env.XAI_PRICE_CACHED || 0.20, out: +process.env.XAI_PRICE_OUT || 2.50, refusal: +process.env.XAI_PRICE_REFUSAL || 0.05 };
   db.exec(`CREATE TABLE IF NOT EXISTS twizz_ai_usage (day TEXT NOT NULL, creator_id TEXT NOT NULL DEFAULT '', kind TEXT NOT NULL DEFAULT '', calls INTEGER NOT NULL DEFAULT 0,
@@ -272,7 +273,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   // compte xAI à sec vu il y a moins de 3 minutes : on n'appelle plus Grok (toutes les 3 minutes, une réponse retente sa chance et relance tout si le crédit est revenu)
   const creditOut = () => !!CREDIT.at && now() - CREDIT.at < 3 * 60e3;
   async function grok(messages, o = {}) {
-    { const x = CTX.getStore(); if (x && x.kind === "reponse") { x.n = (x.n || 0) + 1; if (x.n > 2) throw fail("Limite de 2 appels à Grok pour cette réponse"); } }   // une réponse, plus une réécriture au plus : au-delà, le site corrige lui-même (il retire la bulle fautive)
+    { const x = CTX.getStore(); if (x && x.kind === "reponse") { x.n = (x.n || 0) + 1; if (x.n > 3) throw fail("Limite de 3 appels à Grok pour cette réponse"); } }   // une réponse, plus deux réécritures au plus (avec une seule, des phrases de secours et des expressions interdites passaient) : au-delà, le site corrige lui-même
     const tool = o.tool === undefined ? TOOL : o.tool, body = { model: o.model || XMODEL(), messages, temperature: o.temp ?? (tool === TOOL ? 0.75 : 0.9), max_tokens: o.max || (tool === TOOL ? 500 : 900) };
     if (tool) { body.tools = [tool]; body.tool_choice = { type: "function", function: { name: tool.function.name } }; }
     let r; try { r = await fetch(XBASE() + "/chat/completions", { method: "POST", headers: { Authorization: "Bearer " + XAI(), "Content-Type": "application/json", ...((CTX.getStore() || {}).conv ? { "x-grok-conv-id": CTX.getStore().conv } : {}) },
@@ -558,6 +559,13 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     .map(([w, d]) => [new RegExp("(^|[^a-zà-ÿ])(" + w + ")", "i"), new RegExp(d, "i")]);
   const offDetail = (t, descr, video) => !!descr && (CAPD.some(([w, d]) => w.test(str(t)) && !d.test(descr)) || (!video && /\b(je bouge|je remue|je twerke?|je danse|je me d[ée]hanche)\b/i.test(str(t))));
   const NEUTRAL_CAP = ["regarde ce que je t'ai gardé", "celle-là je l'ai faite en pensant à toi", "j'ai hésité à te l'envoyer celle-là 🙈", "dis-moi ce que t'en penses 😏", "rien que pour toi bb", "j'espère qu'elle va te plaire 😌"];
+  const PERCHE = "PERCHE : quand il te tend une perche coquine (il dit qu'il est nu, excité, ce qu'il aimerait te faire, qu'il pense à toi…), tu la saisis dans cette réponse : tu rebondis dessus avec envie (ce que ça te fait, ce que tu imagines, ou une question qui fait monter la tension). Jamais une réponse qui ferme la discussion (« c'est bon à savoir », « trop bien », « cool », « ah ouais ») et jamais un changement de sujet à ce moment-là (sa ville, son âge, son travail, sa journée, son sommeil). QUESTIONS : ne lui retourne jamais une question à laquelle il vient de répondre (pas de « et toi ? » quand il vient de te dire comment il va), et ne repose pas une question déjà posée plus haut.";
+  const WHY_NOTE = "IL DEMANDE « POURQUOI », « COMMENT ÇA » OU « DE QUOI » : il parle de TON dernier message. Explique-le simplement dans cette réponse, avant toute autre chose, sans changer de sujet et sans compliment à la place.";
+  const WHYQ = /^(?:mais |bah |ah |euh |et )?(?:pourquoi|pk|pq|pkoi|pourkoi|comment [çc]a|de quoi|c['’ ]?est[- ][àa][- ]dire|genre quoi|hein|quoi)(?: (?:[çc]a|tu dis [çc]a|bb|b[ée]b[ée]))?[\s?!.]*$/i;
+  const PERCHE_NOW = "Il vient de te tendre une perche coquine et ta réponse la laisse tomber (elle ferme la discussion ou change de sujet). Réécris-la : rebondis sur ce qu'il vient de dire, avec envie (ce que ça te fait, ce que tu imagines, ou une question qui fait monter la tension). Pas de question sur sa ville, son âge, son travail, sa journée ou son sommeil. Rien à vendre ni à promettre ici.";
+  // réponses qui ferment (« c'est bon à savoir », « trop bien ça »…) et questions de small talk
+  const DEADEND = /^(?:(?:haha+|hihi+|hehe+|mdr+|lol|ptdr+|ah|oh|ok|okay|ouais)[ ,!.]*)*(?:c['’ ]?est bon [àa] savoir|trop bien(?: [çc]a)?|cool(?: cool)?|ah ouais|ah ok|d['’ ]?accord|tranquille(?: alors)?|g[ée]nial|super|top|nice|je vois|ah bon)[\s!.…]*[\p{Extended_Pictographic}\s]*$/iu;
+  const SMALLTALK = /(?:t['’ ]?es d['’ ]?o[uù]|t['’ ]?es de (?:o[uù]|quelle ville)|quelle ville|tu viens d['’ ]?o[uù]|t['’ ]?habites? o[uù]|t['’ ]?as quel [âa]ge|tu fais quoi (?:dans la vie|aujourd|l[àa]|ce soir|demain|comme)|ta journ[ée]e|t['’ ]?as (?:bien )?dormi|tu bosses|ton (?:taf|travail|boulot)|t['’ ]?as fait quoi|quoi de pr[ée]vu|t['’ ]?es de paris)/i;
   const NOPITCH2 = "Réécris ta réponse sans rien proposer ni promettre (aucun média, aucun « tu veux voir ? ») : rebondis sur ce qu'il vient de dire, à sa température. S'il est chaud, reste chaude et chauffe-le ; pas de small talk, une seule question au plus.";
   const NOPITCH = "Réécris ta réponse sans rien proposer ni promettre (aucun média, aucun « tu veux voir ? », aucune allusion à ce que tu pourrais montrer) : réponds simplement à ce qu'il vient de dire et intéresse-toi à lui.";
   const sessOf = L => { let st = 0; for (let i = 1; i < L.length; i++) if ((Date.parse(L[i].at) || 0) - (Date.parse(L[i - 1].at) || 0) > 2 * 3600e3) st = i; return L.slice(st); };
@@ -814,6 +822,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       M.sell ? "TEASER, PAS RACONTER : quand vous vous chauffez, ne décris pas en détail ce que tu es en train de faire, comme en direct : fais monter l'envie et garde le reste pour le média, sinon il a déjà tout gratuitement. S'il demande ce qu'il y a dans un média (avant ou après l'envoi), appuie-toi sur son contenu indiqué (« contenu : … » dans l'historique, ou la description de l'album) : dis franchement ce qu'elle y fait, en une phrase qui lui donne envie de l'ouvrir, sans tout dévoiler. N'invente jamais un contenu qui n'est pas indiqué ; si rien n'est indiqué, reste vague et coquine." : "",
       o.yes && !o.busy && !o.relance ? YES_NOW : "", !o.busy && !o.relance && mediaBack(L) ? MEDIA_BACK : "", !o.busy && !o.relance && insistOf(L) ? INSIST_NOTE : "", !o.busy && !o.relance && M.sell && coldOf(L) ? COLD_NOTE : "", o.priceAsk && !o.busy && !o.relance ? PRICE_NOTE : "", o.asked && !o.busy && !o.relance ? ASKED_NOTE(o.asked.kws, o.asked.has) : "", !o.busy && !o.relance && M.sell && boughtJust(L) ? BOUGHT_NOTE : "", o.pending && !o.busy && !o.relance ? PENDING_NOTE : "", o.ladder && !o.busy && !o.relance ? LADDER_NOTE(o.ladder) : "", o.busy || o.relance ? "" : variety(L, o.cid), o.busy || o.relance || !M.sell ? "" : refusalOf(L),
       nv() && o.freeAsk ? "IL DEMANDE DU GRATUIT : réponds à ça, dans cette réponse, sans changer de sujet et sans question sur sa vie (pas de « et toi tu fais quoi ? »). Tu ne promets rien de gratuit. Un non avec le sourire, qui lui donne envie de ce qu'il rate ; s'il insiste, reste complice et légère, sans reproche." : "",
+      nv() ? PERCHE : "", nv() && o.why ? WHY_NOTE : "",
       nv() ? "CE QUE TU AS VRAIMENT : ne parle jamais d'une photo ou d'une vidéo précise que tu n'as pas dans ta liste d'albums (pas de « j'ai tourné une vidéo où je… » inventée). Si ce qu'il demande n'y est pas, propose ce qui s'en rapproche le plus dans ta liste. Quand un média part, ta phrase décrit celui-là, pas un autre." : "",
       o.early ? (nv() ? EARLY2 : EARLY1) : "", o.broke ? "IL VIENT DE DIRE QU'IL N'A PAS D'ARGENT OU QUE C'EST TROP CHER : ne lui propose aucun média payant et n'en reparle pas. Reste douce, garde le lien, intéresse-toi à lui. S'il redemande lui-même, tu pourras proposer le moins cher." : "", o.stopped ? STOP_NOTE : "", o.warm ? WARM_NOTE : "", o.heat && !o.busy && !o.relance ? HEAT_NOTE : "",
       o.busy ? "IL VIENT DE DIRE QU'IL EST OCCUPÉ OU QU'IL PART : une seule bulle courte et gentille (par exemple « ok vas-y on se capte plus tard »), pas de question, pas de vente, rien d'autre." : ""];
@@ -1040,7 +1049,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const free0 = false, priceAsk = !relance && !busy && !!lastFan && PRICEQ.test(str(lastFan.text)), wantSee = !relance && !busy && !!lastFan && WANTSEE.test(str(lastFan.text));
     const yes = !relance && !busy && sell.albums.length > 0 && (saidYes(tz0, lastFan, M) || asked || priceAsk || wantSee || force);
     const lad = sell.albums.length ? ladderOf(M, boughtOf(cr, c.fan.id, L), lastFan, !!freebieOf(cr, c.fan.id)) : null, wk = !relance && !busy ? wantedKw(L) : [];
-    const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell, hot), rules: rulesOf(M, L, { cid: cr.id, freeAsk: !relance && !!lastFan && FREEW.test(str(lastFan.text)), stopped, warm, heat: heat && !early, broke, early, ladder: lad, pending: !!(!sell.albums.length && pendOf(M, L)), priceAsk: priceAsk && sell.albums.length > 0, asked: wk.length && sell.albums.some(a => (a.all || []).length) ? { kws: wk, has: matchItems(sell.albums, wk).length > 0 } : null, known: knownOf(cr, c.fan.id), plan, relance: !!relance, busy, ticket: T, hot: hot && canSell, push, yes }) };
+    const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell, hot), rules: rulesOf(M, L, { cid: cr.id, why: !relance && !!lastFan && WHYQ.test(str(lastFan.text).trim()), freeAsk: !relance && !!lastFan && FREEW.test(str(lastFan.text)), stopped, warm, heat: heat && !early, broke, early, ladder: lad, pending: !!(!sell.albums.length && pendOf(M, L)), priceAsk: priceAsk && sell.albums.length > 0, asked: wk.length && sell.albums.some(a => (a.all || []).length) ? { kws: wk, has: matchItems(sell.albums, wk).length > 0 } : null, known: knownOf(cr, c.fan.id), plan, relance: !!relance, busy, ticket: T, hot: hot && canSell, push, yes }) };
     if (relance) opt.relance = { since: relance.since, unbought: sell.open ? sell.open.price : plan && plan.lock ? plan.lock.price : null };
     const msgs = [{ role: "system", content: system(cr, M, ficheOf(cr), sell.albums, sell.note, fanInfo, C, opt) }];
     // la dernière photo envoyée par le fan : Grok la regarde (les autres restent en texte)
@@ -1168,6 +1177,14 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     { const T = [...new Set(tics(L).concat(crossTics(cr.id), BANNED, L.some(m => !m.fromFan && hasTic(untag(str(m.text)), RATE)) ? RATE : []))]; if (T.length && B.some(t => hasTic(t, T)) && !f && !act && !tk) { let again = null;   // encore un de ses tics : une seconde chance, sinon la bulle qui le contient est retirée (s'il en reste une)
       try { again = unleak(await grok(msgs.concat([{ role: "system", content: `Ta réponse reprend encore ${T.map(k => "« " + k + " »").join(", ")}, que tu as déjà écrit plusieurs fois. Réécris-la avec d'autres mots et une autre idée.` }]))); } catch (e) {}
       const B2 = again && !str(again.laisser).trim() ? shape(fresh(oneQ(bubbles(again)), said), L) : []; if (B2.length && !B2.some(t => hasTic(t, T))) B = B2; else { const K = B.filter(t => !hasTic(t, T)); if (K.length) B = K; } } }
+    // (nouvelle version) pas de « et toi ? » retourné, pas de bulle qui ne dit rien, et une perche coquine n'est jamais lâchée (réponse qui ferme, ou small talk) : une réécriture, sinon la phrase fautive saute
+    if (nv() && !relance && !busy && !act && !tk && !f && lastFan) {
+      if (/\bet (toi|vous)\b/i.test(lfT)) B = B.map(t => t.replace(/[\s,]*\bet toi\s*\?+/gi, "").trim()).filter(Boolean);
+      if (B.length > 1) { const K = B.filter(t => !DEADEND.test(untag(t))); if (K.length) B = K; }
+      if ((HOTFAN.test(lfT) || HOTW.test(lfT)) && B.length && (B.every(t => DEADEND.test(untag(t))) || B.some(t => SMALLTALK.test(t)))) { let again = null;
+        try { again = unleak(await grok(msgs.concat([{ role: "system", content: PERCHE_NOW }]))); } catch (e) {}
+        const B2 = again && !str(again.laisser).trim() ? fresh(oneQ(bubbles(again)), said).filter(t => !PRICED(t) && !fakeSend(t) && !SMALLTALK.test(t) && !DEADEND.test(untag(t))) : [];
+        if (B2.length) B = shape(B2, L); else { const K = B.filter(t => !SMALLTALK.test(t)); if (K.length) B = K; } } }
     // la discussion est encore froide (aucun mot coquin récemment) : pas de teasing de média ni de cadeau, même si Grok en propose un
     const coldNow = !relance && !busy && !L.slice(-8).some(m => HOTW.test(str(m.text))) && !asks(str(lastFan && lastFan.text));
     if (coldNow && (out.teaser || B.some(t => TEASE_ASK.test(t) || /\b(vid[ée]o|photo|pic|nude)s?\b/i.test(t))) && !f && !act && !tk) {
@@ -1479,7 +1496,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const canSell = sell.albums.length > 0 || !!sell.teaseNow || !!(plan && plan.launch.length), push = canSell && !teaseOk(tz, M) && !(plan && plan.S && plan.S.state === "open") && (hot && pushOf(LL) || !busy && loopOf(LL));
     const priceAsk = !busy && PRICEQ.test(str(lastFan.text)), yes = !busy && albums.length > 0 && (saidYes(tz, lastFan, M) || priceAsk || forceT || WANTSEE.test(str(lastFan.text)));
     const lad = albums.length ? ladderOf(M, LL.filter(m => !m.fromFan && m.type === "FILE" && m.price > 0 && m.status === "accepted").length, lastFan) : null;
-    const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell, hot), rules: rulesOf(M, LL, { freeAsk: FREEW.test(str(lastFan.text)), early: earlyNT && !sessOf(LL).some(m => m.fromFan && asks(m.text)), stopped: stopT, warm: !stopT && WARMW.test(lfTT), broke: brokeT(LL.slice(-8).filter(m => m.fromFan).map(m => str(m.text)).join(" · ")) && !reqT, ladder: lad, pending: !!(!albums.length && pendOf(M, LL)), priceAsk: priceAsk && albums.length > 0, asked: wantedKw(LL).length && albums.some(a => (a.all || []).length) ? { kws: wantedKw(LL), has: matchItems(albums, wantedKw(LL)).length > 0 } : null, known: KN[b.fan] || {}, plan, busy, ticket: TK0, hot: hot && canSell, push, yes }) };
+    const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell, hot), rules: rulesOf(M, LL, { why: WHYQ.test(str(lastFan.text).trim()), freeAsk: FREEW.test(str(lastFan.text)), early: earlyNT && !sessOf(LL).some(m => m.fromFan && asks(m.text)), stopped: stopT, warm: !stopT && WARMW.test(lfTT), broke: brokeT(LL.slice(-8).filter(m => m.fromFan).map(m => str(m.text)).join(" · ")) && !reqT, ladder: lad, pending: !!(!albums.length && pendOf(M, LL)), priceAsk: priceAsk && albums.length > 0, asked: wantedKw(LL).length && albums.some(a => (a.all || []).length) ? { kws: wantedKw(LL), has: matchItems(albums, wantedKw(LL)).length > 0 } : null, known: KN[b.fan] || {}, plan, busy, ticket: TK0, hot: hot && canSell, push, yes }) };
     const FANS = { new: "pseudo : Thomas ; n'a encore jamais rien acheté", reg: "pseudo : Thomas ; prénom : Thomas ; ville : Lyon ; a déjà dépensé 150 € avec elle en 8 achats ; tags de l'équipe : Vidéos",
       big: "pseudo : Thomas ; prénom : Thomas ; métier : chef d'entreprise ; a déjà dépensé 850 € avec elle en 30 achats ; tags de l'équipe : Spender ; résumé de l'équipe : achète vite quand on le chauffe, aime qu'on se souvienne de lui" };
     const L = LL.map(m => ({ role: m.fromFan ? "user" : "assistant", content: m.fromFan ? lineOf(m) : untag(lineOf(m)) })).filter(m => m.content);
@@ -1530,6 +1547,13 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (!str(again.laisser).trim()) B = fresh(oneQ(bubbles(again)), said).filter(t => act || al || !fakeSend(t)); } catch (e) {} } }
     B = shape(B, LL);
     // même mise en forme finale qu'en vrai : aujourd'hui une seule bulle sans média ; nouvelle version, jusqu'à 3 bulles
+    if (nv() && !busy && !act && !tk && !al) {
+      if (/\bet (toi|vous)\b/i.test(lfTT)) B = B.map(t => t.replace(/[\s,]*\bet toi\s*\?+/gi, "").trim()).filter(Boolean);
+      if (B.length > 1) { const K = B.filter(t => !DEADEND.test(untag(t))); if (K.length) B = K; }
+      if ((HOTFAN.test(lfTT) || HOTW.test(lfTT)) && B.length && (B.every(t => DEADEND.test(untag(t))) || B.some(t => SMALLTALK.test(t)))) { let again = null;
+        try { again = unleak(await grok(TM.concat([{ role: "system", content: PERCHE_NOW }]))); } catch (e) {}
+        const B2 = again && !str(again.laisser).trim() ? fresh(oneQ(bubbles(again)), said).filter(t => !PRICED(t) && !fakeSend(t) && !SMALLTALK.test(t) && !DEADEND.test(untag(t))) : [];
+        if (B2.length) B = shape(B2, LL); else { const K = B.filter(t => !SMALLTALK.test(t)); if (K.length) B = K; } } }
     if (nv()) { if (B.length > 3) B = B.slice(0, 2).concat(B[B.length - 1]);
       if (B.length && B.every(t => FREEW.test(t)) && !act && !tk) { let again = null; try { again = unleak(await grok(TM.concat([{ role: "system", content: NOFREE }]))); } catch (e) {}
         const B2 = again && !str(again.laisser).trim() ? fresh(oneQ(bubbles(again)), said).filter(t => !FREEW.test(t) && !PRICED(t)) : []; B = B2.length ? shape(B2, LL) : ["j'aimerais trop te gâter bb mais là je peux pas"]; } }

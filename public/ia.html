@@ -515,6 +515,7 @@ function tabRegl(G, F) { const lockT = F ? "" : " · réglé par le fondateur";
       <aside class="as">
         <div class="pn">${head("chip", "b", "Modèle <em>Grok</em>", "Le cerveau qui écrit ses réponses")}
           <div class="mdl">${D.models.map(m => { const L = MDL[m.id] || [m.label, ""]; return `<button type="button" data-model="${esc(m.id)}" aria-pressed="${G.model === m.id}"><span class="rd"></span><span class="t"><b>${esc(L[0])}</b>${L[2] ? ` <span class="bdg g">${L[2]}</span>` : ""}<small>${esc(L[1])}</small></span></button>`; }).join("")}</div>
+          ${row("Nouvelle version des réponses", "Plusieurs bulles courtes, elle saisit les perches au lieu de fermer la discussion, répond à « pourquoi », ne promet rien de gratuit, pas de payant à un fan sans argent. À allumer après avoir lu les réponses rejouées ; coupe-la pour revenir à l'ancienne.", sw(G.nv, 'id="gNv"', "Nouvelle version des réponses"))}
           ${row("Mémoire des fans", "Toutes les 3 réponses, elle complète la fiche du fan (prénom, ville, goûts, résumé) : elle et les chatters s'en souviendront.", sw(G.memory, 'id="gMem"', "Mémoire des fans"))}
         </div>
         ${(() => { const U = D.usage || { week: 0, today: 0, budget: G.budget, byCreator: {}, byKind: {} }, B = +G.budget || 0, pc = B ? Math.min(100, Math.round(100 * U.week / B)) : 0, $ = v => (v || 0).toFixed(2).replace(".", ",") + " $";
@@ -570,6 +571,7 @@ async function paintBody() {
   if (F) $("gNotice").onclick = async () => { if (await save("/api/twizz/ai/cfg", { notice: !D.cfg.notice })) { notify(D.cfg.notice ? "Message IA rallumé" : "Message IA coupé", D.cfg.notice ? "" : "Le 🤖 reste à la fin de chaque message", "info"); paintBody(); } };
   if (F) $("gMark").onclick = async () => { if (await save("/api/twizz/ai/cfg", { mark: !D.cfg.mark })) { notify(D.cfg.mark ? "🤖 remis dans les messages" : "🤖 retiré des messages", "", "info"); paintBody(); } };
   $("gRel").onclick = async () => { if (await save("/api/twizz/ai/cfg", { relance: !D.cfg.relance })) { flip($("gRel"), D.cfg.relance); deps(); } };
+  $("gNv").onclick = async () => { if (await save("/api/twizz/ai/cfg", { nv: !D.cfg.nv })) flip($("gNv"), D.cfg.nv); };
   $("gMem").onclick = async () => { if (await save("/api/twizz/ai/cfg", { memory: !D.cfg.memory })) flip($("gMem"), D.cfg.memory); };
   $("gText").onchange = async () => { if (await save("/api/twizz/ai/cfg", { noticeText: $("gText").value })) notify("Message enregistré", "", "ok"); };
   $("gFreq").onchange = async () => { if (await save("/api/twizz/ai/cfg", { noticeFreq: $("gFreq").value })) deps(); };
