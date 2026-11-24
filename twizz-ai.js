@@ -337,7 +337,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const sc = M.scripts ? scriptsOf(c.id) : [], notes = M.albumNotes || {};
     const promo = M.promo && M.sell ? (opt.requirePromo ? `Il n'a pas acheté le dernier média payant : tu peux lui en proposer un autre seulement avec une remise (champ remise obligatoire, entre 5 et ${M.maxDiscount} %, valable ${M.promoHours} h). Dis-lui que c'est un petit prix rien que pour lui.`
       : `Si le fan hésite sur un prix ou n'a pas acheté le dernier média, tu peux faire une remise (champ remise, entre 5 et ${M.maxDiscount} %, valable ${M.promoHours} h), jamais à la première proposition.`) : "";
-    const alb = a => `- ${a.id} : ${a.name}${a.count != null ? ` (${a.count})` : ""}${notes[a.id] ? " — " + notes[a.id] : ""}${(a.items || []).length ? "\n" + a.items.map(x => `    · m:${x.id} — ${x.descr}`).join("\n") : ""}`;
+    const alb = a => `- ${a.id} : ${a.name}${a.count != null ? ` (${a.count})` : ""}${notes[a.id] ? " — " + notes[a.id] : ""}${SOFT_ALB.test(str(a.name)) ? " — aperçus seulement : jamais en payant" : ""}${(a.items || []).length ? "\n" + a.items.map(x => `    · m:${x.id} — ${x.descr}`).join("\n") : ""}`;
     // ordre pensé pour le cache de Grok (un texte déjà vu coûte 6 fois moins) : ce qui ne change pas d'un fan à l'autre d'abord, ce qui change à chaque appel (coffre restant, relance, heure, fan) à la fin
     const live = [sc.length ? `Messages de l'agence qui marchent bien (inspire-toi de l'idée et du ton, ne les recopie pas mot pour mot) :\n${sc.join("\n")}` : "",
       opt.rules || "",
@@ -464,6 +464,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   // niveau d'un média d'après sa description, la description de l'album et son nom : 0 soft (lingerie, tenue), 1 nu, 2 acte solo, 3 acte avec partenaire / sextape
   const LV3 = /(p[ée]n[ée]tr|levrette|sexe avec|rapport|fellation|\bsuce|sucer|\bpipe\b|avec un (homme|mec|gar[çc]on|partenaire)|partenaire|sex-?tape|\bbaise|chevauch|[ée]jacul|sperme|couple|plan [àa] (deux|trois)|duo)/i;
   const LV2 = /(doigt|masturb|se touche|caresse (sa|son|ses) (chatte|sexe|clito)|jouet|\bgode|vibro|squirt|orgasm|g[ée]mi)/i;
+  // un album d'aperçus, de feed, de lingerie ou de profil ne se vend jamais (24/11 : « Photo Soft(Feeds) » vendu à 6 € sur ALINA)
+  const SOFT_ALB = /\b(soft|feeds?|teas(?:e|ing)|aper[çc]us?|lingerie|bikini|maillot|tenues?|habill[ée]e?s?|banni[èe]re|profil[e]?|couverture|gratuit|free|sfw|preview)\b/i;
+  // une preuve qu'un média montre plus que de la lingerie : sa description ou le nom de son album
+  const HARD_ALB = /\b(hard|nudes?|nue?s?|explicite?s?|porn[o]?|xxx|sexe|sextape|gode|jouet|vibro|masturb\w*|squirt|anal|seins nus|topless|fesses nues)\b/i;
   const SKIN = /(seins?\b|poitrine|t[ée]tons?|fesses|\bculs?\b|d[ée]nud|transparent|sans rien|rien (?:en |au )?dessous|rien sous|entrouvert|ouverte?s?\b|[ée]cart[ée]|relev[ée]|baiss[ée]|intime|entrejambe)/i;   // signes de peau dans une description de niveau 0 : dans le doute, le média reste vendable
   const LV1 = /(\bnue?s?\b|[àa] poil|seins? nus|seins? [àa] l'?air|rien en haut|sans (le |mon )?haut|sans (soutif|soutien|culotte|rien)|torse nu|d[ée]shabill|topless|t[ée]tons?|poitrine (nue|d[ée]couverte)|fesses nues|cul nu|quatre pattes|sexe visible|chatte)/i;
   db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_filelv (creator_id TEXT NOT NULL, file_id TEXT NOT NULL, lv INTEGER NOT NULL, PRIMARY KEY (creator_id, file_id))");
@@ -1257,7 +1261,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (f) { const N = M.albumNotes || {}, want = lad ? Math.max(1, tierLevel(lad)) : 3, alOf = id => sell.albums.find(a => a.id === id) || {};
         const lvOf = (id, albumId, d) => { const a = alOf(albumId), txt = [d, N[albumId], a.name].filter(Boolean).join(" "); return txt.trim() ? levelOfText(txt, /^vid[ée]o|vid[ée]o/i.test(str(d)) || /vid[ée]o/i.test(str(a.name))) : 1; };
         // « soft » = lingerie, ou média décrit où rien n'est dénudé (tenue moulante, robe, jean…) : réservé au teasing gratuit, jamais vendu ; un média sans description reste vendable comme avant
-        const softOf = (id, albumId, d) => { const a = alOf(albumId), txt = [d, N[albumId], a.name].filter(Boolean).join(" "), desc = [d, N[albumId]].filter(Boolean).join(" ").trim(); if (NAKED.test(txt) || levelOfText(txt) !== 0) return false; return LING.test(txt) || (!!desc && !SKIN.test(txt)); };
+        // vendable seulement s'il y a une preuve qu'il montre plus que de la lingerie (description ou nom d'album) ; un album d'aperçus ou de feed ne se vend jamais ; un média sans description dans un album neutre ne se vend plus
+        const softOf = (id, albumId, d) => { const a = alOf(albumId), nm = str(a.name), txt = [d, N[albumId], nm].filter(Boolean).join(" "); if (SOFT_ALB.test(nm) || SOFT_ALB.test(str(N[albumId])) && !HARD_ALB.test(str(N[albumId]))) return true; return !(NAKED.test(txt) || levelOfText(txt) >= 1 || HARD_ALB.test(txt)); };
         let lvl = lvOf(f.id, str(out.album), descrOf(cr.id, [f.id]).get(f.id)); const soft = softOf(f.id, str(out.album), descrOf(cr.id, [f.id]).get(f.id));
         if (lvl > want || soft) { const pool = sell.albums.flatMap(a => (a.items || []).map(x => ({ id: x.id, albumId: a.id, lv: lvOf(x.id, a.id, x.descr), soft: softOf(x.id, a.id, x.descr) }))).filter(x => x.id !== f.id && !x.soft);
           let C = pool.filter(x => x.lv <= want).sort((a, b) => b.lv - a.lv); if (!C.length && soft) C = pool.sort((a, b) => a.lv - b.lv);
