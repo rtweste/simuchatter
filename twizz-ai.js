@@ -183,6 +183,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (slowFan(cid, fan)) tagBroke(cid, fan); };   // jamais acheté : le tag de l'équipe est posé
   const slowCount = (cid, fan) => { try { const r = slowRow(cid, fan); if (r && now() - r.at < SLOW_TTL) db.prepare("UPDATE twizz_ai_slow SET n = n + 1 WHERE creator_id = ? AND fan_id = ?").run(cid, fan); else db.prepare("INSERT INTO twizz_ai_slow (creator_id, fan_id, at, n) VALUES (?,?,?,1) ON CONFLICT(creator_id, fan_id) DO UPDATE SET at = excluded.at, n = 1").run(cid, fan, now()); } catch (e) {} };
   const msgDay = d => db.prepare("SELECT * FROM twizz_ai_msgday WHERE day = ?").get(d) || { n: 0, calls: 0, tin: 0, tcached: 0, cost: 0 }, sentMark = () => { try { db.prepare("INSERT INTO twizz_ai_msgday (day, n) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET n = n + 1").run(dayOf(Date.now())); } catch (e) {} };
+  // une fois : le 24/11 de 12 h 25 à la mise en ligne de ce correctif, le compte xAI était à sec et chaque appel a été pris pour un refus de contenu. Les fans écartés à tort reviennent dans la file, les faux refus sortent du coût
+  if (!S.get("twizz_ai_credit_fix_1", 0)) { try { const t0 = Date.parse("2026-11-24T11:25:00Z");
+      const n = db.prepare("UPDATE twizz_ai_convs SET blocked = NULL, last_fan_msg = NULL WHERE blocked LIKE 'Grok refuse de répondre%' AND at >= ?").run(t0).changes;
+      db.prepare("DELETE FROM twizz_ai_usage WHERE kind = 'refus' AND day = '2026-11-24'").run(); console.log("IA de secours : " + n + " fan(s) remis dans la file après la panne de crédit xAI"); S.set("twizz_ai_credit_fix_1", Date.now()); } catch (e) { console.error("IA de secours, reprise après panne de crédit", e.message); } }
   const spent7 = () => { const d = []; for (let i = 0; i < 7; i++) d.push(dayOf(Date.now() - i * 864e5)); return db.prepare(`SELECT COALESCE(SUM(cost), 0) c FROM twizz_ai_usage WHERE day IN (${d.map(() => "?").join(",")})`).get(...d).c; };
   const overBudget = () => { const b = gcfg().budget; return b > 0 && spent7() >= b; };
   function usage() {
@@ -191,6 +195,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const by = k => { const o = {}; R.forEach(r => { o[r[k]] = (o[r[k]] || 0) + r.cost; }); return o; };
     const calls = R.reduce((a, r) => a + r.calls, 0), rep = R.filter(r => r.kind === "reponse");
     return { week: sum(() => true), today: sum(r => r.day === days[6]), budget: gcfg().budget, over: overBudget(), days: days.map(d => ({ day: d, cost: sum(r => r.day === d) })),
+      credit: CREDIT.at ? { since: CREDIT.at, msg: CREDIT.msg } : null,
       hourCap: gcfg().hourCap, hour: (() => { const o = {}; try { db.prepare("SELECT creator_id, SUM(cost) c FROM twizz_ai_hour WHERE slot > ? GROUP BY creator_id").all(slotOf(Date.now()) - 12).forEach(r => { if (r.creator_id) o[r.creator_id] = { cost: r.c, wait: gcfg().hourCap > 0 && r.c >= gcfg().hourCap ? capWait(r.creator_id, gcfg().hourCap) : 0 }; }); } catch (e) {} return o; })(),
       byCreator: by("creator_id"), byKind: by("kind"), calls, perReply: rep.length ? rep.reduce((a, r) => a + r.cost, 0) / Math.max(1, rep.reduce((a, r) => a + r.calls, 0)) : 0,
       cachedPct: R.reduce((a, r) => a + r.tin, 0) ? Math.round(100 * R.reduce((a, r) => a + r.tcached, 0) / R.reduce((a, r) => a + r.tin, 0)) : 0,
@@ -263,6 +268,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     snap: { type: "string", description: "Quand il a payé le ticket Snap et te donne son pseudo Snap : ce pseudo, tel quel." },
     demande: { type: "string", description: "Quand il a payé un ticket cam ou vidéo custom et t'a dit ce qu'il veut : sa demande, avec tous les détails (et ses dispos pour une cam)." }
   } } } };
+  const NOCREDIT = /credit|spending limit|billing|insufficient (funds|balance|quota)|payment/i, CREDIT = { at: 0, msg: "", ping: 0 };
+  // compte xAI à sec vu il y a moins de 3 minutes : on n'appelle plus Grok (toutes les 3 minutes, une réponse retente sa chance et relance tout si le crédit est revenu)
+  const creditOut = () => !!CREDIT.at && now() - CREDIT.at < 3 * 60e3;
   async function grok(messages, o = {}) {
     { const x = CTX.getStore(); if (x && x.kind === "reponse") { x.n = (x.n || 0) + 1; if (x.n > 2) throw fail("Limite de 2 appels à Grok pour cette réponse"); } }   // une réponse, plus une réécriture au plus : au-delà, le site corrige lui-même (il retire la bulle fautive)
     const tool = o.tool === undefined ? TOOL : o.tool, body = { model: o.model || XMODEL(), messages, temperature: o.temp ?? (tool === TOOL ? 0.75 : 0.9), max_tokens: o.max || (tool === TOOL ? 500 : 900) };
@@ -271,6 +279,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       body: JSON.stringify(body), signal: AbortSignal.timeout(60000) }); }
     catch (e) { throw fail("Grok ne répond pas : " + e.message); }
     const j = await r.json().catch(() => null);
+    // compte xAI à sec (crédit épuisé, limite de dépense du mois) : ce n'est pas un refus de contenu. L'IA se met en pause pour tout le monde, personne n'est écarté, rien n'est compté
+    { const em = str(j && j.error && (j.error.message || j.error)) || str(j && j.message);
+      if (!r.ok && [400, 401, 402, 403, 429].includes(r.status) && NOCREDIT.test(em) && !/usage guidelines|safety|content polic/i.test(em)) { CREDIT.at = now(); CREDIT.msg = em.slice(0, 200);
+        const e = fail("Le compte xAI n'a plus de crédit ou a atteint sa limite de dépense du mois : recharge-le sur console.x.ai"); e.status = 402; e.credit = true; throw e; }
+      if (r.ok && CREDIT.at) { CREDIT.at = 0; CREDIT.msg = ""; CREDIT.ping = 0; } }
     if (r.status === 403) countRefusal();
     if (!r.ok) { const e = fail(`Grok a refusé la demande (code ${r.status})${j && j.error ? " : " + str(j.error.message || j.error).slice(0, 160) : ""}`); e.status = r.status; throw e; }
     count(j && j.usage);
@@ -1301,6 +1314,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const k = r.id + ":" + c.id, f = FAILS.get(k); if (f && now() < f.until) return false;
     try { const ok = await CTX.run({ cid: cr.id, kind: "reponse", conv: `${cr.id}` }, () => handle(r, cr, c, C, relance)); if (ok) { sentMark(); if (c.fan && c.fan.id && slowFan(cr.id, c.fan.id)) slowCount(cr.id, c.fan.id); } FAILS.delete(k); RUNERR.delete(r.id); return ok; }
     catch (e) {
+      if (e && e.credit) { try { db.prepare("UPDATE twizz_ai_runs SET last_error = ?, last_at = ? WHERE id = ?").run(str(e.message).slice(0, 240), now(), r.id); } catch (x) {} return false; }   // compte xAI à sec : personne n'est écarté, l'IA attend
       // plusieurs erreurs de suite dans la séance (tous fans confondus) : les managers sont prévenus, au plus toutes les 30 min
       { const E = RUNERR.get(r.id) || { n: 0, ping: 0 }; E.n++; RUNERR.set(r.id, E); if (E.n >= 3 && now() - E.ping > 30 * 60e3) { E.ping = now();
         ping(`🤖 ${cr.label} : l'IA enchaîne les erreurs`, `${E.n} erreurs de suite. Dernière : ${str(e.message).slice(0, 120)}`, "ai-err-" + r.id); } }
@@ -1328,6 +1342,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (!mcfg(r.creator_id).ok) { end(r, null, "Accord de la créatrice retiré"); continue; }
       if (!sendOn() || !XAI()) continue;   // en pause : rien ne peut partir
       if (C.hourCap > 0 && spentHour(r.creator_id) >= C.hourCap) continue;   // plafond de l'heure atteint pour cette créatrice : elle reprend toute seule dès que la dépense des 60 dernières minutes repasse dessous
+      if (creditOut()) { if (!CREDIT.ping || now() - CREDIT.ping > 2 * 3600e3) { CREDIT.ping = now(); ping("🤖 Compte xAI à sec : l'IA est en pause", "Grok refuse tous les appels : crédit épuisé ou limite de dépense du mois atteinte. Recharge le compte sur console.x.ai, l'IA reprendra toute seule.", "ai-credit"); } continue; }
       if (overBudget()) { if (!BUDGET_PING || now() - BUDGET_PING > 6 * 3600e3) { BUDGET_PING = now(); ping("🤖 Budget Grok de la semaine atteint", `${spent7().toFixed(2)} $ dépensés sur 7 jours (budget ${C.budget} $). L'IA ne répond plus jusqu'à ce que ça redescende, ou monte le budget dans la page IA.`, "ai-budget"); } continue; }
       if (now() - (POLLED.get(r.id) || 0) < 40e3) continue; POLLED.set(r.id, now());
       const cr = crOf(r.creator_id); if (!cr) { end(r, null, "Créatrice introuvable"); continue; }
