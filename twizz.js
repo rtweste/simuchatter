@@ -292,6 +292,24 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
       chatters: db.prepare("SELECT id, username FROM users WHERE active = 1 AND (role = 'chatter' OR (role = 'admin' AND sells = 1)) ORDER BY username COLLATE NOCASE").all() };
   }
   app.get("/api/admin/twizz", auth, admin, (req, res) => res.json(overview()));
+  // Gros clients : par créatrice, les fans qui dépensent le plus (médias, médias push, collections, pourboires ; pas les abonnements), avec le chatter attitré et le suivi
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_vip (creator_id TEXT NOT NULL, fan_id TEXT NOT NULL, user_id INTEGER, note TEXT, by_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id))");
+  app.get("/api/admin/clients", auth, admin, (req, res) => { const now = Date.now(), d = new Date(now + 3600e3), m0 = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - 3600e3, n = Math.min(50, Math.max(5, +req.query.n || 15));
+    const R = db.prepare("SELECT creator_id, model_id, fan_id, MAX(fan_name) fan_name, MAX(conv_id) conv_id, SUM(net) total, COUNT(*) n, SUM(CASE WHEN at >= ? THEN net ELSE 0 END) month, SUM(CASE WHEN at >= ? THEN 1 ELSE 0 END) nMonth, MAX(at) last FROM twizz_tx WHERE refund = 0 AND net > 0 AND fan_id IS NOT NULL AND fan_id <> '' AND type NOT LIKE '%subscri%' GROUP BY creator_id, fan_id").all(m0, m0);
+    const V = {}; db.prepare("SELECT v.*, u.username FROM twizz_vip v LEFT JOIN users u ON u.id = v.user_id").all().forEach(v => V[v.creator_id + "|" + v.fan_id] = v);
+    const cr = {}; db.prepare("SELECT c.twizz_id, c.label, m.name model FROM twizz_creators c LEFT JOIN models m ON m.id = c.model_id").all().forEach(c => cr[c.twizz_id] = c.model || c.label);
+    const conv = db.prepare("SELECT conv_id FROM twizz_tx WHERE creator_id = ? AND fan_id = ? AND conv_id IS NOT NULL AND conv_id <> '' ORDER BY at DESC LIMIT 1");
+    const by = {}; R.forEach(r => (by[r.creator_id] = by[r.creator_id] || []).push(r));
+    const creators = Object.keys(by).map(cid => { const L = by[cid].sort((a, b) => b.month - a.month || b.total - a.total).slice(0, n).map(r => { const v = V[cid + "|" + r.fan_id] || {}; let c = r.conv_id; if (!c) { const x = conv.get(cid, r.fan_id); c = x ? x.conv_id : ""; }
+        return { fan: r.fan_id, name: String(r.fan_name || "Fan").replace(/\s+/g, " ").trim(), conv: c, total: Math.round(r.total * 100) / 100, n: r.n, month: Math.round(r.month * 100) / 100, nMonth: r.nMonth, last: r.last, user: v.user_id || null, username: v.username || null, note: v.note || "" }; });
+      return { id: cid, name: cr[cid] || cid, monthTotal: Math.round(by[cid].reduce((t, r) => t + r.month, 0) * 100) / 100, buyers: by[cid].filter(r => r.nMonth > 0).length, fans: L }; }).sort((a, b) => b.monthTotal - a.monthTotal);
+    let since = null; try { since = db.prepare("SELECT MIN(at) t FROM twizz_tx").get().t; } catch (e) {}
+    res.json({ creators, since, monthFrom: m0, chatters: db.prepare("SELECT id, username FROM users WHERE active = 1 AND deleted_at IS NULL AND role = 'chatter' ORDER BY username").all() }); });
+  app.post("/api/admin/clients/assign", auth, admin, (req, res) => { const b = req.body || {}, cid = String(b.creator || ""), fan = String(b.fan || ""); if (!cid || !fan) return res.status(400).json({ error: "Fan inconnu" });
+    const cur = db.prepare("SELECT * FROM twizz_vip WHERE creator_id = ? AND fan_id = ?").get(cid, fan) || {};
+    const user = b.user === undefined ? cur.user_id || null : (b.user ? +b.user : null), note = b.note === undefined ? cur.note || "" : String(b.note).slice(0, 400);
+    db.prepare("INSERT INTO twizz_vip (creator_id, fan_id, user_id, note, by_id, at) VALUES (?,?,?,?,?,?) ON CONFLICT(creator_id, fan_id) DO UPDATE SET user_id = excluded.user_id, note = excluded.note, by_id = excluded.by_id, at = excluded.at").run(cid, fan, user, note, req.user.id, Date.now());
+    res.json({ ok: true }); });
   // ventes de médias privés d'une période, avec la conversation et le chatter qui a envoyé le média (pour analyser ce qui fait vendre) ; lecture seule
   app.get("/api/admin/twizz/ppv", auth, admin, (req, res) => { const from = Date.parse(String(req.query.from || "")) || Date.now() - 30 * 864e5, to = Date.parse(String(req.query.to || "")) || Date.now();
     const rows = db.prepare("SELECT t.id, t.creator_id, t.model_id, t.net, t.at, t.fan_id, t.fan_name, t.conv_id, t.ai, t.sale_id, s.user_id sale_user FROM twizz_tx t LEFT JOIN sales s ON s.id = t.sale_id WHERE t.type LIKE '%private%' AND t.refund = 0 AND t.net > 0 AND t.at >= ? AND t.at <= ? ORDER BY t.at DESC LIMIT 2000").all(from, to);

@@ -106,6 +106,8 @@ const MODULES = [
     desc: "Le feed et les vidéos de présentation des créatrices sur Twizz : file d'attente et publication automatique." },
   { id: "ia", label: "IA de secours", href: "/ia", icon: "bot", section: "Manager", roles: ["admin"], nodock: ["admin"], hide: ["assistant"],
     desc: "L'IA qui répond aux fans quand un chatter manque : accord des créatrices, vente de médias, message IA, délais, essai sans rien envoyer." },
+  { id: "clients", label: "Gros clients", href: "/clients", icon: "crown", section: "Manager", roles: ["admin"], hide: ["assistant"],
+    desc: "Les fans qui dépensent le plus, par créatrice : ce qu'ils ont dépensé, leur dernier achat, le chatter attitré et le suivi." },
   { id: "tags", label: "Tags", href: "/tags", icon: "tag", section: "Manager", roles: ["admin"], nodock: ["admin"], hide: ["assistant"],
     desc: "Les tags des fans : règles qui les posent tout seuls (gros payeur, nouveau, inactif…), tags de l'équipe et ce que valent leurs fans." },
   { id: "admin", label: "Gestion", href: "/admin", icon: "team", section: "Manager", roles: ["admin"],

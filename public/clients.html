@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gros clients — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="stylesheet" href="/style.css">
+<style>
+
+@property --fxa{syntax:"<angle>";inherits:false;initial-value:0deg}
+.main-area.tgm{padding:0!important}
+.tg-w{position:relative;min-height:100dvh;padding:26px 28px 60px;background:radial-gradient(900px 300px at 30% -120px,rgba(95,211,162,.07),transparent 70%),#0a0a0a;overflow:hidden}
+.tg-w>.stars{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}.tg-w>.stars i{position:absolute;border-radius:50%;background:#fff;animation:tw ease-in-out infinite}
+@keyframes tw{50%{opacity:.12}}
+.tg-w>*{position:relative;z-index:1}
+@keyframes spin{to{--fxa:360deg}}
+.trace{position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;background:conic-gradient(from var(--fxa),transparent 0 58%,var(--c,#5fd3a2) 78%,#fff 86%,transparent 93%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;z-index:6;animation:spin 1.6s linear infinite}
+.up{animation:up .7s cubic-bezier(.16,1,.3,1) both}
+@keyframes up{from{opacity:0;transform:translateY(12px);filter:blur(4px)}}
+.cap{font:800 10px Inter;letter-spacing:.2em;text-transform:uppercase;color:#6a6a6a}
+.met{font-style:italic;background:linear-gradient(100deg,#fff,#8a8a8a 55%,#e6e6e6);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.08em}
+.hd{display:flex;align-items:flex-end;gap:18px;margin-bottom:8px;flex-wrap:wrap}
+.hd h1{margin:6px 0 0;font:900 38px Inter;letter-spacing:-.045em;line-height:1.02}
+.hd .act{margin-left:auto}
+.lead{font:500 13px/1.55 Inter;color:#7a7a7a;max-width:760px;margin:6px 0 20px}.lead b{color:#cfcfcf}
+.btn2{height:44px;padding:0 16px;border-radius:13px;border:1px solid #262626;background:#121212;color:#e8e8e8;font:800 13px Inter;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .2s,transform .3s cubic-bezier(.3,1.6,.5,1)}
+.btn2:hover{background:#1a1a1a}.btn2:active{transform:scale(.95)}
+.btn2.w{background:#f5f5f5;color:#0a0a0a;border-color:#f5f5f5;box-shadow:0 10px 30px -10px rgba(255,255,255,.4)}
+.grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start}
+.pn{position:relative;border-radius:22px;background:linear-gradient(180deg,#101010,#0c0c0c);border:1px solid #1c1c1c;padding:18px;display:flex;flex-direction:column;gap:12px}
+.ttl2{display:block;font:900 20px Inter;letter-spacing:-.035em;margin-top:4px}.ttl2 em{font-style:italic;background:linear-gradient(100deg,#fff,#8a8a8a 55%,#e6e6e6);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.08em}
+.tgp{--c:#9a9a9a;position:relative;display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px 0 8px;border-radius:999px;font:800 12px Inter;white-space:nowrap;flex:none;color:color-mix(in srgb,var(--c) 78%,#fff);background:color-mix(in srgb,var(--c) 13%,transparent);border:1px solid color-mix(in srgb,var(--c) 34%,transparent)}
+.tgp .d{width:6px;height:6px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c);flex:none}.tgp>svg{color:var(--c);margin:0 -2px 0 -1px}
+.tgp.sp{color:#02240f;background:linear-gradient(105deg,#c9ffdf,#3dff8a 50%,#12d96a);border-color:#3dff8a;overflow:hidden;box-shadow:0 0 14px -2px rgba(61,255,138,.65)}
+.tgp.sp .d{background:#02240f;box-shadow:none}.tgp.sp>svg{color:#02240f}
+.tgp.sp:after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 35%,rgba(255,255,255,.7) 50%,transparent 65%);background-size:300% 100%;animation:shim 3.2s ease-in-out infinite;pointer-events:none}
+@keyframes shim{0%{background-position:150% 0}60%,100%{background-position:-60% 0}}
+
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.tab{height:38px;padding:0 14px;border-radius:12px;border:1px solid #232323;background:#111;color:#bdbdbd;font:800 13px Inter;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.tab small{font:700 11.5px Inter;color:#7a7a7a}.tab.on{background:#f5f5f5;color:#0a0a0a;border-color:#f5f5f5}.tab.on small{color:#555}
+.tw{overflow-x:auto;border-radius:20px;border:1px solid #1c1c1c;background:linear-gradient(180deg,#101010,#0c0c0c)}
+table{width:100%;border-collapse:collapse;font:600 13px Inter;color:#ddd;min-width:860px}
+th{text-align:left;font:800 10.5px Inter;letter-spacing:.12em;text-transform:uppercase;color:#6a6a6a;padding:14px 12px;border-bottom:1px solid #1c1c1c;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid #161616;vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}td.num small{display:block;color:#6a6a6a;font:600 11px Inter}
+.rk{font:900 12px Inter;color:#5a5a5a;width:22px}
+.fn a{color:#f2f2f2;text-decoration:none;font-weight:800}.fn a:hover{text-decoration:underline}
+.ago{white-space:nowrap;font:700 12px Inter;color:#9a9a9a}.ago.cold{color:#ff8a8a}.ago.warm{color:#f0c46a}.ago.hot{color:#5fd3a2}
+select,.nt{height:34px;border-radius:10px;border:1px solid #262626;background:#0f0f0f;color:#e8e8e8;font:600 12.5px Inter;padding:0 8px}
+select{min-width:130px}.nt{width:100%;min-width:180px}select:focus,.nt:focus{border-color:#3a3a3a;outline:none}
+.ok{color:#5fd3a2;font:800 11px Inter;opacity:0;transition:opacity .3s;margin-left:6px}.ok.on{opacity:1}
+.sum{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+.kp{padding:12px 14px;border-radius:14px;background:#111;border:1px solid #1c1c1c;min-width:150px}.kp b{display:block;font:900 20px Inter;letter-spacing:-.03em}.kp small{font:600 11.5px Inter;color:#7a7a7a}
+.emp{padding:20px 8px;text-align:center;font:600 12.5px/1.55 Inter;color:#6a6a6a}
+@media(max-width:900px){.tg-w{padding:22px 16px 110px}.hd h1{font-size:30px}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area tgm">
+<div class="tg-w" id="w">
+  <div class="stars" id="stars"></div>
+  <div class="hd up"><div><div class="cap">Manager</div><h1>Gros <em class="met">clients.</em></h1></div></div>
+  <p class="lead up" style="animation-delay:.04s" id="lead">Les fans qui dépensent le plus sur chaque créatrice. Donne à chacun un chatter attitré et note où en est le suivi : un gros client ne doit jamais rester sans réponse, ni être repris par plusieurs personnes à la fois.</p>
+  <div class="tabs up" id="tabs"></div>
+  <div class="sum up" id="sum"></div>
+  <div class="tw up" id="g"><div class="emp">Chargement…</div></div>
+</div>
+</main>
+</div>
+<script src="/common.js"></script>
+<script>
+(() => {
+$("stars").innerHTML = Array.from({ length: 40 }, (_, i) => { const r = k => ((Math.sin(i * 9301 + k * 49297) + 1) / 2); const z = [1, 1, 1.5, 2][Math.floor(r(1) * 4)];
+  return `<i style="left:${(r(2) * 100).toFixed(1)}%;top:${(r(3) * 100).toFixed(1)}%;width:${z}px;height:${z}px;opacity:${(.12 + r(4) * .35).toFixed(2)};animation-duration:${(2.5 + r(5) * 3.5).toFixed(1)}s;animation-delay:-${(r(6) * 6).toFixed(1)}s"></i>`; }).join("");
+let D = null, CUR = null;
+const eur = n => (Math.round(n * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + " €";
+const agoTxt = t => { const h = (Date.now() - t) / 3600e3; return h < 1 ? "il y a " + Math.max(1, Math.round(h * 60)) + " min" : h < 48 ? "il y a " + Math.round(h) + " h" : "il y a " + Math.round(h / 24) + " j"; };
+const heat = t => { const dd = (Date.now() - t) / 864e5; return dd <= 3 ? "hot" : dd <= 10 ? "warm" : "cold"; };
+function paint() {
+  const C = D.creators; if (!C.length) { $("g").innerHTML = `<div class="emp">Aucune vente enregistrée pour l'instant.</div>`; return; }
+  if (!CUR || !C.some(c => c.id === CUR)) CUR = C[0].id;
+  $("tabs").innerHTML = C.map(c => `<button class="tab ${c.id === CUR ? "on" : ""}" data-c="${esc(c.id)}">${esc(c.name)}<small>${eur(c.monthTotal)} ce mois</small></button>`).join("");
+  document.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { CUR = b.dataset.c; paint(); });
+  const c = C.find(x => x.id === CUR), top = c.fans.slice(0, 10).reduce((t, f) => t + f.month, 0);
+  $("sum").innerHTML = `<div class="kp"><b>${eur(c.monthTotal)}</b><small>dépensés ce mois (hors abonnements)</small></div><div class="kp"><b>${c.buyers}</b><small>fans acheteurs ce mois</small></div><div class="kp"><b>${c.monthTotal ? Math.round(100 * top / c.monthTotal) : 0} %</b><small>faits par les 10 premiers</small></div>`;
+  const opt = u => `<option value="">— Personne —</option>` + D.chatters.map(x => `<option value="${x.id}" ${x.id === u ? "selected" : ""}>${esc(x.username)}</option>`).join("");
+  $("g").innerHTML = c.fans.length ? `<table><thead><tr><th></th><th>Fan</th><th style="text-align:right">Ce mois</th><th style="text-align:right">Depuis le début</th><th>Dernier achat</th><th>Chatter attitré</th><th>Suivi</th></tr></thead><tbody>${c.fans.map((f, i) => {
+    const q = new URLSearchParams({ cr: c.id, fan: f.fan, name: f.name }); if (f.conv) q.set("conv", f.conv);
+    return `<tr data-f="${esc(f.fan)}"><td class="rk">${i + 1}</td><td class="fn"><a href="/messagerie?${q}">${esc(f.name)}</a></td>
+      <td class="num">${eur(f.month)}<small>${f.nMonth} achat${f.nMonth > 1 ? "s" : ""}</small></td><td class="num">${eur(f.total)}<small>${f.n} achat${f.n > 1 ? "s" : ""}</small></td>
+      <td><span class="ago ${heat(f.last)}">${agoTxt(f.last)}</span></td>
+      <td><select data-u="${esc(f.fan)}">${opt(f.user)}</select><span class="ok"></span></td>
+      <td><input class="nt" data-n="${esc(f.fan)}" maxlength="400" value="${esc(f.note)}" placeholder="Ex. veut une cam ce week-end"></td></tr>`; }).join("")}</tbody></table>`
+    : `<div class="emp">Pas encore d'acheteur sur cette créatrice.</div>`;
+  const save = async (fan, body, el) => { try { await api("/api/admin/clients/assign", { body: { creator: c.id, fan, ...body } }); const f = c.fans.find(x => x.fan === fan); if (f) Object.assign(f, body.user !== undefined ? { user: body.user ? +body.user : null } : { note: body.note });
+      const ok = el.parentElement.querySelector(".ok"); if (ok) { ok.textContent = "enregistré"; ok.classList.add("on"); setTimeout(() => ok.classList.remove("on"), 1500); } else notify("Enregistré", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
+  document.querySelectorAll("[data-u]").forEach(s => s.onchange = () => save(s.dataset.u, { user: s.value || null }, s));
+  document.querySelectorAll("[data-n]").forEach(inp => { const go = () => { const f = c.fans.find(x => x.fan === inp.dataset.n); if (f && inp.value !== f.note) save(inp.dataset.n, { note: inp.value }, inp); }; inp.onblur = go; inp.onkeydown = e => { if (e.key === "Enter") inp.blur(); }; });
+}
+(async () => {
+  const me = await api("/api/me"); renderShell("clients", me);
+  if (me.role !== "admin" || me.rk === "assistant") { $("g").innerHTML = `<div class="emp">Réservé aux managers</div>`; return; }
+  try { D = await api("/api/admin/clients"); paint(); } catch (e) { $("g").innerHTML = `<div class="emp">${esc(e.message)}</div>`; }
+})();
+})();
+</script>
+</body>
+</html>
