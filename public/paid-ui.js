@@ -46,37 +46,15 @@ window.PAIDUI = (() => {
       const b = box(), show = L.slice(0, MAX).reverse(); show.forEach(it => b.appendChild(card(it)));
       while (b.querySelectorAll(".pd").length > MAX) b.querySelector(".pd").remove();
       if (L.length > MAX) notify(`${L.length - MAX} autre${L.length - MAX > 1 ? "s" : ""} achat${L.length - MAX > 1 ? "s" : ""} pendant ton absence`, "Retrouve-les dans tes ventes", "info");
-      chime(); hoPoll();
+      chime();
       api("/api/paid/seen", { body: { ids: L.map(x => x.id) } }).catch(() => {});
     } catch (e) {} finally { busy = false; }
   }
-  // ---- « À reprendre » : les fans qui viennent de payer avec l'IA (ou des acheteurs qu'elle a croisés), à reprendre par un chatter ----
-  const FLAME = '<path d="M12 3c1 3 4 4.5 4 8.5a4 4 0 0 1-8 0c0-1 .3-1.8.8-2.5C6.5 10.5 5 12.6 5 15a7 7 0 0 0 14 0c0-5-4.5-7.5-7-12z"/>';
-  let hoBusy = false, hoItems = [], hoOpen = false;
-  function hoBox() { let b = document.getElementById("hoBox");
-    if (!b) { b = document.createElement("div"); b.id = "hoBox"; b.className = "ho"; b.innerHTML = `<button type="button" class="ho-pill" aria-expanded="false">${svg(FLAME, 16)}<b></b></button><div class="ho-pan" hidden><div class="ho-hd"><b>À reprendre</b><small>Ils ont payé : à toi de jouer. Dès que tu écris à un fan, l'IA ne lui répond plus.</small></div><div class="ho-ls"></div></div>`;
-      document.body.appendChild(b);
-      b.querySelector(".ho-pill").onclick = () => { hoOpen = !hoOpen; hoDraw(); };
-      document.addEventListener("click", e => { if (hoOpen && !b.contains(e.target)) { hoOpen = false; hoDraw(); } });
-      document.addEventListener("keydown", e => { if (e.key === "Escape" && hoOpen) { hoOpen = false; hoDraw(); } }); }
-    return b; }
-  function hoDraw() { const b = hoBox(), n = hoItems.length; b.hidden = !n; if (!n) { hoOpen = false; }
-    const pill = b.querySelector(".ho-pill"), pan = b.querySelector(".ho-pan"); pill.querySelector("b").textContent = `${n} à reprendre`; pill.setAttribute("aria-expanded", hoOpen ? "true" : "false"); pill.classList.toggle("hot", hoItems.some(x => x.fresh)); pan.hidden = !hoOpen; if (!hoOpen) return;
-    pan.querySelector(".ho-ls").innerHTML = hoItems.map(x => { const B = x.brief || {}, more = [B.resume, B.gouts && "Il aime : " + B.gouts, B.etat && "Où ça en est : " + B.etat].filter(Boolean);
-      return `<div class="ho-it${x.fresh ? " fresh" : ""}" data-id="${x.id}"><div class="ho-tp"><b>${esc(x.fan)}${B.prenom && B.prenom.toLowerCase() !== String(x.fan).toLowerCase() ? " <i>(" + esc(B.prenom) + ")</i>" : ""}</b><small>${esc(x.creator)} · ${ago(x.at)}</small></div>
-        <p class="ho-why">${esc(x.reason)}${x.spend ? " · " + x.spend + " € dépensés chez elle" : ""}</p>${more.length ? `<p class="ho-br">${more.map(esc).join("<br>")}</p>` : ""}
-        <div class="ho-bt"><button type="button" class="ho-take">Je le prends${svg('<path d="M5 12h14M13 6l6 6-6 6"/>', 14, 2.4)}</button><button type="button" class="ho-see">Voir la conversation</button></div></div>`; }).join("");
-    pan.querySelectorAll(".ho-it").forEach(n => { const it = hoItems.find(x => String(x.id) === n.dataset.id); if (!it) return;
-      n.querySelector(".ho-see").onclick = () => { hoOpen = false; hoDraw(); open(it); };
-      n.querySelector(".ho-take").onclick = async () => { try { await api("/api/tri/take", { body: { id: it.id } }); } catch (e) {} hoItems = hoItems.filter(x => x.id !== it.id); hoOpen = false; hoDraw(); open(it); }; }); }
-  async function hoPoll() { if (hoBusy || document.hidden) return; hoBusy = true;
-    try { const d = await api("/api/tri/handoff"); hoItems = d.items || []; hoDraw(); } catch (e) {} finally { hoBusy = false; } }
   function mount() {
-    if (timer) return; setTimeout(poll, 1500); timer = setInterval(poll, 20e3); setTimeout(hoPoll, 2500); setInterval(hoPoll, 60e3);
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) hoPoll(); });
+    if (timer) return; setTimeout(poll, 1500); timer = setInterval(poll, 20e3);
     document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
     // une notification d'achat vient d'arriver pendant que le site est ouvert : la carte s'affiche tout de suite
     try { navigator.serviceWorker && navigator.serviceWorker.addEventListener("message", e => { if (e.data && e.data.paid) poll(); }); } catch (e) {}
   }
-  return { mount, poll, hoPoll };
+  return { mount, poll };
 })();

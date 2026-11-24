@@ -1476,6 +1476,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   // toujours en route : l'IA s'occupe de tous les fans qui arrivent, sur toutes les créatrices dont l'accord est coché. Elle repart toute seule, sauf si un manager l'a arrêtée à la main sur une créatrice (elle reste arrêtée jusqu'à ce qu'il la relance)
   if (!S.get("twizz_ai_always_since", 0)) S.set("twizz_ai_always_since", Date.now());   // mise en ligne du mode « toujours en route »
   const ALWAYS_SINCE = () => +S.get("twizz_ai_always_since", 0) || 0;
+  // tri dans la messagerie : un fan payeur ou prêt à payer passe directement dans la messagerie des chatters, et l'IA arrête de lui répondre.
+  // Seule exception : si aucun chatter n'est en shift sur la créatrice, l'IA continue, pour qu'il ne reste pas sans réponse.
+  const onShiftN = mid => { if (!mid) return 0; try { return db.prepare("SELECT COUNT(*) n FROM clocks c JOIN users u ON u.id = c.user_id WHERE c.model_id = ? AND c.end_at IS NULL AND u.role <> 'admin'").get(mid).n; } catch (e) { return 0; } };
+  const handed = (cr, fan) => { try { if (!gcfg().triInbox || !fan || !TRI() || !onShiftN(cr.model_id)) return false; const st = TRI().status(cr.id, fan).status; return st === "payeur" || st === "chaud"; } catch (e) { return false; } };
   function keepOn() { const C = gcfg(); if (!C.always || !aiOn() || !XAI() || !sendOn()) return;
     for (const c of mapped()) { if (!c || !c.id || runOf(c.id) || !mcfg(c.id).ok) continue;
       const last = db.prepare("SELECT ended_by, ended_at, end_reason FROM twizz_ai_runs WHERE creator_id = ? ORDER BY id DESC LIMIT 1").get(c.id); if (last && last.ended_by && /^Arrêtée par /.test(str(last.end_reason)) && last.ended_at > ALWAYS_SINCE()) continue;   // un arrêt manuel d'avant le mode « toujours en route » ne compte pas
@@ -1519,6 +1523,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
           // un fan qui attend une réponse : dans la fenêtre réglée ; une relance : jusqu'à 24 h après son dernier message
           if (!c.fan.id || row.blocked || (age > C.fanWindow * 3600e3 && (c.last.fromFan || age > 24 * 3600e3)) || hereOf(c.id, -1).length || (C.teamPause && human.get(c.id, now() - C.teamPause * 60e3))) continue;
           if (fanOff.get(cr.id, c.fan.id)) continue;   // IA coupée pour ce fan
+          if (handed(cr, c.fan.id)) continue;   // payeur ou prêt à payer : il est dans la messagerie du chatter, c'est lui qui répond
           if (skip.size) { const tg = tagged.all(cr.id, c.fan.id).find(x => skip.has(x.tag_id));
             if (tg) { const nm = (db.prepare("SELECT name FROM twizz_tags WHERE id = ?").get(tg.tag_id) || {}).name || "tag";
               db.prepare("INSERT INTO twizz_ai_convs (run_id, conv_id, fan_id, fan_name, blocked, at) VALUES (?,?,?,?,?,?) ON CONFLICT(run_id, conv_id) DO UPDATE SET blocked = excluded.blocked, at = excluded.at")
@@ -1538,7 +1543,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
         if (C.relance && !quiet(C)) { const seen = new Set();
           db.prepare("SELECT x.conv_id, x.fan_id, x.fan_name, x.run_id, x.replies, x.relances, x.relance_at, x.busy, x.fan_at, x.blocked, x.at FROM twizz_ai_convs x JOIN twizz_ai_runs u ON u.id = x.run_id WHERE u.creator_id = ? AND x.at > ? ORDER BY x.at DESC").all(cr.id, now() - 3 * 3600e3).forEach(x => {
             if (seen.has(x.conv_id)) return; seen.add(x.conv_id);   // la ligne la plus récente de chaque conversation
-            if (ids.has(x.conv_id) || !x.fan_id || !x.replies || x.busy || x.blocked || byFan.has(x.fan_id) || fanOff.get(cr.id, x.fan_id) || hereOf(x.conv_id, -1).length || (C.teamPause && human.get(x.conv_id, now() - C.teamPause * 60e3))) return;
+            if (ids.has(x.conv_id) || !x.fan_id || !x.replies || x.busy || x.blocked || byFan.has(x.fan_id) || fanOff.get(cr.id, x.fan_id) || handed(cr, x.fan_id) || hereOf(x.conv_id, -1).length || (C.teamPause && human.get(x.conv_id, now() - C.teamPause * 60e3))) return;
             const since = now() - (x.fan_at || x.at), k = x.run_id === r.id ? x.relances || 0 : 0;
             if (k === 0 && paidRecent.get(x.conv_id, now() - 3 * 3600e3, (x.fan_at || 0) - 60e3) && since >= Math.min(C.relanceAfter, RP[0]) * 60e3 && now() - (x.relance_at || 0) >= 5 * 60e3
               && !slowFan(cr.id, x.fan_id, (spend.get(cr.id, x.fan_id) || {}).spend || 0))   // fan sans argent : pas de relance
