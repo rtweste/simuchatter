@@ -52,7 +52,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const MODELS = { fast: ["grok-4-1-fast-non-reasoning", "Rapide"], smart: ["grok-4-1-fast-reasoning", "Plus réfléchi (un peu plus lent)"] };
   const G_DEF = { notice: true, mark: false, base: "", locked: "", noticeText: "Petite précision : c'est l'IA de {creatrice} qui te répond en ce moment 😊", noticeFreq: "run", noticeDays: 30,
     waitMin: 35, waitMax: 80, teamPause: 15, fanWindow: 12, perFan: 40, maxHours: 12, model: "fast",
-    relance: true, relanceAfter: 45, relanceMax: 1, quietFrom: 1, quietTo: 9, memory: true, vipAlert: 300, budget: 20 };
+    relance: true, relanceAfter: 45, relanceMax: 1, quietFrom: 1, quietTo: 9, memory: true, vipAlert: 300, budget: 20, hourCap: 1 };
   const M_DEF = { ok: false, sell: true, maxPrice: 100, gap: 20, pile: true, albums: [], albumNotes: {}, skipTags: [], extra: "", profile: "", scripts: true, promo: true, maxDiscount: 30, promoHours: 24, vision: true,
     minMsgs: 8, tease: true, teaseWindow: 90, askSkip: false, cooldownH: 6, coolFull: false, sexDays: 1, details: {},
     tk: true, snapMin: 50, snapMax: 100, camMin: 130, camMax: 200, camHour: 300, customPrice: 150, tkAlbum: "", camDispo: "", ladder: [6, 12, 18, 25, 35, 50], freeLing: true };
@@ -67,6 +67,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (b.noticeText != null) { const t = str(b.noticeText).trim().slice(0, 240); if (t.length < 0) throw fail("Message IA trop court"); o.noticeText = t; }
     if (b.noticeFreq != null) { if (!["run", "fan"].includes(b.noticeFreq)) throw fail("Fréquence inconnue"); o.noticeFreq = b.noticeFreq; }
     if (b.budget != null) o.budget = int(b.budget, 0, 500, "Budget Grok par semaine");
+    if (b.hourCap != null) { const n = Math.round(parseFloat(String(b.hourCap).replace(",", ".")) * 100) / 100; if (!Number.isFinite(n) || n < 0 || n > 50) throw fail("Plafond par heure : entre 0 et 50"); o.hourCap = n; }
     if (b.noticeDays != null) o.noticeDays = int(b.noticeDays, 1, 365, "Jours avant de redire que c'est une IA");
     if (b.waitMin != null) o.waitMin = int(b.waitMin, 5, 600, "Délai minimum");
     if (b.waitMax != null) o.waitMax = int(b.waitMax, 5, 900, "Délai maximum");
@@ -138,11 +139,22 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   function count(u) { if (!u) return; const x = CTX.getStore() || {}, tin = +u.prompt_tokens || 0, tc = +((u.prompt_tokens_details || {}).cached_tokens) || 0, to = (+u.completion_tokens || 0) + (+((u.completion_tokens_details || {}).reasoning_tokens) || 0);
     const cost = ((tin - tc) * PRICE.in + tc * PRICE.cached + to * PRICE.out) / 1e6;
     try { db.prepare(`INSERT INTO twizz_ai_usage (day, creator_id, kind, calls, tin, tcached, tout, cost) VALUES (?,?,?,1,?,?,?,?) ON CONFLICT(day, creator_id, kind) DO UPDATE SET
-      calls = calls + 1, tin = tin + excluded.tin, tcached = tcached + excluded.tcached, tout = tout + excluded.tout, cost = cost + excluded.cost`).run(dayOf(Date.now()), x.cid || "", x.kind || "autre", tin, tc, to, cost); } catch (e) {} }
+      calls = calls + 1, tin = tin + excluded.tin, tcached = tcached + excluded.tcached, tout = tout + excluded.tout, cost = cost + excluded.cost`).run(dayOf(Date.now()), x.cid || "", x.kind || "autre", tin, tc, to, cost); } catch (e) {}
+    hourAdd(x.cid, cost);
+    if (x.kind === "reponse") try { db.prepare("INSERT INTO twizz_ai_msgday (day, calls, tin, tcached, cost) VALUES (?,1,?,?,?) ON CONFLICT(day) DO UPDATE SET calls = calls + 1, tin = tin + excluded.tin, tcached = tcached + excluded.tcached, cost = cost + excluded.cost").run(dayOf(Date.now()), tin, tc, cost); } catch (e) {} }
   // une fois : le coût déjà compté est recalculé aux vrais tarifs (l'ancien compteur sous-estimait la dépense d'environ 6 fois)
   if (!S.get("twizz_ai_usage_reprice_1", 0)) { try { db.prepare("UPDATE twizz_ai_usage SET cost = ((tin - tcached) * ? + tcached * ? + tout * ?) / 1e6 WHERE kind <> 'refus'").run(PRICE.in, PRICE.cached, PRICE.out); S.set("twizz_ai_usage_reprice_1", Date.now()); } catch (e) {} }
-  function countRefusal() { const x = CTX.getStore() || {}; try { db.prepare(`INSERT INTO twizz_ai_usage (day, creator_id, kind, calls, tin, tcached, tout, cost) VALUES (?,?,?,1,0,0,0,?) ON CONFLICT(day, creator_id, kind) DO UPDATE SET calls = calls + 1, cost = cost + excluded.cost`).run(dayOf(Date.now()), x.cid || "", "refus", PRICE.refusal); } catch (e) {} }
-  db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_sentday (day TEXT PRIMARY KEY, n INTEGER NOT NULL DEFAULT 0)");
+  function countRefusal() { const x = CTX.getStore() || {}; try { db.prepare(`INSERT INTO twizz_ai_usage (day, creator_id, kind, calls, tin, tcached, tout, cost) VALUES (?,?,?,1,0,0,0,?) ON CONFLICT(day, creator_id, kind) DO UPDATE SET calls = calls + 1, cost = cost + excluded.cost`).run(dayOf(Date.now()), x.cid || "", "refus", PRICE.refusal); } catch (e) {} hourAdd(x.cid, PRICE.refusal); }
+  // plafond par heure et par créatrice : la dépense est notée par tranches de 5 minutes, et on regarde les 60 dernières minutes
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_hour (creator_id TEXT NOT NULL, slot INTEGER NOT NULL, cost REAL NOT NULL DEFAULT 0, PRIMARY KEY (creator_id, slot))");
+  const SLOT = 5 * 60e3, slotOf = t => Math.floor(t / SLOT);
+  const hourAdd = (cid, cost) => { if (!cid || !(cost > 0)) return; try { db.prepare("INSERT INTO twizz_ai_hour (creator_id, slot, cost) VALUES (?,?,?) ON CONFLICT(creator_id, slot) DO UPDATE SET cost = cost + excluded.cost").run(cid, slotOf(Date.now()), cost); } catch (e) {} };
+  const spentHour = cid => { try { return db.prepare("SELECT COALESCE(SUM(cost), 0) c FROM twizz_ai_hour WHERE creator_id = ? AND slot > ?").get(cid, slotOf(Date.now()) - 12).c; } catch (e) { return 0; } };
+  // dans combien de minutes la dépense de l'heure repasse sous le plafond (les plus vieilles tranches sortent une à une)
+  const capWait = (cid, cap) => { try { const R = db.prepare("SELECT slot, cost FROM twizz_ai_hour WHERE creator_id = ? AND slot > ? ORDER BY slot").all(cid, slotOf(Date.now()) - 12); let left = R.reduce((a, r) => a + r.cost, 0);
+      for (const r of R) { if (left < cap) break; left -= r.cost; if (left < cap) return Math.max(1, Math.ceil(((r.slot + 13) * SLOT - Date.now()) / 60e3)); } return 0; } catch (e) { return 0; } };
+  setInterval(() => { try { db.prepare("DELETE FROM twizz_ai_hour WHERE slot < ?").run(slotOf(Date.now()) - 12 * 24); } catch (e) {} }, 3600e3).unref();
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_msgday (day TEXT PRIMARY KEY, n INTEGER NOT NULL DEFAULT 0, calls INTEGER NOT NULL DEFAULT 0, tin INTEGER NOT NULL DEFAULT 0, tcached INTEGER NOT NULL DEFAULT 0, cost REAL NOT NULL DEFAULT 0)");
   // fans sans argent : ceux que l'équipe a tagués « peux pas payer », et ceux qui viennent de le dire (24 h). S'ils n'ont jamais rien acheté, l'IA leur répond après 10 min au lieu d'une minute,
   // 8 fois au plus par 24 h, et ne les relance pas : chaque réponse coûte, autant la garder pour ceux qui peuvent acheter
   db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_slow (creator_id TEXT NOT NULL, fan_id TEXT NOT NULL, at INTEGER NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (creator_id, fan_id))");
@@ -170,7 +182,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const slowSaid = (cid, fan) => { try { const r = slowRow(cid, fan); if (!r || now() - r.at >= SLOW_TTL) db.prepare("INSERT INTO twizz_ai_slow (creator_id, fan_id, at, n) VALUES (?,?,?,0) ON CONFLICT(creator_id, fan_id) DO UPDATE SET at = excluded.at, n = 0").run(cid, fan, now()); } catch (e) {}
     if (slowFan(cid, fan)) tagBroke(cid, fan); };   // jamais acheté : le tag de l'équipe est posé
   const slowCount = (cid, fan) => { try { const r = slowRow(cid, fan); if (r && now() - r.at < SLOW_TTL) db.prepare("UPDATE twizz_ai_slow SET n = n + 1 WHERE creator_id = ? AND fan_id = ?").run(cid, fan); else db.prepare("INSERT INTO twizz_ai_slow (creator_id, fan_id, at, n) VALUES (?,?,?,1) ON CONFLICT(creator_id, fan_id) DO UPDATE SET at = excluded.at, n = 1").run(cid, fan, now()); } catch (e) {} };
-  const sentOn = d => (db.prepare("SELECT n FROM twizz_ai_sentday WHERE day = ?").get(d) || {}).n || 0, sentMark = () => { try { db.prepare("INSERT INTO twizz_ai_sentday (day, n) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET n = n + 1").run(dayOf(Date.now())); } catch (e) {} };
+  const msgDay = d => db.prepare("SELECT * FROM twizz_ai_msgday WHERE day = ?").get(d) || { n: 0, calls: 0, tin: 0, tcached: 0, cost: 0 }, sentMark = () => { try { db.prepare("INSERT INTO twizz_ai_msgday (day, n) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET n = n + 1").run(dayOf(Date.now())); } catch (e) {} };
+  // une fois : le 24/11 de 12 h 25 à la mise en ligne de ce correctif, le compte xAI était à sec et chaque appel a été pris pour un refus de contenu. Les fans écartés à tort reviennent dans la file, les faux refus sortent du coût
+  if (!S.get("twizz_ai_credit_fix_1", 0)) { try { const t0 = Date.parse("2026-11-24T11:25:00Z");
+      const n = db.prepare("UPDATE twizz_ai_convs SET blocked = NULL, last_fan_msg = NULL WHERE blocked LIKE 'Grok refuse de répondre%' AND at >= ?").run(t0).changes;
+      db.prepare("DELETE FROM twizz_ai_usage WHERE kind = 'refus' AND day = '2026-11-24'").run(); console.log("IA de secours : " + n + " fan(s) remis dans la file après la panne de crédit xAI"); S.set("twizz_ai_credit_fix_1", Date.now()); } catch (e) { console.error("IA de secours, reprise après panne de crédit", e.message); } }
   const spent7 = () => { const d = []; for (let i = 0; i < 7; i++) d.push(dayOf(Date.now() - i * 864e5)); return db.prepare(`SELECT COALESCE(SUM(cost), 0) c FROM twizz_ai_usage WHERE day IN (${d.map(() => "?").join(",")})`).get(...d).c; };
   const overBudget = () => { const b = gcfg().budget; return b > 0 && spent7() >= b; };
   function usage() {
@@ -179,11 +195,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const by = k => { const o = {}; R.forEach(r => { o[r[k]] = (o[r[k]] || 0) + r.cost; }); return o; };
     const calls = R.reduce((a, r) => a + r.calls, 0), rep = R.filter(r => r.kind === "reponse");
     return { week: sum(() => true), today: sum(r => r.day === days[6]), budget: gcfg().budget, over: overBudget(), days: days.map(d => ({ day: d, cost: sum(r => r.day === d) })),
+      credit: CREDIT.at ? { since: CREDIT.at, msg: CREDIT.msg } : null,
+      hourCap: gcfg().hourCap, hour: (() => { const o = {}; try { db.prepare("SELECT creator_id, SUM(cost) c FROM twizz_ai_hour WHERE slot > ? GROUP BY creator_id").all(slotOf(Date.now()) - 12).forEach(r => { if (r.creator_id) o[r.creator_id] = { cost: r.c, wait: gcfg().hourCap > 0 && r.c >= gcfg().hourCap ? capWait(r.creator_id, gcfg().hourCap) : 0 }; }); } catch (e) {} return o; })(),
       byCreator: by("creator_id"), byKind: by("kind"), calls, perReply: rep.length ? rep.reduce((a, r) => a + r.cost, 0) / Math.max(1, rep.reduce((a, r) => a + r.calls, 0)) : 0,
       cachedPct: R.reduce((a, r) => a + r.tin, 0) ? Math.round(100 * R.reduce((a, r) => a + r.tcached, 0) / R.reduce((a, r) => a + r.tin, 0)) : 0,
       // par jour : ce que coûte une réponse réellement envoyée (appels de réécriture compris), le nombre d'appels par réponse et la part en cache
-      daily: days.map(d => { const X = R.filter(r => r.day === d && r.kind === "reponse"), c = X.reduce((a, r) => a + r.cost, 0), n = X.reduce((a, r) => a + r.calls, 0), ti = X.reduce((a, r) => a + r.tin, 0), tc = X.reduce((a, r) => a + r.tcached, 0), sent = sentOn(d);
-        return { day: d, cost: c, calls: n, sent, perMsg: sent ? c / sent : 0, callsPerMsg: sent ? n / sent : 0, cachedPct: ti ? Math.round(100 * tc / ti) : 0 }; }) };
+      daily: days.map(d => { const m = msgDay(d); return { day: d, cost: m.cost, calls: m.calls, sent: m.n, perMsg: m.n ? m.cost / m.n : 0, callsPerMsg: m.n ? m.calls / m.n : 0, cachedPct: m.tin ? Math.round(100 * m.tcached / m.tin) : 0 }; }) };
   }
   const XBASE = () => str(process.env.XAI_BASE || "https://api.x.ai/v1").replace(/\/+$/, "");
   const XMODEL = () => str(process.env.XAI_MODEL || (MODELS[gcfg().model] || MODELS.fast)[0]);
@@ -251,6 +268,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     snap: { type: "string", description: "Quand il a payé le ticket Snap et te donne son pseudo Snap : ce pseudo, tel quel." },
     demande: { type: "string", description: "Quand il a payé un ticket cam ou vidéo custom et t'a dit ce qu'il veut : sa demande, avec tous les détails (et ses dispos pour une cam)." }
   } } } };
+  const NOCREDIT = /credit|spending limit|billing|insufficient (funds|balance|quota)|payment/i, CREDIT = { at: 0, msg: "", ping: 0 };
+  // compte xAI à sec vu il y a moins de 3 minutes : on n'appelle plus Grok (toutes les 3 minutes, une réponse retente sa chance et relance tout si le crédit est revenu)
+  const creditOut = () => !!CREDIT.at && now() - CREDIT.at < 3 * 60e3;
   async function grok(messages, o = {}) {
     { const x = CTX.getStore(); if (x && x.kind === "reponse") { x.n = (x.n || 0) + 1; if (x.n > 2) throw fail("Limite de 2 appels à Grok pour cette réponse"); } }   // une réponse, plus une réécriture au plus : au-delà, le site corrige lui-même (il retire la bulle fautive)
     const tool = o.tool === undefined ? TOOL : o.tool, body = { model: o.model || XMODEL(), messages, temperature: o.temp ?? (tool === TOOL ? 0.75 : 0.9), max_tokens: o.max || (tool === TOOL ? 500 : 900) };
@@ -259,6 +279,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       body: JSON.stringify(body), signal: AbortSignal.timeout(60000) }); }
     catch (e) { throw fail("Grok ne répond pas : " + e.message); }
     const j = await r.json().catch(() => null);
+    // compte xAI à sec (crédit épuisé, limite de dépense du mois) : ce n'est pas un refus de contenu. L'IA se met en pause pour tout le monde, personne n'est écarté, rien n'est compté
+    { const em = str(j && j.error && (j.error.message || j.error)) || str(j && j.message);
+      if (!r.ok && [400, 401, 402, 403, 429].includes(r.status) && NOCREDIT.test(em) && !/usage guidelines|safety|content polic/i.test(em)) { CREDIT.at = now(); CREDIT.msg = em.slice(0, 200);
+        const e = fail("Le compte xAI n'a plus de crédit ou a atteint sa limite de dépense du mois : recharge-le sur console.x.ai"); e.status = 402; e.credit = true; throw e; }
+      if (r.ok && CREDIT.at) { CREDIT.at = 0; CREDIT.msg = ""; CREDIT.ping = 0; } }
     if (r.status === 403) countRefusal();
     if (!r.ok) { const e = fail(`Grok a refusé la demande (code ${r.status})${j && j.error ? " : " + str(j.error.message || j.error).slice(0, 160) : ""}`); e.status = r.status; throw e; }
     count(j && j.usage);
@@ -1289,6 +1314,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const k = r.id + ":" + c.id, f = FAILS.get(k); if (f && now() < f.until) return false;
     try { const ok = await CTX.run({ cid: cr.id, kind: "reponse", conv: `${cr.id}` }, () => handle(r, cr, c, C, relance)); if (ok) { sentMark(); if (c.fan && c.fan.id && slowFan(cr.id, c.fan.id)) slowCount(cr.id, c.fan.id); } FAILS.delete(k); RUNERR.delete(r.id); return ok; }
     catch (e) {
+      if (e && e.credit) { try { db.prepare("UPDATE twizz_ai_runs SET last_error = ?, last_at = ? WHERE id = ?").run(str(e.message).slice(0, 240), now(), r.id); } catch (x) {} return false; }   // compte xAI à sec : personne n'est écarté, l'IA attend
       // plusieurs erreurs de suite dans la séance (tous fans confondus) : les managers sont prévenus, au plus toutes les 30 min
       { const E = RUNERR.get(r.id) || { n: 0, ping: 0 }; E.n++; RUNERR.set(r.id, E); if (E.n >= 3 && now() - E.ping > 30 * 60e3) { E.ping = now();
         ping(`🤖 ${cr.label} : l'IA enchaîne les erreurs`, `${E.n} erreurs de suite. Dernière : ${str(e.message).slice(0, 120)}`, "ai-err-" + r.id); } }
@@ -1315,6 +1341,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       const back = backOf(r); if (back) { end(r, back.id, `${back.username} a pointé`); continue; }
       if (!mcfg(r.creator_id).ok) { end(r, null, "Accord de la créatrice retiré"); continue; }
       if (!sendOn() || !XAI()) continue;   // en pause : rien ne peut partir
+      if (C.hourCap > 0 && spentHour(r.creator_id) >= C.hourCap) continue;   // plafond de l'heure atteint pour cette créatrice : elle reprend toute seule dès que la dépense des 60 dernières minutes repasse dessous
+      if (creditOut()) { if (!CREDIT.ping || now() - CREDIT.ping > 2 * 3600e3) { CREDIT.ping = now(); ping("🤖 Compte xAI à sec : l'IA est en pause", "Grok refuse tous les appels : crédit épuisé ou limite de dépense du mois atteinte. Recharge le compte sur console.x.ai, l'IA reprendra toute seule.", "ai-credit"); } continue; }
       if (overBudget()) { if (!BUDGET_PING || now() - BUDGET_PING > 6 * 3600e3) { BUDGET_PING = now(); ping("🤖 Budget Grok de la semaine atteint", `${spent7().toFixed(2)} $ dépensés sur 7 jours (budget ${C.budget} $). L'IA ne répond plus jusqu'à ce que ça redescende, ou monte le budget dans la page IA.`, "ai-budget"); } continue; }
       if (now() - (POLLED.get(r.id) || 0) < 40e3) continue; POLLED.set(r.id, now());
       const cr = crOf(r.creator_id); if (!cr) { end(r, null, "Créatrice introuvable"); continue; }
