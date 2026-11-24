@@ -455,6 +455,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   // niveau d'un média d'après sa description, la description de l'album et son nom : 0 soft (lingerie, tenue), 1 nu, 2 acte solo, 3 acte avec partenaire / sextape
   const LV3 = /(p[ée]n[ée]tr|levrette|sexe avec|rapport|fellation|\bsuce|sucer|\bpipe\b|avec un (homme|mec|gar[çc]on|partenaire)|partenaire|sex-?tape|\bbaise|chevauch|[ée]jacul|sperme|couple|plan [àa] (deux|trois)|duo)/i;
   const LV2 = /(doigt|masturb|se touche|caresse (sa|son|ses) (chatte|sexe|clito)|jouet|\bgode|vibro|squirt|orgasm|g[ée]mi)/i;
+  const SKIN = /(seins?\b|poitrine|t[ée]tons?|fesses|\bculs?\b|d[ée]nud|transparent|sans rien|rien (?:en |au )?dessous|rien sous|entrouvert|ouverte?s?\b|[ée]cart[ée]|relev[ée]|baiss[ée]|intime|entrejambe)/i;   // signes de peau dans une description de niveau 0 : dans le doute, le média reste vendable
   const LV1 = /(\bnue?s?\b|[àa] poil|seins? nus|seins? [àa] l'?air|rien en haut|sans (le |mon )?haut|sans (soutif|soutien|culotte|rien)|torse nu|d[ée]shabill|topless|t[ée]tons?|poitrine (nue|d[ée]couverte)|fesses nues|cul nu|quatre pattes|sexe visible|chatte)/i;
   db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_filelv (creator_id TEXT NOT NULL, file_id TEXT NOT NULL, lv INTEGER NOT NULL, PRIMARY KEY (creator_id, file_id))");
   const levelOfText = (t, video) => { const x = str(t); const l = LV3.test(x) ? 3 : LV2.test(x) ? 2 : LV1.test(x) ? 1 : 0; return video && l === 1 ? 2 : l; };   // une vidéo dénudée vaut plus qu'une photo
@@ -1158,8 +1159,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       // la lingerie sert au teasing (aperçu offert), elle ne se vend pas : un payant montre toujours plus, à son prix plancher
       if (f && lad) { const N = M.albumNotes || {}, want = Math.max(1, tierLevel(lad)), alOf = id => sell.albums.find(a => a.id === id) || {};
         const lvOf = (id, albumId, d) => { const a = alOf(albumId), txt = [d, N[albumId], a.name].filter(Boolean).join(" "); return txt.trim() ? levelOfText(txt, /^vid[ée]o|vid[ée]o/i.test(str(d)) || /vid[ée]o/i.test(str(a.name))) : 1; };
-        // « lingerie » = décrit comme de la lingerie (ou une tenue) sans rien de dénudé ; un média sans description reste vendable comme avant
-        const softOf = (id, albumId, d) => { const a = alOf(albumId), txt = [d, N[albumId], a.name].filter(Boolean).join(" "); return LING.test(txt) && !NAKED.test(txt) && levelOfText(txt) === 0; };
+        // « soft » = lingerie, ou média décrit où rien n'est dénudé (tenue moulante, robe, jean…) : réservé au teasing gratuit, jamais vendu ; un média sans description reste vendable comme avant
+        const softOf = (id, albumId, d) => { const a = alOf(albumId), txt = [d, N[albumId], a.name].filter(Boolean).join(" "), desc = [d, N[albumId]].filter(Boolean).join(" ").trim(); if (NAKED.test(txt) || levelOfText(txt) !== 0) return false; return LING.test(txt) || (!!desc && !SKIN.test(txt)); };
         let lvl = lvOf(f.id, str(out.album), descrOf(cr.id, [f.id]).get(f.id)); const soft = softOf(f.id, str(out.album), descrOf(cr.id, [f.id]).get(f.id));
         if (lvl > want || soft) { const pool = sell.albums.flatMap(a => (a.items || []).map(x => ({ id: x.id, albumId: a.id, lv: lvOf(x.id, a.id, x.descr), soft: softOf(x.id, a.id, x.descr) }))).filter(x => x.id !== f.id && !x.soft);
           let C = pool.filter(x => x.lv <= want).sort((a, b) => b.lv - a.lv); if (!C.length && soft) C = pool.sort((a, b) => a.lv - b.lv);
