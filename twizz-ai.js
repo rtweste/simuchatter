@@ -52,7 +52,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const MODELS = { fast: ["grok-4-1-fast-non-reasoning", "Rapide"], smart: ["grok-4-1-fast-reasoning", "Plus réfléchi (un peu plus lent)"] };
   const G_DEF = { notice: true, mark: false, base: "", locked: "", noticeText: "Petite précision : c'est l'IA de {creatrice} qui te répond en ce moment 😊", noticeFreq: "run", noticeDays: 30,
     waitMin: 35, waitMax: 80, teamPause: 15, fanWindow: 12, perFan: 40, maxHours: 12, model: "fast",
-    relance: true, relanceAfter: 45, relanceMax: 1, quietFrom: 1, quietTo: 9, memory: true, vipAlert: 300, budget: 20, hourCap: 1, nv: false, triInbox: false };
+    relance: true, relanceAfter: 45, relanceMax: 1, quietFrom: 1, quietTo: 9, memory: true, vipAlert: 300, budget: 20, hourCap: 1, nv: false, triInbox: false, always: true };
   const M_DEF = { ok: false, sell: true, maxPrice: 100, gap: 20, pile: true, albums: [], albumNotes: {}, skipTags: [], extra: "", profile: "", scripts: true, promo: true, maxDiscount: 30, promoHours: 24, vision: true,
     minMsgs: 8, tease: true, teaseWindow: 90, askSkip: false, cooldownH: 6, coolFull: false, sexDays: 1, details: {},
     tk: true, snapMin: 50, snapMax: 100, camMin: 130, camMax: 200, camHour: 300, customPrice: 150, tkAlbum: "", camDispo: "", ladder: [6, 12, 18, 25, 35, 50], freeLing: true };
@@ -78,6 +78,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (b.maxHours != null) o.maxHours = int(b.maxHours, 1, 24, "Durée maximum d'une séance");
     if (b.model != null) { if (!MODELS[b.model]) throw fail("Modèle Grok inconnu"); o.model = b.model; }
     if (typeof b.relance === "boolean") o.relance = b.relance;
+    if (typeof b.always === "boolean") { if (b.always && !gcfg().always) S.set("twizz_ai_always_since", Date.now()); o.always = b.always; }   // l'IA tourne en continu sur toutes les créatrices dont l'accord est coché
     if (typeof b.triInbox === "boolean") o.triInbox = b.triInbox;   // messagerie des chatters : seulement les fans qualifiés par l'IA, et l'IA continue de tourner quand un chatter est là
     if (typeof b.nv === "boolean") o.nv = b.nv;   // nouvelle version des réponses : en ligne ou non
     if (typeof b.memory === "boolean") o.memory = b.memory;
@@ -217,7 +218,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const uname = id => (id && (db.prepare("SELECT username FROM users WHERE id = ?").get(id) || {}).username) || null;
 
   /* ---------- lancer, arrêter ---------- */
-  function start(cid, by, reason) {
+  function start(cid, by, reason, silent) {
     const c = crOf(cid); if (!c) throw fail("Créatrice inconnue");
     if (!aiOn()) throw fail("L'IA de secours est coupée par le fondateur");
     if (!XAI()) throw fail("Clé Grok manquante : ajoute la variable XAI_API_KEY dans Railway");
@@ -226,7 +227,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (runOf(cid)) throw fail(`L'IA tourne déjà sur ${c.label}`);
     const id = db.prepare("INSERT INTO twizz_ai_runs (creator_id, model_id, started_by, started_at, reason) VALUES (?,?,?,?,?)").run(cid, c.model_id || null, by || null, now(), str(reason).slice(0, 120) || null).lastInsertRowid;
     log(by || 0, "a", `**${uname(by) || "?"}** a lancé l'IA de secours sur **${c.label}**`, reason ? str(reason).slice(0, 120) : "");
-    ping(`🤖 IA de secours lancée sur ${c.label}`, `Par ${uname(by) || "un manager"}. Elle s'arrête dès qu'un chatter reprend.`, "ai-" + cid);
+    if (!silent) ping(`🤖 IA de secours lancée sur ${c.label}`, gcfg().always ? `Par ${uname(by) || "un manager"}. Elle tourne en continu.` : `Par ${uname(by) || "un manager"}. Elle s'arrête dès qu'un chatter reprend.`, "ai-" + cid);
     return id;
   }
   function end(r, by, why) {
@@ -250,7 +251,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   app.locals.triInbox = (cid, user) => { try { if (!gcfg().triInbox || !user || !["chatter", "tl"].includes(user.rk) || !runOf(cid) || !app.locals.tri) return null; return fan => app.locals.tri.visible(cid, fan); } catch (e) { return null; } };
   app.locals.aiHuman = (cid, user) => {
     if (!user || !["chatter", "tl"].includes(user.rk)) return false;
-    if (gcfg().triInbox) return false;   // l'IA fait le tri : elle continue de tourner, le chatter s'occupe des fans qualifiés
+    if (gcfg().triInbox || gcfg().always) return false;   // l'IA fait le tri ou tourne en continu : elle continue quand un chatter ouvre la messagerie
     const r = runOf(cid); if (!r) return false;
     const c = crOf(cid), on = c && c.model_id && db.prepare("SELECT 1 FROM clocks WHERE user_id = ? AND model_id = ? AND end_at IS NULL").get(user.id, c.model_id);
     return on ? end(r, user.id, `${user.username} a ouvert la messagerie`) : false;
@@ -1470,13 +1471,21 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const quiet = C => { const h = parisHour(); return C.quietFrom === C.quietTo ? false : C.quietFrom < C.quietTo ? h >= C.quietFrom && h < C.quietTo : h >= C.quietFrom || h < C.quietTo; };
   const ago = ms => { const m = Math.round(ms / 60e3); return m < 60 ? `${m} min` : `${Math.round(m / 60)} h`; };
   const WORKING = new Set();   // créatrices dont la file tourne en ce moment
+  // toujours en route : l'IA s'occupe de tous les fans qui arrivent, sur toutes les créatrices dont l'accord est coché. Elle repart toute seule, sauf si un manager l'a arrêtée à la main sur une créatrice (elle reste arrêtée jusqu'à ce qu'il la relance)
+  if (!S.get("twizz_ai_always_since", 0)) S.set("twizz_ai_always_since", Date.now());   // mise en ligne du mode « toujours en route »
+  const ALWAYS_SINCE = () => +S.get("twizz_ai_always_since", 0) || 0;
+  function keepOn() { const C = gcfg(); if (!C.always || !aiOn() || !XAI() || !sendOn()) return;
+    for (const c of mapped()) { if (!c || !c.id || runOf(c.id) || !mcfg(c.id).ok) continue;
+      const last = db.prepare("SELECT ended_by, ended_at, end_reason FROM twizz_ai_runs WHERE creator_id = ? ORDER BY id DESC LIMIT 1").get(c.id); if (last && last.ended_by && /^Arrêtée par /.test(str(last.end_reason)) && last.ended_at > ALWAYS_SINCE()) continue;   // un arrêt manuel d'avant le mode « toujours en route » ne compte pas
+      try { start(c.id, null, "toujours en route", true); log(0, "a", `IA lancée automatiquement sur **${c.label}**`, "toujours en route"); } catch (e) {} } }
   async function loop() {
+    try { keepOn(); } catch (e) {}
     const runs = active(); if (!runs.length) return;
     if (!aiOn()) { runs.forEach(r => end(r, null, "IA coupée par le fondateur")); return; }
     const C = gcfg();
     for (const r of runs) {
-      if (now() - r.started_at > C.maxHours * 3600e3) { end(r, null, `${C.maxHours} h écoulées`); continue; }
-      const back = backOf(r); if (back) { end(r, back.id, `${back.username} a pointé`); continue; }
+      if (!C.always && now() - r.started_at > C.maxHours * 3600e3) { end(r, null, `${C.maxHours} h écoulées`); continue; }   // toujours en route : pas de durée maximum
+      const back = C.always ? null : backOf(r); if (back) { end(r, back.id, `${back.username} a pointé`); continue; }   // toujours en route : un chatter qui pointe ne l'arrête pas, il s'occupe des fans qualifiés
       if (!mcfg(r.creator_id).ok) { end(r, null, "Accord de la créatrice retiré"); continue; }
       if (!sendOn() || !XAI()) continue;   // en pause : rien ne peut partir
       if (C.hourCap > 0 && spentHour(r.creator_id) >= C.hourCap) continue;   // plafond de l'heure atteint pour cette créatrice : elle reprend toute seule dès que la dépense des 60 dernières minutes repasse dessous
