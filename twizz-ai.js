@@ -1402,7 +1402,6 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
         const tagged = db.prepare("SELECT tag_id FROM twizz_fan_tags WHERE creator_id = ? AND fan_id = ?");
         const spend = db.prepare("SELECT spend FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?");
         const fanOff = db.prepare("SELECT 1 FROM twizz_ai_fanoff WHERE creator_id = ? AND fan_id = ?"), RP = strat().points;
-        try { if (TRI()) TRI().sync(cr.id); } catch (e) {}   // un chatter a écrit à un payeur de la liste « à reprendre » : il est à lui, l'IA ne lui répond plus
         const L = [], RL = [];
         // 1re page du fil + toutes les conversations non lues (filtre « Non lus » de Twizz) : aucun fan qui attend n'est oublié
         let unread = []; try { unread = unreadConvs ? await unreadConvs(cr.id) : []; } catch (e) {}
@@ -1417,7 +1416,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
           if (row.blocked && junkLeave(row.blocked)) { db.prepare("UPDATE twizz_ai_convs SET blocked = NULL, last_fan_msg = NULL WHERE run_id = ? AND conv_id = ?").run(r.id, c.id); row.blocked = null; row.last_fan_msg = null; }   // mis de côté sans vraie raison : elle reprend la conversation tout de suite, sans attendre qu'il réécrive
           // un fan qui attend une réponse : dans la fenêtre réglée ; une relance : jusqu'à 24 h après son dernier message
           if (!c.fan.id || row.blocked || (age > C.fanWindow * 3600e3 && (c.last.fromFan || age > 24 * 3600e3)) || hereOf(c.id, -1).length || (C.teamPause && human.get(c.id, now() - C.teamPause * 60e3))) continue;
-          if (fanOff.get(cr.id, c.fan.id)) continue;   // IA coupée pour ce fan (à la main, ou payeur repris par un chatter)
+          if (fanOff.get(cr.id, c.fan.id)) continue;   // IA coupée pour ce fan
           if (skip.size) { const tg = tagged.all(cr.id, c.fan.id).find(x => skip.has(x.tag_id));
             if (tg) { const nm = (db.prepare("SELECT name FROM twizz_tags WHERE id = ?").get(tg.tag_id) || {}).name || "tag";
               db.prepare("INSERT INTO twizz_ai_convs (run_id, conv_id, fan_id, fan_name, blocked, at) VALUES (?,?,?,?,?,?) ON CONFLICT(run_id, conv_id) DO UPDATE SET blocked = excluded.blocked, at = excluded.at")

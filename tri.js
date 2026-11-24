@@ -135,6 +135,8 @@ module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
   app.get("/api/tri/fan/:cid/:fan", auth, (req, res) => { const cid = str(req.params.cid), fan = str(req.params.fan); if (!canOpen(req.user, cid)) return res.status(404).json({ error: "Introuvable" });
     res.json({ ...status(cid, fan), tests: db.prepare("SELECT price, at, seen, outcome FROM twizz_tri_test WHERE creator_id = ? AND fan_id = ? ORDER BY at DESC LIMIT 20").all(cid, fan), said: db.prepare("SELECT day, kind, text FROM twizz_tri_said WHERE creator_id = ? AND fan_id = ? ORDER BY at DESC LIMIT 10").all(cid, fan) }); });
 
+  // toutes les 20 s : un chatter a écrit à un payeur de la liste → il est à lui, l'IA est coupée pour ce fan (elle le voit avant sa prochaine réponse)
+  setInterval(() => sync(), 20e3).unref();
   setInterval(() => { try { const t = now() - 60 * DAY; db.prepare("DELETE FROM twizz_tri_test WHERE at < ?").run(t); db.prepare("DELETE FROM twizz_tri_said WHERE at < ?").run(t); db.prepare("DELETE FROM twizz_tri_handoff WHERE at < ?").run(t); } catch (e) {} }, 6 * 3600e3).unref();
   const api = { observe, classify, status, sold, sync, stats, add, R };
   app.locals.tri = api; return api;
