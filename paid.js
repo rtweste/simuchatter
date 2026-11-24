@@ -27,7 +27,7 @@ module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
   }
   const labelOf = t => { let r = null; try { r = db.prepare("SELECT m.name model, c.label FROM twizz_creators c LEFT JOIN models m ON m.id = c.model_id WHERE c.twizz_id = ?").get(t.creator_id); } catch (e) {} return (r && (r.model || r.label)) || "ta créatrice"; };
   const canOpen = (user, cid) => { try { return !!(user && cid && inbox && inbox.canOpen && inbox.canOpen({ ...user, rk: perms.rk(user) }, cid)); } catch (e) { return false; } };
-  const TITLE = { "ask-snap": n => `${n} demande un snap : à toi`, "ask-cam": n => `${n} demande une cam : à toi`, "ask-custom": n => `${n} demande une vidéo perso : à toi`, handoff: n => `${n} vient d'acheter avec l'IA : à toi de le reprendre`, mine: n => `${n} a acheté ton média`, shift: n => `${n} a acheté un média`, push: n => `${n} a payé un média push` };
+  const TITLE = { "ask-snap": n => `${n} demande un snap : il est dans ta messagerie`, "ask-cam": n => `${n} demande une cam : il est dans ta messagerie`, "ask-custom": n => `${n} demande une vidéo perso : il est dans ta messagerie`, handoff: n => `${n} vient d'acheter avec l'IA : il est dans ta messagerie`, mine: n => `${n} a acheté ton média`, shift: n => `${n} a acheté un média`, push: n => `${n} a payé un média push` };
   // ce que voit le chatter : le titre avec le nom du fan, la créatrice et le prix payé, et le lien vers la conversation
   function pub(r, user) {
     const name = r.fan_name || "Un fan", can = !!r.fan_id && canOpen(user, r.creator_id);

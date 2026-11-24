@@ -259,13 +259,20 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   /* ---------- aperçus de conversations, épingles, inbox ---------- */
   function snapSave(cid, items) { const st = db.prepare("INSERT INTO twizz_conv_snap (creator_id, conv_id, fan_id, data, at) VALUES (?,?,?,?,?) ON CONFLICT(creator_id, conv_id) DO UPDATE SET fan_id = excluded.fan_id, data = excluded.data, at = excluded.at");
     items.forEach(c => { if (c.id && c.fan && c.fan.id) { const { here, ...d } = c; st.run(cid, c.id, c.fan.id, JSON.stringify(d), Date.now()); } }); }
+  // recherche d'un fan par son nom : Twizz exige maintenant la page (sinon erreur « $skip: NaN ») ; si Twizz échoue encore, la recherche se fait dans les conversations que le site a déjà vues
+  async function searchConvs(cid, q, ttl = 10e3) { try { const j = await G(`/conversations/user/${enc(cid)}/search?search=${enc(q)}&page=1&limit=20&creatorId=${enc(cid)}`, ttl); const L = arr(j); if (L.length) return L.map(c => conv(c, cid)); } catch (e) {}
+    const n = String(q).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim(); if (!n) return [];
+    const R = db.prepare("SELECT data FROM twizz_conv_snap WHERE creator_id = ? AND at > ? ORDER BY at DESC LIMIT 3000").all(cid, Date.now() - 60 * 864e5), out = [];
+    for (const r of R) { let c = null; try { c = JSON.parse(r.data); } catch (e) {} if (!c || !c.fan) continue; const nm = String(c.fan.name || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (nm.includes(n) || String(c.fan.username || "").toLowerCase().includes(n)) out.push(c); if (out.length >= 20) break; }
+    return out; }
   const snapOf = (cid, fan) => { const r = db.prepare("SELECT data FROM twizz_conv_snap WHERE creator_id = ? AND fan_id = ? ORDER BY at DESC LIMIT 1").get(cid, fan); try { return r ? JSON.parse(r.data) : null; } catch (e) { return null; } };
   // conversations de fans précis (tagués, épinglés) : depuis les aperçus ; sinon une recherche Twizz par pseudo (4 au plus par appel)
   app.get("/api/twizz/inbox/:cid/snaps", auth, inbox, wrap(async req => {
     const cid = creatorOk(req.params.cid), fans = [...new Set(String(req.query.fans || "").split(",").map(str).filter(Boolean))].slice(0, 60), out = []; let tries = 0;
     for (const f of fans) { let c = snapOf(cid, f);
       if (!c && tries < 4) { const nm = (db.prepare("SELECT name FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, f) || {}).name || (fans.length === 1 ? str(req.query.name).trim() : "");   // un seul fan demandé (lien d'une notification d'achat) : son pseudo peut venir du lien
-        if (nm) { tries++; try { const L = arr(await G(`/conversations/user/${enc(cid)}/search?search=${enc(nm.slice(0, 40))}`, 60e3)).map(x => conv(x, cid)); snapSave(cid, L); c = L.find(x => x.fan.id === f) || null; } catch (e) {} } }
+        if (nm) { tries++; try { const L = await searchConvs(cid, nm.slice(0, 40), 60e3); snapSave(cid, L); c = L.find(x => x.fan.id === f) || null; } catch (e) {} } }
       if (c) { const h = hereOf(c.id, req.user.id); if (h.length) c.here = h.map(x => x.name); out.push(c); } }
     return { items: out };
   }));
@@ -343,7 +350,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
         await new Promise(r => setTimeout(r, 1500)); } } finally { spBusy = false; } }
   app.locals.spendLater = (cid, fan) => { const k = cid + ":" + fan, t = SPSEEN.get(k); if ((t && Date.now() - t < 3600e3) || SPQ.length >= 400) return; SPSEEN.set(k, Date.now()); if (SPSEEN.size > 5000) SPSEEN.clear(); SPQ.push([cid, fan]); if (!spBusy) spRun(); };
   // l'IA fait le tri : ce chatter ne voit que les fans qualifiés (voir twizz-ai.js, app.locals.triInbox) ; null = rien n'est caché
-  const triOf = (cid, req) => { try { return app.locals.triInbox ? app.locals.triInbox(cid, req.user) : null; } catch (e) { return null; } };
+  // un manager ou le fondateur peut afficher la messagerie telle que la voient les chatters (?vue=chatters)
+  const mgrView = req => !!req.user && !["chatter", "tl"].includes(req.user.rk);
+  const triOf = (cid, req) => { try { if (!app.locals.triInbox) return null; if (req.query.vue === "chatters" && mgrView(req)) return app.locals.triInbox(cid, { ...req.user, rk: "chatter" }); return app.locals.triInbox(cid, req.user); } catch (e) { return null; } };
+  const triAvail = (cid, req) => { try { return mgrView(req) && !!app.locals.triInbox && !!app.locals.triInbox(cid, { ...req.user, rk: "chatter" }); } catch (e) { return false; } };
   // auteur du dernier message, faits du fan, aperçus, qui est dessus : pour toute liste de conversations
   function decorate(cid, items, req) {
     const by = authors(items.filter(c => !c.last.fromFan).map(c => c.last.id));
@@ -361,18 +371,19 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
     let aiStopped = false; try { aiStopped = !!(app.locals.aiHuman && app.locals.aiHuman(cid, req.user)); } catch (e) {}   // un chatter reprend : l'IA de secours s'arrête
     const fresh = req.query.fresh === "1"; if (fresh) drop(`/conversations/user/${enc(cid)}?page=${page}&type=${type}`);
     const P = p => `/conversations/user/${enc(cid)}?page=${p}&type=${type}&creatorId=${enc(cid)}`;
-    let j = q ? await G(`/conversations/user/${enc(cid)}/search?search=${enc(q)}`, 10e3) : await G(P(page), 20e3), d = j && j.data, raw = arr(j), outPage = page;
+    const found = q ? await searchConvs(cid, q) : null;   // recherche : Twizz, sinon les conversations déjà vues par le site
+    let j = q ? null : await G(P(page), 20e3), d = j && j.data, raw = q ? [] : arr(j), outPage = page;
     // deep : pages suivantes du fil « Général » tant qu'elles sont remplies de fans qui attendent (6 pages au plus, gardées 45 s)
     if (req.query.deep === "1" && !q && type === "GENERAL") { raw = []; let L = arr(j);
       const waiting = A => A.filter(c => conv(c, cid).last.fromFan).length;
       while (outPage < 6 && (!d || !d.totalPages || d.totalPages > outPage) && L.length && waiting(L) >= Math.max(2, Math.ceil(L.length / 3))) {
         outPage++; await new Promise(r => setTimeout(r, 350)); const jj = await GD(P(outPage), 45e3); d = jj && jj.data; L = arr(jj); raw.push(...L); } }
-    let items = decorate(cid, applySeen(cid, raw.map(c => conv(c, cid))), req), hidden = 0; const tri = !q && type === "GENERAL" ? triOf(cid, req) : null;
+    let items = decorate(cid, applySeen(cid, found || raw.map(c => conv(c, cid))), req), hidden = 0; const tri = !q && type === "GENERAL" ? triOf(cid, req) : null;
     if (tri) { const n0 = items.length; items = items.filter(c => !c.fan.id || tri(c.fan.id)); hidden = n0 - items.length;
       // la liste visible est courte : les pages suivantes sont lues tout de suite (3 de plus au maximum, gardées 45 s)
       for (let k = 0; k < 3 && items.length < 10 && raw.length && (!d || !d.totalPages || d.totalPages > outPage); k++) { outPage++; await new Promise(r => setTimeout(r, 350)); const jj = await GD(P(outPage), 45e3); d = jj && jj.data; const L = arr(jj); if (!L.length) break;
         const more = decorate(cid, applySeen(cid, L.map(c => conv(c, cid))), req), vis = more.filter(c => !c.fan.id || tri(c.fan.id)); hidden += more.length - vis.length; raw = L; items.push(...vis.filter(x => !items.some(y => y.id === x.id))); } }
-    return { tri: tri ? { hidden } : undefined, items, page: outPage, more: !!(d && (d.totalPages ? outPage < d.totalPages : raw.length >= 10)), aiStopped, sample: req.query.debug ? arr(j)[0] : undefined };
+    return { tri: tri ? { hidden } : undefined, triAvail: triAvail(cid, req), items, page: outPage, more: !!(d && (d.totalPages ? outPage < d.totalPages : raw.length >= 10)), aiStopped, sample: req.query.debug ? arr(j)[0] : undefined };
   }));
   app.get("/api/twizz/inbox/:cid/messages/:conv", auth, inbox, wrap(async req => {
     const cid = creatorOk(req.params.cid), page = Math.max(1, +req.query.page || 1), fanId = str(req.query.fan);

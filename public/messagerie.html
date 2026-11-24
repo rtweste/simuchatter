@@ -421,6 +421,7 @@
 .mx-c .tgs2{display:flex;gap:4px;margin-top:5px;overflow:hidden}.mx-c .tgs2 .mo{font:800 10px Inter;color:#7a7a7a;align-self:center}
 .mx-tgf{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 0 0 14px;padding:2px 24px 8px 0;-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent)}
 .mx-tgf::-webkit-scrollbar{display:none}
+.mx-vue{padding-bottom:4px}.mx-vue .tgc.on{border-color:#5fd3a2;color:#eafff5;background:rgba(95,211,162,.12)}
 .tgc{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;border:1px solid #242424;background:#131313;color:#bdbdbd;font:800 11.5px Inter;white-space:nowrap;flex:none;cursor:pointer;transition:all .35s cubic-bezier(.3,1.3,.5,1)}
 .tgc .d{width:6px;height:6px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}.tgc>svg{color:var(--c);margin:0 -2px}
 .tgc .n{font:800 10px Inter;color:#6a6a6a}
@@ -931,6 +932,7 @@
         <div class="qhd" id="qh" hidden><h2><span id="qN"></span><span id="qW">fans <em class="met">à traiter.</em></span></h2><div class="dsh" id="qD"></div><div class="inb" id="inb" hidden></div>
           <div class="kh2"><span class="kh"><span class="kbd">↵</span>envoyer</span><span class="kh"><span class="kbd">↓</span>fan suivant</span></div></div>
         <label class="mx-se" id="seBox"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" placeholder="Rechercher un fan"></label>
+        <div class="mx-tgf mx-vue" id="vue" hidden></div>
         <div class="mx-tgf" id="tgf" hidden></div>
         <div class="mx-cl" id="cl"></div></section>
       <section class="mx-th" id="th"></section>
@@ -966,7 +968,7 @@ const IC = { pin: '<path d="M9 3h6l-1 6 3.5 3.5h-11L10 9z"/><path d="M12 12.5V21
   coin: '<circle cx="12" cy="12" r="9"/><path d="M14.5 9.5c-.6-.9-1.6-1.3-2.7-1.3-1.6 0-2.8.9-2.8 2.1 0 2.9 5.8 1.4 5.8 4.3 0 1.2-1.3 2.2-3 2.2-1.2 0-2.3-.5-2.9-1.4M12 6.5v1.7M12 15.8v1.7"/>' };
 const SPARK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c.6 6.2 5.8 11.4 12 12-6.2.6-11.4 5.8-12 12-.6-6.2-5.8-11.4-12-12C6.2 11.4 11.4 6.2 12 0z" fill="currentColor"/></svg>';
 const SV = (p, s = 16, w = 2.2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
-let ST = null, CID = null, TYPE = "QUEUE", Q = "", CUR = null, LIVE = false;
+let ST = null, CID = null, TYPE = "QUEUE", Q = "", CUR = null, LIVE = false, VUE = "", TRIAV = false;   // VUE = "chatters" : un manager voit la messagerie comme les chatters
 const LISTS = {}, THREADS = {}, FANS = {}, HIST = {}, SPEND = {};
 const QDONE = new Map(); let QTREATED = 0;
 /* ---- fans épinglés (pour toute l'équipe), fans tagués ou épinglés hors des pages chargées, inbox moitié-moitié ---- */
@@ -997,7 +999,8 @@ const inbName = id => (SPLIT && SPLIT.users.find(u => u.id === id) || {}).name |
 // inbox regardée : la sienne si on est en shift sur la créatrice, sinon toutes (on peut choisir)
 const inbView = () => { if (!splitOn()) return "all"; const mine = SPLIT.users.some(u => u.id === SPLIT.me), v = INB && INB.cid === CID ? INB.v : mine ? SPLIT.me : "all";
   return v === "all" || SPLIT.users.some(u => u.id === v) ? v : "all"; };
-const lkey = (t = TYPE) => `${CID}|${t}|${t === "QUEUE" ? "" : Q}`;
+const lkey = (t = TYPE) => `${CID}|${t}|${t === "QUEUE" ? "" : Q}|${VUE}`;
+const vq = () => VUE ? "&vue=" + VUE : "";
 const E = n => (Math.round(n * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + " €";
 const tm = d => new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 const ago = d => { const t = Date.parse(d); if (!t) return ""; const m = (Date.now() - t) / 60e3; if (m < 1) return "maintenant"; if (m < 60) return Math.round(m) + " min";
@@ -1076,9 +1079,10 @@ let qT = null; $("q").oninput = () => { clearTimeout(qT); qT = setTimeout(() => 
 /* ================= conversations ================= */
 async function fetchList(t, fresh, more) {
   const k = lkey(t), L = LISTS[k], page = more && L ? L.page + 1 : 1, q = t === "QUEUE" ? "" : Q;
-  const r = await api2(`/conversations?type=${t}&page=${page}${q ? "&q=" + enc(q) : ""}${fresh ? "&fresh=1" : ""}`);
+  const r = await api2(`/conversations?type=${t}&page=${page}${q ? "&q=" + enc(q) : ""}${fresh ? "&fresh=1" : ""}${vq()}`);
+  if (r.triAvail !== undefined && r.triAvail !== TRIAV) { TRIAV = !!r.triAvail; if (!TRIAV && VUE) VUE = ""; vueBar(); }
   if (r.aiStopped) notify("L'IA de secours s'arrête", `Tu reprends ${crLabel()} : elle ne répond plus aux fans`, "info");
-  if (r.tri && !fetchList.told) { fetchList.told = true; notify("L'IA fait le tri", "Tu ne vois que les fans qui ont déjà payé ou qui sont prêts à payer. Les autres, elle s'en occupe.", "info"); }
+  if (r.tri && !VUE && !fetchList.told) { fetchList.told = true; notify("L'IA fait le tri", "Tu ne vois que les fans qui ont déjà payé ou qui sont prêts à payer. Les autres, elle s'en occupe.", "info"); }
   r.items.forEach(c => fixFan(c.fan));
   const ins = (list, add) => { const out = list.slice(); add.forEach(c => { const t0 = Date.parse(c.last.at) || 0, i = out.findIndex(x => (Date.parse(x.last.at) || Infinity) < t0); i < 0 ? out.push(c) : out.splice(i, 0, c); }); return out; };
   // rafraîchissement de la 1re page : on garde en attendant les pages suivantes déjà chargées tout seul (relues juste après par deepen)
@@ -1093,8 +1097,8 @@ let deepBusy = false;
 async function deepen(fresh) { const k = lkey("GENERAL"), L = LISTS[k]; if (deepBusy || !L || !L.n1 || Q) return;
   deepBusy = true;
   try { const p1 = L.items.slice(0, L.n1), w = p1.filter(c => c.last.fromFan).length, add = []; let pg = null;
-    if (w >= Math.max(2, Math.ceil(p1.length / 3))) { try { pg = await api2(`/conversations?type=GENERAL&deep=1${fresh ? "&fresh=1" : ""}`); add.push(...pg.items); } catch (e) {} }
-    try { const u = await api2(`/unread-list${fresh ? "?fresh=1" : ""}`); add.push(...u.items); } catch (e) {}
+    if (w >= Math.max(2, Math.ceil(p1.length / 3))) { try { pg = await api2(`/conversations?type=GENERAL&deep=1${fresh ? "&fresh=1" : ""}${vq()}`); add.push(...pg.items); } catch (e) {} }
+    try { const u = await api2(`/unread-list?x=1${fresh ? "&fresh=1" : ""}${vq()}`); add.push(...u.items); } catch (e) {}
     const L2 = LISTS[k]; if (!L2 || !L2.n1) return;
     add.forEach(c => fixFan(c.fan)); const b = L2.items.slice(0, L2.n1), have = new Set(b.map(c => c.id)), extra = [];
     add.forEach(c => { if (!have.has(c.id)) { have.add(c.id); extra.push(c); } });
@@ -1726,6 +1730,10 @@ async function loadTags(force) {
   if (!CID) return; const cid = CID; if (!force && TAGS && TAGS.cid === cid && Date.now() - tagT < 15e3) return; tagT = Date.now();
   try { const r = await api2("/tags"); if (cid !== CID) return; TAGS = { cid, tags: r.tags, map: r.map }; tagFilterBar(); renderList(); if ($("htg")) $("htg").innerHTML = headTagsHtml(); } catch (e) {}
 }
+// manager ou fondateur, quand le tri des fans est allumé : voir tous les fans, ou la messagerie telle que la voient les chatters
+function vueBar() { const B = $("vue"); if (!B) return; B.hidden = !TRIAV; if (!TRIAV) { B.innerHTML = ""; return; }
+  B.innerHTML = `<button class="tgc all ${!VUE ? "on" : ""}" data-vue="">Tous les fans</button><button class="tgc ${VUE ? "on" : ""}" data-vue="chatters" title="Ce que voient les chatters : les fans qui ont déjà payé ou qui sont prêts à payer">Messagerie des chatters</button>`;
+  B.querySelectorAll("[data-vue]").forEach(b => b.onclick = () => { if (VUE === b.dataset.vue) return; VUE = b.dataset.vue; vueBar(); loadList(); }); }
 function tagFilterBar() {
   const B = $("tgf"); if (!B) return; const T = TAGS && TAGS.cid === CID ? TAGS.tags.filter(t => t.n) : [];
   if (TAGF && !T.some(t => t.id === TAGF)) TAGF = ""; B.hidden = !T.length; if (!T.length) { B.innerHTML = ""; return; }
