@@ -810,6 +810,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const TKASK = { snap: /\b(snap|snapchat|sc|ton snap|ajoute[- ]?moi)\b/i, cam: /\b(cam|webcam|visio|facetime|appel vid[ée]o|en live|live)\b/i,
     custom: /\b(perso|personnalis[ée]e?s?|custom|sur mesure|rien que pour moi|juste pour moi|avec mon (pr[ée]nom|nom)|dis mon (pr[ée]nom|nom))\b/i };
   // le fan doit l'avoir demandé le premier : si elle en a parlé avant lui, sa réponse ne compte pas comme une demande
+  const TK_HANDOFF = true;   // une demande de Snap, de cam ou de vidéo perso passe à un chatter (tri.js) : l'IA n'envoie plus de ticket
+  // une vidéo perso : il faut qu'il parle bien d'un contenu fait pour lui, pas seulement « juste pour moi »
+  const CUSTOMW = /(vid[ée]os?|photos?|contenu|truc|film)[^.?!]{0,40}(perso|personnalis|custom|sur mesure|rien que pour moi|juste pour moi|avec mon (pr[ée]nom|nom))|(perso|personnalis[ée]e?s?|custom|sur mesure)[^.?!]{0,25}(vid[ée]os?|photos?|contenu)|dis mon (pr[ée]nom|nom)/i;
   const tkAsked = (kind, L) => { const X = TKASK[kind]; if (!X || !L.filter(m => m.fromFan).slice(-6).some(m => X.test(str(m.text)))) return false;
     const R = L.slice(-30), f = R.findIndex(m => m.fromFan && X.test(str(m.text))), she = R.findIndex(m => !m.fromFan && X.test(untag(str(m.text)))); return f >= 0 && (she < 0 || f < she); };
   function tkNote(M, T) {
@@ -819,7 +822,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       : T.kind === "cam" ? (M.camDispo ? `TICKET ${tkLabel(T).toUpperCase()} PAYÉ : remercie-le, demande-lui ce qu'il aimerait pendant la cam et propose-lui un de ces créneaux : ${M.camDispo}. Quand il a répondu et choisi, remplis demande (ce qu'il veut et le créneau choisi) et confirme-lui le créneau.`
         : `TICKET ${tkLabel(T).toUpperCase()} PAYÉ : remercie-le, demande-lui ce qu'il aimerait pendant la cam et quand il est disponible. Quand il a répondu, remplis demande (ce qu'il veut et ses dispos) et dis-lui que tu reviens vers lui pour caler l'heure.`)
       : `TICKET VIDÉO CUSTOM PAYÉ : remercie-le et demande-lui précisément ce qu'il veut voir (tenue, ce que tu fais, s'il veut que tu dises son prénom…). Quand il a répondu, remplis demande avec tous les détails et dis-lui que tu t'en occupes et que tu lui envoies dès que c'est prêt.`;
-    return `DEMANDES SPÉCIALES (Snap, cam, vidéo custom) : s'il demande ton Snap, une cam, ou une vidéo tournée rien que pour lui, ne le laisse jamais à l'équipe pour ça : propose-lui le ticket. Remplis ticket (snap, cam ou custom) et prix : Snap de ${M.snapMin} à ${M.snapMax} € (selon ce qu'il a déjà dépensé) ; cam de 20 à 30 min de ${M.camMin} à ${M.camMax} € (remplis aussi duree, de 20 à 30) ; cam d'une heure ${M.camHour} € (duree 60) ; vidéo custom de 3 à 5 min ${M.customPrice} €. Pour une cam, demande d'abord combien de temps il veut s'il ne l'a pas dit. Le ticket part juste après ta bulle, avec le texte « Ticket … » : dans ta bulle, dis-lui simplement de le prendre pour que tu t'occupes de lui. S'il réclame un contenu précis que tu n'as pas dans le coffre, propose-lui la vidéo custom.`;
+    // depuis le tri des fans : une demande de Snap, de cam ou de vidéo perso passe à un chatter, l'IA ne vend plus de ticket (un ticket déjà envoyé ou payé suit son cours, ci-dessus)
+    return "DEMANDES SPÉCIALES (Snap, cam, vidéo tournée rien que pour lui) : s'il en demande une, ne dis ni oui ni non, ne donne aucun prix, ne promets aucune date et n'envoie rien pour ça. Montre que l'idée te plaît, dis-lui que tu regardes ça et que tu reviens vers lui très vite, puis garde-le chaud en continuant la discussion. Ne remplis jamais ticket.";
   }
   // les consignes : les lignes fixes d'abord (elles restent en cache d'un fan à l'autre), puis celles qui dépendent de la conversation ; le texte de chaque ligne ne change pas
   function rulesOf(M, L, o = {}) { const A = rulesArr(M, L, o); let F = null; try { F = rulesArr(M, [], {}); } catch (e) {}
@@ -1040,6 +1044,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     // il vient de dire qu'il n'a pas d'argent : pas de payant tant qu'il ne demande pas lui-même
     // tri des fans : ce que la conversation prouve (offres achetées, refusées, vues et laissées fermées, « pas d'argent ») met à jour son statut
     let TR = { status: "test" }; try { if (TRI()) TR = TRI().observe(cr.id, c.fan.id, c.fan.name, c.id, L, { nomoney: NOMONEY }); } catch (e) {}
+    // il demande un snap, une cam ou une vidéo perso : il passe au chatter en shift, qui est prévenu (une fois par jour et par type de demande)
+    let askedTk = null;
+    if (!relance && lastFan && TRI()) { try { const k = ["snap", "cam", "custom"].find(k => (k === "custom" ? CUSTOMW : TKASK[k]).test(lfT) && tkAsked(k, L) && !/\b(gratuit(?:e|es|s|ement)?|sans payer)\b/i.test(lfT)); if (k && tkFree(tkOf(cr, c.fan.id, L))) { askedTk = k; TRI().special(cr.id, c.fan.id, c.fan.name, c.id, k, lfT); TR = TRI().status(cr.id, c.fan.id); } } catch (e) {} }
     const hold = TR.status === "retest" || TR.status === "waster";   // un doute ou un time waster : l'IA ne propose plus rien d'elle-même jusqu'au prochain test ; s'il demande lui-même, il est servi
     const broke = !relance && (hold || brokeT(L.slice(-8).filter(m => m.fromFan).map(m => str(m.text)).join(" · "))) && !WANTSEE.test(lfT) && !sendW(lfT);
     if (broke && plan && !plan.S && (plan.launch || []).length) { plan.launch = []; plan.text = "Pas de vente avec ce fan pour l'instant : ne lance aucun script et ne propose aucun média. Discute, crée du lien."; }
@@ -1140,9 +1147,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (push && !yes && !act && !out.teaser && !str(out.ticket) && !okAlb(out) && streak(L) >= 10) { out.bulles = bubbles(out).slice(0, 1).concat([TEASES[Math.floor(Math.random() * TEASES.length)]]); out.teaser = true; }
     let tk = null, tkInfo = "";
     if (M.tk && M.sell && !relance && !busy && !act) {
-      if (tkFree(T) && TK[str(out.ticket)] && tkAsked(str(out.ticket), L)) { tk = tkPlan(M, str(out.ticket), out.prix, out.duree); tk.f = await tkMedia(cr, M, c, L); if (!tk.f) { tk = null; db.prepare("UPDATE twizz_ai_runs SET last_error = ? WHERE id = ?").run(`${c.fan.name || "un fan"} : ticket impossible, aucun média dans le coffre`, r.id); } }
+      if (!TK_HANDOFF && tkFree(T) && TK[str(out.ticket)] && tkAsked(str(out.ticket), L)) { tk = tkPlan(M, str(out.ticket), out.prix, out.duree); tk.f = await tkMedia(cr, M, c, L); if (!tk.f) { tk = null; db.prepare("UPDATE twizz_ai_runs SET last_error = ? WHERE id = ?").run(`${c.fan.name || "un fan"} : ticket impossible, aucun média dans le coffre`, r.id); } }
       else if (T && T.state === "paid") { const v = (T.kind === "snap" ? str(out.snap).replace(/^@/, "") : str(out.demande)).trim(); if (v.length >= 2) tkInfo = v; }
     }
+    // aucun ticket ne part plus : une bulle qui parle de « ticket » alors qu'aucun n'est en cours est retirée ; s'il ne reste rien après sa demande, elle le fait patienter
+    if (TK_HANDOFF && !tk && tkFree(T)) { out.ticket = ""; const K = bubbles(out).filter(t => !/\btickets?\b/i.test(t)); if (K.length !== bubbles(out).length) out.bulles = K.length ? K : askedTk ? ["mmh l'idée me plaît… laisse moi regarder ça je reviens vers toi très vite"] : bubbles(out); }
     const shut = early || (!sell.albums.length && !sell.teaseNow && !act);   // rien ne peut partir maintenant
     if (!stopped && !warm && shut && !relance) { let K = bubbles(out).filter(t => !pitchy(t));
       if (!K.length) { let again = null; try { again = unleak(await grok(msgs.concat([{ role: "system", content: NOPITCH }]))); } catch (e) {} K = again && !str(again.laisser).trim() ? bubbles(again).filter(t => !pitchy(t)) : []; if (!K.length && early) K = ["raconte-moi un peu, t'as fait quoi aujourd'hui ?"]; }

@@ -29,6 +29,7 @@ module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
   // il veut acheter : il demande le prix, dit qu'il prend, réclame un snap, une cam ou une vidéo sur mesure (jamais une phrase avec « pas », « jamais », « gratuit »)
   const INTENT = /(c['’ ]?est combien|combien (?:[çc]a|c['’ ]?est|tu (?:prends|demandes|vends)|pour|la |le |les |co[uû]te)|quel(?:s)? (?:prix|tarifs?)|[çc]a co[uû]te|tes (?:prix|tarifs)|je (?:la |le |les |te (?:la |le |les )?)?prends|j['’ ]?ach[èe]te|je (?:vais |veux |peux )(?:te |la |le |les )?(?:payer|acheter|prendre|d[ée]bloquer|ouvrir)|je (?:te )?pa(?:ie|ye)\b|je d[ée]bloque|(?:viens|on se fait|fais[- ]moi|je veux) (?:un |une |en |sur )?(?:snap|cam|show|appel vid[ée]o|vid[ée]o perso|custom)|ticket (?:snap|cam)|vid[ée]o (?:perso|sur mesure|custom))/i;
   const NEG = /\b(pas|plus|jamais|rien|gratuit(?:e|es|s|ement)?|sans payer|aucun)\b/i;
+  const ASKL = { snap: "un snap", cam: "une cam", custom: "une vidéo perso" };
   const isTk = t => /^\s*ticket\b/i.test(str(t));
   // il a acheté un média (preuve qu'il paie) : une vente de média connue du site, un média acheté vu dans la conversation, ou un achat compté dans sa fiche
   const boughtMedia = (cid, fan) => { try { if (db.prepare("SELECT 1 FROM twizz_tx WHERE creator_id = ? AND fan_id = ? AND refund = 0 AND net > 0 AND type IN ('privatemedia','mediapush','collection') LIMIT 1").get(cid, fan)) return true; } catch (e) {}
@@ -45,7 +46,9 @@ module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
     const t0 = now() - R.window;
     const T = db.prepare("SELECT at, outcome, price FROM twizz_tri_test WHERE creator_id = ? AND fan_id = ? AND at > ? AND outcome IN ('refused','ignored') AND price <= ?").all(cid, fan, t0, R.fairMax);
     const S = db.prepare("SELECT day, kind, at, text FROM twizz_tri_said WHERE creator_id = ? AND fan_id = ? AND at > ?").all(cid, fan, t0);
-    const want = S.filter(x => x.kind === "intent"); S.splice(0, S.length, ...S.filter(x => x.kind !== "intent"));   // l'envie d'acheter n'est pas une preuve contre lui
+    const asked = S.filter(x => x.kind.startsWith("ask-")).sort((a, b) => b.at - a.at)[0], want = S.filter(x => x.kind === "intent"); S.splice(0, S.length, ...S.filter(x => x.kind !== "intent" && !x.kind.startsWith("ask-")));
+    // il demande un snap, une cam ou une vidéo perso : c'est un chatter qui s'en occupe, quoi qu'il ait dit par ailleurs (3 jours)
+    if (asked && now() - asked.at < 3 * DAY) return { status: "chaud", reason: "demande " + (ASKL[asked.kind.slice(4)] || "une demande spéciale"), until: asked.at + 3 * DAY };   // l'envie d'acheter n'est pas une preuve contre lui
     const fDays = new Set(T.map(x => dayOf(x.at))).size, broke = S.filter(x => x.kind === "nomoney"), never = S.filter(x => x.kind === "never");
     const last = Math.max(0, ...T.map(x => x.at), ...S.map(x => x.at));
     const why = T.length >= R.wasterTests && fDays >= R.wasterDays ? `${T.length} offres vues et pas achetées, sur ${fDays} jours`
@@ -113,6 +116,12 @@ module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
       if (old) { db.prepare("UPDATE twizz_tri_handoff SET fan_name = COALESCE(NULLIF(?, ''), fan_name), conv_id = COALESCE(NULLIF(?, ''), conv_id), tx_id = ?, amount = ?, reason = ?, at = ? WHERE id = ?").run(str(h.fan_name).slice(0, 80), str(h.conv_id), str(h.tx_id), h.amount || null, str(h.reason), now(), old.id); return old.id; }
       return db.prepare("INSERT INTO twizz_tri_handoff (creator_id, fan_id, fan_name, conv_id, tx_id, amount, reason, at) VALUES (?,?,?,?,?,?,?,?)").run(h.creator_id, h.fan_id, str(h.fan_name).slice(0, 80), str(h.conv_id), str(h.tx_id), h.amount || null, str(h.reason), now()).lastInsertRowid;
     } catch (e) { return 0; } }
+  // il demande un snap, une cam ou une vidéo perso (vu par l'IA dans son dernier message) : il passe tout de suite au chatter en shift, qui est prévenu ; une fois par jour et par type de demande
+  function special(cid, fan, name, conv, kind, text) { if (!cid || !fan || !ASKL[kind]) return false; const at = now();
+    const fresh = db.prepare("INSERT OR IGNORE INTO twizz_tri_said (creator_id, fan_id, day, kind, at, text) VALUES (?,?,?,?,?,?)").run(cid, fan, dayOf(at), "ask-" + kind, at, str(text).slice(0, 200)).changes > 0;
+    store(cid, fan, name, conv); if (!fresh) return false;
+    add({ creator_id: cid, fan_id: fan, fan_name: name, conv_id: conv, tx_id: "ask:" + kind, reason: "demande " + ASKL[kind] + (str(text).trim() ? " : « " + str(text).trim().slice(0, 70) + " »" : "") }, true);
+    try { if (app.locals.paidAsk) app.locals.paidAsk({ creator_id: cid, fan_id: fan, fan_name: name, conv_id: conv, kind }); } catch (e) {} return true; }
   // l'IA vient de vendre : le fan est payeur, il entre dans la liste (appelé par paid.js, qui prévient les chatters en shift)
   function sold(t, amount) { if (!t || !t.creator_id || !t.fan_id) return 0;
     const id = add({ creator_id: t.creator_id, fan_id: str(t.fan_id), fan_name: t.fan_name, conv_id: t.conv_id, tx_id: t.id, amount, reason: `vient d'acheter ${amount ? amount + " € " : ""}avec l'IA` }, true);
@@ -153,7 +162,7 @@ module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
   function stats(cid) { const d0 = Date.parse(dayOf(now()) + "T00:00:00Z") - 3600e3, W = cid ? "AND creator_id = ?" : "", A = cid ? [cid] : [];
     const one = (sql, ...a) => { try { return db.prepare(sql).get(...a).n || 0; } catch (e) { return 0; } };
     const by = {}; try { db.prepare(`SELECT status, COUNT(*) n FROM twizz_tri WHERE (until IS NULL OR until > ? OR status = 'payeur') ${W} GROUP BY status`).all(now(), ...A).forEach(r => { by[r.status] = r.n; }); } catch (e) {}
-    return { today: { tested: one(`SELECT COUNT(DISTINCT fan_id) n FROM twizz_tri_test WHERE at > ? ${W}`, d0, ...A), found: one(`SELECT COUNT(*) n FROM twizz_tri_handoff WHERE at > ? AND tx_id IS NOT NULL AND tx_id <> '' ${W}`, d0, ...A), taken: one(`SELECT COUNT(*) n FROM twizz_tri_handoff WHERE taken_at > ? ${W}`, d0, ...A) },
+    return { today: { tested: one(`SELECT COUNT(DISTINCT fan_id) n FROM twizz_tri_test WHERE at > ? ${W}`, d0, ...A), found: one(`SELECT COUNT(*) n FROM twizz_tri_handoff WHERE at > ? AND tx_id IS NOT NULL AND tx_id <> '' AND tx_id NOT LIKE 'ask:%' ${W}`, d0, ...A), taken: one(`SELECT COUNT(*) n FROM twizz_tri_handoff WHERE taken_at > ? ${W}`, d0, ...A) },
       waiting: one(`SELECT COUNT(*) n FROM twizz_tri_handoff WHERE taken_at IS NULL AND at > ? ${W}`, now() - 7 * DAY, ...A), payeur: by.payeur || 0, chaud: by.chaud || 0, waster: by.waster || 0, retest: by.retest || 0, rules: R }; }
   // pourquoi ce fan a ce statut (pour la messagerie et les vérifications)
   app.get("/api/tri/fan/:cid/:fan", auth, (req, res) => { const cid = str(req.params.cid), fan = str(req.params.fan); if (!canOpen(req.user, cid)) return res.status(404).json({ error: "Introuvable" });
@@ -162,6 +171,6 @@ module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
   // toutes les 20 s : un chatter a écrit à un payeur de la liste → il est à lui, l'IA est coupée pour ce fan (elle le voit avant sa prochaine réponse)
   setInterval(() => sync(), 20e3).unref();
   setInterval(() => { try { const t = now() - 60 * DAY; db.prepare("DELETE FROM twizz_tri_test WHERE at < ?").run(t); db.prepare("DELETE FROM twizz_tri_said WHERE at < ?").run(t); db.prepare("DELETE FROM twizz_tri_handoff WHERE at < ?").run(t); } catch (e) {} }, 6 * 3600e3).unref();
-  const api = { observe, classify, status, sold, sync, stats, add, visible, R };
+  const api = { observe, classify, status, sold, special, sync, stats, add, visible, R };
   app.locals.tri = api; return api;
 };

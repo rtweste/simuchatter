@@ -27,7 +27,7 @@ module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
   }
   const labelOf = t => { let r = null; try { r = db.prepare("SELECT m.name model, c.label FROM twizz_creators c LEFT JOIN models m ON m.id = c.model_id WHERE c.twizz_id = ?").get(t.creator_id); } catch (e) {} return (r && (r.model || r.label)) || "ta créatrice"; };
   const canOpen = (user, cid) => { try { return !!(user && cid && inbox && inbox.canOpen && inbox.canOpen({ ...user, rk: perms.rk(user) }, cid)); } catch (e) { return false; } };
-  const TITLE = { handoff: n => `${n} vient d'acheter avec l'IA : à toi de le reprendre`, mine: n => `${n} a acheté ton média`, shift: n => `${n} a acheté un média`, push: n => `${n} a payé un média push` };
+  const TITLE = { "ask-snap": n => `${n} demande un snap : à toi`, "ask-cam": n => `${n} demande une cam : à toi`, "ask-custom": n => `${n} demande une vidéo perso : à toi`, handoff: n => `${n} vient d'acheter avec l'IA : à toi de le reprendre`, mine: n => `${n} a acheté ton média`, shift: n => `${n} a acheté un média`, push: n => `${n} a payé un média push` };
   // ce que voit le chatter : le titre avec le nom du fan, la créatrice et le prix payé, et le lien vers la conversation
   function pub(r, user) {
     const name = r.fan_name || "Un fan", can = !!r.fan_id && canOpen(user, r.creator_id);
@@ -62,6 +62,15 @@ module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
     });
     return n;
   }
+  // un fan demande un snap, une cam ou une vidéo perso à l'IA : les chatters en shift sur la créatrice sont prévenus (tri.js décide quand)
+  function ask(h) { let mid = null; try { mid = (db.prepare("SELECT model_id FROM twizz_creators WHERE twizz_id = ?").get(h.creator_id) || {}).model_id; } catch (e) {}
+    const at = now(), kind = "ask-" + h.kind, key = `ask:${h.creator_id}:${h.fan_id}:${h.kind}:${new Date(at).toISOString().slice(0, 10)}`; let n = 0;
+    onShift(mid, at).forEach(uid => { const u = activeUser(uid); if (!u) return;
+      const info = db.prepare(`INSERT OR IGNORE INTO paid_notifs (user_id, tx_id, kind, creator_id, model_id, fan_id, fan_name, conv_id, msg_id, amount, at, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(uid, key, kind, h.creator_id, mid, str(h.fan_id), str(h.fan_name).slice(0, 80), str(h.conv_id), "", 0, at, at);
+      if (!info.changes) return; n++; const p = pub(db.prepare("SELECT * FROM paid_notifs WHERE id = ?").get(info.lastInsertRowid), u);
+      try { notify.push(uid, "paid", { title: "🔥 " + p.title, body: `${p.sub} · touche pour ouvrir la conversation`, url: p.url, tag: "paid-" + key, inapp: true, ttl: 6 * 3600 }).catch(() => {}); } catch (e) {} });
+    return n; }
+  app.locals.paidAsk = h => { try { return ask(h); } catch (e) { console.error("Demande spéciale", e.message); return 0; } };
   app.locals.paidNotif = id => { try { return onTx(id); } catch (e) { console.error("Achats des fans", e.message); return 0; } };
 
   // les achats pas encore montrés à cette personne (12 h au plus) ; rien dans la vue « en tant que »
