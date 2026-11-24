@@ -138,7 +138,7 @@ async function withLock(id, res, fn, what) {
     // message plus précis selon la cause
     const st = e.status || 0, m = String(e.message || "").toLowerCase();
     let msg = "L'IA n'a pas pu répondre. Réessayez dans un instant.";
-    if (m.includes("credit") || m.includes("billing") || m.includes("balance")) msg = "Crédit de l'API Anthropic épuisé : rechargez le compte sur console.anthropic.com.";
+    if (m.includes("credit") || m.includes("billing") || m.includes("balance")) msg = ai.simProvider() === "grok" ? "Grok refuse les appels : crédit xAI épuisé ou limite de dépense du mois atteinte. Vérifie sur console.x.ai (Billing)." : "Crédit de l'API Anthropic épuisé : rechargez le compte sur console.anthropic.com.";
     else if (st === 401 || st === 403) msg = "Clé d'API refusée : vérifiez ANTHROPIC_API_KEY dans Railway.";
     else if (st === 429 || st === 529 || st >= 500) msg = "L'IA est surchargée en ce moment. Réessayez dans une minute.";
     else if (what === "fan") msg = "Le fan n'a pas pu répondre. Touche « Relancer le fan » pour réessayer.";
