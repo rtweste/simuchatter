@@ -27,7 +27,7 @@ module.exports = function mount(app, db, auth, admin, { inbox, notify }) {
   function cooling(cid, fan) { try { const T = db.prepare("SELECT at FROM twizz_tx WHERE creator_id = ? AND fan_id = ? AND refund = 0 AND net > 0 AND type NOT LIKE '%subscri%' ORDER BY at").all(cid, fan).map(r => r.at);
       if (T.length < 3) return null; const days = []; for (let i = 1; i < T.length; i++) { const g = (T[i] - T[i - 1]) / 864e5; if (g > 0.5) days.push(g); } if (days.length < 2) return null;
       days.sort((a, b) => a - b); const usual = Math.max(1, days[Math.floor(days.length / 2)]), since = (now() - T[T.length - 1]) / 864e5;
-      return since >= Math.max(4, usual * 2) ? { since: Math.round(since), usual: Math.round(usual) } : null; } catch (e) { return null; } }
+      return since >= Math.max(4, usual * 2) && since <= 30 ? { since: Math.round(since), usual: Math.round(usual) } : null; } catch (e) { return null; } }
 
   // ---- Attend : lu dans la 1re page des conversations de chaque créatrice, toutes les 2 min (une requête par créatrice, la même que la messagerie) ----
   let busy = false;
