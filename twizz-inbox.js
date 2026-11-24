@@ -350,7 +350,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
         await new Promise(r => setTimeout(r, 1500)); } } finally { spBusy = false; } }
   app.locals.spendLater = (cid, fan) => { const k = cid + ":" + fan, t = SPSEEN.get(k); if ((t && Date.now() - t < 3600e3) || SPQ.length >= 400) return; SPSEEN.set(k, Date.now()); if (SPSEEN.size > 5000) SPSEEN.clear(); SPQ.push([cid, fan]); if (!spBusy) spRun(); };
   // l'IA fait le tri : ce chatter ne voit que les fans qualifiés (voir twizz-ai.js, app.locals.triInbox) ; null = rien n'est caché
-  const triOf = (cid, req) => { try { return app.locals.triInbox ? app.locals.triInbox(cid, req.user) : null; } catch (e) { return null; } };
+  // un manager ou le fondateur peut afficher la messagerie telle que la voient les chatters (?vue=chatters)
+  const mgrView = req => !!req.user && !["chatter", "tl"].includes(req.user.rk);
+  const triOf = (cid, req) => { try { if (!app.locals.triInbox) return null; if (req.query.vue === "chatters" && mgrView(req)) return app.locals.triInbox(cid, { ...req.user, rk: "chatter" }); return app.locals.triInbox(cid, req.user); } catch (e) { return null; } };
+  const triAvail = (cid, req) => { try { return mgrView(req) && !!app.locals.triInbox && !!app.locals.triInbox(cid, { ...req.user, rk: "chatter" }); } catch (e) { return false; } };
   // auteur du dernier message, faits du fan, aperçus, qui est dessus : pour toute liste de conversations
   function decorate(cid, items, req) {
     const by = authors(items.filter(c => !c.last.fromFan).map(c => c.last.id));
@@ -380,7 +383,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
       // la liste visible est courte : les pages suivantes sont lues tout de suite (3 de plus au maximum, gardées 45 s)
       for (let k = 0; k < 3 && items.length < 10 && raw.length && (!d || !d.totalPages || d.totalPages > outPage); k++) { outPage++; await new Promise(r => setTimeout(r, 350)); const jj = await GD(P(outPage), 45e3); d = jj && jj.data; const L = arr(jj); if (!L.length) break;
         const more = decorate(cid, applySeen(cid, L.map(c => conv(c, cid))), req), vis = more.filter(c => !c.fan.id || tri(c.fan.id)); hidden += more.length - vis.length; raw = L; items.push(...vis.filter(x => !items.some(y => y.id === x.id))); } }
-    return { tri: tri ? { hidden } : undefined, items, page: outPage, more: !!(d && (d.totalPages ? outPage < d.totalPages : raw.length >= 10)), aiStopped, sample: req.query.debug ? arr(j)[0] : undefined };
+    return { tri: tri ? { hidden } : undefined, triAvail: triAvail(cid, req), items, page: outPage, more: !!(d && (d.totalPages ? outPage < d.totalPages : raw.length >= 10)), aiStopped, sample: req.query.debug ? arr(j)[0] : undefined };
   }));
   app.get("/api/twizz/inbox/:cid/messages/:conv", auth, inbox, wrap(async req => {
     const cid = creatorOk(req.params.cid), page = Math.max(1, +req.query.page || 1), fanId = str(req.query.fan);
