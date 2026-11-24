@@ -533,7 +533,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const BANNED = ["t'es direct", "tes direct", "t es direct", "t'es chaud", "tes chaud", "t es chaud"];
   // « t'as raté », « ce que tu rates » : permis, mais une seule fois par conversation
   const RATE = ["ce que tu rates", "t'as rate", "tas rate", "t as rate", "tu rates", "tu vas rater", "t'as pas idee"];   // tics déjà repérés partout par la surveillance
-  const hasTic = (t, T) => { const x = " " + str(t).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ") + " "; return T.some(k => x.includes(" " + k + " ")); };
+  // « t'es direct », « t'es chaud » et leurs variantes (« t'es grave chaud », « t'es vraiment chaud là », « t'es trop direct ») : toujours interdits
+  const BANNED_RX = /(?:^|[^a-zà-ÿ])t['’ ]?es (?:(?:grave|vraiment|trop|bien|super|tellement|hyper|carrément|si|tout) )?(?:direct|chaud)(?![a-zà-ÿ])/i;
+  const hasTic = (t, T) => { if (T === BANNED || (Array.isArray(T) && T.some(k => BANNED.includes(k)))) { if (BANNED_RX.test(str(t))) return true; } const x = " " + str(t).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ") + " "; return T.some(k => x.includes(" " + k + " ")); };
   // il refuse le média ou le veut gratuit : elle le revend avec envie au lieu de répéter « c'est payant »
   const FREEQ = /\b(aper[çc]u|preview|avant d'?acheter|montre d'?abord|autre chose|une autre|pas [çc]a|gratuit|gratos|gratuitement|offert|offre[- ]?(le|moi)|cadeau|sans payer|pas payer|payer pas|trop cher|c'?est cher|non merci|nn merci|pas int[ée]ress[ée]|j'?en veux pas|refus)/i, BROKE = /\b(pas (de |d')?(thunes?|sous|argent|tune)|fauch[ée]|plus (de |d')?(thunes?|sous|argent)|fin de mois|pas les moyens)\b/i;
   const brokeT = t => /\b(pas (d['’ ]?argent|de sous|de thunes|les moyens)|[àa] d[ée]couvert|fauch[ée]|trop ch[èe]re?|peux pas payer|pas payer)\b/i.test(t) || (nv() && BROKE.test(t));
@@ -1713,6 +1715,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (act && act.kind === "floor") { const id = "f" + now(); floor = { id, price: act.sc.steps[act.k].floor }; state = { ...T0, lockId: id, lock_price: floor.price, floor_used: 1 }; }
     const mode = busy ? "Fan occupé : une bulle courte, pas de vente, pas de relance ensuite" : !plan ? "" : plan.after ? "Script terminé : elle raccompagne le fan, sans vendre" : plan.S ? `Script « ${plan.sc.title} » · étape ${plan.S.step + 1}/${plan.sc.steps.length}${plan.lock ? ` · média à ${eurs(plan.lock.price)} pas encore pris` : plan.force ? " · étape suivante due" : plan.step ? " · étape suivante possible" : ""}`
       : plan.launch.length ? `${plan.launch.length} script${plan.launch.length > 1 ? "s" : ""} disponible${plan.launch.length > 1 ? "s" : ""}, elle lance quand le fan est prêt` : plan.coffre ? "Tous les scripts déjà reçus : coffre en secours" : clip(plan.text.split("(")[0], 90);
+    // même filtre qu'en vrai : ses tics et les expressions interdites (une réécriture, sinon la bulle saute s'il en reste une)
+    if (!busy && !act && !tk && !al) { const T = [...new Set(tics(LL).concat(crossTics(c.id), BANNED))]; if (B.some(t => hasTic(t, T))) { let again = null;
+      try { again = unleak(await grok(TM.concat([{ role: "system", content: `Ta réponse reprend encore ${T.slice(0, 8).map(k => "« " + k + " »").join(", ")}, que tu as déjà écrit plusieurs fois. Réécris-la avec d'autres mots et une autre idée.` }]), { must: true })); } catch (e) {}
+      const B2 = again && !str(again.laisser).trim() ? shape(fresh(oneQ(bubbles(again)), said), LL) : []; if (B2.length && !B2.some(t => hasTic(t, T))) B = B2; else { const K = B.filter(t => !hasTic(t, T)); if (K.length) B = K; } } }
     let relu = null;
     if (nv() && !busy && !act && !tk && B.length && JUDGE_ST.has(stage)) { try { const v = await judge(LL, B, stage, ""); relu = v ? (v.ok ? "ok" : v.pb) : null;
         if (v && v.ok === false && v.pb) { const again = unleak(await grok(TM.concat([{ role: "system", content: REDO(v.pb) }]), { must: true }));
