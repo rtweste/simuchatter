@@ -54,6 +54,21 @@ select{min-width:130px}.nt{width:100%;min-width:180px}select:focus,.nt:focus{bor
 .ok{color:#5fd3a2;font:800 11px Inter;opacity:0;transition:opacity .3s;margin-left:6px}.ok.on{opacity:1}
 .sum{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 14px}
 .kp{padding:12px 14px;border-radius:14px;background:#111;border:1px solid #1c1c1c;min-width:150px}.kp b{display:block;font:900 20px Inter;letter-spacing:-.03em}.kp small{font:600 11.5px Inter;color:#7a7a7a}
+.att{margin:0 0 14px}.att .cap{color:#ff9a9a}.atb{display:flex;align-items:center;gap:10px}.atb .rl{margin-left:auto;font:700 11.5px Inter;color:#6a6a6a;background:none;border:0;cursor:pointer}.atb .rl:hover{color:#bdbdbd}
+.atg{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:8px}
+.atc{position:relative;padding:12px 14px;border-radius:16px;border:1px solid #1f1f1f;background:linear-gradient(135deg,color-mix(in srgb,var(--c) 10%,transparent),transparent 65%),#111;display:flex;gap:10px;align-items:flex-start}
+.atc b{display:block;font:800 13.5px Inter;color:#f2f2f2}.atc small{display:block;font:600 12px Inter;color:#8a8a8a;margin-top:2px}
+.atc .ic{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 16%,transparent);color:var(--c);flex:none;font:900 14px Inter}
+.atc .go{margin-left:auto;align-self:center;height:30px;padding:0 10px;border-radius:9px;border:1px solid #2a2a2a;background:#141414;color:#e8e8e8;font:800 11.5px Inter;text-decoration:none;display:inline-flex;align-items:center}
+.atc .go:hover{background:#1a1a1a}
+.stp{--c:#9a9a9a;display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px 0 8px;border-radius:999px;font:800 12px Inter;white-space:nowrap;color:color-mix(in srgb,var(--c) 80%,#fff);background:color-mix(in srgb,var(--c) 12%,transparent);border:1px solid color-mix(in srgb,var(--c) 30%,transparent)}
+.stp i{width:6px;height:6px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
+.fn{display:flex;align-items:center;gap:6px}.tg{width:24px;height:24px;border-radius:8px;border:1px solid #262626;background:#141414;color:#8a8a8a;cursor:pointer;display:grid;place-items:center;flex:none;transition:transform .3s}.tg.on{transform:rotate(90deg);color:#eee}
+.rs td{background:#0d0d0d;padding:14px 14px 16px 46px!important}
+.rsg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.rsb{padding:10px 12px;border-radius:13px;border:1px solid #1c1c1c;background:#111}.rsb .cap{display:block;margin-bottom:4px}.rsb p{margin:0;font:600 12.5px/1.5 Inter;color:#d9d9d9}.rsb.w{border-color:rgba(240,196,106,.35)}
+.rsf{margin-top:8px;font:600 11px Inter;color:#5a5a5a}
+@media(max-width:900px){.rsg{grid-template-columns:1fr 1fr}}
 .emp{padding:20px 8px;text-align:center;font:600 12.5px/1.55 Inter;color:#6a6a6a}
 @media(max-width:900px){.tg-w{padding:22px 16px 110px}.hd h1{font-size:30px}}
 </style>
@@ -68,6 +83,7 @@ select{min-width:130px}.nt{width:100%;min-width:180px}select:focus,.nt:focus{bor
   <p class="lead up" style="animation-delay:.04s" id="lead">Les fans qui dépensent le plus sur chaque créatrice. Donne à chacun un chatter attitré et note où en est le suivi : un gros client ne doit jamais rester sans réponse, ni être repris par plusieurs personnes à la fois.</p>
   <div class="tabs up" id="tabs"></div>
   <div class="sum up" id="sum"></div>
+  <div class="att up" id="att" hidden></div>
   <div class="tw up" id="g"><div class="emp">Chargement…</div></div>
 </div>
 </main>
@@ -77,7 +93,9 @@ select{min-width:130px}.nt{width:100%;min-width:180px}select:focus,.nt:focus{bor
 (() => {
 $("stars").innerHTML = Array.from({ length: 40 }, (_, i) => { const r = k => ((Math.sin(i * 9301 + k * 49297) + 1) / 2); const z = [1, 1, 1.5, 2][Math.floor(r(1) * 4)];
   return `<i style="left:${(r(2) * 100).toFixed(1)}%;top:${(r(3) * 100).toFixed(1)}%;width:${z}px;height:${z}px;opacity:${(.12 + r(4) * .35).toFixed(2)};animation-duration:${(2.5 + r(5) * 3.5).toFixed(1)}s;animation-delay:-${(r(6) * 6).toFixed(1)}s"></i>`; }).join("");
-let D = null, CUR = null;
+let D = null, CUR = null, WT = { fans: {}, todo: [] }; const OPEN = new Set();
+const ST = { attend: ["Attend", "#ff6b6b"], refroidit: ["Refroidit", "#7db4ff"], surveiller: ["À surveiller", "#f0c46a"], ok: ["OK", "#5fd3a2"] };
+const ICO = { attend: "!", surveiller: "✓", refroidit: "❄" };
 const eur = n => (Math.round(n * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + " €";
 const agoTxt = t => { const h = (Date.now() - t) / 3600e3; return h < 1 ? "il y a " + Math.max(1, Math.round(h * 60)) + " min" : h < 48 ? "il y a " + Math.round(h) + " h" : "il y a " + Math.round(h / 24) + " j"; };
 const heat = t => { const dd = (Date.now() - t) / 864e5; return dd <= 3 ? "hot" : dd <= 10 ? "warm" : "cold"; };
@@ -88,24 +106,35 @@ function paint() {
   document.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { CUR = b.dataset.c; paint(); });
   const c = C.find(x => x.id === CUR), top = c.fans.slice(0, 10).reduce((t, f) => t + f.month, 0);
   $("sum").innerHTML = `<div class="kp"><b>${eur(c.monthTotal)}</b><small>dépensés ce mois (hors abonnements)</small></div><div class="kp"><b>${c.buyers}</b><small>fans acheteurs ce mois</small></div><div class="kp"><b>${c.monthTotal ? Math.round(100 * top / c.monthTotal) : 0} %</b><small>faits par les 10 premiers</small></div>`;
+  const T = WT.todo || [];
+  $("att").hidden = !T.length && !WT.lastRead;
+  const lr = WT.lastRead ? "Relu par Grok " + agoTxt(WT.lastRead) : "Pas encore relu par Grok";
+  $("att").innerHTML = `<div class="atb"><span class="cap">${T.length ? "À traiter maintenant · " + T.length + (WT.more ? " (+" + WT.more + ")" : "") : "Rien à traiter pour l'instant"}</span><button class="rl" id="rl">${WT.reading ? "Relecture en cours…" : lr + " · relire maintenant"}</button></div>${T.length ? `<div class="atg">${T.map(t => { const q = new URLSearchParams({ cr: t.creator, fan: t.fan, name: t.name }); if (t.conv) q.set("conv", t.conv);
+    return `<div class="atc" style="--c:${ST[t.kind][1]}"><span class="ic">${ICO[t.kind]}</span><div><b>${esc(t.title)}</b><small>${esc(t.sub)}</small></div><a class="go" href="/messagerie?${q}">Ouvrir</a></div>`; }).join("")}</div>` : ""}`;
+  if ($("rl")) $("rl").onclick = async () => { try { await api("/api/admin/clients/read", { body: {} }); WT.reading = true; paint(); notify("Relecture lancée", "Grok relit les conversations des gros clients, ça prend quelques minutes", "ok"); setTimeout(loadWatch, 120e3); } catch (e) { notify("Impossible", e.message, "err"); } };
   const opt = u => `<option value="">— Personne —</option>` + D.chatters.map(x => `<option value="${x.id}" ${x.id === u ? "selected" : ""}>${esc(x.username)}</option>`).join("");
-  $("g").innerHTML = c.fans.length ? `<table><thead><tr><th></th><th>Fan</th><th style="text-align:right">Ce mois</th><th style="text-align:right">Depuis le début</th><th>Dernier achat</th><th>Chatter attitré</th><th>Suivi</th></tr></thead><tbody>${c.fans.map((f, i) => {
+  $("g").innerHTML = c.fans.length ? `<table><thead><tr><th></th><th>Fan</th><th style="text-align:right">Ce mois</th><th>État</th><th style="text-align:right">Depuis le début</th><th>Dernier achat</th><th>Chatter attitré</th><th>Suivi</th></tr></thead><tbody>${c.fans.map((f, i) => {
     const q = new URLSearchParams({ cr: c.id, fan: f.fan, name: f.name }); if (f.conv) q.set("conv", f.conv);
-    return `<tr data-f="${esc(f.fan)}"><td class="rk">${i + 1}</td><td class="fn"><a href="/messagerie?${q}">${esc(f.name)}</a></td>
-      <td class="num">${eur(f.month)}<small>${f.nMonth} achat${f.nMonth > 1 ? "s" : ""}</small></td><td class="num">${eur(f.total)}<small>${f.n} achat${f.n > 1 ? "s" : ""}</small></td>
+    const w = (WT.fans || {})[c.id + "|" + f.fan] || { state: "ok" }, s = ST[w.state] || ST.ok, b = w.brief, k = c.id + "|" + f.fan, op = OPEN.has(k);
+    const tip = w.state === "attend" ? `Sans réponse depuis ${w.waitMin} min` : w.state === "refroidit" && w.cool ? `${w.cool.since} j sans achat, d'habitude ${w.cool.usual} j` : w.state === "surveiller" && b ? b.attention : "";
+    const rs = op ? `<tr class="rs"><td colspan="8">${b ? `<div class="rsg"><div class="rsb"><span class="cap">Il aime</span><p>${esc(b.aime || "—")}</p></div><div class="rsb"><span class="cap">Il a demandé</span><p>${esc(b.demande || "Rien en attente")}</p></div><div class="rsb"><span class="cap">On lui a promis</span><p>${esc(b.promis || "Rien en attente")}</p></div><div class="rsb ${b.attention ? "w" : ""}"><span class="cap">Attention</span><p>${esc(b.attention || "Rien à signaler")}</p></div></div><div class="rsf">Résumé relu par Grok ${agoTxt(b.at)}</div>` : `<div class="rsf">Pas encore de résumé : il sera fait à la prochaine relecture de Grok (chaque matin vers 9 h).</div>`}</td></tr>` : "";
+    return `<tr data-f="${esc(f.fan)}"><td class="rk">${i + 1}</td><td><span class="fn"><button class="tg ${op ? "on" : ""}" data-k="${esc(k)}" aria-label="Voir le résumé">›</button><a href="/messagerie?${q}">${esc(f.name)}</a></span></td>
+      <td class="num">${eur(f.month)}<small>${f.nMonth} achat${f.nMonth > 1 ? "s" : ""}</small></td><td><span class="stp" style="--c:${s[1]}" title="${esc(tip)}"><i></i>${s[0]}</span></td><td class="num">${eur(f.total)}<small>${f.n} achat${f.n > 1 ? "s" : ""}</small></td>
       <td><span class="ago ${heat(f.last)}">${agoTxt(f.last)}</span></td>
       <td><select data-u="${esc(f.fan)}">${opt(f.user)}</select><span class="ok"></span></td>
-      <td><input class="nt" data-n="${esc(f.fan)}" maxlength="400" value="${esc(f.note)}" placeholder="Ex. veut une cam ce week-end"></td></tr>`; }).join("")}</tbody></table>`
+      <td><input class="nt" data-n="${esc(f.fan)}" maxlength="400" value="${esc(f.note)}" placeholder="Ex. veut une cam ce week-end"></td></tr>${rs}`; }).join("")}</tbody></table>`
     : `<div class="emp">Pas encore d'acheteur sur cette créatrice.</div>`;
   const save = async (fan, body, el) => { try { await api("/api/admin/clients/assign", { body: { creator: c.id, fan, ...body } }); const f = c.fans.find(x => x.fan === fan); if (f) Object.assign(f, body.user !== undefined ? { user: body.user ? +body.user : null } : { note: body.note });
       const ok = el.parentElement.querySelector(".ok"); if (ok) { ok.textContent = "enregistré"; ok.classList.add("on"); setTimeout(() => ok.classList.remove("on"), 1500); } else notify("Enregistré", "", "ok"); } catch (e) { notify("Impossible", e.message, "err"); } };
+  document.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { const k = b.dataset.k; OPEN.has(k) ? OPEN.delete(k) : OPEN.add(k); paint(); });
   document.querySelectorAll("[data-u]").forEach(s => s.onchange = () => save(s.dataset.u, { user: s.value || null }, s));
   document.querySelectorAll("[data-n]").forEach(inp => { const go = () => { const f = c.fans.find(x => x.fan === inp.dataset.n); if (f && inp.value !== f.note) save(inp.dataset.n, { note: inp.value }, inp); }; inp.onblur = go; inp.onkeydown = e => { if (e.key === "Enter") inp.blur(); }; });
 }
+async function loadWatch() { try { WT = await api("/api/admin/clients/watch"); if (D) paint(); } catch (e) {} }
 (async () => {
   const me = await api("/api/me"); renderShell("clients", me);
   if (me.role !== "admin" || me.rk === "assistant") { $("g").innerHTML = `<div class="emp">Réservé aux managers</div>`; return; }
-  try { D = await api("/api/admin/clients"); paint(); } catch (e) { $("g").innerHTML = `<div class="emp">${esc(e.message)}</div>`; }
+  try { D = await api("/api/admin/clients"); paint(); loadWatch(); setInterval(loadWatch, 60e3); } catch (e) { $("g").innerHTML = `<div class="emp">${esc(e.message)}</div>`; }
 })();
 })();
 </script>

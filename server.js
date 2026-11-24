@@ -566,6 +566,7 @@ const NOTIFY = require("./notify")(app, db, auth, admin, { bcrypt, PROD, gest: G
 require("./backups")(app, db, auth, admin, { dbPath: DB_PATH, notify: NOTIFY, gest: GEST });   // sauvegardes de nuit + téléchargement fondateur
 const TWIZZ = require("./twizz")(app, db, auth, admin, { gest: GEST });   // CRM Twizz : ventes automatiques (lecture seule)
 const INBOX = require("./twizz-inbox")(app, db, auth, admin, { twizz: TWIZZ, ai, notify: NOTIFY });   // messagerie Twizz (fondateur, puis l'équipe qu'il ouvre)
+require("./whales")(app, db, auth, admin, { inbox: INBOX, notify: NOTIFY });   // gros clients : sans réponse, refroidissement, relecture Grok quotidienne
 require("./paid")(app, db, auth, { notify: NOTIFY, inbox: INBOX, perms: PERM });   // achats des fans : le chatter est prévenu, avec le nom du fan et un lien vers la conversation
 require("./tri")(app, db, auth, { notify: NOTIFY, inbox: INBOX, perms: PERM });   // tri des fans par l'IA : payeurs, doutes, time wasters, et liste « à reprendre » pour les chatters
 require("./twizz-ai")(app, db, auth, admin, { twizz: TWIZZ, inbox: INBOX, notify: NOTIFY, gest: GEST, dataDir: path.dirname(DB_PATH) });   // IA de secours (Grok) quand un chatter manque
