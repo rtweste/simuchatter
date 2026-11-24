@@ -150,10 +150,21 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const slowRow = (cid, fan) => { try { return db.prepare("SELECT at, n FROM twizz_ai_slow WHERE creator_id = ? AND fan_id = ?").get(cid, fan) || null; } catch (e) { return null; } };
   const slowTag = (cid, fan) => { try { return db.prepare("SELECT t.name FROM twizz_fan_tags ft JOIN twizz_tags t ON t.id = ft.tag_id WHERE ft.creator_id = ? AND ft.fan_id = ?").all(cid, fan).some(r => SLOW_TAG.test(str(r.name))); } catch (e) { return false; } };
   // { n } si ce fan est à ralentir (n = réponses déjà reçues sur 24 h), sinon null ; jamais un fan qui a déjà acheté
-  function slowFan(cid, fan, spent) { if (!fan) return null; if (spent == null) { try { spent = (db.prepare("SELECT spend FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, fan) || {}).spend || 0; } catch (e) { spent = 0; } } if (spent > 0) return null; const r = slowRow(cid, fan), live = r && now() - r.at < SLOW_TTL; if (!live && !slowTag(cid, fan)) return null;
-    try { if (db.prepare("SELECT 1 FROM twizz_tx WHERE creator_id = ? AND fan_id = ? AND refund = 0 AND net > 0 AND at > ? LIMIT 1").get(cid, fan, now() - 30 * 864e5)) return null; } catch (e) {}   // il a acheté ce mois-ci : il n'est pas à ralentir
+  function slowFan(cid, fan, spent) { if (!fan) return null; if (spent == null) { try { spent = (db.prepare("SELECT spend FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, fan) || {}).spend || 0; } catch (e) { spent = 0; } }
+    const r = slowRow(cid, fan), live = r && now() - r.at < SLOW_TTL, tagged = slowTag(cid, fan); if (!live && !tagged) return null;
+    let bought = spent > 0; if (!bought) try { bought = !!db.prepare("SELECT 1 FROM twizz_tx WHERE creator_id = ? AND fan_id = ? AND refund = 0 AND net > 0 AND at > ? LIMIT 1").get(cid, fan, now() - 30 * 864e5); } catch (e) {}
+    if (bought) { if (tagged) untagBroke(cid, fan); return null; }   // il a acheté : plus ralenti, et le tag que l'IA avait posé saute
     return { n: live ? r.n : 0 }; }
-  const slowSaid = (cid, fan) => { try { const r = slowRow(cid, fan); if (!r || now() - r.at >= SLOW_TTL) db.prepare("INSERT INTO twizz_ai_slow (creator_id, fan_id, at, n) VALUES (?,?,?,0) ON CONFLICT(creator_id, fan_id) DO UPDATE SET at = excluded.at, n = 0").run(cid, fan, now()); } catch (e) {} };
+  // l'IA pose elle-même le tag de l'équipe (« Peux pas payer ») quand un fan qui n'a jamais acheté dit qu'il n'a pas d'argent ; elle le retire s'il achète. Un tag posé à la main par l'équipe n'est jamais retiré par l'IA
+  const NOMONEY = t => { const x = str(t).toLowerCase().replace(/['’]/g, " ").replace(/\s+/g, " ");   // « j ai plus d argent », « jai pas dargent » : écrit avec ou sans apostrophe
+    if (/\b(t as|tu as|tu n as|t es|tu es|vous avez) (pas|plus)\b/.test(x)) return false;   // il parle d'elle, pas de lui
+    return /\b(pas|plus|aucun) (trop )?(de |d ?)?(thunes?|tunes?|sous(?![- ]v[êe]t)|argent|fric|oseille)\b|\bfauch[ée]e?s?(?![a-z])|[àa] d[ée]couvert\b|\bfin de mois\b|\bpas les moyens\b|\b(peux|peut|px) (pas|plus) (payer|acheter)\b|\bpas de quoi payer\b|\b(plus|pas) un rond\b|\brien sur (mon|ma) (compte|carte)\b/.test(x); };
+  const slowTags = () => { try { return db.prepare("SELECT id, name FROM twizz_tags WHERE rule IS NULL AND COALESCE(active, 1) = 1").all().filter(r => SLOW_TAG.test(str(r.name))); } catch (e) { return []; } };
+  function tagBroke(cid, fan) { try { let T = slowTags(); if (!T.length) { db.prepare("INSERT INTO twizz_tags (name, color, active, at) VALUES ('Peux pas payer', '#ff8a8a', 1, ?)").run(now()); T = slowTags(); } if (!T.length) return;
+      if (db.prepare("INSERT OR IGNORE INTO twizz_fan_tags (creator_id, fan_id, tag_id, auto, at) VALUES (?,?,?,1,?)").run(cid, fan, T[0].id, now()).changes) db.prepare("INSERT INTO twizz_tag_log (creator_id, fan_id, tag_id, action, at) VALUES (?,?,?,'auto+',?)").run(cid, fan, T[0].id, now()); } catch (e) {} }
+  function untagBroke(cid, fan) { try { slowTags().forEach(t => { if (db.prepare("DELETE FROM twizz_fan_tags WHERE creator_id = ? AND fan_id = ? AND tag_id = ? AND auto = 1").run(cid, fan, t.id).changes) db.prepare("INSERT INTO twizz_tag_log (creator_id, fan_id, tag_id, action, at) VALUES (?,?,?,'auto-',?)").run(cid, fan, t.id, now()); }); } catch (e) {} }
+  const slowSaid = (cid, fan) => { try { const r = slowRow(cid, fan); if (!r || now() - r.at >= SLOW_TTL) db.prepare("INSERT INTO twizz_ai_slow (creator_id, fan_id, at, n) VALUES (?,?,?,0) ON CONFLICT(creator_id, fan_id) DO UPDATE SET at = excluded.at, n = 0").run(cid, fan, now()); } catch (e) {}
+    if (slowFan(cid, fan)) tagBroke(cid, fan); };   // jamais acheté : le tag de l'équipe est posé
   const slowCount = (cid, fan) => { try { const r = slowRow(cid, fan); if (r && now() - r.at < SLOW_TTL) db.prepare("UPDATE twizz_ai_slow SET n = n + 1 WHERE creator_id = ? AND fan_id = ?").run(cid, fan); else db.prepare("INSERT INTO twizz_ai_slow (creator_id, fan_id, at, n) VALUES (?,?,?,1) ON CONFLICT(creator_id, fan_id) DO UPDATE SET at = excluded.at, n = 1").run(cid, fan, now()); } catch (e) {} };
   const sentOn = d => (db.prepare("SELECT n FROM twizz_ai_sentday WHERE day = ?").get(d) || {}).n || 0, sentMark = () => { try { db.prepare("INSERT INTO twizz_ai_sentday (day, n) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET n = n + 1").run(dayOf(Date.now())); } catch (e) {} };
   const spent7 = () => { const d = []; for (let i = 0; i < 7; i++) d.push(dayOf(Date.now() - i * 864e5)); return db.prepare(`SELECT COALESCE(SUM(cost), 0) c FROM twizz_ai_usage WHERE day IN (${d.map(() => "?").join(",")})`).get(...d).c; };
@@ -967,7 +978,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const bit = iMe >= 0 && iMe < L.length - 1 && freshAsk(L[iMe]) && (TEASE_ASK.test(lastMe) || PITCH.test(lastMe)) && !/\b(non|nan|nn|pas (envie|int[ée]ress)|je veux savoir)\b/i.test(lfT);
     // il vient de dire qu'il n'a pas d'argent : pas de payant tant qu'il ne demande pas lui-même
     const broke = !relance && brokeT(L.slice(-8).filter(m => m.fromFan).map(m => str(m.text)).join(" · ")) && !WANTSEE.test(lfT) && !sendW(lfT);
-    if (!relance && lastFan && (BROKE.test(str(lastFan.text)) || brokeT(str(lastFan.text))) && !/trop ch[èe]re?/i.test(str(lastFan.text))) slowSaid(cr.id, c.fan.id);   // il vient de dire qu'il n'a pas d'argent : noté pour 24 h (réponses ralenties s'il n'a jamais acheté)
+    if (!relance && lastFan && NOMONEY(lfT)) slowSaid(cr.id, c.fan.id);   // il vient de dire qu'il n'a pas d'argent : noté pour 24 h (réponses ralenties s'il n'a jamais acheté)
     // « arrête » dans ses derniers messages : plus aucune proposition ; « chauffe-moi avant de payer » : pas de média dans cette réponse
     const stopped = !relance && L.slice(-10).some(m => m.fromFan && STOPFAN.test(str(m.text))) && !WANTSEE.test(lfT), warm = !relance && !stopped && WARMW.test(lfT);
     // il dit oui ou demande franchement, juste après une proposition ou un média : le média part, quels que soient les délais
@@ -1333,8 +1344,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
                 .run(r.id, c.id, c.fan.id, c.fan.name, `Fan tagué ${nm} : laissé à l'équipe`, now()); continue; } }
           const value = (spend.get(cr.id, c.fan.id) || {}).spend || 0, slow = slowFan(cr.id, c.fan.id, value);   // fan sans argent qui n'a jamais acheté : réponses plus lentes, plafonnées, pas de relance
           if (c.last.fromFan) {
-            const wait = slow ? SLOW_WAIT : (C.waitMin + (parseInt(c.id.slice(-4), 16) || 0) % (Math.max(1, C.waitMax - C.waitMin) + 1)) * 1000;   // laisse le fan finir d'écrire, comme quelqu'un qui répond
-            if (age >= wait && (row.replies || 0) < C.perFan && !(slow && slow.n >= SLOW_MAX) && row.last_fan_msg !== c.last.id) L.push({ c, value, t });
+            const eager = slow && (asks(str(c.last.text)) || WANTSEE.test(str(c.last.text)) || sendW(str(c.last.text)));   // même ralenti, s'il demande à voir ou à acheter, il est servi tout de suite
+            const wait = slow && !eager ? SLOW_WAIT : (C.waitMin + (parseInt(c.id.slice(-4), 16) || 0) % (Math.max(1, C.waitMax - C.waitMin) + 1)) * 1000;   // laisse le fan finir d'écrire, comme quelqu'un qui répond
+            if (age >= wait && (row.replies || 0) < C.perFan && !(slow && !eager && slow.n >= SLOW_MAX) && row.last_fan_msg !== c.last.id) L.push({ c, value, t });
           } else if (C.relance && !quiet(C) && !slow) {
             // suivie dans une séance précédente (moins de 24 h) : la relance part quand même ; son payant pas encore ouvert est relancé après le délai réglé (pas 3 h)
             const rr = row.relances != null ? row : (prevRow.get(c.id, r.id, now() - 24 * 3600e3) || {}); if (!rr.replies || rr.busy || rr.blocked) continue;
