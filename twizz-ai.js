@@ -1093,6 +1093,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const L = ((j && j.data && j.data.data) || []).map(m => msg(m, c.fan.id)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(-20);
     const last = L[L.length - 1]; if (!last) return false;
     if (relance ? last.fromFan : (!last.fromFan || last.id === row.last_fan_msg)) return false;   // le fan a réécrit, ou déjà répondu
+    // un message de l'équipe dans la conversation ces 30 dernières minutes, envoyé du site ou directement sur Twizz : un chatter s'en occupe, l'IA ne répond pas
+    { const S = db.prepare("SELECT msg_id, at, text, price FROM twizz_sent WHERE conv_id = ? AND via = 'ia' AND at > ?").all(c.id, now() - 6 * 3600e3), ids = new Set(S.filter(x => x.msg_id).map(x => str(x.msg_id)));
+      const ai = m => ids.has(str(m.id)) || S.some(x => Math.abs(x.at - (Date.parse(m.at) || 0)) < 120e3 && (m.type === "FILE" ? x.price > 0 || !x.text : str(x.text).trim() && str(m.text).includes(str(x.text).trim().slice(0, 40))));
+      const team = L.filter(m => !m.fromFan && now() - (Date.parse(m.at) || 0) < 30 * 60e3 && !ai(m));
+      if (team.length) { if (team.some(m => !/^\s*$/.test(str(m.text)) || m.type === "FILE")) return false; } }
+    if (handed(cr, c.fan.id)) return false;   // fan de la messagerie du chatter pendant son shift
     whatOf(L);   // ce que contenaient les médias qu'elle a envoyés
     // achats vus dans la conversation : pour « Ce qui vend »
     { const ok = L.filter(m => !m.fromFan && m.status === "accepted" && m.price > 0); if (ok.length) { const u = db.prepare("UPDATE twizz_ai_sold SET paid_at = ? WHERE msg_id = ? AND paid_at IS NULL"); ok.forEach(m => u.run(Date.parse(m.at) || now(), m.id)); } }
@@ -1479,7 +1485,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   // tri dans la messagerie : un fan payeur ou prêt à payer passe directement dans la messagerie des chatters, et l'IA arrête de lui répondre.
   // Seule exception : si aucun chatter n'est en shift sur la créatrice, l'IA continue, pour qu'il ne reste pas sans réponse.
   const onShiftN = mid => { if (!mid) return 0; try { return db.prepare("SELECT COUNT(*) n FROM clocks c JOIN users u ON u.id = c.user_id WHERE c.model_id = ? AND c.end_at IS NULL AND u.role <> 'admin'").get(mid).n; } catch (e) { return 0; } };
-  const handed = (cr, fan) => { try { if (!gcfg().triInbox || !fan || !TRI() || !onShiftN(cr.model_id)) return false; const st = TRI().status(cr.id, fan).status; return st === "payeur" || st === "chaud"; } catch (e) { return false; } };
+  // partage des fans quand un chatter est en shift sur la créatrice : un fan visible dans la messagerie du chatter est à lui, l'IA ne lui répond pas.
+  // Tri éteint : le chatter voit tous les fans, donc l'IA ne répond à personne pendant son shift (elle reste en route et reprend à la fin du shift).
+  const handed = (cr, fan) => { try { if (!fan || !onShiftN(cr.model_id)) return false; if (!gcfg().triInbox || !TRI()) return true; return !!TRI().visible(cr.id, fan); } catch (e) { return true; } };
   function keepOn() { const C = gcfg(); if (!C.always || !aiOn() || !XAI() || !sendOn()) return;
     for (const c of mapped()) { if (!c || !c.id || runOf(c.id) || !mcfg(c.id).ok) continue;
       const last = db.prepare("SELECT ended_by, ended_at, end_reason FROM twizz_ai_runs WHERE creator_id = ? ORDER BY id DESC LIMIT 1").get(c.id); if (last && last.ended_by && /^Arrêtée par /.test(str(last.end_reason)) && last.ended_at > ALWAYS_SINCE()) continue;   // un arrêt manuel d'avant le mode « toujours en route » ne compte pas
