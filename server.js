@@ -567,6 +567,7 @@ require("./backups")(app, db, auth, admin, { dbPath: DB_PATH, notify: NOTIFY, ge
 const TWIZZ = require("./twizz")(app, db, auth, admin, { gest: GEST });   // CRM Twizz : ventes automatiques (lecture seule)
 const INBOX = require("./twizz-inbox")(app, db, auth, admin, { twizz: TWIZZ, ai });   // messagerie Twizz (fondateur, puis l'équipe qu'il ouvre)
 require("./paid")(app, db, auth, { notify: NOTIFY, inbox: INBOX, perms: PERM });   // achats des fans : le chatter est prévenu, avec le nom du fan et un lien vers la conversation
+require("./tri")(app, db, auth, { notify: NOTIFY, inbox: INBOX, perms: PERM });   // tri des fans par l'IA : payeurs, doutes, time wasters, et liste « à reprendre » pour les chatters
 require("./twizz-ai")(app, db, auth, admin, { twizz: TWIZZ, inbox: INBOX, notify: NOTIFY, gest: GEST, dataDir: path.dirname(DB_PATH) });   // IA de secours (Grok) quand un chatter manque
 require("./twizz-creator")(app, db, auth, admin, { gest: GEST, notify: NOTIFY, dataDir: path.dirname(DB_PATH) });   // publications et vidéos de présentation (compte de chaque créatrice)
 require("./controle")(app, db, auth, admin);   // « À vérifier » : ventes automatiques et médias offerts qui sortent des clous

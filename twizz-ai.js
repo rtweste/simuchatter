@@ -166,12 +166,14 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const slowRow = (cid, fan) => { try { return db.prepare("SELECT at, n FROM twizz_ai_slow WHERE creator_id = ? AND fan_id = ?").get(cid, fan) || null; } catch (e) { return null; } };
   const slowTag = (cid, fan) => { try { return db.prepare("SELECT t.name FROM twizz_fan_tags ft JOIN twizz_tags t ON t.id = ft.tag_id WHERE ft.creator_id = ? AND ft.fan_id = ?").all(cid, fan).some(r => SLOW_TAG.test(str(r.name))); } catch (e) { return false; } };
   // { n } si ce fan est à ralentir (n = réponses déjà reçues sur 24 h), sinon null ; jamais un fan qui a déjà acheté
-  function slowFan(cid, fan, spent) { if (!fan) return null; if (spent == null) { try { spent = (db.prepare("SELECT spend FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, fan) || {}).spend || 0; } catch (e) { spent = 0; } }
-    const r = slowRow(cid, fan), live = r && now() - r.at < SLOW_TTL, tagged = slowTag(cid, fan), many = !live && !tagged && unpaidOf(cid, fan) >= SLOW_UNPAID; if (!live && !tagged && !many) return null;
-    let bought = spent > 0; if (!bought) try { bought = !!db.prepare("SELECT 1 FROM twizz_tx WHERE creator_id = ? AND fan_id = ? AND refund = 0 AND net > 0 AND at > ? LIMIT 1").get(cid, fan, now() - 30 * 864e5); } catch (e) {}
-    if (bought) { if (tagged) untagBroke(cid, fan); return null; }   // il a acheté : plus ralenti, et le tag que l'IA avait posé saute
-    if (many) tagBroke(cid, fan);   // il ne dit rien mais ne paie jamais : 4 médias payants reçus en 48 h, aucun achat → le tag de l'équipe est posé
-    return { n: live ? r.n : 0 }; }
+  // Depuis le tri des fans : seul un time waster prouvé (plusieurs offres vues et pas achetées sur plusieurs jours, voir tri.js) ou un fan tagué à la main par l'équipe est ralenti.
+  // Dire une fois « j'ai pas d'argent » ou laisser quelques médias fermés ne suffit plus : c'est un doute, pas un verdict.
+  const TRI = () => app.locals.tri || null, triOf = (cid, fan) => { try { return TRI() ? TRI().status(cid, fan) : { status: "test" }; } catch (e) { return { status: "test" }; } };
+  function slowFan(cid, fan, spent) { if (!fan) return null; const tagged = slowTag(cid, fan), tw = triOf(cid, fan).status === "waster"; if (!tagged && !tw) return null;
+    if (tagged && !tw) { if (spent == null) { try { spent = (db.prepare("SELECT spend FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, fan) || {}).spend || 0; } catch (e) { spent = 0; } }
+      let bought = spent > 0; if (!bought) try { bought = !!db.prepare("SELECT 1 FROM twizz_tx WHERE creator_id = ? AND fan_id = ? AND refund = 0 AND net > 0 AND at > ? LIMIT 1").get(cid, fan, now() - 30 * 864e5); } catch (e) {}
+      if (bought) return null; }   // tagué par l'équipe mais il a acheté depuis : plus ralenti
+    const r = slowRow(cid, fan), live = r && now() - r.at < SLOW_TTL; return { n: live ? r.n : 0 }; }
   // l'IA pose elle-même le tag de l'équipe (« Peux pas payer ») quand un fan qui n'a jamais acheté dit qu'il n'a pas d'argent ; elle le retire s'il achète. Un tag posé à la main par l'équipe n'est jamais retiré par l'IA
   const NOMONEY = t => { const x = str(t).toLowerCase().replace(/['’]/g, " ").replace(/\s+/g, " ");   // « j ai plus d argent », « jai pas dargent » : écrit avec ou sans apostrophe
     if (/\b(t as|tu as|tu n as|t es|tu es|vous avez) (pas|plus)\b/.test(x)) return false;   // il parle d'elle, pas de lui
@@ -180,10 +182,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   function tagBroke(cid, fan) { try { let T = slowTags(); if (!T.length) { db.prepare("INSERT INTO twizz_tags (name, color, active, at) VALUES ('Peux pas payer', '#ff8a8a', 1, ?)").run(now()); T = slowTags(); } if (!T.length) return;
       if (db.prepare("INSERT OR IGNORE INTO twizz_fan_tags (creator_id, fan_id, tag_id, auto, at) VALUES (?,?,?,1,?)").run(cid, fan, T[0].id, now()).changes) db.prepare("INSERT INTO twizz_tag_log (creator_id, fan_id, tag_id, action, at) VALUES (?,?,?,'auto+',?)").run(cid, fan, T[0].id, now()); } catch (e) {} }
   function untagBroke(cid, fan) { try { slowTags().forEach(t => { if (db.prepare("DELETE FROM twizz_fan_tags WHERE creator_id = ? AND fan_id = ? AND tag_id = ? AND auto = 1").run(cid, fan, t.id).changes) db.prepare("INSERT INTO twizz_tag_log (creator_id, fan_id, tag_id, action, at) VALUES (?,?,?,'auto-',?)").run(cid, fan, t.id, now()); }); } catch (e) {} }
-  const slowSaid = (cid, fan) => { try { const r = slowRow(cid, fan); if (!r || now() - r.at >= SLOW_TTL) db.prepare("INSERT INTO twizz_ai_slow (creator_id, fan_id, at, n) VALUES (?,?,?,0) ON CONFLICT(creator_id, fan_id) DO UPDATE SET at = excluded.at, n = 0").run(cid, fan, now()); } catch (e) {}
-    if (slowFan(cid, fan)) tagBroke(cid, fan); };   // jamais acheté : le tag de l'équipe est posé
   const slowCount = (cid, fan) => { try { const r = slowRow(cid, fan); if (r && now() - r.at < SLOW_TTL) db.prepare("UPDATE twizz_ai_slow SET n = n + 1 WHERE creator_id = ? AND fan_id = ?").run(cid, fan); else db.prepare("INSERT INTO twizz_ai_slow (creator_id, fan_id, at, n) VALUES (?,?,?,1) ON CONFLICT(creator_id, fan_id) DO UPDATE SET at = excluded.at, n = 1").run(cid, fan, now()); } catch (e) {} };
   const msgDay = d => db.prepare("SELECT * FROM twizz_ai_msgday WHERE day = ?").get(d) || { n: 0, calls: 0, tin: 0, tcached: 0, cost: 0 }, sentMark = () => { try { db.prepare("INSERT INTO twizz_ai_msgday (day, n) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET n = n + 1").run(dayOf(Date.now())); } catch (e) {} };
+  // une fois, à l'arrivée du tri des fans : les tags « Peux pas payer » que l'IA avait posés sur une seule phrase ou sur 4 médias en 48 h sautent (les tags posés à la main restent) ; chaque fan est rejugé sur les nouvelles règles
+  if (!S.get("twizz_ai_tri_fix_1", 0)) { try { slowTags().forEach(t => { db.prepare("SELECT creator_id, fan_id FROM twizz_fan_tags WHERE tag_id = ? AND auto = 1").all(t.id).forEach(x => { db.prepare("DELETE FROM twizz_fan_tags WHERE creator_id = ? AND fan_id = ? AND tag_id = ? AND auto = 1").run(x.creator_id, x.fan_id, t.id);
+      try { db.prepare("INSERT INTO twizz_tag_log (creator_id, fan_id, tag_id, action, at) VALUES (?,?,?,'auto-',?)").run(x.creator_id, x.fan_id, t.id, now()); } catch (e) {} }); }); db.prepare("DELETE FROM twizz_ai_slow").run(); } catch (e) {} S.set("twizz_ai_tri_fix_1", 1); }
   // une fois : le 24/11 de 12 h 25 à la mise en ligne de ce correctif, le compte xAI était à sec et chaque appel a été pris pour un refus de contenu. Les fans écartés à tort reviennent dans la file, les faux refus sortent du coût
   if (!S.get("twizz_ai_credit_fix_1", 0)) { try { const t0 = Date.parse("2026-11-24T11:25:00Z");
       const n = db.prepare("UPDATE twizz_ai_convs SET blocked = NULL, last_fan_msg = NULL WHERE blocked LIKE 'Grok refuse de répondre%' AND at >= ?").run(t0).changes;
@@ -565,6 +568,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const WHYQ = /^(?:mais |bah |ah |euh |et )?(?:pourquoi|pk|pq|pkoi|pourkoi|comment [çc]a|de quoi|c['’ ]?est[- ][àa][- ]dire|genre quoi|hein|quoi)(?: (?:[çc]a|tu dis [çc]a|bb|b[ée]b[ée]))?[\s?!.]*$/i;
   const PERCHE_NOW = "Il vient de te tendre une perche coquine et ta réponse la laisse tomber (elle ferme la discussion ou change de sujet). Réécris-la : rebondis sur ce qu'il vient de dire, avec envie (ce que ça te fait, ce que tu imagines, ou une question qui fait monter la tension). Pas de question sur sa ville, son âge, son travail, sa journée ou son sommeil. Rien à vendre ni à promettre ici.";
   // réponses qui ferment (« c'est bon à savoir », « trop bien ça »…) et questions de small talk
+  // écrire comme un vrai texto : pas de virgule, pas de point-virgule, pas de point final, pas de majuscule en début de phrase (les « ... », « ? » et « ! » restent)
+  const texto = t => str(t).replace(/\s*[,;]\s*/g, " ").replace(/\s+—\s+|\s+–\s+/g, " ").replace(/([a-zà-ÿ0-9\p{Extended_Pictographic}])\.(\s+)(\S)(?=(.?))/giu, (m, a, b, c, d) => a + b + (/[A-ZÀ-Ý]/.test(c) && !/[A-ZÀ-Ý]/.test(d) ? c.toLowerCase() : c)).replace(/([^.…\s])\.\s*$/u, "$1")
+    .replace(/^(\s*)([A-ZÀ-Ý])(?=[a-zà-ÿ'’ ])/u, (m, a, b) => a + b.toLowerCase()).replace(/([?!…]\s+)([A-ZÀ-Ý])(?=[a-zà-ÿ'’ ])/gu, (m, a, b) => a + b.toLowerCase()).replace(/[ \t]{2,}/g, " ").trim();
+  const HOLD_NOTE = "IL N'A PAS ACHETÉ CE QUE TU LUI AS PROPOSÉ RÉCEMMENT : ne lui propose aucun média payant pour l'instant et n'en reparle pas. Ce n'est pas grave et tu ne lui en veux pas : crée du lien, intéresse-toi à lui, à ce qu'il aime chez toi, donne-lui envie de revenir te parler. S'il demande lui-même à voir quelque chose, tu pourras lui proposer le moins cher.";
   const SCRIPT_NOW = "Un script est en cours et ta réponse sort de la scène (elle parle d'autre chose). Réécris-la : reste dans ce que vous êtes en train de vous dire, rebondis sur son dernier message et fais monter l'envie vers la suite, sans la décrire. Pas de question sur son sport, son travail, sa ville, son âge, sa journée ou son sommeil. Rien à vendre ni à promettre ici.";
   // le dernier média payant de la conversation, ni acheté ni refusé, de moins de 30 min (hors ticket)
   const pendAnyOf = L => { const P = L.filter(m => !m.fromFan && m.type === "FILE" && m.price > 0), x = P[P.length - 1]; return x && x.status !== "accepted" && x.status !== "refused" && !stale0(x) && !/^\s*ticket\b/i.test(str(x.text)) ? x : null; };
@@ -834,7 +841,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       nv() && o.freeAsk ? "IL DEMANDE DU GRATUIT : réponds à ça, dans cette réponse, sans changer de sujet et sans question sur sa vie (pas de « et toi tu fais quoi ? »). Tu ne promets rien de gratuit. Un non avec le sourire, qui lui donne envie de ce qu'il rate ; s'il insiste, reste complice et légère, sans reproche." : "",
       nv() ? PERCHE : "", nv() && o.why ? WHY_NOTE : "",
       nv() ? "CE QUE TU AS VRAIMENT : ne parle jamais d'une photo ou d'une vidéo précise que tu n'as pas dans ta liste d'albums (pas de « j'ai tourné une vidéo où je… » inventée). Si ce qu'il demande n'y est pas, propose ce qui s'en rapproche le plus dans ta liste. Quand un média part, ta phrase décrit celui-là, pas un autre." : "",
-      o.early ? (nv() ? EARLY2 : EARLY1) : "", o.broke ? "IL VIENT DE DIRE QU'IL N'A PAS D'ARGENT OU QUE C'EST TROP CHER : ne lui propose aucun média payant et n'en reparle pas. Reste douce, garde le lien, intéresse-toi à lui. S'il redemande lui-même, tu pourras proposer le moins cher." : "", o.stopped ? STOP_NOTE : "", o.warm ? WARM_NOTE : "", o.heat && !o.busy && !o.relance ? HEAT_NOTE : "",
+      o.early ? (nv() ? EARLY2 : EARLY1) : "", o.broke && o.hold ? HOLD_NOTE : o.broke ? "IL VIENT DE DIRE QU'IL N'A PAS D'ARGENT OU QUE C'EST TROP CHER : ne lui propose aucun média payant et n'en reparle pas. Reste douce, garde le lien, intéresse-toi à lui. S'il redemande lui-même, tu pourras proposer le moins cher." : "", o.stopped ? STOP_NOTE : "", o.warm ? WARM_NOTE : "", o.heat && !o.busy && !o.relance ? HEAT_NOTE : "",
       o.busy ? "IL VIENT DE DIRE QU'IL EST OCCUPÉ OU QU'IL PART : une seule bulle courte et gentille (par exemple « ok vas-y on se capte plus tard »), pas de question, pas de vente, rien d'autre." : ""];
   }
   // le bloc « scripts » des consignes, avec ce que dit le coffre quand il sert en secours (sinon sa consigne de teasing serait perdue)
@@ -1026,8 +1033,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const PITCH = /j['’ ]?ai (une?|des) (petite? )?(photo|vid[ée]o|truc)|je te (la |le )?montre|[çc]a te dit|tu veux (la |le )?voir|tu veux que je te/i, lastMe = iMe >= 0 ? untag(str(L[iMe].text)) : "";
     const bit = iMe >= 0 && iMe < L.length - 1 && freshAsk(L[iMe]) && (TEASE_ASK.test(lastMe) || PITCH.test(lastMe)) && !/\b(non|nan|nn|pas (envie|int[ée]ress)|je veux savoir)\b/i.test(lfT);
     // il vient de dire qu'il n'a pas d'argent : pas de payant tant qu'il ne demande pas lui-même
-    const broke = !relance && brokeT(L.slice(-8).filter(m => m.fromFan).map(m => str(m.text)).join(" · ")) && !WANTSEE.test(lfT) && !sendW(lfT);
-    if (!relance && lastFan && NOMONEY(lfT)) slowSaid(cr.id, c.fan.id);   // il vient de dire qu'il n'a pas d'argent : noté pour 24 h (réponses ralenties s'il n'a jamais acheté)
+    // tri des fans : ce que la conversation prouve (offres achetées, refusées, vues et laissées fermées, « pas d'argent ») met à jour son statut
+    let TR = { status: "test" }; try { if (TRI()) TR = TRI().observe(cr.id, c.fan.id, c.fan.name, c.id, L, { nomoney: NOMONEY }); } catch (e) {}
+    const hold = TR.status === "retest" || TR.status === "waster";   // un doute ou un time waster : l'IA ne propose plus rien d'elle-même jusqu'au prochain test ; s'il demande lui-même, il est servi
+    const broke = !relance && (hold || brokeT(L.slice(-8).filter(m => m.fromFan).map(m => str(m.text)).join(" · "))) && !WANTSEE.test(lfT) && !sendW(lfT);
+    if (broke && plan && !plan.S && (plan.launch || []).length) { plan.launch = []; plan.text = "Pas de vente avec ce fan pour l'instant : ne lance aucun script et ne propose aucun média. Discute, crée du lien."; }
     // « arrête » dans ses derniers messages : plus aucune proposition ; « chauffe-moi avant de payer » : pas de média dans cette réponse
     const stopped = !relance && L.slice(-10).some(m => m.fromFan && STOPFAN.test(str(m.text))) && !WANTSEE.test(lfT), warm = !relance && !stopped && WARMW.test(lfT);
     // il dit oui ou demande franchement, juste après une proposition ou un média : le média part, quels que soient les délais
@@ -1060,7 +1070,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const free0 = false, priceAsk = !relance && !busy && !!lastFan && PRICEQ.test(str(lastFan.text)), wantSee = !relance && !busy && !!lastFan && WANTSEE.test(str(lastFan.text));
     const yes = !relance && !busy && sell.albums.length > 0 && (saidYes(tz0, lastFan, M) || asked || priceAsk || wantSee || force);
     const lad = sell.albums.length ? ladderOf(M, boughtOf(cr, c.fan.id, L), lastFan, !!freebieOf(cr, c.fan.id)) : null, wk = !relance && !busy ? wantedKw(L) : [];
-    const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell, hot), rules: rulesOf(M, L, { cid: cr.id, why: !relance && !!lastFan && WHYQ.test(str(lastFan.text).trim()), freeAsk: !relance && !!lastFan && FREEW.test(str(lastFan.text)), stopped, warm, heat: heat && !early, broke, early, ladder: lad, pending: !!(!sell.albums.length && pendOf(M, L)), priceAsk: priceAsk && sell.albums.length > 0, asked: wk.length && sell.albums.some(a => (a.all || []).length) ? { kws: wk, has: matchItems(sell.albums, wk).length > 0 } : null, known: knownOf(cr, c.fan.id), plan, relance: !!relance, busy, ticket: T, hot: hot && canSell, push, yes }) };
+    const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell, hot), rules: rulesOf(M, L, { cid: cr.id, hold: hold && !brokeT(L.slice(-8).filter(m => m.fromFan).map(m => str(m.text)).join(" · ")), why: !relance && !!lastFan && WHYQ.test(str(lastFan.text).trim()), freeAsk: !relance && !!lastFan && FREEW.test(str(lastFan.text)), stopped, warm, heat: heat && !early, broke, early, ladder: lad, pending: !!(!sell.albums.length && pendOf(M, L)), priceAsk: priceAsk && sell.albums.length > 0, asked: wk.length && sell.albums.some(a => (a.all || []).length) ? { kws: wk, has: matchItems(sell.albums, wk).length > 0 } : null, known: knownOf(cr, c.fan.id), plan, relance: !!relance, busy, ticket: T, hot: hot && canSell, push, yes }) };
     if (relance) opt.relance = { since: relance.since, unbought: sell.open ? sell.open.price : plan && plan.lock ? plan.lock.price : null };
     const msgs = [{ role: "system", content: system(cr, M, ficheOf(cr), sell.albums, sell.note, fanInfo, C, opt) }];
     // la dernière photo envoyée par le fan : Grok la regarde (les autres restent en texte)
@@ -1258,6 +1268,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       try { db.prepare("INSERT INTO twizz_ai_filelv (creator_id, file_id, lv) VALUES (?,?,?) ON CONFLICT(creator_id, file_id) DO UPDATE SET lv = MAX(lv, excluded.lv)").run(cr.id, f.id, lvB); } catch (e) {} }
     // plusieurs bulles : envoyées à la suite, le temps de les taper ; un média du coffre ou le prix plancher part avec la dernière, l'étape du script après
     let usedPre = false; const floor = act && act.kind === "floor";
+    B = B.map(texto).filter(Boolean);
     for (let i = 0; i < B.length; i++) {
       if (i) { if (!runOf(cr.id)) break; await sleep(Math.min(9000, 1800 + B[i].length * 70 + Math.random() * 1500)); }
       const body = (usedPre ? "" : pre) + B[i] + tail, lastB = i === B.length - 1; usedPre = true;
@@ -1391,6 +1402,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
         const tagged = db.prepare("SELECT tag_id FROM twizz_fan_tags WHERE creator_id = ? AND fan_id = ?");
         const spend = db.prepare("SELECT spend FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?");
         const fanOff = db.prepare("SELECT 1 FROM twizz_ai_fanoff WHERE creator_id = ? AND fan_id = ?"), RP = strat().points;
+        try { if (TRI()) TRI().sync(cr.id); } catch (e) {}   // un chatter a écrit à un payeur de la liste « à reprendre » : il est à lui, l'IA ne lui répond plus
         const L = [], RL = [];
         // 1re page du fil + toutes les conversations non lues (filtre « Non lus » de Twizz) : aucun fan qui attend n'est oublié
         let unread = []; try { unread = unreadConvs ? await unreadConvs(cr.id) : []; } catch (e) {}
@@ -1405,7 +1417,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
           if (row.blocked && junkLeave(row.blocked)) { db.prepare("UPDATE twizz_ai_convs SET blocked = NULL, last_fan_msg = NULL WHERE run_id = ? AND conv_id = ?").run(r.id, c.id); row.blocked = null; row.last_fan_msg = null; }   // mis de côté sans vraie raison : elle reprend la conversation tout de suite, sans attendre qu'il réécrive
           // un fan qui attend une réponse : dans la fenêtre réglée ; une relance : jusqu'à 24 h après son dernier message
           if (!c.fan.id || row.blocked || (age > C.fanWindow * 3600e3 && (c.last.fromFan || age > 24 * 3600e3)) || hereOf(c.id, -1).length || (C.teamPause && human.get(c.id, now() - C.teamPause * 60e3))) continue;
-          if (fanOff.get(cr.id, c.fan.id)) continue;   // IA coupée pour ce fan
+          if (fanOff.get(cr.id, c.fan.id)) continue;   // IA coupée pour ce fan (à la main, ou payeur repris par un chatter)
           if (skip.size) { const tg = tagged.all(cr.id, c.fan.id).find(x => skip.has(x.tag_id));
             if (tg) { const nm = (db.prepare("SELECT name FROM twizz_tags WHERE id = ?").get(tg.tag_id) || {}).name || "tag";
               db.prepare("INSERT INTO twizz_ai_convs (run_id, conv_id, fan_id, fan_name, blocked, at) VALUES (?,?,?,?,?,?) ON CONFLICT(run_id, conv_id) DO UPDATE SET blocked = excluded.blocked, at = excluded.at")
@@ -1458,7 +1470,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     creators: mapped().map(c => ({ id: c.id, label: c.label, model_id: c.model_id, model: c.model, cfg: mcfg(c.id), fiche: ficheFilled(c), run: view(runOf(c.id)),
       media: db.prepare("SELECT COUNT(*) n FROM twizz_ai_media WHERE creator_id = ? AND descr IS NOT NULL").get(c.id).n, scan: SCAN[c.id] || null,
       scripts: aiScripts(c.id).map(x => ({ id: x.id, title: x.title, steps: x.steps.length, first: x.first, desc: !!x.desc, when: clip(x.desc, 160), timeout: x.timeout, ladder: ladder(x), path: x.steps.map(stepPath) })) })),
-    strat: strat(), stratDef: STRAT_DEF, usage: usage(),
+    strat: strat(), stratDef: STRAT_DEF, usage: usage(), tri: (() => { try { return TRI() ? TRI().stats() : null; } catch (e) { return null; } })(),
     recent: db.prepare("SELECT * FROM twizz_ai_runs WHERE ended_at IS NOT NULL ORDER BY ended_at DESC LIMIT 12").all().map(r => ({ ...view(r), cid: r.creator_id, label: (crOf(r.creator_id) || {}).label || "?" })) });
   app.get("/api/twizz/ai", auth, mgr, wrap(async req => state(req)));
   app.post("/api/twizz/ai/switch", auth, founder, wrap(async req => { const b = req.body || {};
@@ -1598,6 +1610,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (act && act.kind === "floor") { const id = "f" + now(); floor = { id, price: act.sc.steps[act.k].floor }; state = { ...T0, lockId: id, lock_price: floor.price, floor_used: 1 }; }
     const mode = busy ? "Fan occupé : une bulle courte, pas de vente, pas de relance ensuite" : !plan ? "" : plan.after ? "Script terminé : elle raccompagne le fan, sans vendre" : plan.S ? `Script « ${plan.sc.title} » · étape ${plan.S.step + 1}/${plan.sc.steps.length}${plan.lock ? ` · média à ${eurs(plan.lock.price)} pas encore pris` : plan.force ? " · étape suivante due" : plan.step ? " · étape suivante possible" : ""}`
       : plan.launch.length ? `${plan.launch.length} script${plan.launch.length > 1 ? "s" : ""} disponible${plan.launch.length > 1 ? "s" : ""}, elle lance quand le fan est prêt` : plan.coffre ? "Tous les scripts déjà reçus : coffre en secours" : clip(plan.text.split("(")[0], 90);
+    B = B.map(texto).filter(Boolean);
     return { bulles: B, step, floor, state, burned: [...burned], ended, mode, guarded, redit, ticket: tk ? { id: tk.id, kind: tk.kind, minutes: tk.minutes, price: tk.price, text: tk.text } : null,
       tkState: TK0 ? { id: TK0.msg_id, kind: TK0.kind, minutes: TK0.minutes, price: TK0.price, state: TK0.state } : null, studio, album: al ? al.name : null, media: it ? it.descr : null, prix: al ? Math.min(lad ? lad.price : cents(out.prix), M.maxPrice) : null,
       remise: al && M.promo && pct >= 5 ? Math.min(pct, M.maxDiscount) : null, laisser: null, teaser: !al && !act && !!out.teaser && !!(sell.teaseNow || albums.length), gate: plan ? "" : albums.length ? "" : sell.note };

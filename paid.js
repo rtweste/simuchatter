@@ -1,6 +1,7 @@
 // Achats des fans : le chatter est prévenu dès qu'un fan paie
 // - un média qu'il a envoyé dans une conversation (« média privé ») → celui qui l'a envoyé
 // - un média push payant → les chatters en shift sur cette créatrice au moment de l'achat
+// - un média vendu par l'IA → les chatters en shift : le fan est un payeur, à reprendre (tri.js tient la liste)
 // Chaque notification porte le nom du fan et un lien direct vers sa conversation dans la messagerie.
 // Tout est lu dans les ventes Twizz déjà synchronisées : aucune requête en plus vers Twizz.
 module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
@@ -26,7 +27,7 @@ module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
   }
   const labelOf = t => { let r = null; try { r = db.prepare("SELECT m.name model, c.label FROM twizz_creators c LEFT JOIN models m ON m.id = c.model_id WHERE c.twizz_id = ?").get(t.creator_id); } catch (e) {} return (r && (r.model || r.label)) || "ta créatrice"; };
   const canOpen = (user, cid) => { try { return !!(user && cid && inbox && inbox.canOpen && inbox.canOpen({ ...user, rk: perms.rk(user) }, cid)); } catch (e) { return false; } };
-  const TITLE = { mine: n => `${n} a acheté ton média`, shift: n => `${n} a acheté un média`, push: n => `${n} a payé un média push` };
+  const TITLE = { handoff: n => `${n} vient d'acheter avec l'IA : à toi de le reprendre`, mine: n => `${n} a acheté ton média`, shift: n => `${n} a acheté un média`, push: n => `${n} a payé un média push` };
   // ce que voit le chatter : le titre avec le nom du fan, la créatrice et le prix payé, et le lien vers la conversation
   function pub(r, user) {
     const name = r.fan_name || "Un fan", can = !!r.fan_id && canOpen(user, r.creator_id);
@@ -43,19 +44,21 @@ module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
     if (t.type === "privatemedia") {
       // le dernier média payant de la conversation avant l'achat : envoyé par un chatter depuis le site, ou par l'IA
       let s = null; try { if (conv) s = db.prepare("SELECT user_id, via, msg_id FROM twizz_sent WHERE conv_id = ? AND price > 0 AND at <= ? AND at > ? ORDER BY at DESC LIMIT 1").get(conv, t.at + 60e3, t.at - 7 * 864e5); } catch (e) {}
-      if (t.ai || (s && s.via === "ia")) return 0;   // vendu par l'IA : aucun chatter à prévenir (le fondateur a déjà sa notification)
-      if (s && s.user_id) { ids = [s.user_id]; kind = "mine"; msg = str(s.msg_id); }
+      // vendu par l'IA : le fan vient de prouver qu'il paie → il passe aux chatters en shift sur la créatrice (liste « à reprendre » + notification)
+      if (t.ai || (s && s.via === "ia")) { kind = "handoff"; ids = onShift(t.model_id, t.at); msg = s ? str(s.msg_id) : ""; }
+      else if (s && s.user_id) { ids = [s.user_id]; kind = "mine"; msg = str(s.msg_id); }
       else if (t.user_id) ids = [t.user_id];          // média envoyé hors du site : la personne à qui la vente est rattachée
       else ids = onShift(t.model_id, t.at);           // sinon les chatters en shift sur la créatrice
     } else { kind = "push"; ids = onShift(t.model_id, t.at); conv = convOf(t.creator_id, t.fan_id); }
     let amount = r2(t.net / keep()), n = 0; if (Math.abs(amount - Math.round(amount)) <= 0.03) amount = Math.round(amount);   // 9,02 € net → 12 € payés (et non 11,99)
+    if (kind === "handoff") { try { if (app.locals.tri) app.locals.tri.sold(t, amount); } catch (e) {} }
     [...new Set(ids)].forEach(uid => { const u = activeUser(uid); if (!u) return;
       const info = db.prepare(`INSERT OR IGNORE INTO paid_notifs (user_id, tx_id, kind, creator_id, model_id, fan_id, fan_name, conv_id, msg_id, amount, at, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
         .run(uid, t.id, kind, t.creator_id, t.model_id, str(t.fan_id), str(t.fan_name).slice(0, 80), conv, msg, amount, t.at, now());
       if (!info.changes) return; n++;
       const p = pub(db.prepare("SELECT * FROM paid_notifs WHERE id = ?").get(info.lastInsertRowid), u);
       // sur le téléphone ou l'ordinateur : toucher la notification ouvre la conversation ; si le site est ouvert devant lui, c'est la carte du site qui s'affiche
-      try { notify.push(uid, "paid", { title: "💰 " + p.title, body: `${p.sub} · touche pour ${p.open ? "ouvrir la conversation" : "voir tes ventes"}`, url: p.url, tag: "paid-" + t.id, inapp: true, ttl: 6 * 3600 }).catch(() => {}); } catch (e) {}
+      try { notify.push(uid, "paid", { title: (kind === "handoff" ? "🔥 " : "💰 ") + p.title, body: `${p.sub} · touche pour ${p.open ? "ouvrir la conversation" : "voir tes ventes"}`, url: p.url, tag: "paid-" + t.id, inapp: true, ttl: 6 * 3600 }).catch(() => {}); } catch (e) {}
     });
     return n;
   }
