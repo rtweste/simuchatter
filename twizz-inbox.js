@@ -2,7 +2,7 @@
 // et choisit qui y a accès : lecture, ou lecture + envoi. Un chatter voit ses créatrices, même hors de son shift :
 // celles de la Gestion, celles de son planning (30 jours avant, 14 jours après) et celle de son shift en cours. Rien n'est marqué comme lu automatiquement,
 // et l'envoi est bloqué pour tout le monde tant que l'interrupteur « Envoi activé » est coupé.
-module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
+module.exports = function mount(app, db, auth, admin, { twizz, ai, notify }) {
   const { call, S } = twizz;
   db.exec("CREATE TABLE IF NOT EXISTS twizz_fan_notes (creator_id TEXT, fan_id TEXT, text TEXT, user_id INTEGER, at INTEGER, PRIMARY KEY (creator_id, fan_id))");
   if (!db.prepare("PRAGMA table_info(twizz_sent)").all().some(x => x.name === "files")) db.exec("ALTER TABLE twizz_sent ADD COLUMN files TEXT");
@@ -351,6 +351,26 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   app.locals.spendLater = (cid, fan) => { const k = cid + ":" + fan, t = SPSEEN.get(k); if ((t && Date.now() - t < 3600e3) || SPQ.length >= 400) return; SPSEEN.set(k, Date.now()); if (SPSEEN.size > 5000) SPSEEN.clear(); SPQ.push([cid, fan]); if (!spBusy) spRun(); };
   // l'IA fait le tri : ce chatter ne voit que les fans qualifiés (voir twizz-ai.js, app.locals.triInbox) ; null = rien n'est caché
   // un manager ou le fondateur peut afficher la messagerie telle que la voient les chatters (?vue=chatters)
+  // supprimer un message envoyé par l'équipe, tant que le fan ne l'a pas lu (même règle que l'appli Twizz) ; les managers sont prévenus et voient le message supprimé
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_deleted (id INTEGER PRIMARY KEY, creator_id TEXT, conv_id TEXT, fan_id TEXT, fan_name TEXT, msg_id TEXT, type TEXT, text TEXT, price REAL, medias TEXT, sent_at INTEGER, user_id INTEGER, at INTEGER)");
+  const J = (v, d) => { try { const x = JSON.parse(v); return x == null ? d : x; } catch (e) { return d; } };
+  app.post("/api/twizz/inbox/:cid/delete-msg", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid), b = req.body || {}, id = str(b.messageId), conv = str(b.conv), fan = str(b.fan);
+    if (req.viewAs) throw bad("Pas en vue « en tant que »"); if (!id || !conv) throw bad("Message inconnu");
+    const path = `/messages/find-all-messages?conversationId=${enc(conv)}&creatorId=${enc(cid)}&page=1`; drop(path);
+    const m = ((await G(path, 0)) || {}).data, it = ((m && m.data) || []).map(x => msg(x, fan)).find(x => x.id === id);
+    if (!it) throw bad("Message introuvable : il est peut-être trop ancien");
+    if (it.fromFan) throw bad("On ne peut supprimer que les messages de l'équipe");
+    if (it.read) throw bad("Le fan a déjà lu ce message : Twizz ne permet plus de le supprimer");
+    await call("PATCH", "/messages/delete-message", { messageId: id, creatorId: cid }, true);
+    const name = str(b.name).slice(0, 80);
+    db.prepare("INSERT INTO twizz_deleted (creator_id, conv_id, fan_id, fan_name, msg_id, type, text, price, medias, sent_at, user_id, at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
+      .run(cid, conv, fan, name, id, it.type, it.text, it.price, JSON.stringify((it.medias || []).map(x => ({ thumb: x.thumb, video: x.video, private: x.private }))), Date.parse(it.at) || Date.now(), req.user.id, Date.now());
+    drop(path, conv, `/conversations/user/${enc(cid)}`);
+    try { const mg = db.prepare("SELECT id FROM users WHERE active = 1 AND deleted_at IS NULL AND role = 'admin' AND COALESCE(grade, '') <> 'assistant' AND id <> ?").all(req.user.id).map(r => r.id);
+      const what = it.text ? "« " + it.text.slice(0, 120) + " »" : it.medias.length ? (it.price > 0 ? `un média à ${it.price} €` : "un média") : "un message";
+      const q = new URLSearchParams({ cr: cid, conv, fan, name: name || "Fan" });
+      if (notify && mg.length) notify.pushMany(mg, null, { title: `🗑 ${req.user.username} a supprimé un message`, body: `${name || "Un fan"} : ${what}`, url: "/messagerie?" + q, tag: "del-" + id }); } catch (e) {}
+    return { ok: true }; }));
   const mgrView = req => !!req.user && !["chatter", "tl"].includes(req.user.rk);
   const triOf = (cid, req) => { try { if (!app.locals.triInbox) return null; if (req.query.vue === "chatters" && mgrView(req)) return app.locals.triInbox(cid, { ...req.user, rk: "chatter" }); return app.locals.triInbox(cid, req.user); } catch (e) { return null; } };
   const triAvail = (cid, req) => { try { return mgrView(req) && !!app.locals.triInbox && !!app.locals.triInbox(cid, { ...req.user, rk: "chatter" }); } catch (e) { return false; } };
@@ -397,6 +417,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
       PS.forEach(m => { const r = q.get(m.id); try { const x = r && JSON.parse(r.promo); if (x) Object.assign(m.promo, { kind: x.type === "pct" ? "pct" : "eur", value: +x.value || null }); } catch (e) {} }); }
     if (fanId) try { keepMedia(cid, str(req.params.conv), L); setDepth(str(req.params.conv), page, d.totalPages || 1); } catch (e) {}
     if (page >= (d.totalPages || 1)) try { firstSeen(cid, fanId, L); } catch (e) {}
+    // messages supprimés par l'équipe : un manager ou le fondateur les voit à leur place dans le fil, avec qui les a supprimés
+    if (page === 1 && mgrView(req)) try { db.prepare("SELECT d.*, u.username FROM twizz_deleted d LEFT JOIN users u ON u.id = d.user_id WHERE d.conv_id = ? ORDER BY d.sent_at").all(str(req.params.conv)).forEach(x => {
+        if (L.some(m => m.id === x.msg_id)) return; L.push({ id: "del:" + x.id, fromFan: false, type: x.type || "TEXT", text: x.text || "", status: "", at: new Date(x.sent_at || x.at).toISOString(), read: false, price: x.price, promo: null, mediaPushId: "", medias: J(x.medias, []), deleted: { by: x.username || "?", at: x.at } }); });
+      L.sort((a, b) => Date.parse(a.at) - Date.parse(b.at)); } catch (e) {}
     return { items: L, page, totalPages: d.totalPages || 1, note: d.creatorFanNote || null, sample: req.query.debug ? (d.data || [])[0] : undefined };
   }));
   app.get("/api/twizz/inbox/:cid/fan/:fan", auth, inbox, wrap(async req => {

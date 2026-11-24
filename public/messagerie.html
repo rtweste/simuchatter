@@ -161,6 +161,12 @@
 @keyframes mxBub{from{opacity:0;transform:translateY(14px) scale(.94)}}
 .mx-g.me.nw{transform-origin:bottom right}
 .mx-b{position:relative;padding:9px 14px;border-radius:18px;background:#141414;border:1px solid #1f1f1f;color:#ededed;font-size:14.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.mx-dl{display:inline-flex;align-items:center;gap:5px;align-self:flex-end;margin:2px 4px 0;padding:3px 8px;border-radius:999px;border:1px solid transparent;background:transparent;color:#6f6f6f;font:600 11px Inter;cursor:pointer;opacity:0;transition:opacity .2s,background .2s,color .2s}
+.mx-dl span{display:none}.mx-g:hover .mx-dl,.mx-dl:focus-visible,.mx-dl.sure{opacity:1}.mx-dl:hover{color:#ff8a8a;background:rgba(255,107,107,.08)}
+.mx-dl.sure{color:#fff;background:#d94b4b;border-color:#d94b4b}.mx-dl.sure span{display:inline}
+@media (hover:none){.mx-dl{opacity:.75}}
+.mx-delm{display:flex;flex-direction:column;align-items:flex-end;gap:3px;opacity:.6}.mx-delm .mx-b{text-decoration:line-through;background:rgba(255,107,107,.06)!important;border:1px dashed rgba(255,107,107,.45)!important;box-shadow:none!important;color:#d9b3b3!important}
+.mx-delt{display:inline-flex;align-items:center;gap:4px;font:600 11px Inter;color:#ff9a9a}
 .mx-g.me .mx-b{background:#0d1512;color:#d9ffee;border:0;box-shadow:0 0 22px -8px rgba(95,211,162,.55)}
 .mx-g.me .mx-b:before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(135deg,#5fd3a2,#2aa6a0 50%,rgba(95,211,162,.15));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
 .fgr{display:flex;align-items:flex-end;gap:8px;max-width:74%;margin-bottom:12px;flex:none}
@@ -1318,6 +1324,12 @@ let DEEPPIN = null;
 const deepOn = () => DEEPPIN && Date.now() < DEEPPIN.until;
 function pinDeep() { if (!deepOn()) return; const sc = $("sc"), el = sc && sc.querySelector(`[data-ppv="${CSS.escape(DEEPPIN.id)}"]`); if (!el) return;
   sc._prog = Date.now(); sc.dataset.stick = ""; el.scrollIntoView({ block: "center" }); }
+// supprimer un message : un premier clic demande confirmation sur le bouton, le second supprime
+document.addEventListener("click", async e => { const b = e.target.closest && e.target.closest(".mx-dl"); if (!b || !CUR) return; e.preventDefault();
+  if (!b.classList.contains("sure")) { document.querySelectorAll(".mx-dl.sure").forEach(x => x.classList.remove("sure")); b.classList.add("sure"); clearTimeout(b._t); b._t = setTimeout(() => b.classList.remove("sure"), 4000); return; }
+  b.disabled = true; const c = CUR;
+  try { await api2("/delete-msg", { body: { messageId: b.dataset.del, conv: c.id, fan: c.fan.id, name: c.fan.name || "" } }); notify("Message supprimé", "Le fan ne le verra pas", "ok"); if (CUR === c) loadMsgs(true); }
+  catch (err) { b.disabled = false; b.classList.remove("sure"); notify("Suppression impossible", err.message, "err"); } });
 async function loadMsgs(fresh) {
   if (!CUR) return; const id = CUR.id, T = THREADS[id];
   try { const r = await api2(`/messages/${enc(id)}?fan=${enc(CUR.fan.id)}${fresh ? "&fresh=1" : ""}`); if (!CUR || CUR.id !== id) return;
@@ -1376,11 +1388,14 @@ function ppvHtml(m) {
 }
 function groupHtml(G) {
   const m0 = G[0], me = !m0.fromFan, last = G[G.length - 1], fresh = G.some(m => !SHOWN.has(m.id));
+  // supprimer : un message de l'équipe que le fan n'a pas encore lu (règle de Twizz) ; un message supprimé n'apparaît qu'aux managers, barré
+  const delBtn = m => me && !m.fromFan && !m.read && !m.tmp && !m.deleted && !String(m.id).startsWith("del:") ? `<button type="button" class="mx-dl" data-del="${esc(m.id)}" title="Supprimer ce message (le fan ne l'a pas encore lu)">${SV(IC.trash, 13, 2.2)}<span>Supprimer ?</span></button>` : "";
   const parts = G.map(m => {
-    if (isPPV(m)) return ppvHtml(m) + (m.text ? `<div class="mx-b">${esc(m.text)}</div>` : "");
+    if (m.deleted) return `<div class="mx-delm">${m.medias.length ? `<div class="mx-b">📷 ${m.medias.length > 1 ? m.medias.length + " médias" : "média"}${m.price > 0 ? " à " + E(m.price) : ""}</div>` : ""}${m.text ? `<div class="mx-b">${esc(m.text)}</div>` : ""}<span class="mx-delt">${SV(IC.trash, 11, 2.2)} Supprimé par ${esc(m.deleted.by)} · ${esc(fullDate(new Date(m.deleted.at).toISOString()))}</span></div>`;
+    if (isPPV(m)) return ppvHtml(m) + (m.text ? `<div class="mx-b">${esc(m.text)}</div>` : "") + delBtn(m);
     const md = m.medias.length ? mediaGrid(m) : "";
     const pr = m.type === "FILE" && m.price != null ? (m.price > 0 ? `<span class="mx-pr ${esc(m.status)}">${E(m.price)} · ${m.status === "accepted" ? "acheté" : m.status === "refused" ? "refusé" : "pas encore acheté"}</span>` : `<span class="mx-pr">Gratuit</span>`) : "";
-    return `${md}${m.text ? `<div class="mx-b">${esc(m.text)}</div>` : ""}${pr}`; }).join("");
+    return `${md}${m.text ? `<div class="mx-b">${esc(m.text)}</div>` : ""}${pr}${delBtn(m)}`; }).join("");
   const st = last.tmp ? (last.failed ? `<span class="st ko" data-retry="${esc(last.id)}">Échec · réessayer</span>` : `<span class="st"><i></i>envoi…</span>`) : me ? sigHtml(last) : `<span class="lbl tm2">${tm(last.at)}</span>`;
   const tip = me && !last.tmp ? `<span class="tip">${isAi(last) ? `Écrit par <b>l'IA de secours</b> (Grok)` : last.by ? `Écrit par <b>${esc(last.by)}</b> sur StellADS` : `Envoyé directement depuis l'appli <b>Twizz</b>`} · ${esc(fullDate(last.at))}</span>` : "";
   if (!me) return `<div class="fgr ${fresh && SHOWN.size ? "nw" : ""}">${av(CUR.fan, "fav")}<div class="mx-g">${parts}${st}</div></div>`;
