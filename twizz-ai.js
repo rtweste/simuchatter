@@ -142,6 +142,35 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   // une fois : le coût déjà compté est recalculé aux vrais tarifs (l'ancien compteur sous-estimait la dépense d'environ 6 fois)
   if (!S.get("twizz_ai_usage_reprice_1", 0)) { try { db.prepare("UPDATE twizz_ai_usage SET cost = ((tin - tcached) * ? + tcached * ? + tout * ?) / 1e6 WHERE kind <> 'refus'").run(PRICE.in, PRICE.cached, PRICE.out); S.set("twizz_ai_usage_reprice_1", Date.now()); } catch (e) {} }
   function countRefusal() { const x = CTX.getStore() || {}; try { db.prepare(`INSERT INTO twizz_ai_usage (day, creator_id, kind, calls, tin, tcached, tout, cost) VALUES (?,?,?,1,0,0,0,?) ON CONFLICT(day, creator_id, kind) DO UPDATE SET calls = calls + 1, cost = cost + excluded.cost`).run(dayOf(Date.now()), x.cid || "", "refus", PRICE.refusal); } catch (e) {} }
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_sentday (day TEXT PRIMARY KEY, n INTEGER NOT NULL DEFAULT 0)");
+  // fans sans argent : ceux que l'équipe a tagués « peux pas payer », et ceux qui viennent de le dire (24 h). S'ils n'ont jamais rien acheté, l'IA leur répond après 10 min au lieu d'une minute,
+  // 8 fois au plus par 24 h, et ne les relance pas : chaque réponse coûte, autant la garder pour ceux qui peuvent acheter
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_slow (creator_id TEXT NOT NULL, fan_id TEXT NOT NULL, at INTEGER NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (creator_id, fan_id))");
+  const SLOW_WAIT = 10 * 60e3, SLOW_MAX = 8, SLOW_TTL = 24 * 3600e3, SLOW_TAG = /((peu[tx]|peuvent) pas|ne paie|ne paye|pas) pay|pas d['’ ]?argent|sans argent|fauch|non[- ]payeur|mauvais payeur|radin/i;
+  // il ne le dit pas mais ne paie jamais : médias payants reçus (de l'IA ou d'un chatter) sur les dernières 48 h
+  const SLOW_UNPAID = 4, SLOW_WINDOW = 48 * 3600e3; try { db.exec("CREATE INDEX IF NOT EXISTS twizz_sent_fan ON twizz_sent(creator_id, fan_id, at)"); } catch (e) {}
+  const unpaidOf = (cid, fan) => { try { return db.prepare("SELECT COUNT(*) n FROM twizz_sent WHERE creator_id = ? AND fan_id = ? AND price > 0 AND at > ?").get(cid, fan, now() - SLOW_WINDOW).n; } catch (e) { return 0; } };
+  const slowRow = (cid, fan) => { try { return db.prepare("SELECT at, n FROM twizz_ai_slow WHERE creator_id = ? AND fan_id = ?").get(cid, fan) || null; } catch (e) { return null; } };
+  const slowTag = (cid, fan) => { try { return db.prepare("SELECT t.name FROM twizz_fan_tags ft JOIN twizz_tags t ON t.id = ft.tag_id WHERE ft.creator_id = ? AND ft.fan_id = ?").all(cid, fan).some(r => SLOW_TAG.test(str(r.name))); } catch (e) { return false; } };
+  // { n } si ce fan est à ralentir (n = réponses déjà reçues sur 24 h), sinon null ; jamais un fan qui a déjà acheté
+  function slowFan(cid, fan, spent) { if (!fan) return null; if (spent == null) { try { spent = (db.prepare("SELECT spend FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, fan) || {}).spend || 0; } catch (e) { spent = 0; } }
+    const r = slowRow(cid, fan), live = r && now() - r.at < SLOW_TTL, tagged = slowTag(cid, fan), many = !live && !tagged && unpaidOf(cid, fan) >= SLOW_UNPAID; if (!live && !tagged && !many) return null;
+    let bought = spent > 0; if (!bought) try { bought = !!db.prepare("SELECT 1 FROM twizz_tx WHERE creator_id = ? AND fan_id = ? AND refund = 0 AND net > 0 AND at > ? LIMIT 1").get(cid, fan, now() - 30 * 864e5); } catch (e) {}
+    if (bought) { if (tagged) untagBroke(cid, fan); return null; }   // il a acheté : plus ralenti, et le tag que l'IA avait posé saute
+    if (many) tagBroke(cid, fan);   // il ne dit rien mais ne paie jamais : 4 médias payants reçus en 48 h, aucun achat → le tag de l'équipe est posé
+    return { n: live ? r.n : 0 }; }
+  // l'IA pose elle-même le tag de l'équipe (« Peux pas payer ») quand un fan qui n'a jamais acheté dit qu'il n'a pas d'argent ; elle le retire s'il achète. Un tag posé à la main par l'équipe n'est jamais retiré par l'IA
+  const NOMONEY = t => { const x = str(t).toLowerCase().replace(/['’]/g, " ").replace(/\s+/g, " ");   // « j ai plus d argent », « jai pas dargent » : écrit avec ou sans apostrophe
+    if (/\b(t as|tu as|tu n as|t es|tu es|vous avez) (pas|plus)\b/.test(x)) return false;   // il parle d'elle, pas de lui
+    return /\b(pas|plus|aucun) (trop )?(de |d ?)?(thunes?|tunes?|sous(?![- ]v[êe]t)|argent|fric|oseille)\b|\bfauch[ée]e?s?(?![a-z])|[àa] d[ée]couvert\b|\bfin de mois\b|\bpas les moyens\b|\b(peux|peut|px) (pas|plus) (payer|acheter)\b|\bpas de quoi payer\b|\b(plus|pas) un rond\b|\brien sur (mon|ma) (compte|carte)\b/.test(x); };
+  const slowTags = () => { try { return db.prepare("SELECT id, name FROM twizz_tags WHERE rule IS NULL AND COALESCE(active, 1) = 1").all().filter(r => SLOW_TAG.test(str(r.name))); } catch (e) { return []; } };
+  function tagBroke(cid, fan) { try { let T = slowTags(); if (!T.length) { db.prepare("INSERT INTO twizz_tags (name, color, active, at) VALUES ('Peux pas payer', '#ff8a8a', 1, ?)").run(now()); T = slowTags(); } if (!T.length) return;
+      if (db.prepare("INSERT OR IGNORE INTO twizz_fan_tags (creator_id, fan_id, tag_id, auto, at) VALUES (?,?,?,1,?)").run(cid, fan, T[0].id, now()).changes) db.prepare("INSERT INTO twizz_tag_log (creator_id, fan_id, tag_id, action, at) VALUES (?,?,?,'auto+',?)").run(cid, fan, T[0].id, now()); } catch (e) {} }
+  function untagBroke(cid, fan) { try { slowTags().forEach(t => { if (db.prepare("DELETE FROM twizz_fan_tags WHERE creator_id = ? AND fan_id = ? AND tag_id = ? AND auto = 1").run(cid, fan, t.id).changes) db.prepare("INSERT INTO twizz_tag_log (creator_id, fan_id, tag_id, action, at) VALUES (?,?,?,'auto-',?)").run(cid, fan, t.id, now()); }); } catch (e) {} }
+  const slowSaid = (cid, fan) => { try { const r = slowRow(cid, fan); if (!r || now() - r.at >= SLOW_TTL) db.prepare("INSERT INTO twizz_ai_slow (creator_id, fan_id, at, n) VALUES (?,?,?,0) ON CONFLICT(creator_id, fan_id) DO UPDATE SET at = excluded.at, n = 0").run(cid, fan, now()); } catch (e) {}
+    if (slowFan(cid, fan)) tagBroke(cid, fan); };   // jamais acheté : le tag de l'équipe est posé
+  const slowCount = (cid, fan) => { try { const r = slowRow(cid, fan); if (r && now() - r.at < SLOW_TTL) db.prepare("UPDATE twizz_ai_slow SET n = n + 1 WHERE creator_id = ? AND fan_id = ?").run(cid, fan); else db.prepare("INSERT INTO twizz_ai_slow (creator_id, fan_id, at, n) VALUES (?,?,?,1) ON CONFLICT(creator_id, fan_id) DO UPDATE SET at = excluded.at, n = 1").run(cid, fan, now()); } catch (e) {} };
+  const sentOn = d => (db.prepare("SELECT n FROM twizz_ai_sentday WHERE day = ?").get(d) || {}).n || 0, sentMark = () => { try { db.prepare("INSERT INTO twizz_ai_sentday (day, n) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET n = n + 1").run(dayOf(Date.now())); } catch (e) {} };
   const spent7 = () => { const d = []; for (let i = 0; i < 7; i++) d.push(dayOf(Date.now() - i * 864e5)); return db.prepare(`SELECT COALESCE(SUM(cost), 0) c FROM twizz_ai_usage WHERE day IN (${d.map(() => "?").join(",")})`).get(...d).c; };
   const overBudget = () => { const b = gcfg().budget; return b > 0 && spent7() >= b; };
   function usage() {
@@ -151,7 +180,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const calls = R.reduce((a, r) => a + r.calls, 0), rep = R.filter(r => r.kind === "reponse");
     return { week: sum(() => true), today: sum(r => r.day === days[6]), budget: gcfg().budget, over: overBudget(), days: days.map(d => ({ day: d, cost: sum(r => r.day === d) })),
       byCreator: by("creator_id"), byKind: by("kind"), calls, perReply: rep.length ? rep.reduce((a, r) => a + r.cost, 0) / Math.max(1, rep.reduce((a, r) => a + r.calls, 0)) : 0,
-      cachedPct: R.reduce((a, r) => a + r.tin, 0) ? Math.round(100 * R.reduce((a, r) => a + r.tcached, 0) / R.reduce((a, r) => a + r.tin, 0)) : 0 };
+      cachedPct: R.reduce((a, r) => a + r.tin, 0) ? Math.round(100 * R.reduce((a, r) => a + r.tcached, 0) / R.reduce((a, r) => a + r.tin, 0)) : 0,
+      // par jour : ce que coûte une réponse réellement envoyée (appels de réécriture compris), le nombre d'appels par réponse et la part en cache
+      daily: days.map(d => { const X = R.filter(r => r.day === d && r.kind === "reponse"), c = X.reduce((a, r) => a + r.cost, 0), n = X.reduce((a, r) => a + r.calls, 0), ti = X.reduce((a, r) => a + r.tin, 0), tc = X.reduce((a, r) => a + r.tcached, 0), sent = sentOn(d);
+        return { day: d, cost: c, calls: n, sent, perMsg: sent ? c / sent : 0, callsPerMsg: sent ? n / sent : 0, cachedPct: ti ? Math.round(100 * tc / ti) : 0 }; }) };
   }
   const XBASE = () => str(process.env.XAI_BASE || "https://api.x.ai/v1").replace(/\/+$/, "");
   const XMODEL = () => str(process.env.XAI_MODEL || (MODELS[gcfg().model] || MODELS.fast)[0]);
@@ -220,7 +252,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     demande: { type: "string", description: "Quand il a payé un ticket cam ou vidéo custom et t'a dit ce qu'il veut : sa demande, avec tous les détails (et ses dispos pour une cam)." }
   } } } };
   async function grok(messages, o = {}) {
-    { const x = CTX.getStore(); if (x && x.kind === "reponse") { x.n = (x.n || 0) + 1; if (x.n > 3) throw fail("Limite de 3 appels à Grok pour cette réponse"); } }   // jamais plus de 3 appels (réponse + relances) par réponse
+    { const x = CTX.getStore(); if (x && x.kind === "reponse") { x.n = (x.n || 0) + 1; if (x.n > 2) throw fail("Limite de 2 appels à Grok pour cette réponse"); } }   // une réponse, plus une réécriture au plus : au-delà, le site corrige lui-même (il retire la bulle fautive)
     const tool = o.tool === undefined ? TOOL : o.tool, body = { model: o.model || XMODEL(), messages, temperature: o.temp ?? (tool === TOOL ? 0.75 : 0.9), max_tokens: o.max || (tool === TOOL ? 500 : 900) };
     if (tool) { body.tools = [tool]; body.tool_choice = { type: "function", function: { name: tool.function.name } }; }
     let r; try { r = await fetch(XBASE() + "/chat/completions", { method: "POST", headers: { Authorization: "Bearer " + XAI(), "Content-Type": "application/json", ...((CTX.getStore() || {}).conv ? { "x-grok-conv-id": CTX.getStore().conv } : {}) },
@@ -271,14 +303,15 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const promo = M.promo && M.sell ? (opt.requirePromo ? `Il n'a pas acheté le dernier média payant : tu peux lui en proposer un autre seulement avec une remise (champ remise obligatoire, entre 5 et ${M.maxDiscount} %, valable ${M.promoHours} h). Dis-lui que c'est un petit prix rien que pour lui.`
       : `Si le fan hésite sur un prix ou n'a pas acheté le dernier média, tu peux faire une remise (champ remise, entre 5 et ${M.maxDiscount} %, valable ${M.promoHours} h), jamais à la première proposition.`) : "";
     const alb = a => `- ${a.id} : ${a.name}${a.count != null ? ` (${a.count})` : ""}${notes[a.id] ? " — " + notes[a.id] : ""}${(a.items || []).length ? "\n" + a.items.map(x => `    · m:${x.id} — ${x.descr}`).join("\n") : ""}`;
-    const live = [`Il est ${new Date().toLocaleString("fr-FR", { weekday: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })} à Paris.`,
-      fanInfo ? `Ce qu'on sait du fan : ${fanInfo}` : "",
-      sc.length ? `Messages de l'agence qui marchent bien (inspire-toi de l'idée et du ton, ne les recopie pas mot pour mot) :\n${sc.join("\n")}` : "",
+    // ordre pensé pour le cache de Grok (un texte déjà vu coûte 6 fois moins) : ce qui ne change pas d'un fan à l'autre d'abord, ce qui change à chaque appel (coffre restant, relance, heure, fan) à la fin
+    const live = [sc.length ? `Messages de l'agence qui marchent bien (inspire-toi de l'idée et du ton, ne les recopie pas mot pour mot) :\n${sc.join("\n")}` : "",
       opt.rules || "",
       opt.script || "",
       albums.length ? `Albums du coffre que tu peux proposer (identifiant : nom, nombre de médias — description ; sous l'album, des médias qu'il n'a pas encore reçus) :\n${albums.map(alb).join("\n")}\nPour joindre un média, remplis album et prix (entre 3 et ${M.maxPrice} €, nombre rond, d'après son catalogue). Si l'album liste des médias, remplis aussi media avec celui qui colle le mieux à la conversation. Sinon le site choisit dans l'album un média qu'il n'a pas encore reçu. Ne promets jamais un contenu précis qui ne serait pas dans ces albums.\nLA PHRASE DU MÉDIA : ta dernière bulle part avec le média, c'est elle qui le vend. Dis avec envie ce que tu y fais, d'après sa description (celle du média choisi ou de l'album) : à la première personne, sans tabou (Twizz est réservé aux adultes, le langage cru est permis), en insistant sur ce qui rend ce média spécial (ce que tu fais, combien de temps, à quel point c'était intense). Une ou deux phrases, jamais de prix, jamais « tiens » tout seul.${promo ? "\n" + promo : ""}`
         : opt.script ? "" : `Pas de média à proposer maintenant${sellNote ? " : " + sellNote : ""}. Discute seulement.`,
-      opt.relance ? `RELANCE : le fan ne répond plus depuis ${opt.relance.since}${opt.relance.unbought ? ` et n'a pas acheté le média à ${opt.relance.unbought} €` : ""}. Écris une relance courte et naturelle, comme si tu pensais à lui, sans reproche${opt.relance.unbought ? ", qui lui redonne envie de l'ouvrir en disant ce qu'il va y voir (« contenu : … » dans l'historique), sans redemander « tu veux voir ? »" : ""}. Si une relance n'a pas de sens ici, laisse bulles et message vides.` : ""].filter(Boolean).join("\n\n");
+      opt.relance ? `RELANCE : le fan ne répond plus depuis ${opt.relance.since}${opt.relance.unbought ? ` et n'a pas acheté le média à ${opt.relance.unbought} €` : ""}. Écris une relance courte et naturelle, comme si tu pensais à lui, sans reproche${opt.relance.unbought ? ", qui lui redonne envie de l'ouvrir en disant ce qu'il va y voir (« contenu : … » dans l'historique), sans redemander « tu veux voir ? »" : ""}. Si une relance n'a pas de sens ici, laisse bulles et message vides.` : "",
+      `Il est ${new Date().toLocaleString("fr-FR", { weekday: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })} à Paris.`,
+      fanInfo ? `Ce qu'on sait du fan : ${fanInfo}` : ""].filter(Boolean).join("\n\n");
     const auto = [profile, live].filter(Boolean).join("\n\n");
         const markText = (C && C.mark) ? "Chacun de tes messages est signé 🤖 par le site." : "Le site prévient le fan que c'est ton IA qui répond.";
     const lockedRaw = str((C && C.locked) || "").trim();
@@ -733,7 +766,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       : `TICKET VIDÉO CUSTOM PAYÉ : remercie-le et demande-lui précisément ce qu'il veut voir (tenue, ce que tu fais, s'il veut que tu dises son prénom…). Quand il a répondu, remplis demande avec tous les détails et dis-lui que tu t'en occupes et que tu lui envoies dès que c'est prêt.`;
     return `DEMANDES SPÉCIALES (Snap, cam, vidéo custom) : s'il demande ton Snap, une cam, ou une vidéo tournée rien que pour lui, ne le laisse jamais à l'équipe pour ça : propose-lui le ticket. Remplis ticket (snap, cam ou custom) et prix : Snap de ${M.snapMin} à ${M.snapMax} € (selon ce qu'il a déjà dépensé) ; cam de 20 à 30 min de ${M.camMin} à ${M.camMax} € (remplis aussi duree, de 20 à 30) ; cam d'une heure ${M.camHour} € (duree 60) ; vidéo custom de 3 à 5 min ${M.customPrice} €. Pour une cam, demande d'abord combien de temps il veut s'il ne l'a pas dit. Le ticket part juste après ta bulle, avec le texte « Ticket … » : dans ta bulle, dis-lui simplement de le prendre pour que tu t'occupes de lui. S'il réclame un contenu précis que tu n'as pas dans le coffre, propose-lui la vidéo custom.`;
   }
-  function rulesOf(M, L, o = {}) {
+  // les consignes : les lignes fixes d'abord (elles restent en cache d'un fan à l'autre), puis celles qui dépendent de la conversation ; le texte de chaque ligne ne change pas
+  function rulesOf(M, L, o = {}) { const A = rulesArr(M, L, o); let F = null; try { F = rulesArr(M, [], {}); } catch (e) {}
+    if (!F || F.length !== A.length) return A.filter(Boolean).join("\n\n");
+    return A.filter((x, i) => x && x === F[i]).concat(A.filter((x, i) => x && x !== F[i])).join("\n\n"); }
+  function rulesArr(M, L, o = {}) {
     const ST = strat(), K = o.known || {}, first = L.find(m => m.fromFan), t0 = first ? Date.parse(first.at) || now() : now();
     const kycOver = L.length >= ST.kycMax || now() - t0 >= ST.kycHours * 3600e3, kycKnown = !!(K.prenom && (K.ville || K.metier));
     const scriptOpen = o.plan && o.plan.S;
@@ -754,7 +791,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       nv() && o.freeAsk ? "IL DEMANDE DU GRATUIT : réponds à ça, dans cette réponse, sans changer de sujet et sans question sur sa vie (pas de « et toi tu fais quoi ? »). Tu ne promets rien de gratuit. Un non avec le sourire, qui lui donne envie de ce qu'il rate ; s'il insiste, reste complice et légère, sans reproche." : "",
       nv() ? "CE QUE TU AS VRAIMENT : ne parle jamais d'une photo ou d'une vidéo précise que tu n'as pas dans ta liste d'albums (pas de « j'ai tourné une vidéo où je… » inventée). Si ce qu'il demande n'y est pas, propose ce qui s'en rapproche le plus dans ta liste. Quand un média part, ta phrase décrit celui-là, pas un autre." : "",
       o.early ? (nv() ? EARLY2 : EARLY1) : "", o.broke ? "IL VIENT DE DIRE QU'IL N'A PAS D'ARGENT OU QUE C'EST TROP CHER : ne lui propose aucun média payant et n'en reparle pas. Reste douce, garde le lien, intéresse-toi à lui. S'il redemande lui-même, tu pourras proposer le moins cher." : "", o.stopped ? STOP_NOTE : "", o.warm ? WARM_NOTE : "", o.heat && !o.busy && !o.relance ? HEAT_NOTE : "",
-      o.busy ? "IL VIENT DE DIRE QU'IL EST OCCUPÉ OU QU'IL PART : une seule bulle courte et gentille (par exemple « ok vas-y on se capte plus tard »), pas de question, pas de vente, rien d'autre." : ""].filter(Boolean).join("\n\n");
+      o.busy ? "IL VIENT DE DIRE QU'IL EST OCCUPÉ OU QU'IL PART : une seule bulle courte et gentille (par exemple « ok vas-y on se capte plus tard »), pas de question, pas de vente, rien d'autre." : ""];
   }
   // le bloc « scripts » des consignes, avec ce que dit le coffre quand il sert en secours (sinon sa consigne de teasing serait perdue)
   const scriptNote = (plan, coffre, sell, hot) => !plan ? "" : [plan.text, !coffre ? "" : sell.albums.length ? (plan.coffre ? "" : hot ? "La conversation est chaude : lance le script qui colle, ou, si aucun ne colle, propose un média du coffre ci-dessous (teasing d'abord)." : "Le coffre ci-dessous sert seulement s'il réclame un contenu précis qu'aucun script ne propose : sinon lance le script qui colle.")
@@ -945,6 +982,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const bit = iMe >= 0 && iMe < L.length - 1 && freshAsk(L[iMe]) && (TEASE_ASK.test(lastMe) || PITCH.test(lastMe)) && !/\b(non|nan|nn|pas (envie|int[ée]ress)|je veux savoir)\b/i.test(lfT);
     // il vient de dire qu'il n'a pas d'argent : pas de payant tant qu'il ne demande pas lui-même
     const broke = !relance && brokeT(L.slice(-8).filter(m => m.fromFan).map(m => str(m.text)).join(" · ")) && !WANTSEE.test(lfT) && !sendW(lfT);
+    if (!relance && lastFan && NOMONEY(lfT)) slowSaid(cr.id, c.fan.id);   // il vient de dire qu'il n'a pas d'argent : noté pour 24 h (réponses ralenties s'il n'a jamais acheté)
     // « arrête » dans ses derniers messages : plus aucune proposition ; « chauffe-moi avant de payer » : pas de média dans cette réponse
     const stopped = !relance && L.slice(-10).some(m => m.fromFan && STOPFAN.test(str(m.text))) && !WANTSEE.test(lfT), warm = !relance && !stopped && WARMW.test(lfT);
     // il dit oui ou demande franchement, juste après une proposition ou un média : le média part, quels que soient les délais
@@ -1249,7 +1287,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const FAILS = new Map(), RUNERR = new Map();
   async function safely(r, cr, c, C, relance) {
     const k = r.id + ":" + c.id, f = FAILS.get(k); if (f && now() < f.until) return false;
-    try { const ok = await CTX.run({ cid: cr.id, kind: "reponse", conv: `${cr.id}` }, () => handle(r, cr, c, C, relance)); FAILS.delete(k); RUNERR.delete(r.id); return ok; }
+    try { const ok = await CTX.run({ cid: cr.id, kind: "reponse", conv: `${cr.id}` }, () => handle(r, cr, c, C, relance)); if (ok) { sentMark(); if (c.fan && c.fan.id && slowFan(cr.id, c.fan.id)) slowCount(cr.id, c.fan.id); } FAILS.delete(k); RUNERR.delete(r.id); return ok; }
     catch (e) {
       // plusieurs erreurs de suite dans la séance (tous fans confondus) : les managers sont prévenus, au plus toutes les 30 min
       { const E = RUNERR.get(r.id) || { n: 0, ping: 0 }; E.n++; RUNERR.set(r.id, E); if (E.n >= 3 && now() - E.ping > 30 * 60e3) { E.ping = now();
@@ -1308,11 +1346,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
             if (tg) { const nm = (db.prepare("SELECT name FROM twizz_tags WHERE id = ?").get(tg.tag_id) || {}).name || "tag";
               db.prepare("INSERT INTO twizz_ai_convs (run_id, conv_id, fan_id, fan_name, blocked, at) VALUES (?,?,?,?,?,?) ON CONFLICT(run_id, conv_id) DO UPDATE SET blocked = excluded.blocked, at = excluded.at")
                 .run(r.id, c.id, c.fan.id, c.fan.name, `Fan tagué ${nm} : laissé à l'équipe`, now()); continue; } }
-          const value = (spend.get(cr.id, c.fan.id) || {}).spend || 0;
+          const value = (spend.get(cr.id, c.fan.id) || {}).spend || 0, slow = slowFan(cr.id, c.fan.id, value);   // fan sans argent qui n'a jamais acheté : réponses plus lentes, plafonnées, pas de relance
           if (c.last.fromFan) {
-            const wait = (C.waitMin + (parseInt(c.id.slice(-4), 16) || 0) % (Math.max(1, C.waitMax - C.waitMin) + 1)) * 1000;   // laisse le fan finir d'écrire, comme quelqu'un qui répond
-            if (age >= wait && (row.replies || 0) < C.perFan && row.last_fan_msg !== c.last.id) L.push({ c, value, t });
-          } else if (C.relance && !quiet(C)) {
+            const eager = slow && (asks(str(c.last.text)) || WANTSEE.test(str(c.last.text)) || sendW(str(c.last.text)));   // même ralenti, s'il demande à voir ou à acheter, il est servi tout de suite
+            const wait = slow && !eager ? SLOW_WAIT : (C.waitMin + (parseInt(c.id.slice(-4), 16) || 0) % (Math.max(1, C.waitMax - C.waitMin) + 1)) * 1000;   // laisse le fan finir d'écrire, comme quelqu'un qui répond
+            if (age >= wait && (row.replies || 0) < C.perFan && !(slow && !eager && slow.n >= SLOW_MAX) && row.last_fan_msg !== c.last.id) L.push({ c, value, t });
+          } else if (C.relance && !quiet(C) && !slow) {
             // suivie dans une séance précédente (moins de 24 h) : la relance part quand même ; son payant pas encore ouvert est relancé après le délai réglé (pas 3 h)
             const rr = row.relances != null ? row : (prevRow.get(c.id, r.id, now() - 24 * 3600e3) || {}); if (!rr.replies || rr.busy || rr.blocked) continue;
             const k = rr.relances || 0, since = now() - (rr.fan_at || t), first = paidRecent.get(c.id, now() - 3 * 3600e3, (rr.fan_at || 0) - 60e3) ? Math.min(C.relanceAfter, RP[0]) : relFirstOf(cr.id, c.fan.id, C, RP[0]);
@@ -1324,7 +1363,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
             if (seen.has(x.conv_id)) return; seen.add(x.conv_id);   // la ligne la plus récente de chaque conversation
             if (ids.has(x.conv_id) || !x.fan_id || !x.replies || x.busy || x.blocked || byFan.has(x.fan_id) || fanOff.get(cr.id, x.fan_id) || hereOf(x.conv_id, -1).length || (C.teamPause && human.get(x.conv_id, now() - C.teamPause * 60e3))) return;
             const since = now() - (x.fan_at || x.at), k = x.run_id === r.id ? x.relances || 0 : 0;
-            if (k === 0 && paidRecent.get(x.conv_id, now() - 3 * 3600e3, (x.fan_at || 0) - 60e3) && since >= Math.min(C.relanceAfter, RP[0]) * 60e3 && now() - (x.relance_at || 0) >= 5 * 60e3)
+            if (k === 0 && paidRecent.get(x.conv_id, now() - 3 * 3600e3, (x.fan_at || 0) - 60e3) && since >= Math.min(C.relanceAfter, RP[0]) * 60e3 && now() - (x.relance_at || 0) >= 5 * 60e3
+              && !slowFan(cr.id, x.fan_id, (spend.get(cr.id, x.fan_id) || {}).spend || 0))   // fan sans argent : pas de relance
               RL.push({ c: { id: x.conv_id, fan: { id: x.fan_id, name: x.fan_name || "" }, last: { id: "", at: null, fromFan: false } }, value: (spend.get(cr.id, x.fan_id) || {}).spend || 0, t: x.fan_at || x.at, age: since }); }); }
         // les gros payeurs d'abord, puis ceux qui attendent depuis le plus longtemps
         L.sort((a, b) => (b.value - a.value) || (a.t - b.t));
