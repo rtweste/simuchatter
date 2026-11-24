@@ -22,7 +22,7 @@ module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
     neverDays: 2,                       // … ou il dit 2 jours différents qu'il ne paie jamais
     wasterTtl: 14 * DAY,                // un time waster est retesté 14 jours après la dernière preuve
     pause1: 1 * DAY, pause2: 3 * DAY,
-    likelySpend: 30,                    // « très susceptible de payer » : il a déjà dépensé 30 € ou plus chez elle (abonnement compris)
+    grace: 2 * 3600e3,                  // messagerie des chatters : un fan à qui un chatter vient d'écrire reste visible 2 h, pour ne rien faire disparaître sous ses doigts
     intentTtl: 7 * DAY };               // … ou il a demandé un prix / dit qu'il prend / réclamé un ticket dans les 7 derniers jours, sans rien dire ou faire de contraire depuis // doute : pas d'offre pendant 24 h après une offre ratée, 3 jours après deux ou après « pas d'argent »
   const NEVER = /\b(je (ne )?pa(ie|ye) (jamais|pas|rien)|j['’ ]?ach[èe]te (jamais|rien|pas)|jamais pay[ée]|pa(ie|ye)rai? (jamais|pas)|(je )?pa(ie|ye) pas pour|pas question de payer|que du gratuit|gratuit (ou|sinon) rien|je veux (que )?du gratuit)\b/i;
   const PAYDAY = /\b(fin de mois|fin du mois|ma pa(ie|ye)|mon salaire|d[ée]but du mois|quand j['’ ]?(aurai|ai) (ma pa(ie|ye)|mon salaire|touch[ée]))\b/i;
@@ -35,14 +35,16 @@ module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
   const boughtMedia = (cid, fan) => { try { if (db.prepare("SELECT 1 FROM twizz_tx WHERE creator_id = ? AND fan_id = ? AND refund = 0 AND net > 0 AND type IN ('privatemedia','mediapush','collection') LIMIT 1").get(cid, fan)) return true; } catch (e) {}
     try { if (db.prepare("SELECT 1 FROM twizz_tri_test WHERE creator_id = ? AND fan_id = ? AND outcome = 'bought' LIMIT 1").get(cid, fan)) return true; } catch (e) {}
     try { return ((db.prepare("SELECT buys FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, fan) || {}).buys || 0) > 0; } catch (e) { return false; } };
-  // il a dépensé chez elle d'après Twizz (abonnement compris) : pas une preuve d'achat de média, mais assez pour ne jamais le classer time waster
-  const spentOf = (cid, fan) => { try { return (db.prepare("SELECT spend FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, fan) || {}).spend || 0; } catch (e) { return 0; } };
+  // ce qu'il a dépensé chez elle d'après Twizz : médias, médias push et collections (vérifié le 24/11 : 13 abonnés sur 14 sont à 0 €, l'abonnement n'y est donc pas compté). Un euro dépensé suffit : c'est un payeur
+  const spentRaw = (cid, fan) => { try { const r = db.prepare("SELECT spend FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, fan); return r && r.spend != null ? +r.spend || 0 : null; } catch (e) { return null; } };   // null = Twizz n'a pas encore été interrogé pour ce fan
+  const spentOf = (cid, fan) => spentRaw(cid, fan) || 0;
 
   // il a acheté un média chez une autre créatrice de l'agence (même compte Twizz) : il sort sa carte
   const boughtElsewhere = (cid, fan) => { try { return !!db.prepare("SELECT 1 FROM twizz_tx WHERE fan_id = ? AND creator_id <> ? AND refund = 0 AND net > 0 AND type IN ('privatemedia','mediapush','collection') LIMIT 1").get(fan, cid); } catch (e) { return false; } };
   // le statut d'après les preuves gardées ; ne lit rien sur Twizz
   function classify(cid, fan) {
     if (boughtMedia(cid, fan)) return { status: "payeur", reason: "a déjà acheté un média", until: null };
+    { const sp = spentOf(cid, fan); if (sp > 0) return { status: "payeur", reason: `a déjà dépensé ${Math.round(sp)} € chez elle (médias ou collections)`, until: null }; }
     const t0 = now() - R.window;
     const T = db.prepare("SELECT at, outcome, price FROM twizz_tri_test WHERE creator_id = ? AND fan_id = ? AND at > ? AND outcome IN ('refused','ignored') AND price <= ?").all(cid, fan, t0, R.fairMax);
     const S = db.prepare("SELECT day, kind, at, text FROM twizz_tri_said WHERE creator_id = ? AND fan_id = ? AND at > ?").all(cid, fan, t0);
@@ -57,7 +59,6 @@ module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
     const spent = spentOf(cid, fan);   // il a déjà sorti sa carte chez elle : il y a une chance qu'il paie, donc jamais « time waster », seulement un doute
     // très susceptible de payer, sur des faits : il achète chez une autre créatrice, ou il a déjà dépensé chez elle
     if (boughtElsewhere(cid, fan)) return { status: "chaud", reason: "achète chez une autre créatrice de l'agence", until: null };
-    if (spent >= R.likelySpend) return { status: "chaud", reason: `a déjà dépensé ${Math.round(spent)} € chez elle`, until: null };
     // … ou sur ce qu'il dit : il demande un prix, dit qu'il prend, réclame un ticket, et rien de contraire depuis
     const wl = want.sort((a, b) => b.at - a.at)[0]; if (wl && now() - wl.at < R.intentTtl && wl.at > last) return { status: "chaud", reason: "veut acheter : « " + str(wl.text).slice(0, 60) + " »", until: wl.at + R.intentTtl };
     if (why && !(spent > 0)) return now() < last + R.wasterTtl ? { status: "waster", reason: why, until: last + R.wasterTtl } : { status: "test", reason: "nouveau test après 14 jours", until: null };
@@ -91,6 +92,7 @@ module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
     L.forEach(m => { if (!m.fromFan || !m.text) return; const at = tOf(m); if (at < t0) return; const t = str(m.text);
       if (NEVER.test(t)) say.run(cid, fan, dayOf(at), "never", at, t.slice(0, 200)); else if (o.nomoney && o.nomoney(t)) say.run(cid, fan, dayOf(at), "nomoney", at, t.slice(0, 200));
       else if (INTENT.test(t) && !NEG.test(t)) { say.run(cid, fan, dayOf(at), "intent", at, t.slice(0, 200)); db.prepare("UPDATE twizz_tri_said SET at = ?, text = ? WHERE creator_id = ? AND fan_id = ? AND day = ? AND kind = 'intent' AND at < ?").run(at, t.slice(0, 200), cid, fan, dayOf(at), at); } });
+    if (spentRaw(cid, fan) == null) { try { if (app.locals.spendLater) app.locals.spendLater(cid, fan); } catch (e) {} }   // ce qu'il a dépensé sur Twizz n'est pas encore connu : le site le demande, le statut sera juste à la prochaine réponse
     const c = store(cid, fan, name, conv);
     // un payeur que l'IA croise : il entre dans la liste « à reprendre » (sans notification : il n'y a pas d'achat à l'instant)
     if (c.status === "payeur" && o.list !== false) { const sp = spentOf(cid, fan);
@@ -136,11 +138,13 @@ module.exports = function mount(app, db, auth, { notify, inbox, perms }) {
   // messagerie des chatters quand l'IA fait le tri : un fan n'y apparaît que s'il est qualifié (payeur ou prêt à payer), déjà suivi par l'équipe, ou laissé à l'équipe par l'IA
   function visible(cid, fan) { if (!fan) return true; const st = status(cid, fan).status; if (st === "payeur" || st === "chaud") return true;
     const one = (sql, ...a) => { try { return !!db.prepare(sql).get(...a); } catch (e) { return false; } };
+    if (boughtMedia(cid, fan) || boughtElsewhere(cid, fan)) return true;   // connu comme acheteur avant même que l'IA l'ait croisé
+    const sp = spentRaw(cid, fan); if (sp > 0) return true;
+    if (sp == null) { try { if (app.locals.spendLater) app.locals.spendLater(cid, fan); } catch (e) {} return true; }   // pas encore analysé : il reste visible, et le site demande à Twizz ce qu'il a dépensé (en arrière-plan, un fan à la fois)
     return one("SELECT 1 FROM twizz_tri_handoff WHERE creator_id = ? AND fan_id = ?", cid, fan)
-      || one("SELECT 1 FROM twizz_sent WHERE creator_id = ? AND fan_id = ? AND user_id IS NOT NULL AND COALESCE(via, '') <> 'ia' AND at > ? LIMIT 1", cid, fan, now() - 14 * DAY)   // un chatter lui a écrit ces 14 derniers jours : il le garde
+      || one("SELECT 1 FROM twizz_sent WHERE creator_id = ? AND fan_id = ? AND user_id IS NOT NULL AND COALESCE(via, '') <> 'ia' AND at > ? LIMIT 1", cid, fan, now() - R.grace)
       || one("SELECT 1 FROM twizz_ai_fanoff WHERE creator_id = ? AND fan_id = ?", cid, fan)   // l'IA est coupée pour lui : il faut bien quelqu'un
-      || one("SELECT 1 FROM twizz_ai_convs x JOIN twizz_ai_runs u ON u.id = x.run_id WHERE u.creator_id = ? AND x.fan_id = ? AND x.blocked IS NOT NULL AND x.at > ? LIMIT 1", cid, fan, now() - 7 * DAY)   // l'IA l'a laissé à l'équipe (mineur, détresse, gros payeur…)
-      || boughtMedia(cid, fan) || boughtElsewhere(cid, fan) || spentOf(cid, fan) >= R.likelySpend; }   // connu comme acheteur avant même que l'IA l'ait croisé
+      || one("SELECT 1 FROM twizz_ai_convs x JOIN twizz_ai_runs u ON u.id = x.run_id WHERE u.creator_id = ? AND x.fan_id = ? AND x.blocked IS NOT NULL AND x.at > ? LIMIT 1", cid, fan, now() - 7 * DAY); }   // l'IA l'a laissé à l'équipe (mineur, détresse, gros payeur…)
   const canOpen = (user, cid) => { try { return !!(user && cid && inbox && inbox.canOpen && inbox.canOpen({ ...user, rk: perms.rk(user) }, cid)); } catch (e) { return false; } };
   const labelOf = cid => { let r = null; try { r = db.prepare("SELECT m.name model, c.label FROM twizz_creators c LEFT JOIN models m ON m.id = c.model_id WHERE c.twizz_id = ?").get(cid); } catch (e) {} return (r && (r.model || r.label)) || "ta créatrice"; };
   const briefOf = (cid, fan) => { let B = {}; try { B = J((db.prepare("SELECT data FROM twizz_fan_brief WHERE creator_id = ? AND fan_id = ?").get(cid, fan) || {}).data, {}) || {}; } catch (e) {}

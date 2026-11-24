@@ -336,6 +336,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai }) {
   app.get("/api/twizz/inbox/:cid/unread-list", auth, inbox, wrap(async req => { const cid = creatorOk(req.params.cid);
     let items = decorate(cid, applySeen(cid, await unreadConvs(cid, req.query.fresh === "1")), req); const tri = triOf(cid, req); if (tri) items = items.filter(c => !c.fan.id || tri(c.fan.id));
     return { items }; }));
+  // tri des fans : pour savoir si un fan a déjà payé (médias, médias push, collections), le site demande à Twizz ce qu'il a dépensé. Un fan à la fois, 1,5 s entre deux demandes, une seule fois par fan et par heure
+  const SPQ = [], SPSEEN = new Map(); let spBusy = false;
+  async function spRun() { spBusy = true; try { while (SPQ.length) { const [cid, fan] = SPQ.shift();
+        try { const j = await G(`/business/get-fan-purchase-stats/${enc(fan)}?creatorId=${enc(cid)}`, 600e3), d = (j && (j.data ?? j)) || {}, k = Object.keys(d).find(k => /totalSpent|spent/i.test(k)); if (k) fact(cid, fan, { spend: +d[k] || 0 }); } catch (e) {}
+        await new Promise(r => setTimeout(r, 1500)); } } finally { spBusy = false; } }
+  app.locals.spendLater = (cid, fan) => { const k = cid + ":" + fan, t = SPSEEN.get(k); if ((t && Date.now() - t < 3600e3) || SPQ.length >= 400) return; SPSEEN.set(k, Date.now()); if (SPSEEN.size > 5000) SPSEEN.clear(); SPQ.push([cid, fan]); if (!spBusy) spRun(); };
   // l'IA fait le tri : ce chatter ne voit que les fans qualifiés (voir twizz-ai.js, app.locals.triInbox) ; null = rien n'est caché
   const triOf = (cid, req) => { try { return app.locals.triInbox ? app.locals.triInbox(cid, req.user) : null; } catch (e) { return null; } };
   // auteur du dernier message, faits du fan, aperçus, qui est dessus : pour toute liste de conversations
