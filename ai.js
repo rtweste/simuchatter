@@ -1,4 +1,5 @@
-// Appels à l'IA (API Anthropic). MOCK_AI=1 renvoie des réponses factices pour tester sans clé.
+// Appels à l'IA. Le Simu Chatter (fan simulé, indices, correction) passe par Grok (xAI) quand XAI_API_KEY est là ; le reste par l'API Anthropic.
+// MOCK_AI=1 renvoie des réponses factices pour tester sans clé.
 const AnthropicMod = require("@anthropic-ai/sdk");
 const Anthropic = AnthropicMod.default || AnthropicMod;
 
@@ -6,6 +7,12 @@ const MOCK = !!process.env.MOCK_AI;
 const MODEL_FAN = process.env.MODEL_FAN || "claude-haiku-5-5";
 const MODEL_EVAL = process.env.MODEL_EVAL || "claude-sonnet-5-5";
 const MODEL_HINT = process.env.MODEL_HINT || "claude-haiku-5-5";
+// Simu Chatter sur Grok : le fan et les indices sur le modèle rapide, la correction sur le modèle qui réfléchit. SIM_PROVIDER=anthropic revient à Claude.
+// Si Grok ne répond pas (panne, refus, clé absente), l'appel repart sur Claude : une simulation ne s'arrête jamais à cause de ça.
+const XAI_KEY = () => process.env.XAI_API_KEY || "", XAI_BASE = () => String(process.env.XAI_BASE || "https://api.x.ai/v1").replace(/\/+$/, "");
+const SIM_GROK = () => !MOCK && !!XAI_KEY() && String(process.env.SIM_PROVIDER || "grok").toLowerCase() !== "anthropic";
+const SIM_FAN = process.env.SIM_MODEL_FAN || "grok-4-1-fast-non-reasoning", SIM_HINT = process.env.SIM_MODEL_HINT || "grok-4-1-fast-non-reasoning", SIM_EVAL = process.env.SIM_MODEL_EVAL || "grok-4-1-fast-reasoning";
+const isGrok = m => /^grok/i.test(String(m));
 
 const client = MOCK ? null : new Anthropic(); // lit ANTHROPIC_API_KEY
 // Suivi de la consommation : le serveur branche ici l'enregistrement de chaque appel
@@ -48,6 +55,37 @@ function extractJSON(text) {
 }
 
 // Appel à l'IA, avec nouvelles tentatives si elle est momentanément surchargée
+async function grokOnce(prompt, model, maxTokens, extra) {
+  const body = { model, max_tokens: maxTokens, messages: [{ role: "user", content: prompt }] };
+  if (extra && extra.system) body.messages.unshift({ role: "system", content: extra.system });
+  if (extra && extra.tools) { body.tools = extra.tools.map(t => ({ type: "function", function: { name: t.name, description: t.description || "", parameters: t.input_schema || { type: "object" } } }));
+    if (extra.tool_choice && extra.tool_choice.name) body.tool_choice = { type: "function", function: { name: extra.tool_choice.name } }; }
+  const r = await fetch(XAI_BASE() + "/chat/completions", { method: "POST", headers: { Authorization: "Bearer " + XAI_KEY(), "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(90000) });
+  const txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch (e) {}
+  if (!r.ok || !j) { const e = new Error("Grok : " + ((j && (j.error && (j.error.message || j.error) || j.message)) || txt.slice(0, 200) || r.status)); e.status = r.status; throw e; }
+  const ch = (j.choices || [])[0] || {}, m = ch.message || {}, content = [];
+  if (m.content) content.push({ type: "text", text: String(m.content) });
+  (m.tool_calls || []).forEach(tc => { let input = null; try { input = JSON.parse((tc.function && tc.function.arguments) || "{}"); } catch (e) {} if (input) content.push({ type: "tool_use", name: tc.function && tc.function.name, input }); });
+  const u = j.usage || {}, cached = +((u.prompt_tokens_details || {}).cached_tokens) || 0;
+  return { content, stop_reason: ch.finish_reason === "length" ? "max_tokens" : (m.tool_calls || []).length ? "tool_use" : "end_turn",
+    usage: { input_tokens: Math.max(0, (+u.prompt_tokens || 0) - cached), cache_read_input_tokens: cached, cache_creation_input_tokens: 0, output_tokens: (+u.completion_tokens || 0) + (+((u.completion_tokens_details || {}).reasoning_tokens) || 0) } };
+}
+// Simu Chatter : Grok d'abord (2 essais), puis Claude en secours
+async function askSim(prompt, grokModel, claudeModel, maxTokens, tag, extra) {
+  if (SIM_GROK()) for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await grokOnce(prompt, grokModel, /reasoning/i.test(grokModel) && !/non-reasoning/i.test(grokModel) ? maxTokens + 4000 : maxTokens, extra);
+      if (res.stop_reason === "max_tokens") console.warn(`Réponse Grok coupée (max_tokens=${maxTokens})`);
+      try { if (usageHook && res.usage) usageHook(tag || {}, grokModel, res.usage); } catch (e) {}
+      if (extra && extra.tools) return res;
+      const text = res.content.filter(c => c.type === "text").map(c => c.text).join(""); if (text.trim()) return text;
+      throw new Error("Grok : réponse vide");
+    } catch (e) { const st = e.status || 0; console.error(`Simu : appel Grok échoué (tentative ${attempt}) :`, st, e.message); if (st && st !== 429 && st < 500 && st !== 408) break; if (attempt < 2) await new Promise(r => setTimeout(r, 2000)); }
+  }
+  if (!client || !process.env.ANTHROPIC_API_KEY) throw new Error("Le simulateur n'arrive pas à joindre Grok");
+  return ask(prompt, claudeModel, maxTokens, tag, extra);
+}
+const askOne = (...a) => ask(...a);
 async function ask(prompt, model, maxTokens, tag, extra) {
   for (let attempt = 1; ; attempt++) {
     try {
@@ -68,8 +106,8 @@ async function ask(prompt, model, maxTokens, tag, extra) {
   }
 }
 
-async function askJSON(prompt, model, maxTokens, tag) {
-  let text = await ask(prompt, model, maxTokens, tag);
+async function askJSON(prompt, model, maxTokens, tag, via) {
+  const ask = via || askOne; let text = await ask(prompt, model, maxTokens, tag);
   try { return extractJSON(text); }
   catch (e) {
     console.error("JSON illisible, nouvel essai :", e.message);
@@ -148,7 +186,7 @@ ${transcript(sim.log) || "(aucun message — tu ouvres la conversation)"}
   const ok = r => r && Array.isArray(r.replies) && r.replies.some(x => typeof x === "string" && x.trim());
   for (let k = 0; k < 2; k++) {
     try {
-      const res = await ask(prompt.replace("RÉPONDS UNIQUEMENT EN JSON :", "Réponds avec l'outil « reponse_fan », en suivant cette structure :"), MODEL_FAN, 900, tag,
+      const res = await askSim(prompt.replace("RÉPONDS UNIQUEMENT EN JSON :", "Réponds avec l'outil « reponse_fan », en suivant cette structure :"), SIM_FAN, MODEL_FAN, 900, tag,
         { tools: [FAN_TOOL], tool_choice: { type: "tool", name: "reponse_fan" } });
       const tu = res.content.find(c => c.type === "tool_use");
       if (ok(tu && tu.input)) return tu.input;
@@ -156,7 +194,7 @@ ${transcript(sim.log) || "(aucun message — tu ouvres la conversation)"}
     } catch (e) { if (e.status && e.status !== 400) throw e; console.error("Réponse du fan par outil échouée :", e.message); }
   }
   // dernier recours : texte libre, on en tire au moins un message
-  const text = await ask(prompt, MODEL_FAN, 900, tag);
+  const text = await askSim(prompt, SIM_FAN, MODEL_FAN, 900, tag);
   try { const r = extractJSON(text); if (ok(r)) return r; } catch (e) {}
   const lines = String(text || "").replace(/```[a-z]*|```/g, "").split(/\n+/).map(x => x.trim()).filter(x => x && !/^[{}\[\]"]/.test(x)).slice(0, 2);
   return { replies: lines.length ? lines : ["?"], interest: sim.interest, ppv_decision: null, left: false };
@@ -170,7 +208,7 @@ ${transcript(sim.log) || "(vide)"}
 
 Donne UN conseil concret et court (3 phrases max) pour le prochain message, en français, avec éventuellement un exemple de formulation. Reste éthique : pas de pression sur un fan vulnérable, pas de fausses promesses (rencontres, exclusivité mensongère).`;
   if (MOCK) return "Pose-lui une question sur lui avant de proposer quoi que ce soit. Ex : « et toi tu fais quoi dans la vie ? »";
-  return (await ask(prompt, MODEL_HINT, 300, { sim: sim.id, user: sim.user_id, kind: "hint" })).trim();
+  return (await askSim(prompt, SIM_HINT, MODEL_HINT, 300, { sim: sim.id, user: sim.user_id, kind: "hint" })).trim();
 }
 
 /* ---------- Évaluation ---------- */
@@ -238,13 +276,13 @@ Donne 2 à 3 réécritures des messages les plus perfectibles (moins si le chatt
   }
   const tag = { sim: sim.id, user: sim.user_id, kind: "eval" };
   try {
-    const res = await ask(prompt.replace("RÉPONDS UNIQUEMENT EN JSON :", "Donne ton évaluation avec l'outil « evaluation », en suivant cette structure :"), MODEL_EVAL, 6000, tag,
+    const res = await askSim(prompt.replace("RÉPONDS UNIQUEMENT EN JSON :", "Donne ton évaluation avec l'outil « evaluation », en suivant cette structure :"), SIM_EVAL, MODEL_EVAL, 6000, tag,
       { tools: [EVAL_TOOL], tool_choice: { type: "tool", name: "evaluation" } });
     const tu = res.content.find(c => c.type === "tool_use");
     if (tu && tu.input && typeof tu.input.score === "number" && Array.isArray(tu.input.criteria)) return noEthics(tu.input);
     console.error("Évaluation par outil incomplète, passage au texte :", res.stop_reason);
   } catch (e) { if (e.status && e.status !== 400) throw e; console.error("Évaluation par outil échouée, passage au texte :", e.message); }
-  return noEthics(await askJSON(prompt, MODEL_EVAL, 6000, tag));
+  return noEthics(await askJSON(prompt, MODEL_EVAL, 6000, tag, (p, m, n, t) => askSim(p, SIM_EVAL, m, n, t)));
 }
 
 /* ---------- Lecture d'une capture de vente (Twizz) ---------- */
@@ -439,4 +477,4 @@ La prochaine action doit être concrète et respectueuse : pas de fausse promess
   return { difficulte: ["facile", "moyenne", "difficile"].includes(x.difficulte) ? x.difficulte : "", prenom: S(x.prenom).slice(0, 40), brief: S(x.brief).slice(0, 400), etat: S(x.etat).slice(0, 240), action: S(x.action).slice(0, 240), profil: { anniv: S(p.anniv), ville: S(p.ville), metier: S(p.metier), gouts: S(p.gouts) } };
 }
 
-module.exports = { fanTurn, hint, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead, assistant, gradeApplicant, replies, scriptVariants, tagSuggest, fanBrief };
+module.exports = { simProvider: () => (SIM_GROK() ? "grok" : "anthropic"), fanTurn, hint, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead, assistant, gradeApplicant, replies, scriptVariants, tagSuggest, fanBrief };
