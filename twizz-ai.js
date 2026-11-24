@@ -412,7 +412,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   }
   const teaseOk = (tz, M) => !!tz && (tz.live || now() - tz.at < M.teaseWindow * 60e3);
   // il vient de dire oui au teasing (« oh ouais vas-y », « montre ») : le média part dans cette réponse, sans le faire attendre
-  const YES = /\b(oui|ouii+|ouais|ouai|ouep|ouaip|oe|oé|wé|wè|ui|yep|yes|wesh|vas[- ]?y|vasy|vazy|vasi|vazi|azy|dis[- ]moi|dit[- ]moi|balance|chaud|go|grave|carr[ée]ment|[ée]videmment|bien s[uû]r|ok|okay|d'?acc|envoie|envoi|montre|fais voir|je veux|j'?veux|stp|please|avec plaisir|pourquoi pas|trop)\b/i, NOPE = /\b(non|nan|pas maintenant|plus tard|pas ce soir|j'?ai pas (de )?(thunes|sous|argent)|pas d'?argent)\b/i;
+  const YES = /\b(oui+|ouais+|ouai|ouep|ouaip|oe+|ou[ée]+|wé+|wè|ui+|yep|yes|wesh|vas[- ]?y|vasy|vazy|vasi|vazi|azy|dis[- ]moi|dit[- ]moi|balance|chaud|go|grave|carr[ée]ment|[ée]videmment|bien s[uû]r|ok|okay|d'?acc|envoie|envoi|montre|fai[st]?r? voir|je veux|j'?veux|stp|please|avec plaisir|pourquoi pas|trop)(?![a-zà-ÿ0-9])/i, NOPE = /\b(non|nan|pas maintenant|plus tard|pas ce soir|j'?ai pas (de )?(thunes|sous|argent)|pas d'?argent)\b/i;
   const TEASE_ASK = /\b(tu veux (que je te (le |la |les )?montre|voir|que je t'?en montre)|[çc]a te dirait de (voir|que je te montre)|je te montre\s*\?|t'?as envie de voir|tu veux (une )?(petite )?(photo|vid[ée]o))/i;
   // il répond oui à une proposition qu'elle vient de faire (« tu veux voir ? », « tu kiffes ma tenue ? ») ou réagit au média qu'on vient de lui envoyer
   const PEND_Q = /c['’ ]?est quoi|qu['’ ]?est[- ]ce que c['’ ]?est|y a quoi|il y a quoi|on voit quoi|tu fais quoi dessus|dedans|\b(oui|ouais|ouii+|vas[- ]?y|vasy|go|envoie|envoi|montre|fais voir|je veux|j'?veux|pourquoi pas|carr[ée]ment|grave)\b/i;
@@ -520,7 +520,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     for (let i = 0; i + 2 < w.length; i++) { const g = w.slice(i, i + 3); if (g.some(x => !STOPW.has(x))) G.add(g.join(" ")); } return G; };
   function crossTics(cid) { try { const R = db.prepare("SELECT conv_id, text FROM twizz_sent WHERE creator_id = ? AND via = 'ia' AND text IS NOT NULL AND at > ? ORDER BY at DESC LIMIT 120").all(cid, now() - 3 * 3600e3), by = {};
     R.forEach(r => grams(r.text).forEach(g => { (by[g] = by[g] || new Set()).add(r.conv_id); })); return Object.entries(by).filter(([, v]) => v.size >= 3).sort((a, b) => b[1].size - a[1].size).map(([k]) => k).slice(0, 6); } catch (e) { return []; } }
-  const BANNED = ["t'es direct", "tes direct", "t es direct"];
+  const BANNED = ["t'es direct", "tes direct", "t es direct", "t'es chaud", "tes chaud", "t es chaud"];
   // « t'as raté », « ce que tu rates » : permis, mais une seule fois par conversation
   const RATE = ["ce que tu rates", "t'as rate", "tas rate", "t as rate", "tu rates", "tu vas rater", "t'as pas idee"];   // tics déjà repérés partout par la surveillance
   const hasTic = (t, T) => { const x = " " + str(t).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ") + " "; return T.some(k => x.includes(" " + k + " ")); };
@@ -542,7 +542,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     R.forEach(t => new Set(t.match(EMO) || []).forEach(e => cnt[e] = (cnt[e] || 0) + 1));
     if (q >= 3) out.push("tes derniers messages finissent presque tous par une question : cette fois, pas de question, affirme, raconte ou taquine");
     const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0]; if (top && top[1] >= 3) out.push(`tu as mis ${top[0]} dans presque tous tes derniers messages : pas de ${top[0]} cette fois`);
-    const T = [...new Set(tics(L).concat(cid ? crossTics(cid) : []))]; out.push("n'écris jamais « t'es direct »");
+    const T = [...new Set(tics(L).concat(cid ? crossTics(cid) : []))]; out.push("n'écris jamais « t'es direct »", "n'écris jamais « t'es chaud » (ni « t'es chaud toi », « t'es chaud là ») : réagis à ce qu'il vient de dire, précisément");
     if (T.length) out.push(`tu répètes sans arrêt les mêmes expressions (${T.map(k => "« " + k + " »").join(", ")}) : ne les utilise plus du tout, trouve d'autres mots, change d'idée (raconte, pose une autre question, propose quelque chose)`);
     return out.length ? "VARIE : " + out.join(" ; ") + "." : "";
   }
@@ -705,7 +705,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
           } else {
             const since = L.filter(m => m.fromFan && tOf(m) > (S0.sent_at || 0)).length, [a, b] = PACE[cur.pace] || PACE.normal;
             const nx = `Prochaine étape : « ${clip(fillStep(nxt.text, cr, "[son prénom]")) || "(médias seuls)"} » (${stepSum(nxt)}${what(nxt)}).`;
-            if (paid || since >= b) { P.force = true; P.text = [head, paid ? "Il vient d'acheter le média." : "", nx, `Elle part juste après ta réponse, telle qu'elle est écrite : écris seulement une bulle courte et naturelle ${paid ? "(ta réaction à son achat)" : "de transition"}, ou rien. Ne la recopie pas, ne la décris pas.`].filter(Boolean).join("\n"); }
+            // il dit oui à la question que pose l'étape (« tu veux voir… ? ») et elle n'a rien écrit depuis : la suite part, sans le faire attendre
+            const lfm = [...L].reverse().find(m => m.fromFan), lmm = L[L.length - 1], ansYes = !!lfm && lmm === lfm && tOf(lfm) > (S0.sent_at || 0) && !NOPE.test(str(lfm.text)) && YES.test(str(lfm.text))
+              && /\?/.test(str(cur.text)) && /(tu veux|[çc]a te (?:dit|dirait|tente)|t['’ ]?as envie|t['’ ]?aimerais|je te montre)/i.test(str(cur.text)) && !L.some(m => !m.fromFan && tOf(m) > (S0.sent_at || 0) + 20e3);
+            if (paid || since >= b || ansYes) { P.force = true; P.text = [head, paid ? "Il vient d'acheter le média." : "", nx, `Elle part juste après ta réponse, telle qu'elle est écrite : écris seulement une bulle courte et naturelle ${paid ? "(ta réaction à son achat)" : "de transition"}, ou rien. Ne la recopie pas, ne la décris pas.`].filter(Boolean).join("\n"); }
             else if (since >= a) { P.step = true; P.text = [head, nx, "Envoie-la quand ça colle à la conversation (etape = true) : ta réponse part d'abord, puis le message de l'étape tel qu'il est écrit, avec son média. Sinon continue de discuter et fais monter l'envie. Ne la recopie pas."].join("\n"); }
             else P.text = [head, nx, `Pas encore : discute encore un peu (environ ${a - since} message${a - since > 1 ? "s" : ""} de sa part), fais monter l'envie vers la suite sans la décrire précisément et sans promettre de délai. Pas d'autre script, pas d'autre média.`].join("\n");
           }
@@ -760,7 +763,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const relFirstOf = (cid, fan, C, p0) => { const S0 = scGet(cid, fan); if (!S0 || S0.state !== "open" || !S0.lock_msg || S0.relanced) return p0;
     const sc = aiScripts(cid).find(x => x.id === S0.script_id), st = sc && sc.steps[S0.step]; return st && str(st.relance).trim() && st.relanceMin ? st.relanceMin : C.relanceAfter; };
   // jamais « je te l'envoie », « et voilà »… si aucun média ne part avec le message
-  const DELIV = [/(?:^|[^a-zà-ÿ])(?:je|j'?|jvais|je vais|vais)\s*(?:te|t'|t)\s*(?:l'|la |le |les |l )?\s*envoi(?:e|er|es)?\b/i, /\bjt'?envoi/i, /\bet voil[aà]\b/i, /\bc'?est parti\b/i, /\bregarde bien\b/i, /^\s*(?:et\s+)?voil[aà]\s*[!.\p{Extended_Pictographic}\s]*$/iu, /\bvoil[aà] (en|la|ma|mon|ta|ton|pour toi)\b/i, /\b(bug|bugu[ée]|beug|beugu[ée]|le site (a|m'a)|pas pass[ée]|pas parti|probl[èe]me technique)\b/i, /(?:^|[^a-zà-ÿ])(?:je|j'?)\s*(?:te\s*)?(?:les|la|le|l')\s*sors\b/i, /(?:^|[^a-zà-ÿ])(?:je|j'?)\s*te\s*(?:les|la|le|l')\s*montre\b(?!\s*\?)/i, /^\s*tiens\b/i, /\bvoil[aà] pour toi\b/i,
+  const DELIV = [/\bje te laisse (?:regarder|mater|voir|admirer)\b/i, /^\s*(?:ok+|okay|allez|bon|vas[- ]?y)?[\s,]*je te montre (?:comment|ce que|[àa] quoi|tout)\b[^?]*$/i, /(?:^|[^a-zà-ÿ])(?:je|j'?|jvais|je vais|vais)\s*(?:te|t'|t)\s*(?:l'|la |le |les |l )?\s*envoi(?:e|er|es)?\b/i, /\bjt'?envoi/i, /\bet voil[aà]\b/i, /\bc'?est parti\b/i, /\bregarde bien\b/i, /^\s*(?:et\s+)?voil[aà]\s*[!.\p{Extended_Pictographic}\s]*$/iu, /\bvoil[aà] (en|la|ma|mon|ta|ton|pour toi)\b/i, /\b(bug|bugu[ée]|beug|beugu[ée]|le site (a|m'a)|pas pass[ée]|pas parti|probl[èe]me technique)\b/i, /(?:^|[^a-zà-ÿ])(?:je|j'?)\s*(?:te\s*)?(?:les|la|le|l')\s*sors\b/i, /(?:^|[^a-zà-ÿ])(?:je|j'?)\s*te\s*(?:les|la|le|l')\s*montre\b(?!\s*\?)/i, /^\s*tiens\b/i, /\bvoil[aà] pour toi\b/i,
     /(?:^|[^a-zà-ÿ])(?:je|j'?)\s*te\s*(?:la |le |les )?pr[ée]par/i, /\bjte pr[ée]par/i, /\btu vas voir\b/i, /(?:^|[^a-zà-ÿ])(?:je|j'?)\s*te\s*r[ée]serv/i, /\bjte r[ée]serv/i];
   const fakeSend = t => DELIV.some(x => x.test(str(t)));
   // ce que le site sait déjà du fan (pour savoir si la découverte est finie)
