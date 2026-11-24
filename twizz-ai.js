@@ -147,13 +147,17 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   // 8 fois au plus par 24 h, et ne les relance pas : chaque réponse coûte, autant la garder pour ceux qui peuvent acheter
   db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_slow (creator_id TEXT NOT NULL, fan_id TEXT NOT NULL, at INTEGER NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (creator_id, fan_id))");
   const SLOW_WAIT = 10 * 60e3, SLOW_MAX = 8, SLOW_TTL = 24 * 3600e3, SLOW_TAG = /((peu[tx]|peuvent) pas|ne paie|ne paye|pas) pay|pas d['’ ]?argent|sans argent|fauch|non[- ]payeur|mauvais payeur|radin/i;
+  // il ne le dit pas mais ne paie jamais : médias payants reçus (de l'IA ou d'un chatter) sur les dernières 48 h
+  const SLOW_UNPAID = 4, SLOW_WINDOW = 48 * 3600e3; try { db.exec("CREATE INDEX IF NOT EXISTS twizz_sent_fan ON twizz_sent(creator_id, fan_id, at)"); } catch (e) {}
+  const unpaidOf = (cid, fan) => { try { return db.prepare("SELECT COUNT(*) n FROM twizz_sent WHERE creator_id = ? AND fan_id = ? AND price > 0 AND at > ?").get(cid, fan, now() - SLOW_WINDOW).n; } catch (e) { return 0; } };
   const slowRow = (cid, fan) => { try { return db.prepare("SELECT at, n FROM twizz_ai_slow WHERE creator_id = ? AND fan_id = ?").get(cid, fan) || null; } catch (e) { return null; } };
   const slowTag = (cid, fan) => { try { return db.prepare("SELECT t.name FROM twizz_fan_tags ft JOIN twizz_tags t ON t.id = ft.tag_id WHERE ft.creator_id = ? AND ft.fan_id = ?").all(cid, fan).some(r => SLOW_TAG.test(str(r.name))); } catch (e) { return false; } };
   // { n } si ce fan est à ralentir (n = réponses déjà reçues sur 24 h), sinon null ; jamais un fan qui a déjà acheté
   function slowFan(cid, fan, spent) { if (!fan) return null; if (spent == null) { try { spent = (db.prepare("SELECT spend FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, fan) || {}).spend || 0; } catch (e) { spent = 0; } }
-    const r = slowRow(cid, fan), live = r && now() - r.at < SLOW_TTL, tagged = slowTag(cid, fan); if (!live && !tagged) return null;
+    const r = slowRow(cid, fan), live = r && now() - r.at < SLOW_TTL, tagged = slowTag(cid, fan), many = !live && !tagged && unpaidOf(cid, fan) >= SLOW_UNPAID; if (!live && !tagged && !many) return null;
     let bought = spent > 0; if (!bought) try { bought = !!db.prepare("SELECT 1 FROM twizz_tx WHERE creator_id = ? AND fan_id = ? AND refund = 0 AND net > 0 AND at > ? LIMIT 1").get(cid, fan, now() - 30 * 864e5); } catch (e) {}
     if (bought) { if (tagged) untagBroke(cid, fan); return null; }   // il a acheté : plus ralenti, et le tag que l'IA avait posé saute
+    if (many) tagBroke(cid, fan);   // il ne dit rien mais ne paie jamais : 4 médias payants reçus en 48 h, aucun achat → le tag de l'équipe est posé
     return { n: live ? r.n : 0 }; }
   // l'IA pose elle-même le tag de l'équipe (« Peux pas payer ») quand un fan qui n'a jamais acheté dit qu'il n'a pas d'argent ; elle le retire s'il achète. Un tag posé à la main par l'équipe n'est jamais retiré par l'IA
   const NOMONEY = t => { const x = str(t).toLowerCase().replace(/['’]/g, " ").replace(/\s+/g, " ");   // « j ai plus d argent », « jai pas dargent » : écrit avec ou sans apostrophe
