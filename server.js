@@ -39,6 +39,8 @@ const db = new DatabaseSync(DB_PATH);
 // Coût de l'IA : chaque appel est enregistré avec son prix (dollars, tarifs Anthropic par million de tokens)
 db.exec("CREATE TABLE IF NOT EXISTS ai_usage (id INTEGER PRIMARY KEY, at INTEGER NOT NULL, sim_id INTEGER, user_id INTEGER, kind TEXT, model TEXT, in_tok INTEGER, out_tok INTEGER, cache_w INTEGER, cache_r INTEGER, cost REAL)");
 const AI_PRICE = { "claude-haiku": [0.10, 0.50, 0.125, 0.01], "claude-sonnet": [2, 10, 2.5, 0.10], "claude-opus": [2, 10, 2.5, 0.10] };
+// Simu Chatter sur Grok : tarifs xAI relevés (entrée, sortie, —, entrée déjà en cache), les mêmes que ceux de l'IA de secours
+AI_PRICE.grok = [+process.env.XAI_PRICE_IN || 1.25, +process.env.XAI_PRICE_OUT || 2.50, 0, +process.env.XAI_PRICE_CACHED || 0.20];
 ai.setUsageHook((tag, model, u) => {
   const p = AI_PRICE[Object.keys(AI_PRICE).find(k => String(model).startsWith(k))] || AI_PRICE["claude-sonnet"];
   const i = u.input_tokens || 0, o = u.output_tokens || 0, w = u.cache_creation_input_tokens || 0, r = u.cache_read_input_tokens || 0;
