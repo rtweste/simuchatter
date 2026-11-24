@@ -52,7 +52,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const MODELS = { fast: ["grok-4-1-fast-non-reasoning", "Rapide"], smart: ["grok-4-1-fast-reasoning", "Plus réfléchi (un peu plus lent)"] };
   const G_DEF = { notice: true, mark: false, base: "", locked: "", noticeText: "Petite précision : c'est l'IA de {creatrice} qui te répond en ce moment 😊", noticeFreq: "run", noticeDays: 30,
     waitMin: 35, waitMax: 80, teamPause: 15, fanWindow: 12, perFan: 40, maxHours: 12, model: "fast",
-    relance: true, relanceAfter: 45, relanceMax: 1, quietFrom: 1, quietTo: 9, memory: true, vipAlert: 300, budget: 20, hourCap: 1, nv: false };
+    relance: true, relanceAfter: 45, relanceMax: 1, quietFrom: 1, quietTo: 9, memory: true, vipAlert: 300, budget: 20, hourCap: 1, nv: false, triInbox: false };
   const M_DEF = { ok: false, sell: true, maxPrice: 100, gap: 20, pile: true, albums: [], albumNotes: {}, skipTags: [], extra: "", profile: "", scripts: true, promo: true, maxDiscount: 30, promoHours: 24, vision: true,
     minMsgs: 8, tease: true, teaseWindow: 90, askSkip: false, cooldownH: 6, coolFull: false, sexDays: 1, details: {},
     tk: true, snapMin: 50, snapMax: 100, camMin: 130, camMax: 200, camHour: 300, customPrice: 150, tkAlbum: "", camDispo: "", ladder: [6, 12, 18, 25, 35, 50], freeLing: true };
@@ -78,6 +78,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (b.maxHours != null) o.maxHours = int(b.maxHours, 1, 24, "Durée maximum d'une séance");
     if (b.model != null) { if (!MODELS[b.model]) throw fail("Modèle Grok inconnu"); o.model = b.model; }
     if (typeof b.relance === "boolean") o.relance = b.relance;
+    if (typeof b.triInbox === "boolean") o.triInbox = b.triInbox;   // messagerie des chatters : seulement les fans qualifiés par l'IA, et l'IA continue de tourner quand un chatter est là
     if (typeof b.nv === "boolean") o.nv = b.nv;   // nouvelle version des réponses : en ligne ou non
     if (typeof b.memory === "boolean") o.memory = b.memory;
     if (b.relanceAfter != null) o.relanceAfter = int(b.relanceAfter, 10, 720, "Relance après");
@@ -169,11 +170,11 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   // Depuis le tri des fans : seul un time waster prouvé (plusieurs offres vues et pas achetées sur plusieurs jours, voir tri.js) ou un fan tagué à la main par l'équipe est ralenti.
   // Dire une fois « j'ai pas d'argent » ou laisser quelques médias fermés ne suffit plus : c'est un doute, pas un verdict.
   const TRI = () => app.locals.tri || null, triOf = (cid, fan) => { try { return TRI() ? TRI().status(cid, fan) : { status: "test" }; } catch (e) { return { status: "test" }; } };
-  function slowFan(cid, fan, spent) { if (!fan) return null; const tagged = slowTag(cid, fan), tw = triOf(cid, fan).status === "waster"; if (!tagged && !tw) return null;
+  function slowFan(cid, fan, spent) { if (!fan) return null; const st = triOf(cid, fan).status, tagged = slowTag(cid, fan), tw = st === "waster" || st === "retest"; if (!tagged && !tw) return null;   // time waster, ou doute en attente de son prochain test : moins de réponses, pour ne pas brûler des crédits
     if (tagged && !tw) { if (spent == null) { try { spent = (db.prepare("SELECT spend FROM twizz_fan_facts WHERE creator_id = ? AND fan_id = ?").get(cid, fan) || {}).spend || 0; } catch (e) { spent = 0; } }
       let bought = spent > 0; if (!bought) try { bought = !!db.prepare("SELECT 1 FROM twizz_tx WHERE creator_id = ? AND fan_id = ? AND refund = 0 AND net > 0 AND at > ? LIMIT 1").get(cid, fan, now() - 30 * 864e5); } catch (e) {}
       if (bought) return null; }   // tagué par l'équipe mais il a acheté depuis : plus ralenti
-    const r = slowRow(cid, fan), live = r && now() - r.at < SLOW_TTL; return { n: live ? r.n : 0 }; }
+    const r = slowRow(cid, fan), live = r && now() - r.at < SLOW_TTL; return { n: live ? r.n : 0, max: st === "waster" ? 3 : SLOW_MAX }; }   // time waster : 3 réponses par 24 h ; doute : 8
   // l'IA pose elle-même le tag de l'équipe (« Peux pas payer ») quand un fan qui n'a jamais acheté dit qu'il n'a pas d'argent ; elle le retire s'il achète. Un tag posé à la main par l'équipe n'est jamais retiré par l'IA
   const NOMONEY = t => { const x = str(t).toLowerCase().replace(/['’]/g, " ").replace(/\s+/g, " ");   // « j ai plus d argent », « jai pas dargent » : écrit avec ou sans apostrophe
     if (/\b(t as|tu as|tu n as|t es|tu es|vous avez) (pas|plus)\b/.test(x)) return false;   // il parle d'elle, pas de lui
@@ -244,8 +245,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   // correction d'une réponse écrite de la formation : un petit appel à Grok (modèle rapide), compté dans le budget ; rien si la clé manque ou si le budget de la semaine est dépassé
   app.locals.aiGrade = (system, user) => CTX.run({ kind: "formation" }, async () => { if (!XAI() || overBudget()) return null;
     const r = await grok([{ role: "system", content: system }, { role: "user", content: user }], { tool: null, temp: 0.2, max: 160, model: MODELS.fast[0] }); return r.text; });
+  // messagerie d'un chatter quand l'IA fait le tri : renvoie le filtre des fans qu'il voit (payeurs, prêts à payer, déjà suivis par l'équipe, laissés à l'équipe par l'IA), ou null si rien n'est caché.
+  // Rien n'est caché si le réglage est éteint, pour un manager, ou quand l'IA ne tourne pas sur la créatrice : aucun fan ne reste sans personne.
+  app.locals.triInbox = (cid, user) => { try { if (!gcfg().triInbox || !user || !["chatter", "tl"].includes(user.rk) || !runOf(cid) || !app.locals.tri) return null; return fan => app.locals.tri.visible(cid, fan); } catch (e) { return null; } };
   app.locals.aiHuman = (cid, user) => {
     if (!user || !["chatter", "tl"].includes(user.rk)) return false;
+    if (gcfg().triInbox) return false;   // l'IA fait le tri : elle continue de tourner, le chatter s'occupe des fans qualifiés
     const r = runOf(cid); if (!r) return false;
     const c = crOf(cid), on = c && c.model_id && db.prepare("SELECT 1 FROM clocks WHERE user_id = ? AND model_id = ? AND end_at IS NULL").get(user.id, c.model_id);
     return on ? end(r, user.id, `${user.username} a ouvert la messagerie`) : false;
@@ -1425,7 +1430,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
           if (c.last.fromFan) {
             const eager = slow && (asks(str(c.last.text)) || WANTSEE.test(str(c.last.text)) || sendW(str(c.last.text)));   // même ralenti, s'il demande à voir ou à acheter, il est servi tout de suite
             const wait = slow && !eager ? SLOW_WAIT : (C.waitMin + (parseInt(c.id.slice(-4), 16) || 0) % (Math.max(1, C.waitMax - C.waitMin) + 1)) * 1000;   // laisse le fan finir d'écrire, comme quelqu'un qui répond
-            if (age >= wait && (row.replies || 0) < C.perFan && !(slow && !eager && slow.n >= SLOW_MAX) && row.last_fan_msg !== c.last.id) L.push({ c, value, t });
+            if (age >= wait && (row.replies || 0) < C.perFan && !(slow && !eager && slow.n >= (slow.max || SLOW_MAX)) && row.last_fan_msg !== c.last.id) L.push({ c, value, t });
           } else if (C.relance && !quiet(C) && !slow) {
             // suivie dans une séance précédente (moins de 24 h) : la relance part quand même ; son payant pas encore ouvert est relancé après le délai réglé (pas 3 h)
             const rr = row.relances != null ? row : (prevRow.get(c.id, r.id, now() - 24 * 3600e3) || {}); if (!rr.replies || rr.busy || rr.blocked) continue;

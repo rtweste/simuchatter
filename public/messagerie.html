@@ -1078,6 +1078,7 @@ async function fetchList(t, fresh, more) {
   const k = lkey(t), L = LISTS[k], page = more && L ? L.page + 1 : 1, q = t === "QUEUE" ? "" : Q;
   const r = await api2(`/conversations?type=${t}&page=${page}${q ? "&q=" + enc(q) : ""}${fresh ? "&fresh=1" : ""}`);
   if (r.aiStopped) notify("L'IA de secours s'arrête", `Tu reprends ${crLabel()} : elle ne répond plus aux fans`, "info");
+  if (r.tri && !fetchList.told) { fetchList.told = true; notify("L'IA fait le tri", "Tu ne vois que les fans qui ont déjà payé ou qui sont prêts à payer. Les autres, elle s'en occupe.", "info"); }
   r.items.forEach(c => fixFan(c.fan));
   const ins = (list, add) => { const out = list.slice(); add.forEach(c => { const t0 = Date.parse(c.last.at) || 0, i = out.findIndex(x => (Date.parse(x.last.at) || Infinity) < t0); i < 0 ? out.push(c) : out.splice(i, 0, c); }); return out; };
   // rafraîchissement de la 1re page : on garde en attendant les pages suivantes déjà chargées tout seul (relues juste après par deepen)
