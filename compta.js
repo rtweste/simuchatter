@@ -327,6 +327,17 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     return out;
   }
   const TW0 = { abo: 0, live: 0, coll: 0, push: 0, ppv: 0, autres: 0 };
+  // ventes de médias privés (chatting) d'après Twizz, par créatrice : c'est le vrai chiffre de la créatrice. Les déclarations des chatters servent seulement à les payer.
+  // null si les ventes Twizz ne couvrent pas tout l'intervalle (début de l'import) : on garde alors les déclarations
+  function twizzPpv(from, to) { try {
+      const a = Date.parse(from + "T00:00:00Z") - 3 * 3600e3, b = Date.parse(to + "T23:59:59Z") + 3 * 3600e3;
+      const first = db.prepare("SELECT MIN(at) t FROM twizz_tx WHERE type LIKE '%private%'").get().t; if (!first || first > Date.parse(from + "T00:00:00Z") + 36 * 3600e3) return null;   // les ventes de médias privés doivent couvrir le début de l'intervalle
+      const out = {}; db.prepare("SELECT model_id, type, net, at FROM twizz_tx WHERE refund = 0 AND net > 0 AND model_id IS NOT NULL AND at >= ? AND at <= ?").all(a, b)
+        .forEach(r => { const d = parisDate(r.at); if (d < from || d > to || TWMAP(r.type) !== "ppv") return; out[r.model_id] = rr2((out[r.model_id] || 0) + r.net); });
+      // garde-fou : si Twizz donne moins de la moitié de ce que les chatters ont déclaré, l'import est incomplet : on garde les déclarations
+      const tw = Object.values(out).reduce((t, v) => t + v, 0), decl = validatedByPeriod ? [+from.slice(8) <= 15 ? from.slice(0, 7) + "-A" : "", +to.slice(8) >= 16 ? from.slice(0, 7) + "-B" : ""].filter(Boolean).reduce((t, k) => t + Object.values(validatedByPeriod(k) || {}).reduce((x, v) => x + v, 0), 0) : 0;
+      if (decl > 0 && tw < decl * 0.625 * 0.5) return null;
+      return out; } catch (e) { return null; } }
 
   /* ================= COMPTA ================= */
   function computeCompta(pkey) {
@@ -357,18 +368,18 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
       .forEach(a => overrides[a.user_id + ":" + a.model_id] = a.amount);
 
     const r2 = x => Math.round(x * 100) / 100;
-    const AT = autoMonth(mi.key) ? twizzSrc(p.from, p.to) : null;
+    const AT = autoMonth(mi.key) ? twizzSrc(p.from, p.to) : null, TP = AT ? twizzPpv(p.from, p.to) : null;
     const modelRows = models.map(m => {
       const totalH = users.reduce((t, u) => t + (hours[u.id + ":" + m.id] || 0), 0);
-      const chatBrut = r2(chatBy[m.id] || 0), chatNet = r2(chatBrut * keep);
+      const declBrut = r2(chatBy[m.id] || 0), useTw = !!TP, chatNet = useTw ? r2(TP[m.id] || 0) : r2(declBrut * keep), chatBrut = useTw ? r2(chatNet / keep) : declBrut;   // chatting : le chiffre Twizz quand il est complet, sinon les déclarations
       const tw = AT ? (AT[m.id] || TW0) : null; if (tw) { SRC.forEach(k => m[k] = tw[k]); m.v2 = 1; m.legacy_net = 0; }
       const legacy = !m.v2 && m.brut != null;   // CA saisi d'un bloc avant les sources
-      const manual = tw ? tw.abo + tw.live + tw.coll + tw.push + tw.ppv + tw.autres : (SRC.reduce((t, k) => t + (m[k] || 0), 0) + (m.legacy_net || 0)) * share;
+      const manual = tw ? tw.abo + tw.live + tw.coll + tw.push + (useTw ? 0 : tw.ppv) + tw.autres : (SRC.reduce((t, k) => t + (m[k] || 0), 0) + (m.legacy_net || 0)) * share;
       const net = legacy ? r2((m.net || 0) * share) : r2(chatNet + manual), brut = legacy ? m.brut * share : chatBrut + manual / keep;
       const missing = legacy ? [] : SRC.filter(k => m[k] == null);
       const creatorPay = r2(net * m.creator_pct / 100), cp = paidC[m.id];
-      return { id: m.id, name: m.name, creator_pct: m.creator_pct, brut, net, legacy, chatBrut, chatNet, chatCount: chatN[m.id] || 0,
-        sources: Object.fromEntries(SRC.map(k => [k, m[k] == null ? null : r2(tw ? m[k] : m[k] * share)])), missing: tw ? [] : missing, auto: !!tw, ppvAgence: tw ? tw.ppv : 0, autres: tw ? tw.autres : 0,
+      return { id: m.id, name: m.name, creator_pct: m.creator_pct, brut, net, legacy, chatBrut, chatNet, chatCount: chatN[m.id] || 0, chatTwizz: useTw, chatDeclNet: r2(declBrut * keep),
+        sources: Object.fromEntries(SRC.map(k => [k, m[k] == null ? null : r2(tw ? m[k] : m[k] * share)])), missing: tw ? [] : missing, auto: !!tw, ppvAgence: tw && !useTw ? tw.ppv : 0, autres: tw ? tw.autres : 0,
         totalHours: totalH, creatorPay, creatorPaid: cp ? cp.amount : 0, creatorPaidAt: cp ? cp.paid_at : null, agencyShare: net - creatorPay,
         commissionBase: base === "brut" ? brut : net };
     });
@@ -441,18 +452,18 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     db.prepare("SELECT model_id, sold_at FROM sales WHERE status = 'validated'").all().filter(x => parisDate(x.sold_at).slice(0, 7) === mkey)
       .forEach(x => chatN[x.model_id] = (chatN[x.model_id] || 0) + 1);
     const paidC = {}; db.prepare("SELECT model_id, amount, paid_at FROM creator_paid WHERE period = ?").all(mkey).forEach(x => paidC[x.model_id] = x);
-    const AM = autoMonth(mkey) ? twizzSrc(mi.from, mi.to) : null;
+    const AM = autoMonth(mkey) ? twizzSrc(mi.from, mi.to) : null, TPM = AM ? twizzPpv(mi.from, mi.to) : null;
     const models = db.prepare(`SELECT m.id, m.name, m.creator_pct, r.brut, r.net, r.abo, r.live, r.coll, r.push, r.v2, r.legacy_net FROM models m
       LEFT JOIN revenues r ON r.model_id = m.id AND r.period = ? ORDER BY m.name`).all(mkey).map(m => {
-      const chatBrut = r2(chatBy[m.id] || 0), chatNet = r2(chatBrut * keep);
+      const declBrut = r2(chatBy[m.id] || 0), useTw = !!TPM, chatNet = useTw ? r2(TPM[m.id] || 0) : r2(declBrut * keep), chatBrut = useTw ? r2(chatNet / keep) : declBrut;   // chatting : le chiffre Twizz quand il est complet, sinon les déclarations
       const tw = AM ? (AM[m.id] || TW0) : null; if (tw) { SRC.forEach(k => m[k] = tw[k]); m.v2 = 1; m.legacy_net = 0; }
       const legacy = !m.v2 && m.brut != null;
-      const manual = SRC.reduce((t, k) => t + (m[k] || 0), 0) + (m.legacy_net || 0) + (tw ? tw.ppv + tw.autres : 0);
+      const manual = SRC.reduce((t, k) => t + (m[k] || 0), 0) + (m.legacy_net || 0) + (tw ? (useTw ? 0 : tw.ppv) + tw.autres : 0);
       const net = legacy ? (m.net || 0) : r2(chatNet + manual), brut = legacy ? m.brut : r2(chatBrut + manual / keep);
       const missing = legacy ? [] : SRC.filter(k => m[k] == null);
       const creatorPay = r2(net * m.creator_pct / 100), cp = paidC[m.id];
-      return { id: m.id, name: m.name, creator_pct: m.creator_pct, brut, net, legacy, legacyNet: m.legacy_net || 0, chatBrut, chatNet, chatCount: chatN[m.id] || 0,
-        sources: { abo: m.abo, live: m.live, coll: m.coll, push: m.push }, missing: tw ? [] : missing, auto: !!tw, ppvAgence: tw ? tw.ppv : 0, autres: tw ? tw.autres : 0,
+      return { id: m.id, name: m.name, creator_pct: m.creator_pct, brut, net, legacy, legacyNet: m.legacy_net || 0, chatBrut, chatNet, chatCount: chatN[m.id] || 0, chatTwizz: useTw, chatDeclNet: r2(declBrut * keep),
+        sources: { abo: m.abo, live: m.live, coll: m.coll, push: m.push }, missing: tw ? [] : missing, auto: !!tw, ppvAgence: tw && !useTw ? tw.ppv : 0, autres: tw ? tw.autres : 0,
         creatorPay, creatorPaid: cp ? cp.amount : 0, creatorPaidAt: cp ? cp.paid_at : null, agencyShare: r2(net - creatorPay) };
     });
     const sum = (arr, f) => arr.reduce((t, x) => t + (f(x) || 0), 0);
@@ -460,7 +471,8 @@ module.exports = function mount(app, db, auth, admin, validatedByPeriod) {
     totals.platform = r2(totals.brut - totals.net);
     totals.sources = { chat: sum(models, m => m.legacy ? 0 : m.chatNet), legacy: sum(models, m => m.legacy ? m.net : m.legacyNet), ppv: sum(models, m => m.ppvAgence), autres: sum(models, m => m.autres) };
     SRC.forEach(k => totals.sources[k] = sum(models, m => m.legacy ? 0 : m.sources[k]));
-    return { period: mi, base, mode, fee, models, totals, auto: !!AM, autoSales: !!twSince() };
+    let twizzFrom = null; try { const t = db.prepare("SELECT MIN(at) t FROM twizz_tx WHERE type LIKE '%private%'").get().t; twizzFrom = t ? parisDate(t) : null; } catch (e) {}
+    return { period: mi, base, mode, fee, models, totals, auto: !!AM, autoSales: !!twSince(), chatTwizz: !!TPM, twizzFrom };
   }
   // le mois tel qu'affiché : CA figé à la clôture du mois, paie des chatters toujours lue sur les quinzaines
   function comptaMonthOf(mkey) {
