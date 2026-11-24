@@ -564,8 +564,14 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   const WHYQ = /^(?:mais |bah |ah |euh |et )?(?:pourquoi|pk|pq|pkoi|pourkoi|comment [çc]a|de quoi|c['’ ]?est[- ][àa][- ]dire|genre quoi|hein|quoi)(?: (?:[çc]a|tu dis [çc]a|bb|b[ée]b[ée]))?[\s?!.]*$/i;
   const PERCHE_NOW = "Il vient de te tendre une perche coquine et ta réponse la laisse tomber (elle ferme la discussion ou change de sujet). Réécris-la : rebondis sur ce qu'il vient de dire, avec envie (ce que ça te fait, ce que tu imagines, ou une question qui fait monter la tension). Pas de question sur sa ville, son âge, son travail, sa journée ou son sommeil. Rien à vendre ni à promettre ici.";
   // réponses qui ferment (« c'est bon à savoir », « trop bien ça »…) et questions de small talk
+  const SCRIPT_NOW = "Un script est en cours et ta réponse sort de la scène (elle parle d'autre chose). Réécris-la : reste dans ce que vous êtes en train de vous dire, rebondis sur son dernier message et fais monter l'envie vers la suite, sans la décrire. Pas de question sur son sport, son travail, sa ville, son âge, sa journée ou son sommeil. Rien à vendre ni à promettre ici.";
+  // le dernier média payant de la conversation, ni acheté ni refusé, de moins de 30 min (hors ticket)
+  const pendAnyOf = L => { const P = L.filter(m => !m.fromFan && m.type === "FILE" && m.price > 0), x = P[P.length - 1]; return x && x.status !== "accepted" && x.status !== "refused" && !stale0(x) && !/^\s*ticket\b/i.test(str(x.text)) ? x : null; };
+  // jamais de script démarré sur une relance, ni par-dessus un média payant pas encore ouvert
+  const noLaunch = (plan, L, relance) => { if (!plan || plan.S || !(plan.launch || []).length) return; const pa = pendAnyOf(L); if (!relance && !pa) return; plan.launch = [];
+    plan.text = pa ? `Un média payant (${eurs(pa.price)}) attend dans la conversation et il ne l'a pas encore ouvert : ne lance aucun script et ne propose aucun autre média. ${relance ? "Relance-le sur ce média, en une phrase courte qui donne envie de l'ouvrir." : "S'il en parle ou s'il hésite, ramène-le vers ce média."}` : "C'est une relance : ne lance aucun script et ne propose aucun nouveau média."; };
   const DEADEND = /^(?:(?:haha+|hihi+|hehe+|mdr+|lol|ptdr+|ah|oh|ok|okay|ouais)[ ,!.]*)*(?:c['’ ]?est bon [àa] savoir|trop bien(?: [çc]a)?|cool(?: cool)?|ah ouais|ah ok|d['’ ]?accord|tranquille(?: alors)?|g[ée]nial|super|top|nice|je vois|ah bon)[\s!.…]*[\p{Extended_Pictographic}\s]*$/iu;
-  const SMALLTALK = /(?:t['’ ]?es d['’ ]?o[uù]|t['’ ]?es de (?:o[uù]|quelle ville)|quelle ville|tu viens d['’ ]?o[uù]|t['’ ]?habites? o[uù]|t['’ ]?as quel [âa]ge|tu fais quoi (?:dans la vie|aujourd|l[àa]|ce soir|demain|comme)|ta journ[ée]e|t['’ ]?as (?:bien )?dormi|tu bosses|ton (?:taf|travail|boulot)|t['’ ]?as fait quoi|quoi de pr[ée]vu|t['’ ]?es de paris)/i;
+  const SMALLTALK = /(?:t['’ ]?es d['’ ]?o[uù]|t['’ ]?es de (?:o[uù]|quelle ville)|quelle ville|tu viens d['’ ]?o[uù]|t['’ ]?habites? o[uù]|t['’ ]?as quel [âa]ge|tu fais quoi (?:dans la vie|aujourd|l[àa]|ce soir|demain|comme)|tu fais (?:du|quel) sport|t['’ ]?as des plans|ta journ[ée]e|t['’ ]?as (?:bien )?dormi|tu bosses|ton (?:taf|travail|boulot)|t['’ ]?as fait quoi|quoi de pr[ée]vu|t['’ ]?es de paris)/i;
   const NOPITCH2 = "Réécris ta réponse sans rien proposer ni promettre (aucun média, aucun « tu veux voir ? ») : rebondis sur ce qu'il vient de dire, à sa température. S'il est chaud, reste chaude et chauffe-le ; pas de small talk, une seule question au plus.";
   const NOPITCH = "Réécris ta réponse sans rien proposer ni promettre (aucun média, aucun « tu veux voir ? », aucune allusion à ce que tu pourrais montrer) : réponds simplement à ce qu'il vient de dire et intéresse-toi à lui.";
   const sessOf = L => { let st = 0; for (let i = 1; i < L.length; i++) if ((Date.parse(L[i].at) || 0) - (Date.parse(L[i - 1].at) || 0) > 2 * 3600e3) st = i; return L.slice(st); };
@@ -1005,6 +1011,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (sp >= C.vipAlert) { db.prepare("INSERT INTO twizz_ai_convs (run_id, conv_id, fan_id, fan_name, vip, at) VALUES (?,?,?,?,1,?) ON CONFLICT(run_id, conv_id) DO UPDATE SET vip = 1").run(r.id, c.id, c.fan.id, c.fan.name, now()); row.vip = 1;
         ping(`💎 ${cr.label} : un gros payeur écrit`, `${c.fan.name || "Un fan"} (${eurs(sp)} dépensés) parle à l'IA de secours`, "ai-vip-" + c.id); } }
     const fanInfo = await fanCtx(cr, c), lastFan = [...L].reverse().find(m => m.fromFan), plan = planOf(cr, M, L, c.fan.id);
+    noLaunch(plan, L, relance);
     if (plan && plan.endNow) scEnd(cr.id, c.fan.id, plan.endNow.why, plan.endNow.full, plan.endNow.at);
     // le coffre : sans script IA, quand il a déjà reçu tous les scripts, ou s'il réclame un contenu précis (jamais pendant un script)
     // (un média du coffre déjà teasé reste possible au message suivant du fan, même s'il ne le réclame pas mot pour mot)
@@ -1024,7 +1031,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const askedSess = sessOf(L).some(m => m.fromFan && asks(m.text)), reqNow = WANTSEE.test(lfT) || sendW(lfT);   // il réclame lui-même
     const force = !relance && !busy && !stopped && !warm && !!lastFan && !NOPE.test(lfT) && (!earlyN || asked || bit) && !broke && (asked || bit || WANTSEE.test(lfT) || sendW(lfT) || (GOW.test(lfT) && mine.slice(-3).some(m => freshAsk(m) && (m.type === "FILE" || TEASE_ASK.test(untag(str(m.text)))))));
     // début de discussion (moins de messages que le minimum réglé) : ni proposition, ni photo offerte, ni média, sauf s'il réclame lui-même
-    const early = !relance && earlyN && !askedSess;
+    const early = !relance && earlyN && !askedSess && !(plan && plan.S);   // un script est en cours : on n'est plus au début de la discussion
     const heat = !relance && !busy && !stopped && mine.length >= 5 && !L.slice(-10).some(m => HOTW.test(str(m.text)));
     const hot = !relance && !busy && hotOf(L), coffre = !busy && !stopped && !warm && !broke && (!plan || plan.coffre || asked || force || reqNow || (plan.coffreAsk && lastFan && (asks(lastFan.text) || teased || hot)));
     const sell = coffre ? await sellable(cr, M, L, c.id, asked || force ? { at: now() - 60e3, answered: true, live: true } : undefined, force) : { albums: [], note: "" };
@@ -1178,11 +1185,13 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       try { again = unleak(await grok(msgs.concat([{ role: "system", content: `Ta réponse reprend encore ${T.map(k => "« " + k + " »").join(", ")}, que tu as déjà écrit plusieurs fois. Réécris-la avec d'autres mots et une autre idée.` }]))); } catch (e) {}
       const B2 = again && !str(again.laisser).trim() ? shape(fresh(oneQ(bubbles(again)), said), L) : []; if (B2.length && !B2.some(t => hasTic(t, T))) B = B2; else { const K = B.filter(t => !hasTic(t, T)); if (K.length) B = K; } } }
     // (nouvelle version) pas de « et toi ? » retourné, pas de bulle qui ne dit rien, et une perche coquine n'est jamais lâchée (réponse qui ferme, ou small talk) : une réécriture, sinon la phrase fautive saute
-    if (nv() && !relance && !busy && !act && !tk && !f && lastFan) {
-      if (/\bet (toi|vous)\b/i.test(lfT)) B = B.map(t => t.replace(/[\s,]*\bet toi\s*\?+/gi, "").trim()).filter(Boolean);
-      if (B.length > 1) { const K = B.filter(t => !DEADEND.test(untag(t))); if (K.length) B = K; }
-      if ((HOTFAN.test(lfT) || HOTW.test(lfT)) && B.length && (B.every(t => DEADEND.test(untag(t))) || B.some(t => SMALLTALK.test(t)))) { let again = null;
-        try { again = unleak(await grok(msgs.concat([{ role: "system", content: PERCHE_NOW }]))); } catch (e) {}
+    // script en cours (toujours) ou nouvelle version : pas de small talk quand la discussion est chaude
+    const inSc = !!(plan && plan.S && !plan.endNow && !plan.after);
+    if ((nv() || inSc) && !relance && !busy && !act && !tk && !f && lastFan) {
+      if (nv() && /\bet (toi|vous)\b/i.test(lfT)) B = B.map(t => t.replace(/[\s,]*\bet toi\s*\?+/gi, "").trim()).filter(Boolean);
+      if (nv() && B.length > 1) { const K = B.filter(t => !DEADEND.test(untag(t))); if (K.length) B = K; }
+      if ((inSc || HOTFAN.test(lfT) || HOTW.test(lfT)) && B.length && ((nv() && B.every(t => DEADEND.test(untag(t)))) || B.some(t => SMALLTALK.test(t)))) { let again = null;
+        try { again = unleak(await grok(msgs.concat([{ role: "system", content: inSc ? SCRIPT_NOW : PERCHE_NOW }]))); } catch (e) {}
         const B2 = again && !str(again.laisser).trim() ? fresh(oneQ(bubbles(again)), said).filter(t => !PRICED(t) && !fakeSend(t) && !SMALLTALK.test(t) && !DEADEND.test(untag(t))) : [];
         if (B2.length) B = shape(B2, L); else { const K = B.filter(t => !SMALLTALK.test(t)); if (K.length) B = K; } } }
     // la discussion est encore froide (aucun mot coquin récemment) : pas de teasing de média ni de cadeau, même si Grok en propose un
@@ -1484,6 +1493,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       state: T0.state || "open", ended_at: T0.state && T0.state !== "open" ? atId(T0.endedId) : null, full: T0.full ? 1 : 0 } : null;
     const burned = new Set((Array.isArray(b.burned) ? b.burned : []).map(Number).filter(Number.isFinite)), lastFan = LL[LL.length - 1];
     const busy = BUSY.test(lastFan.text), plan = planOf(c, M, LL, "essai", { S: S0, burned });
+    noLaunch(plan, LL, false);
     const hot = !busy && hotOf(LL), coffre = !busy && (!plan || plan.coffre || (plan.coffreAsk && (asks(lastFan.text) || hot || teaseOk(tz, M))));
     const iMeT = LL.map(m => !m.fromFan).lastIndexOf(true), lfTT = LL.slice(iMeT + 1).filter(m => m.fromFan).map(m => str(m.text)).join(" · "), lastMeT = iMeT >= 0 ? untag(str(LL[iMeT].text)) : "";
     const bitT = iMeT >= 0 && freshAsk(LL[iMeT]) && (TEASE_ASK.test(lastMeT) || /j['’ ]?ai (une?|des) (petite? )?(photo|vid[ée]o|truc)|je te (la |le )?montre|[çc]a te dit|tu veux (la |le )?voir|tu veux que je te/i.test(lastMeT)) && !/\b(non|nan|nn|pas (envie|int[ée]ress)|je veux savoir)\b/i.test(lfTT);
@@ -1528,7 +1538,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       else if (TK0 && TK0.state === "paid") { const v = (TK0.kind === "snap" ? str(out.snap).replace(/^@/, "") : str(out.demande)).trim();
         if (v.length >= 2) { studio = `${tkLabel(TK0)} · ${TK0.kind === "snap" ? "Snap du fan : " : ""}${v} · ticket payé ${eurs(TK0.price)}`; TK0 = { ...TK0, state: "done" }; } }
     }
-    { const earlyT = earlyNT && !sessOf(LL).some(m => m.fromFan && asks(m.text)), shutT = earlyT || (!albums.length && !sell.teaseNow && !act);
+    { const earlyT = earlyNT && !(plan && plan.S) && !sessOf(LL).some(m => m.fromFan && asks(m.text)), shutT = earlyT || (!albums.length && !sell.teaseNow && !act);
       if (shutT && !stopT) { let K = bubbles(out).filter(t => !pitchy(t));
         if (!K.length) { let again = null; try { again = unleak(await grok(TM.concat([{ role: "system", content: nv() ? NOPITCH2 : NOPITCH }]))); } catch (e) {} K = again && !str(again.laisser).trim() ? bubbles(again).filter(t => !pitchy(t)) : []; if (!K.length && earlyT) K = ["raconte-moi un peu, t'as fait quoi aujourd'hui ?"]; }
         if (earlyT) { out.album = ""; out.teaser = false; } if (K.length) out.bulles = K; } }
@@ -1547,11 +1557,12 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       if (!str(again.laisser).trim()) B = fresh(oneQ(bubbles(again)), said).filter(t => act || al || !fakeSend(t)); } catch (e) {} } }
     B = shape(B, LL);
     // même mise en forme finale qu'en vrai : aujourd'hui une seule bulle sans média ; nouvelle version, jusqu'à 3 bulles
-    if (nv() && !busy && !act && !tk && !al) {
-      if (/\bet (toi|vous)\b/i.test(lfTT)) B = B.map(t => t.replace(/[\s,]*\bet toi\s*\?+/gi, "").trim()).filter(Boolean);
-      if (B.length > 1) { const K = B.filter(t => !DEADEND.test(untag(t))); if (K.length) B = K; }
-      if ((HOTFAN.test(lfTT) || HOTW.test(lfTT)) && B.length && (B.every(t => DEADEND.test(untag(t))) || B.some(t => SMALLTALK.test(t)))) { let again = null;
-        try { again = unleak(await grok(TM.concat([{ role: "system", content: PERCHE_NOW }]))); } catch (e) {}
+    const inScT = !!(plan && plan.S && !plan.endNow && !plan.after);
+    if ((nv() || inScT) && !busy && !act && !tk && !al) {
+      if (nv() && /\bet (toi|vous)\b/i.test(lfTT)) B = B.map(t => t.replace(/[\s,]*\bet toi\s*\?+/gi, "").trim()).filter(Boolean);
+      if (nv() && B.length > 1) { const K = B.filter(t => !DEADEND.test(untag(t))); if (K.length) B = K; }
+      if ((inScT || HOTFAN.test(lfTT) || HOTW.test(lfTT)) && B.length && ((nv() && B.every(t => DEADEND.test(untag(t)))) || B.some(t => SMALLTALK.test(t)))) { let again = null;
+        try { again = unleak(await grok(TM.concat([{ role: "system", content: inScT ? SCRIPT_NOW : PERCHE_NOW }]))); } catch (e) {}
         const B2 = again && !str(again.laisser).trim() ? fresh(oneQ(bubbles(again)), said).filter(t => !PRICED(t) && !fakeSend(t) && !SMALLTALK.test(t) && !DEADEND.test(untag(t))) : [];
         if (B2.length) B = shape(B2, LL); else { const K = B.filter(t => !SMALLTALK.test(t)); if (K.length) B = K; } } }
     if (nv()) { if (B.length > 3) B = B.slice(0, 2).concat(B[B.length - 1]);
