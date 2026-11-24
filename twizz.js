@@ -292,6 +292,11 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
       chatters: db.prepare("SELECT id, username FROM users WHERE active = 1 AND (role = 'chatter' OR (role = 'admin' AND sells = 1)) ORDER BY username COLLATE NOCASE").all() };
   }
   app.get("/api/admin/twizz", auth, admin, (req, res) => res.json(overview()));
+  // ventes de médias privés d'une période, avec la conversation et le chatter qui a envoyé le média (pour analyser ce qui fait vendre) ; lecture seule
+  app.get("/api/admin/twizz/ppv", auth, admin, (req, res) => { const from = Date.parse(String(req.query.from || "")) || Date.now() - 30 * 864e5, to = Date.parse(String(req.query.to || "")) || Date.now();
+    const rows = db.prepare("SELECT t.id, t.creator_id, t.model_id, t.net, t.at, t.fan_id, t.fan_name, t.conv_id, t.ai, t.sale_id, s.user_id sale_user FROM twizz_tx t LEFT JOIN sales s ON s.id = t.sale_id WHERE t.type LIKE '%private%' AND t.refund = 0 AND t.net > 0 AND t.at >= ? AND t.at <= ? ORDER BY t.at DESC LIMIT 2000").all(from, to);
+    const sent = db.prepare("SELECT s.user_id, u.username, s.price, s.msg_id, s.via, s.at FROM twizz_sent s LEFT JOIN users u ON u.id = s.user_id WHERE s.conv_id = ? AND s.price > 0 AND s.at <= ? AND s.at > ? ORDER BY s.at DESC LIMIT 1"), un = db.prepare("SELECT username FROM users WHERE id = ?");
+    res.json({ items: rows.map(r => { const x = r.conv_id ? sent.get(r.conv_id, r.at + 60e3, r.at - 7 * 864e5) : null; return { ...r, by: x ? (x.via === "ia" ? "IA" : x.username) : r.sale_user ? (un.get(r.sale_user) || {}).username : null, sentAt: x ? x.at : null, msgId: x ? x.msg_id : null, price: x ? x.price : null }; }) }); });
   // tester la connexion : se connecte et lit le compte + la liste des créatrices (2 requêtes)
   app.post("/api/admin/twizz/test", auth, admin, founder, async (req, res) => {
     try {
