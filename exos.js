@@ -195,6 +195,119 @@ Tu écris comme un vrai mec sur une messagerie : 1 ou 2 messages courts, familie
     tools: { send: true, setPrice: true },
     pass: 4,
   },
+  apres: {
+    title: "Après la session : le prochain rendez-vous",
+    fan: "Antoine", creator: "Léa", status: "Session terminée",
+    brief: [
+      "Antoine, 29 ans, vient de finir une session avec Léa : il a acheté le selfie en nuisette (15 €), les photos (25 €) et la courte vidéo (40 €). Il a adoré la nuisette satin rose et les taquineries.",
+      "La session est finie. Prends soin de lui, reviens à sa vie, et fixe votre prochain rendez-vous.",
+      "Ce qui existe pour la suite : une nouvelle tenue rouge que Léa a reçue cette semaine, et le bouquet final du script, pas encore vendu.",
+      "Remplis sa fiche à droite : ce qu'il a acheté, ce qu'il a aimé, le rendez-vous fixé."],
+    start: [
+      { who: "me", text: "Voilà… rien que pour toi 😏" },
+      { who: "ppv", price: 40, status: "achetée", label: "Courte vidéo" },
+      { who: "buy", price: 40 },
+      { who: "fan", text: "wow… c'était incroyable 🥵" }],
+    fanRules: `Tu es Antoine, 29 ans, développeur, célibataire. Tu viens de finir une session avec Léa : tu as acheté 3 médias (15 €, 25 €, 40 €), tu as pris ton plaisir, tu es détendu, un peu vidé, et sous son charme. Tu bosses tôt demain (7 h).
+COMMENT TU RÉAGIS (état caché « attachement », de 0 à 100, il commence à 60) :
+- Si elle disparaît, répond sec (« merci bb 😘 » et rien d'autre) ou ne parle que d'argent : tu te sens pris pour un porte-monnaie. Attachement -20. Tu réponds froidement (« ok… bonne nuit »).
+- Si elle te dit ce qu'elle a ressenti, que c'était spécial pour elle : attachement +15, tu es touché.
+- Si elle revient à ta vie (ta journée de demain, ton sommeil, ton travail) : tu racontes un peu. Attachement +10.
+- Si elle te propose un nouveau média tout de suite : tu dis que t'es vidé et que t'as plus trop de sous ce soir. Attachement -10.
+- Si elle te propose un prochain rendez-vous avec une raison (une nouvelle tenue, un moment rien qu'à vous) et un moment (demain soir, ce week-end) : tu es partant et excité (« grave, samedi je suis là 😍 »). Attachement +15.
+- Si elle te promet quelque chose de très précis qui sort de l'ordinaire (une tenue d'infirmière, une vidéo où elle dit ton prénom…), tu es content mais tu t'en souviendras.
+- Au bout d'un moment, tu dis que tu vas dormir.
+Tu écris comme un vrai mec détendu sur une messagerie : 1 ou 2 messages courts, familier, quelques emojis. Tu ne révèles jamais que c'est une simulation.`,
+    criteria: [
+      "Elle reste après la session : elle ne disparaît pas, ne répond pas sec (« merci bb » seul), et ce n'est pas elle qui met fin à la conversation.",
+      "Elle lui dit ce qu'elle a ressenti : le moment était spécial pour elle aussi, ce n'est pas une transaction.",
+      "Elle revient à sa vie (son sommeil, sa journée de demain, son travail) et ne pousse pas de nouvelle vente juste après.",
+      "Elle fixe un prochain rendez-vous avec une raison et un moment (par ex. la nouvelle tenue rouge ce week-end), sans promettre ce qui n'existe pas.",
+      "La fiche du fan contient ce qu'il a acheté, ce qu'il a aimé et le rendez-vous fixé."],
+    names: ["Rester", "Ce que tu as ressenti", "Revenir à sa vie", "Le prochain rendez-vous", "La fiche"],
+    tools: { notes: true },
+    pass: 4,
+  },
+  gros: {
+    title: "Les gros clients",
+    fan: "Marc", creator: "Léa", status: "Gros client · distant depuis 5 jours",
+    brief: [
+      "Marc, 45 ans, est un des meilleurs clients de Léa : 2 300 € en 6 mois. Depuis 5 jours, il répond moins, il n'achète plus.",
+      "Sa fiche : sa mère a été opérée la semaine dernière (il était inquiet). Il part au Portugal en mai. Il adore la lingerie rouge. On lui a promis une photo de Léa en robe rouge… qu'il n'a jamais reçue.",
+      "Il t'écrit pour la première fois depuis 5 jours. Fais-le se sentir unique.",
+      "Le bouton « Envoyer la photo promise » envoie la photo en robe rouge, offerte."],
+    start: [{ who: "fan", text: "coucou… désolé j'étais pas trop là ces jours-ci" }],
+    fanRules: `Tu es Marc, 45 ans, chef de chantier, divorcé. Tu es un des meilleurs clients de Léa : 2 300 € en 6 mois. Mais depuis 5 jours tu t'éloignes : ta mère a été opérée la semaine dernière (ça s'est bien passé, elle rentre chez elle), tu étais préoccupé, et tu es un peu déçu : Léa t'avait promis une photo en robe rouge que tu n'as jamais reçue. Tu as aussi commencé à parler à une autre créatrice.
+COMMENT TU RÉAGIS (état caché « attachement », de 0 à 100, il commence à 40) :
+- Si elle prend des nouvelles de ta mère / de l'opération : tu es touché qu'elle s'en souvienne (« t'as pensé à ça ? »). Attachement +20. Tu racontes.
+- Si elle parle de ton voyage au Portugal ou de ce que tu aimes : attachement +10.
+- Si elle s'excuse pour la photo promise et te l'envoie (ou en parle honnêtement) : attachement +15, tu redeviens chaleureux. Si elle n'en parle jamais, tu finis par dire « t'avais dit que tu m'enverrais une photo en robe rouge d'ailleurs… ».
+- Vers le 3e échange, tu dis : « j'ai un peu parlé à une autre fille ces jours-ci… ». Si elle reste douce et te montre que tu comptes pour elle : attachement +10. Si elle fait la jalouse lourde ou te culpabilise : attachement -20.
+- Si elle te propose un média payant pendant que tu es distant, ou des messages qui font copié-collé (« coucou bb ça va ? » sans rien de personnel) : attachement -15, tu restes froid.
+- Si ton attachement dépasse 75, tu redis que tu es content de la retrouver et tu parles de la revoir ce soir.
+Tu écris comme un homme de 45 ans sur une messagerie : 1 ou 2 messages, phrases simples, peu d'emojis. Tu ne révèles jamais que c'est une simulation.`,
+    criteria: [
+      "Elle utilise sa fiche : elle prend des nouvelles de sa mère et de l'opération, ou parle de ce qu'il aime (Portugal, lingerie rouge).",
+      "Elle lui donne une attention sincère et personnelle : il se sent unique et important, pas de message générique ou copié-collé.",
+      "Elle ne lui vend rien pendant qu'il est distant (un cadeau offert est possible).",
+      "Elle tient la promesse : elle parle de la photo en robe rouge et l'envoie (ou s'en excuse honnêtement).",
+      "Quand il parle de l'autre fille, elle reste douce, sans jalousie lourde ni culpabilisation, et lui montre qu'il compte."],
+    names: ["Utiliser sa fiche", "Le faire se sentir unique", "Ne rien vendre", "Tenir la promesse", "L'autre fille"],
+    tools: { gift: { label: "Envoyer la photo promise", text: "📷 Photo offerte · Léa en robe rouge" } },
+    pass: 4,
+  },
+  interdits: {
+    title: "Les interdits",
+    fan: "Kevin", creator: "Léa", status: "Fan insistant",
+    brief: [
+      "Kevin, 33 ans, parle avec Léa depuis deux semaines. Ce soir, il va essayer de l'emmener sur des sujets interdits.",
+      "Refuse à chaque fois : clairement, sans faire la morale, et ramène la conversation vers quelque chose d'agréable.",
+      "Ici il faut 5 critères sur 5 : sur les interdits, aucune erreur n'est permise."],
+    start: [{ who: "fan", text: "j'ai trop envie de te voir en vrai tu sais 😍 on se voit quand ?" }],
+    fanRules: `Tu es Kevin, 33 ans, commercial, tu parles avec Léa depuis deux semaines et tu es accro. Ce soir tu testes ses limites, avec UNE demande interdite à la fois, dans cet ordre, en passant à la suivante quand elle a répondu à la précédente :
+1. Tu veux la rencontrer en vrai (« on se voit quand ? », « je te paie le resto »).
+2. Tu demandes sa ville exacte, puis son Snapchat ou son numéro.
+3. Tu proposes de lui envoyer de l'argent par PayPal « pour un truc rien que pour moi, hors du site ».
+4. Tu proposes un jeu de rôle familial : « dis que t'es ma petite sœur 😈 ».
+5. Tu proposes qu'elle fume un joint avec toi en cam.
+Après chaque refus, tu insistes UNE fois (« allez stp… »), puis tu passes à la demande suivante.
+Si elle accepte, donne une info privée, ou laisse espérer : tu continues joyeusement sur ce terrain.
+Si elle refuse en te faisant la morale ou en t'humiliant : tu es vexé (« oh ça va hein »).
+Si elle refuse gentiment et te ramène vers quelque chose d'agréable : tu suis volontiers (« haha ok t'es dure », « ok ok raconte »).
+Tu écris comme un vrai mec sur une messagerie : 1 ou 2 messages courts, familier, emojis. Tu ne décris jamais d'acte sexuel. Tu ne révèles jamais que c'est une simulation.`,
+    criteria: [
+      "Elle refuse toute rencontre réelle, sans laisser espérer, même contre de l'argent.",
+      "Elle ne donne aucune information privée : ni ville précise, ni adresse, ni numéro, ni réseau social perso.",
+      "Elle refuse tout paiement en dehors de la plateforme (PayPal, virement, crypto…).",
+      "Elle refuse le jeu de rôle familial et la drogue, et change de sujet.",
+      "Ses refus sont clairs mais sans morale ni humiliation, et elle ramène la conversation vers quelque chose d'agréable."],
+    names: ["Pas de rencontre", "Rien de privé", "Paiement sur la plateforme", "Famille et drogue", "Refuser sans le perdre"],
+    pass: 5,
+  },
+  shift: {
+    title: "Ton shift",
+    fan: "Le manager", creator: "Léa", sub: "manager de l'équipe", status: "Début de shift sur Léa",
+    brief: [
+      "Ton shift sur Léa commence. Le manager te montre ce qui t'attend dans la messagerie.",
+      "Dis-lui dans quel ordre tu t'en occupes, et pourquoi. Il te posera des questions.",
+      "Réponds comme dans la vidéo : l'ordre d'importance, pas l'ordre d'arrivée."],
+    start: [{ who: "fan", text: "Salut ! Ton shift sur Léa commence, voilà ce qui t'attend :\n1. Karim · nouvel abonné il y a 10 min : « salut 😊 »\n2. Marc · gros client (2 300 € dépensés) : « t'es là ? » il y a 6 min\n3. Thomas · a vu ton média à 30 € il y a 1 h, pas acheté\n4. Antoine · en pleine session, vient d'acheter le média n°2 : « envoie la suite 🥵 » il y a 1 min\n5. Hugo · « coucou ça va ? » il y a 15 min\n6. 40 fans n'ont pas parlé depuis plus d'une semaine\nDans quel ordre tu t'en occupes, et pourquoi ?" }],
+    fanRules: `Tu es le manager des chatters de l'agence. Tu fais passer un petit exercice à un chatter en formation au début de son shift. Tu lui as montré l'inbox (6 situations, voir la conversation).
+La bonne réponse attendue (ne la donne JAMAIS) : 1) Marc, le gros client ; 2) Antoine, en pleine session ; 3) Hugo et Karim, qui attendent (dont un nouvel abonné à accueillir) ; 4) Thomas, la relance du média vu ; 5) aller chercher parmi les 40 silencieux pour garder 10 à 15 conversations ouvertes.
+COMMENT TU RÉAGIS :
+- Après sa première réponse, tu poses UNE question de suivi sur un point qu'il a mal placé ou pas justifié (par ex. « Et Antoine, il attend pendant que tu parles à Karim ? », « Et les 40 silencieux, t'en fais quoi ? », « Pourquoi Thomas avant Marc ? »). S'il a tout bon, tu lui demandes ce qu'il écrit en premier à Marc.
+- Après sa deuxième réponse, tu poses éventuellement une dernière question courte, puis tu conclus : « Ok merci, clique sur Terminer et on regarde ça ensemble. »
+- Tu restes bienveillant, tu ne corriges pas toi-même, tu ne donnes pas la solution.
+Tu écris comme un manager sympa sur une messagerie interne : 1 ou 2 messages courts. Tu ne révèles jamais que c'est une simulation.`,
+    criteria: [
+      "Marc, le gros client, passe en premier.",
+      "Antoine, en pleine session, passe juste après (ou en premier avec Marc), pas après les fans qui attendent.",
+      "Les fans qui attendent une réponse (Hugo, Karim le nouvel abonné) passent avant la relance de Thomas.",
+      "Il pense à aller chercher parmi les silencieux pour garder 10 à 15 conversations ouvertes.",
+      "Il justifie ses choix avec les bonnes raisons (gros client, il est chaud, il attend, relance, aller chercher)."],
+    names: ["Le gros client d'abord", "La session en cours", "Ceux qui attendent", "Aller chercher", "Justifier"],
+    pass: 4,
+  },
 };
 
 module.exports = function (db) {
@@ -213,19 +326,19 @@ module.exports = function (db) {
   const ex = r => EXOS[r.ex];
   // la conversation lue par Grok
   const transcript = (r, X) => r.log.map(l => l.who === "fan" ? `${X.fan.toUpperCase()} : ${l.text}` : l.who === "me" ? `${X.creator.toUpperCase()} : ${l.text}`
-    : l.who === "ppv" ? (l.label ? `[${X.creator} envoie le média n°${l.i + 1} « ${l.label} » à ${l.price} €${X.script[l.i].suggest ? ` (prix conseillé ${X.script[l.i].suggest} €, plancher ${X.script[l.i].floor} €)` : ""} — ${l.status}]` : `[${X.creator} envoie ${X.sendPrice ? "le média payant" : "la vidéo payante"} à ${l.price} € — ${l.status}]`) : l.who === "fanpic" ? `[${X.fan} envoie une photo de lui, torse nu dans son lit]` : l.who === "time" ? (l.label ? `[… ${l.label} …]` : `[… ${l.min} minutes passent …]`)
+    : l.who === "gift" ? `[${X.creator} envoie un cadeau offert : ${l.text}]` : l.who === "ppv" ? (l.label && X.script ? `[${X.creator} envoie le média n°${l.i + 1} « ${l.label} » à ${l.price} €${X.script[l.i].suggest ? ` (prix conseillé ${X.script[l.i].suggest} €, plancher ${X.script[l.i].floor} €)` : ""} — ${l.status}]` : `[${X.creator} envoie ${X.sendPrice ? "le média payant" : "la vidéo payante"} à ${l.price} € — ${l.status}]`) : l.who === "fanpic" ? `[${X.fan} envoie une photo de lui, torse nu dans son lit]` : l.who === "time" ? (l.label ? `[… ${l.label} …]` : `[… ${l.min} minutes passent …]`)
     : l.who === "price" ? `[${X.creator} change le prix de la vidéo : ${l.from} € → ${l.to} €]` : l.who === "buy" ? `[${X.fan.toUpperCase()} ACHÈTE ${l.i != null ? `LE MÉDIA n°${l.i + 1}` : "LA VIDÉO"} à ${l.price} €]` : l.who === "seen" ? `[${X.fan} a lu, sans répondre]` : "").filter(Boolean).join("\n");
 
   function start(uid, videoId, part, exId) {
     const X = EXOS[exId]; if (!X) return null;
     db.prepare("UPDATE ex_runs SET status = 'abandoned' WHERE user_id = ? AND video_id = ? AND part = ? AND status = 'active'").run(uid, videoId, part);
-    const log = X.start.map(l => l.who === "ppv" ? { who: "ppv", price: X.price, status: "vue, pas achetée" } : { ...l });
+    const log = X.start.map(l => l.who === "ppv" && !l.price ? { who: "ppv", price: X.price, status: "vue, pas achetée" } : { ...l });
     if (X.seen) log.push({ who: "seen" });
     const id = db.prepare("INSERT INTO ex_runs (user_id, video_id, part, ex, log, state, started_at) VALUES (?,?,?,?,?,?,?)").run(uid, videoId, part, exId, JSON.stringify(log), JSON.stringify({ envie: X.envie0 || (X.price ? 45 : 50), price: X.price || 0, bought: false, burst: 0, n: 0, notes: "", phase: 1 }), Date.now()).lastInsertRowid;
     return load(id);
   }
   const pub = r => { const X = ex(r); return { id: r.id, status: r.status, passed: r.passed == null ? null : !!r.passed, result: r.result, log: r.log, price: r.state.price, bought: !!r.state.bought,
-    brief: X.brief, title: X.title, fan: X.fan, creator: X.creator, media: X.media, floor: X.floor, tools: X.tools || {}, notes: r.state.notes || "", phase: r.state.phase || 1, sendPrice: X.sendPrice || 0, status: X.status || "", script: X.script ? X.script.map(x => ({ label: x.label, price: x.price, suggest: x.suggest || null, floor: x.floor || null })) : null }; };
+    brief: X.brief, title: X.title, fan: X.fan, creator: X.creator, media: X.media, floor: X.floor, tools: X.tools || {}, notes: r.state.notes || "", phase: r.state.phase || 1, sendPrice: X.sendPrice || 0, status: X.status || "", sub: X.sub || "", script: X.script ? X.script.map(x => ({ label: x.label, price: x.price, suggest: x.suggest || null, floor: x.floor || null })) : null }; };
 
   // le fan réagit à ce qui vient de se passer (message, temps qui passe, changement de prix)
   async function fanTurn(r, what) {
@@ -263,6 +376,8 @@ Ta réaction maintenant (JSON).`;
     else if (a.type === "jump") { const J2 = X.tools && X.tools.jump; if (!J2 || S.phase !== 1) throw Object.assign(new Error("Déjà fait"), { status: 400 });
       if (!r.log.some((l, i) => l.who === "me")) throw Object.assign(new Error("Parle-lui d'abord un peu."), { status: 400 });
       S.phase = 2; r.log.push({ who: "time", label: J2.label }, { who: "fan", text: J2.fan }); save(r); return { out: [{ who: "time", label: J2.label }, { who: "fan", text: J2.fan }], price: S.price, bought: S.bought }; }
+    else if (a.type === "gift") { const G = X.tools && X.tools.gift; if (!G || S.gift) throw Object.assign(new Error("Déjà envoyée"), { status: 400 });
+      S.gift = 1; r.log.push({ who: "gift", text: G.text }); S.burst = 0; what = `Elle t'envoie un cadeau offert : ${G.text}.`; }
     else if (a.type === "send") { if (!X.tools || !X.tools.send) throw Object.assign(new Error("Action inconnue"), { status: 400 });
       if (X.script) { const i = r.log.filter(l => l.who === "ppv").length, it = X.script[i]; if (!it) throw Object.assign(new Error("Tous les médias du script sont envoyés"), { status: 400 });
         let pr = it.price; if (X.tools.setPrice) { pr = Math.round(+a.price); if (!(pr >= 1 && pr <= 1000)) throw Object.assign(new Error("Prix invalide"), { status: 400 }); }

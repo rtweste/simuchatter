@@ -17,13 +17,27 @@ const COURSE = [
 const ADV = [
   { id: "tw7", title: "Vendre au bon moment", file: "vente-01-bon-moment.mp4", sub: "Les signaux, le post-follow, le follow-up, le fan qui disparaît" },
   { id: "tw9", title: "Connaître son fan", file: "vente-03-connaitre.mp4", sub: "Les bonnes questions, rebondir, la fiche du fan · exercice au simulateur" },
-  { id: "tw8", title: "Les relances après le média", file: "vente-02-relances.mp4", sub: "La séquence de relances, chaque réaction du fan, la frontière · exercice au simulateur" }];
+  { id: "tw10", title: "La patience et les signaux d'achat", file: "vente-05-patience.mp4", sub: "Le fan pas prêt, les 4 signaux, la transition en douceur · exercice au simulateur" },
+  { id: "tw12", title: "Faire monter l'envie et garder le contrôle", file: "vente-06-envie.mp4", sub: "Vendre par étapes, l'échange, garder le contrôle · exercice au simulateur" },
+  { id: "tw11", title: "L'échelle des prix", file: "vente-04-prix.mp4", sub: "Le prix monte, le bouquet final, adapter au fan, le plancher · exercice au simulateur" },
+  { id: "tw8", title: "Les relances après le média", file: "vente-02-relances.mp4", sub: "La séquence de relances, chaque réaction du fan, la frontière · exercice au simulateur" },
+  { id: "tw13", title: "Après la session : le prochain rendez-vous", file: "vente-07-apres.mp4", sub: "Rester, ce que tu as ressenti, le prochain rendez-vous, la fiche · exercice au simulateur" },
+  { id: "tw14", title: "Les gros clients", file: "vente-08-gros-clients.mp4", sub: "La petite amie parfaite, la priorité absolue, les garder des mois · exercice au simulateur" },
+  { id: "tw15", title: "Les interdits", file: "vente-09-interdits.mp4", sub: "La liste rouge, rencontres, argent, vie privée, quand il insiste · exercice au simulateur" },
+  { id: "tw16", title: "Ton shift", file: "vente-10-shift.mp4", sub: "Pointer, l'ordre d'importance, 10 à 15 conversations, bien finir · exercice au simulateur" }];
 // Vidéos à revoir librement
 const EXTRA = [
   { id: "x-pres", title: "Présentation de StellADS", src: "/video/presentation-v4.mp4" },
   { id: "x-simu", title: "Le Simu Chatter", src: "/video/simu-chatter.mp4" }];
 // Exercices obligatoires : la vidéo s'arrête à la fin de chaque chapitre (at, en secondes) ; il faut tout réussir pour continuer. ok = la bonne réponse (jamais envoyée au navigateur)
-const QUIZ = { tw9: [{ id: "ex", at: 408.3, from: 97.0, title: "Connaître son fan", sim: "connaitre", qs: [] }], tw8: [{ id: "ex", at: 469.6, from: 112.6, title: "Les relances", sim: "relances", qs: [] }], tw7: [
+const QUIZ = {
+  tw10: [{ id: "ex", at: 364.7, from: 86.8, title: "La patience", sim: "patience", qs: [] }],
+  tw12: [{ id: "ex", at: 358.3, from: 88.4, title: "Faire monter l'envie", sim: "envie", qs: [] }],
+  tw13: [{ id: "ex", at: 314.0, from: 75.8, title: "Après la session", sim: "apres", qs: [] }],
+  tw14: [{ id: "ex", at: 315.0, from: 75.0, title: "Les gros clients", sim: "gros", qs: [] }],
+  tw15: [{ id: "ex", at: 331.0, from: 75.4, title: "Les interdits", sim: "interdits", qs: [] }],
+  tw16: [{ id: "ex", at: 287.5, from: 71.7, title: "Ton shift", sim: "shift", qs: [] }],
+  tw11: [{ id: "ex", at: 335.0, from: 92.4, title: "L'échelle des prix", sim: "prix", qs: [] }], tw9: [{ id: "ex", at: 408.3, from: 97.0, title: "Connaître son fan", sim: "connaitre", qs: [] }], tw8: [{ id: "ex", at: 469.6, from: 112.6, title: "Les relances", sim: "relances", qs: [] }], tw7: [
   { id: "p1", at: 151.3, from: 28, title: "Le bon moment", qs: [
     { q: "Un fan vient d'arriver et t'écrit « Salut, ça va ? ». Que fais-tu ?", opts: ["Je crée le lien : je lui réponds et je lui pose une question", "Je lui propose un PPV tout de suite", "Je lui envoie la liste de mes prix"], ok: 0, why: "C'est un fan froid : il découvre. Ton objectif, c'est de créer le lien, pas de vendre." },
     { q: "Il répond vite, te pose des questions, complimente ton sourire, puis écrit « T'as des photos plus sexy ? ».", opts: ["J'attends encore quelques jours", "C'est le moment : « J'en ai, oui… tu veux voir ? »", "Je change de sujet"], ok: 1, why: "Plusieurs signaux d'engagement, puis un signal d'intention clair : c'est le bon moment pour proposer." },
