@@ -45,7 +45,7 @@ const TRAINEE = window.TRAINEE = (() => {
         <div class="co-cv off" data-end><div class="co-ok">${CHECK}</div><b style="font-size:22px">${idx + 1 < C.total || solo ? "Vidéo terminée" : C.endTitle || "Formation messagerie terminée"}</b><small>${solo || v0.free ? "" : idx + 1 < C.total ? `La vidéo ${idx + 2} est débloquée.` : C.endText || "Ton manager va être prévenu."}</small>
           <div style="display:flex;gap:10px;margin-top:6px"><button class="co-gh" data-close>Fermer</button>${idx + 1 < C.total && !solo ? `<button class="co-go" data-next>Vidéo suivante →</button>` : ""}</div></div>
         <div class="co-cv off" data-err><b>La vidéo ne se charge pas</b><small>Vérifie ta connexion et réessaie.</small><button class="co-gh" data-close>Fermer</button></div></div>
-      <div class="co-ft"><span class="co-tb"><i></i></span><span class="co-tm">—</span></div>${replay ? "" : `<div class="co-note">${LOCK}Pas d'avance rapide : regarde jusqu'au bout pour débloquer la suite.${v0.quiz ? " Un exercice à réussir à la fin de chaque chapitre." : ""}</div>`}</div>`;
+      <div class="co-ft"><span class="co-tb"><i></i></span><span class="co-tm">—</span></div>${replay ? "" : `<div class="co-note">${LOCK}Pas d'avance rapide : regarde jusqu'au bout pour débloquer la suite.${v0.quiz ? (v0.quiz.some(p => p.sim) ? " Un exercice au simulateur t'attend à la fin." : " Un exercice à réussir à la fin de chaque chapitre.") : ""}</div>`}</div>`;
     document.body.appendChild(ov); document.body.style.overflow = "hidden"; requestAnimationFrame(() => ov.classList.add("on"));
     const v = ov.querySelector("video"), bar = ov.querySelector(".co-tb i"), tm = ov.querySelector(".co-tm"), ps = ov.querySelector(".co-ps");
     let maxT = replay ? 1e9 : v0.pos, started = false, lastSent = 0, finished = false, nextVid = null, qzOpen = false;
@@ -59,6 +59,7 @@ const TRAINEE = window.TRAINEE = (() => {
       const head = `<div class="tr-eb">EXERCICE ${g.n} / ${parts.length} · ${esc(g.title).toUpperCase()}</div>`;
       let Q; el.innerHTML = head + `<div class="qz-ld">Chargement…</div>`;
       try { Q = await api(`/api/course/${v0.id}/quiz/${g.id}`); } catch (e) { el.innerHTML = head + `<div class="qz-ld">${esc(e.message)}</div><div class="qz-bt"><button class="co-gh" data-rt>Réessayer</button></div>`; el.querySelector("[data-rt]").onclick = () => { shut(); quiz(g); }; return; }
+      if (Q.sim) return simExo(el, g, Q, head, shut);
       // chaque exercice mélange plusieurs formes : choix, trouver l'erreur, remettre dans l'ordre, associer, réponse écrite
       const ans = [], UP = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14l6-6 6 6"/></svg>';
       const run = todo => { let n = 0;
@@ -102,6 +103,61 @@ const TRAINEE = window.TRAINEE = (() => {
           el.querySelector("[data-rev]").onclick = () => { shut(); v.currentTime = Math.max(0, g.from || 0); v.play().catch(() => {}); }; };
         ask(); };
       run(Q.qs.map((_, i) => i));
+    }
+    // exercice au simulateur : Grok joue le fan, le chatter relance, puis Grok corrige la technique de la vidéo
+    async function simExo(el, g, Q, head, shut) {
+      const base = `/api/course/${v0.id}/sim/${g.id}`;
+      const intro = () => { el.innerHTML = head + `<div class="qz-q">${esc(Q.sim.title)} : à toi de jouer</div><div class="sx-br">${Q.sim.brief.map(b => `<p>${esc(b)}</p>`).join("")}</div>
+        <div class="qz-bt"><button class="co-gh" data-rev>Revoir la vidéo</button><button class="co-go" data-go>Ouvrir le simulateur</button></div>`;
+        el.querySelector("[data-rev]").onclick = () => { shut(); v.currentTime = Math.max(0, g.from || 0); v.play().catch(() => {}); };
+        el.querySelector("[data-go]").onclick = go; };
+      const go = async () => { el.innerHTML = head + `<div class="qz-ld">Ouverture du simulateur…</div>`; let R;
+        try { R = await api(base + "/start", { body: {} }); } catch (e) { el.innerHTML = head + `<div class="qz-ld">${esc(e.message)}</div><div class="qz-bt"><button class="co-gh" data-rt>Réessayer</button></div>`; el.querySelector("[data-rt]").onclick = go; return; }
+        chat(R); };
+      const bub = l => l.who === "fan" ? `<div class="qz-m fan">${esc(l.text)}</div>` : l.who === "me" ? `<div class="qz-m me sx-me">${esc(l.text)}</div>`
+        : l.who === "ppv" ? `<div class="sx-pv${l.status === "achetée" ? " ok" : ""}">${LOCK}<b>Vidéo · <span data-pr>${l.price}</span> €</b><small>${l.status === "achetée" ? "Achetée ✓" : "Vue · pas achetée"}</small></div>`
+        : l.who === "time" ? `<div class="sx-sys">⏱ ${l.min} min plus tard</div>` : l.who === "seen" ? `<div class="sx-seen">Vu</div>` : l.who === "price" ? `<div class="sx-sys">Prix changé : ${l.from} € → ${l.to} €</div>`
+        : l.who === "buy" ? `<div class="sx-sys g">💸 Il a acheté la vidéo à ${l.price} €</div>` : "";
+      function chat(R) {
+        let busy = false;
+        el.innerHTML = head + `<div class="sx"><div class="sx-hd"><span class="sx-av">${esc(R.fan[0])}</span><div><b>${esc(R.fan)}</b><small>fan de ${esc(R.creator)}</small></div><span class="sx-pp">Vidéo à <b data-price>${R.price}</b> €</span></div>
+          <div class="sx-ms" aria-live="polite"></div>
+          <div class="sx-in"><textarea rows="2" maxlength="600" placeholder="Écris ta relance comme ${esc(R.creator)}…"></textarea><button class="co-go" data-send>Envoyer</button></div>
+          <div class="sx-tl"><button class="co-gh" data-wait>⏱ 3 min plus tard</button><button class="co-gh" data-px>Changer le prix</button><span class="sx-sp"></span><button class="co-go" data-fin>Terminer et corriger</button></div>
+          <div class="qz-er" role="alert"></div></div>`;
+        const ms = el.querySelector(".sx-ms"), ta = el.querySelector("textarea"), er = t => el.querySelector(".qz-er").textContent = t || "";
+        const draw = log => { ms.innerHTML = log.map(bub).join(""); ms.scrollTop = ms.scrollHeight; };
+        let LOG = R.log.slice(); draw(LOG);
+        const typing = on => { const t = ms.querySelector(".sx-ty"); if (on && !t) { ms.insertAdjacentHTML("beforeend", `<div class="sx-ty"><i></i><i></i><i></i></div>`); ms.scrollTop = ms.scrollHeight; } else if (!on && t) t.remove(); };
+        const act = async (body, mine) => { if (busy) return; busy = true; er("");
+          if (mine) { LOG = LOG.filter((l, i) => !(l.who === "seen" && i === LOG.length - 1)); LOG.push(mine); draw(LOG); }
+          typing(true);
+          try { const A = await api(`${base}/run/${R.id}`, { body }); typing(false);
+            if (body.type === "price") { LOG = LOG.filter((l, i) => !(l.who === "seen" && i === LOG.length - 1)); LOG.push({ who: "price", from: +el.querySelector("[data-price]").textContent, to: A.price }); }
+            if (A.bought) LOG.forEach(l => { if (l.who === "ppv") l.status = "achetée"; });
+            LOG = LOG.concat(A.out); el.querySelector("[data-price]").textContent = A.price; LOG.forEach(l => { if (l.who === "ppv") l.price = A.price; }); draw(LOG);
+          } catch (e) { typing(false); er(e.message); if (mine) { LOG.pop(); draw(LOG); ta.value = mine.text || ta.value; } }
+          busy = false; };
+        const say = () => { const t = ta.value.trim(); if (!t) return er("Écris d'abord ton message."); ta.value = ""; act({ type: "say", text: t }, { who: "me", text: t }); };
+        el.querySelector("[data-send]").onclick = say;
+        ta.onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); say(); } }; ta.focus();
+        el.querySelector("[data-wait]").onclick = () => act({ type: "wait" }, { who: "time", min: 3 });
+        el.querySelector("[data-px]").onclick = () => { const t = prompt("Nouveau prix de la vidéo (en €) :", el.querySelector("[data-price]").textContent); if (t == null) return; const n = Math.round(+String(t).replace(",", ".")); if (!(n >= 3)) return er("Prix invalide"); act({ type: "price", to: n }); };
+        el.querySelector("[data-fin]").onclick = async () => { if (busy) return; busy = true; er(""); const b = el.querySelector("[data-fin]"); b.textContent = "Correction…";
+          try { result(await api(`${base}/run/${R.id}/end`, { body: {} })); } catch (e) { er(e.message); b.textContent = "Terminer et corriger"; busy = false; } };
+      }
+      function result(X) {
+        el.innerHTML = head + (X.passed ? `<div class="co-ok">${CHECK}</div>` : "") + `<div class="qz-q" style="${X.passed ? "text-align:center" : ""}">${X.passed ? "Exercice réussi" : "Pas encore : on recommence"} · ${X.score} / ${X.total}</div>
+          <div class="qz-ft" style="${X.passed ? "text-align:center" : ""}">Il faut ${X.need} critères sur ${X.total}. On note ta technique, pas l'achat${X.bought ? " (et il a acheté 💸)" : ""}.</div>
+          <div class="qz-rs">${X.criteria.map(c => `<div class="qz-r${c.ok ? " ok" : ""}"><span>${c.ok ? "✓" : "✕"}</span><div><b>${esc(c.name)}</b><small>${esc(c.why)}</small></div></div>`).join("")}</div>
+          ${X.bravo ? `<div class="sx-fb"><b>👍 Bien joué</b><p>${esc(X.bravo)}</p></div>` : ""}${X.conseil ? `<div class="sx-fb"><b>🎯 À travailler</b><p>${esc(X.conseil)}</p></div>` : ""}
+          ${X.exemple ? `<div class="sx-fb"><b>✍️ Exemple</b>${X.exemple.original ? `<p class="sx-was">${esc(X.exemple.original)}</p>` : ""}<p class="sx-now">${esc(X.exemple.mieux)}</p></div>` : ""}
+          <div class="qz-bt">${X.passed ? `<button class="co-gh" data-again>Refaire pour t'entraîner</button><button class="co-go" data-cont>Continuer</button>` : `<button class="co-gh" data-rev>Revoir la vidéo</button><button class="co-go" data-again>Recommencer</button>`}</div>`;
+        if (X.passed) { g.passed = true; burst(el.querySelector(".co-ok")); el.querySelector("[data-cont]").onclick = () => { shut(); v.play().catch(() => {}); }; }
+        else el.querySelector("[data-rev]").onclick = () => { shut(); v.currentTime = Math.max(0, g.from || 0); v.play().catch(() => {}); };
+        el.querySelector("[data-again]").onclick = go;
+      }
+      intro();
     }
     const send = (force) => { if (replay || !v.duration) return; const now = Date.now(); if (!force && now - lastSent < 5000) return; lastSent = now;
       return api(`/api/course/${v0.id}/progress`, { body: { pos: Math.min(maxT, v.duration), dur: v.duration } }).catch(() => null); };

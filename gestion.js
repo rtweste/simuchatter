@@ -15,13 +15,14 @@ const COURSE = [
   { id: "tw6", title: "Le shift", file: "messagerie-06-shift.mp4" }];
 // Formation continue (onglet Formation) : réservée aux chatters, après la formation de base
 const ADV = [
-  { id: "tw7", title: "Vendre au bon moment", file: "vente-01-bon-moment.mp4", sub: "Les signaux, le post-follow, le follow-up, le fan qui disparaît" }];
+  { id: "tw7", title: "Vendre au bon moment", file: "vente-01-bon-moment.mp4", sub: "Les signaux, le post-follow, le follow-up, le fan qui disparaît" },
+  { id: "tw8", title: "Les relances après le média", file: "vente-02-relances.mp4", sub: "La séquence de relances, chaque réaction du fan, la frontière · exercice au simulateur" }];
 // Vidéos à revoir librement
 const EXTRA = [
   { id: "x-pres", title: "Présentation de StellADS", src: "/video/presentation-v4.mp4" },
   { id: "x-simu", title: "Le Simu Chatter", src: "/video/simu-chatter.mp4" }];
 // Exercices obligatoires : la vidéo s'arrête à la fin de chaque chapitre (at, en secondes) ; il faut tout réussir pour continuer. ok = la bonne réponse (jamais envoyée au navigateur)
-const QUIZ = { tw7: [
+const QUIZ = { tw8: [{ id: "ex", at: 469.6, from: 112.6, title: "Les relances", sim: "relances", qs: [] }], tw7: [
   { id: "p1", at: 151.3, from: 28, title: "Le bon moment", qs: [
     { q: "Un fan vient d'arriver et t'écrit « Salut, ça va ? ». Que fais-tu ?", opts: ["Je crée le lien : je lui réponds et je lui pose une question", "Je lui propose un PPV tout de suite", "Je lui envoie la liste de mes prix"], ok: 0, why: "C'est un fan froid : il découvre. Ton objectif, c'est de créer le lien, pas de vendre." },
     { q: "Il répond vite, te pose des questions, complimente ton sourire, puis écrit « T'as des photos plus sexy ? ».", opts: ["J'attends encore quelques jours", "C'est le moment : « J'en ai, oui… tu veux voir ? »", "Je change de sujet"], ok: 1, why: "Plusieurs signaux d'engagement, puis un signal d'intention clair : c'est le bon moment pour proposer." },
@@ -71,6 +72,7 @@ const TR_DEF = { sessions: { on: true, v: 8 }, avg: { on: true, v: 70 }, hard: {
 const KIND_LBL = { warn: "Avertissement", fine: "Retenue", prime: "Perte de prime", suspend: "Suspension" };
 
 module.exports = function mount(app, db, auth, admin, ctx) {
+  const EXO = require("./exos")(db);   // exercices au simulateur à la fin des vidéos
   const { compta, planning } = ctx;
   db.exec(`
   CREATE TABLE IF NOT EXISTS activity (id INTEGER PRIMARY KEY, at INTEGER NOT NULL, user_id INTEGER, kind TEXT NOT NULL, text TEXT NOT NULL, sub TEXT, chg TEXT);
@@ -264,21 +266,21 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   db.exec("CREATE TABLE IF NOT EXISTS training_bypass (user_id INTEGER PRIMARY KEY, level TEXT NOT NULL, at INTEGER NOT NULL)");
   db.exec("CREATE TABLE IF NOT EXISTS course_progress (user_id INTEGER NOT NULL, video_id TEXT NOT NULL, max_pos REAL NOT NULL DEFAULT 0, dur REAL, upd INTEGER, done_at INTEGER, PRIMARY KEY (user_id, video_id))");
   db.exec("CREATE TABLE IF NOT EXISTS course_quiz (user_id INTEGER NOT NULL, video_id TEXT NOT NULL, part TEXT NOT NULL, tries INTEGER NOT NULL DEFAULT 0, passed_at INTEGER, PRIMARY KEY (user_id, video_id, part))");
-  function course(uid, unlocked, list) {
+  function course(uid, unlocked, list, open) {
     const rows = {}; db.prepare("SELECT video_id, max_pos, dur, done_at FROM course_progress WHERE user_id = ?").all(uid).forEach(r => rows[r.video_id] = r);
     const qp = new Set(db.prepare("SELECT video_id, part FROM course_quiz WHERE user_id = ? AND passed_at IS NOT NULL").all(uid).map(r => r.video_id + ":" + r.part));
     let prevDone = true;
     const videos = (list || courseList()).map((v, i) => { const r = rows[v.id] || {};
       // exercices : la vidéo n'est validée que si tous sont réussis
-      const quiz = QUIZ[v.id] ? QUIZ[v.id].map((p, k) => ({ id: p.id, n: k + 1, at: p.at, from: p.from, title: p.title, count: p.qs.length, passed: qp.has(v.id + ":" + p.id) })) : null;
-      const done = !!r.done_at && (!quiz || quiz.every(p => p.passed)), locked = !unlocked || !prevDone; prevDone = prevDone && done;
+      const quiz = QUIZ[v.id] ? QUIZ[v.id].map((p, k) => ({ id: p.id, n: k + 1, at: p.at, from: p.from, title: p.title, count: p.qs.length, sim: p.sim || null, passed: qp.has(v.id + ":" + p.id) })) : null;
+      const done = !!r.done_at && (!quiz || quiz.every(p => p.passed)), locked = !unlocked || (!prevDone && !open); prevDone = prevDone && done;
       return { id: v.id, n: i + 1, title: v.title, src: "/video/twizz/" + v.file, done, locked, pos: done ? 0 : Math.max(0, r.max_pos || 0), dur: r.dur || null, quiz, sub: v.sub || "" }; });
     const done = videos.filter(v => v.done).length;
     return { unlocked, videos, done, total: videos.length, complete: videos.length > 0 && done === videos.length, next: videos.find(v => !v.done && !v.locked) || null };
   }
   // onglet Formation : les bases (les 6 vidéos de la messagerie), la formation continue (chatters), les vidéos à revoir
   function library(user) {
-    const tr = user.role === "trainee", base = tr ? training(user.id, true).course : course(user.id, true), adv = course(user.id, !tr, advList());
+    const tr = user.role === "trainee", base = tr ? training(user.id, true).course : course(user.id, true), adv = course(user.id, !tr, advList(), user.role === "admin");   // les managers ouvrent n'importe quelle vidéo de la formation continue
     if (!tr) base.videos.forEach(v => { v.free = true; v.locked = false; });   // un chatter revoit les bases librement
     const extra = EXTRA.filter(x => exists(require("path").join(__dirname, "public", x.src))).map(x => ({ id: x.id, n: 0, title: x.title, src: x.src, done: true, free: true, locked: false, pos: 0 }));
     return { trainee: tr, base, adv, extra };
@@ -493,7 +495,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     if (!part.passed && !req.viewAs && (!r || r.max_pos < P.at - 2)) return void res.status(403).json({ error: "Regarde d'abord le chapitre jusqu'au bout" });
     return { uid, v, P, part }; };
   app.get("/api/course/:id/quiz/:part", auth, (req, res) => { const x = quizOf(req, res); if (!x) return;
-    res.json({ id: x.P.id, n: x.part.n, total: x.v.quiz.length, title: x.P.title, qs: x.P.qs.map(q => ({ type: q.type || "qcm", q: q.q, opts: q.opts, msgs: q.msgs, items: q.items, left: q.left, right: q.right, ctx: q.ctx })) }); });
+    res.json({ id: x.P.id, n: x.part.n, total: x.v.quiz.length, title: x.P.title, sim: x.P.sim ? { id: x.P.sim, title: EXO.EXOS[x.P.sim].title, brief: EXO.EXOS[x.P.sim].brief } : null, qs: x.P.qs.map(q => ({ type: q.type || "qcm", q: q.q, opts: q.opts, msgs: q.msgs, items: q.items, left: q.left, right: q.right, ctx: q.ctx })) }); });
   // réponse écrite : corrigée par Grok d'après les critères de l'exercice (gardée en mémoire : la même phrase n'est jamais recorrigée)
   db.exec("CREATE TABLE IF NOT EXISTS course_write (user_id INTEGER NOT NULL, video_id TEXT NOT NULL, part TEXT NOT NULL, q INTEGER NOT NULL, text TEXT NOT NULL, ok INTEGER NOT NULL, feedback TEXT, at INTEGER NOT NULL)");
   const sameArr = (a, b) => Array.isArray(a) && a.length === b.length && a.every((v, i) => Number(v) === b[i]);
@@ -524,6 +526,22 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     if (passed && !x.part.passed) { const u = db.prepare("SELECT username FROM users WHERE id = ?").get(x.uid), t = (db.prepare("SELECT tries FROM course_quiz WHERE user_id = ? AND video_id = ? AND part = ?").get(x.uid, x.v.id, x.P.id) || {}).tries || 1;
       log(x.uid, "a", `**${u ? u.username : "?"}** a réussi l'exercice ${x.part.n} de « ${x.v.title} »`, `${x.P.title} · ${t === 1 ? "du premier coup" : "au " + t + "e essai"}`); }
     res.json({ passed, results }); } catch (e) { res.status(500).json({ error: "Correction impossible pour l'instant : réessaie" }); } });
+  // exercice « en conversation » : le simulateur s'ouvre sur la situation de la vidéo, Grok joue le fan puis corrige la technique
+  const simOf = (req, res) => { const x = quizOf(req, res); if (!x) return null; if (!x.P.sim) { res.status(400).json({ error: "Pas d'exercice de conversation ici" }); return null; } return x; };
+  const runOf = (req, res, x) => { const r = EXO.load(+req.params.rid); if (!r || r.user_id !== x.uid || r.video_id !== x.v.id || r.part !== x.P.id) { res.status(404).json({ error: "Exercice introuvable" }); return null; } return r; };
+  const exErr = (res, e) => res.status(e.status || 500).json({ error: e.status ? e.message : "Erreur, réessaie dans un instant" });
+  app.post("/api/course/:id/sim/:part/start", auth, (req, res) => { const x = simOf(req, res); if (!x) return;
+    if (req.user.role !== "admin" && EXO.todayCount(x.uid) >= 15) return res.status(429).json({ error: "15 essais aujourd'hui : reviens demain, repose-toi un peu 🙂" });
+    res.json(EXO.pub(EXO.start(x.uid, x.v.id, x.P.id, x.P.sim))); });
+  app.post("/api/course/:id/sim/:part/run/:rid", auth, async (req, res) => { const x = simOf(req, res); if (!x) return; const r = runOf(req, res, x); if (!r) return;
+    try { res.json(await EXO.act(r, req.body || {})); } catch (e) { if (!e.status) console.error("Exercice", e.message); exErr(res, e); } });
+  app.post("/api/course/:id/sim/:part/run/:rid/end", auth, async (req, res) => { const x = simOf(req, res); if (!x) return; const r = runOf(req, res, x); if (!r) return;
+    try { const R = await EXO.grade(r);
+      if (!req.viewAs) { db.prepare("INSERT INTO course_quiz (user_id, video_id, part, tries, passed_at) VALUES (?,?,?,1,?) ON CONFLICT(user_id, video_id, part) DO UPDATE SET tries = tries + (CASE WHEN course_quiz.passed_at IS NULL THEN 1 ELSE 0 END), passed_at = COALESCE(course_quiz.passed_at, excluded.passed_at)")
+          .run(x.uid, x.v.id, x.P.id, R.passed ? Date.now() : null);
+        if (R.passed && !x.part.passed) { const u = db.prepare("SELECT username FROM users WHERE id = ?").get(x.uid), t = (db.prepare("SELECT tries FROM course_quiz WHERE user_id = ? AND video_id = ? AND part = ?").get(x.uid, x.v.id, x.P.id) || {}).tries || 1;
+          log(x.uid, "a", `**${u ? u.username : "?"}** a réussi l'exercice au simulateur de « ${x.v.title} »`, `${R.score} / ${R.total} · ${t === 1 ? "du premier coup" : "au " + t + "e essai"}`); } }
+      res.json(R); } catch (e) { if (!e.status) console.error("Exercice, correction", e.message); exErr(res, e); } });
   app.post("/api/admin/users/:id/promote", auth, admin, (req, res) => {
     const u = db.prepare("SELECT id, role FROM users WHERE id = ?").get(parseInt(req.params.id, 10));
     if (!u || u.role !== "trainee") return res.status(400).json({ error: "Ce compte n'est pas en formation" });
