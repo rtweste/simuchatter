@@ -490,7 +490,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   // exercices d'une vidéo : questions sans les réponses, puis correction côté serveur (tout juste pour passer)
   const quizOf = (req, res) => { const uid = req.user.id, X = vidOf(req.user, req.params.id), v = X && X.v, P = v && (QUIZ[v.id] || []).find(p => p.id === req.params.part);
     if (!v || !P) return void res.status(404).json({ error: "Exercice introuvable" });
-    if (v.locked) return void res.status(403).json({ error: "Cette vidéo n'est pas encore débloquée" });
+    if (v.locked && !req.viewAs) return void res.status(403).json({ error: "Cette vidéo n'est pas encore débloquée" });
     const r = db.prepare("SELECT max_pos FROM course_progress WHERE user_id = ? AND video_id = ?").get(uid, v.id), part = v.quiz.find(p => p.id === P.id);
     if (!part.passed && !req.viewAs && (!r || r.max_pos < P.at - 2)) return void res.status(403).json({ error: "Regarde d'abord le chapitre jusqu'au bout" });
     return { uid, v, P, part }; };
