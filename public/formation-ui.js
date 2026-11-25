@@ -115,17 +115,21 @@ const TRAINEE = window.TRAINEE = (() => {
         try { R = await api(base + "/start", { body: {} }); } catch (e) { el.innerHTML = head + `<div class="qz-ld">${esc(e.message)}</div><div class="qz-bt"><button class="co-gh" data-rt>Réessayer</button></div>`; el.querySelector("[data-rt]").onclick = go; return; }
         chat(R); };
       const bub = l => l.who === "fan" ? `<div class="qz-m fan">${esc(l.text)}</div>` : l.who === "me" ? `<div class="qz-m me sx-me">${esc(l.text)}</div>`
-        : l.who === "ppv" ? `<div class="sx-pv${l.status === "achetée" ? " ok" : ""}">${LOCK}<b>Vidéo · <span data-pr>${l.price}</span> €</b><small>${l.status === "achetée" ? "Achetée ✓" : "Vue · pas achetée"}</small></div>`
-        : l.who === "time" ? `<div class="sx-sys">⏱ ${l.min} min plus tard</div>` : l.who === "seen" ? `<div class="sx-seen">Vu</div>` : l.who === "price" ? `<div class="sx-sys">Prix changé : ${l.from} € → ${l.to} €</div>`
+        : l.who === "ppv" ? `<div class="sx-pv${l.status === "achetée" ? " ok" : ""}">${LOCK}<b>${l.label ? esc(l.label) : "Vidéo"} · <span data-pr>${l.price}</span> €</b><small>${l.status === "achetée" ? "Achetée ✓" : l.status === "envoyé" ? "Envoyé · en attente" : "Vue · pas achetée"}</small></div>`
+: l.who === "fanpic" ? `<div class="sx-pic">📷 Il t'envoie une photo de lui</div>`
+        : l.who === "time" ? `<div class="sx-sys">${l.label ? "⏩ " + esc(l.label) : `⏱ ${l.min} min plus tard`}</div>` : l.who === "seen" ? `<div class="sx-seen">Vu</div>` : l.who === "price" ? `<div class="sx-sys">Prix changé : ${l.from} € → ${l.to} €</div>`
         : l.who === "buy" ? `<div class="sx-sys g">💸 Il a acheté la vidéo à ${l.price} €</div>` : "";
       function chat(R) {
-        let busy = false;
-        el.innerHTML = head + `<div class="sx"><div class="sx-hd"><span class="sx-av">${esc(R.fan[0])}</span><div><b>${esc(R.fan)}</b><small>fan de ${esc(R.creator)}</small></div><span class="sx-pp">Vidéo à <b data-price>${R.price}</b> €</span></div>
+        let busy = false; const TL = R.tools || {};
+        const chatH = `<div class="sx-hd"><span class="sx-av">${esc(R.fan[0])}</span><div><b>${esc(R.fan)}</b><small>fan de ${esc(R.creator)}</small></div><span class="sx-pp">${R.price ? `Vidéo à <b data-price>${R.price}</b> €` : `<span data-price hidden>0</span>${R.phase === 2 && TL.jump ? esc(TL.jump.label) : esc(R.status || "")}`}</span></div>
           <div class="sx-ms" aria-live="polite"></div>
-          <div class="sx-in"><textarea rows="2" maxlength="600" placeholder="Écris ta relance comme ${esc(R.creator)}…"></textarea><button class="co-go" data-send>Envoyer</button></div>
-          <div class="sx-tl"><button class="co-gh" data-wait>⏱ 3 min plus tard</button><button class="co-gh" data-px>Changer le prix</button><span class="sx-sp"></span><button class="co-go" data-fin>Terminer et corriger</button></div>
-          <div class="qz-er" role="alert"></div></div>`;
-        const ms = el.querySelector(".sx-ms"), ta = el.querySelector("textarea"), er = t => el.querySelector(".qz-er").textContent = t || "";
+          <div class="sx-in"><textarea class="sx-say" rows="2" maxlength="600" placeholder="Écris ton message comme ${esc(R.creator)}…"></textarea><button class="co-go" data-send>Envoyer</button></div>
+          <div class="sx-tl">${TL.wait ? `<button class="co-gh" data-wait>⏱ 3 min plus tard</button>` : ""}${TL.price ? `<button class="co-gh" data-px>Changer le prix</button>` : ""}${TL.jump && R.phase !== 2 ? `<button class="co-gh" data-jump>⏩ ${esc(TL.jump.label)}</button>` : ""}${TL.send && (R.script ? R.log.filter(l => l.who === "ppv").length < R.script.length : !R.log.some(l => l.who === "ppv")) ? `<button class="co-gh" data-snd>🔒 Envoyer le média</button>` : ""}<span class="sx-sp"></span><button class="co-go" data-fin>Terminer et corriger</button></div>
+          <div class="qz-er" role="alert"></div>`;
+        el.innerHTML = head + (TL.notes ? `<div class="sx sx-wide"><div class="sx-l">${chatH}</div><div class="sx-nt"><b>📝 Fiche de ${esc(R.fan)}</b><small>Note tout ce que tu apprends : âge, travail, ville, passions, projets…</small><textarea class="sx-fi" maxlength="2000" placeholder="Ex. 27 ans, électricien…">${esc(R.notes || "")}</textarea></div></div>` : `<div class="sx">${chatH}</div>`);
+        const ms = el.querySelector(".sx-ms"), ta = el.querySelector(".sx-say"), er = t => el.querySelector(".qz-er").textContent = t || "";
+        const fi = el.querySelector(".sx-fi"); let fiT = 0; const saveFi = () => fi ? api(`${base}/run/${R.id}`, { body: { type: "notes", text: fi.value } }).catch(() => {}) : Promise.resolve();
+        if (fi) fi.oninput = () => { clearTimeout(fiT); fiT = setTimeout(saveFi, 900); };
         const draw = log => { ms.innerHTML = log.map(bub).join(""); ms.scrollTop = ms.scrollHeight; };
         let LOG = R.log.slice(); draw(LOG);
         const typing = on => { const t = ms.querySelector(".sx-ty"); if (on && !t) { ms.insertAdjacentHTML("beforeend", `<div class="sx-ty"><i></i><i></i><i></i></div>`); ms.scrollTop = ms.scrollHeight; } else if (!on && t) t.remove(); };
@@ -134,17 +138,28 @@ const TRAINEE = window.TRAINEE = (() => {
           typing(true);
           try { const A = await api(`${base}/run/${R.id}`, { body }); typing(false);
             if (body.type === "price") { LOG = LOG.filter((l, i) => !(l.who === "seen" && i === LOG.length - 1)); LOG.push({ who: "price", from: +el.querySelector("[data-price]").textContent, to: A.price }); }
-            if (A.bought) LOG.forEach(l => { if (l.who === "ppv") l.status = "achetée"; });
-            LOG = LOG.concat(A.out); el.querySelector("[data-price]").textContent = A.price; LOG.forEach(l => { if (l.who === "ppv") l.price = A.price; }); draw(LOG);
+            A.out.filter(o => o.who === "buy").forEach(b => { const p = LOG.filter(l => l.who === "ppv" && l.status !== "achetée").pop(); if (p) p.status = "achetée"; });
+            LOG = LOG.concat(A.out); el.querySelector("[data-price]").textContent = A.price; if (body.type === "price") LOG.forEach(l => { if (l.who === "ppv") l.price = A.price; }); draw(LOG);
           } catch (e) { typing(false); er(e.message); if (mine) { LOG.pop(); draw(LOG); ta.value = mine.text || ta.value; } }
           busy = false; };
         const say = () => { const t = ta.value.trim(); if (!t) return er("Écris d'abord ton message."); ta.value = ""; act({ type: "say", text: t }, { who: "me", text: t }); };
         el.querySelector("[data-send]").onclick = say;
         ta.onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); say(); } }; ta.focus();
-        el.querySelector("[data-wait]").onclick = () => act({ type: "wait" }, { who: "time", min: 3 });
-        el.querySelector("[data-px]").onclick = () => { const t = prompt("Nouveau prix de la vidéo (en €) :", el.querySelector("[data-price]").textContent); if (t == null) return; const n = Math.round(+String(t).replace(",", ".")); if (!(n >= 3)) return er("Prix invalide"); act({ type: "price", to: n }); };
+        const bw = el.querySelector("[data-wait]"); if (bw) bw.onclick = () => act({ type: "wait" }, { who: "time", min: 3 });
+        const bj = el.querySelector("[data-jump]"); if (bj) bj.onclick = async () => { await saveFi(); await act({ type: "jump" }); if (LOG.some(l => l.who === "time" && l.label)) { bj.remove(); const pp = el.querySelector(".sx-pp"); if (pp) pp.lastChild.textContent = TL.jump.label; } };
+        const bs = el.querySelector("[data-snd]"); const nSent = () => LOG.filter(l => l.who === "ppv").length;
+        const sndLbl = () => { if (!bs) return; if (R.script) { const it = R.script[nSent()]; if (!it) return bs.remove(); bs.textContent = `🔒 Envoyer n°${nSent() + 1} · ${it.label}${it.price ? " · " + it.price + " €" : ""}`; } };
+        sndLbl();
+        if (bs) bs.onclick = async () => { let body = { type: "send" }, mine;
+          if (R.script) { const i = nSent(), it = R.script[i]; let pr = it.price;
+            if (TL.setPrice) { const t = prompt(`Prix du média n°${i + 1} « ${it.label} » (conseillé ${it.suggest} €, plancher ${it.floor} €) :`, it.suggest); if (t == null) return; pr = Math.round(+String(t).replace(",", ".")); if (!(pr >= 1)) return er("Prix invalide"); body.price = pr; }
+            else if (!confirm(`Envoyer le média n°${i + 1} « ${it.label} » à ${pr} € ?`)) return;
+            mine = { who: "ppv", price: pr, status: "envoyé", i, label: it.label }; }
+          else { if (!confirm("Envoyer le média payant maintenant ?")) return; mine = { who: "ppv", price: R.sendPrice || 20, status: "envoyé" }; }
+          await act(body, mine); if (R.script) sndLbl(); else if (LOG.some(l => l.who === "ppv")) bs.remove(); };
+        const bp = el.querySelector("[data-px]"); if (bp) bp.onclick = () => { const t = prompt("Nouveau prix de la vidéo (en €) :", el.querySelector("[data-price]").textContent); if (t == null) return; const n = Math.round(+String(t).replace(",", ".")); if (!(n >= 3)) return er("Prix invalide"); act({ type: "price", to: n }); };
         el.querySelector("[data-fin]").onclick = async () => { if (busy) return; busy = true; er(""); const b = el.querySelector("[data-fin]"); b.textContent = "Correction…";
-          try { result(await api(`${base}/run/${R.id}/end`, { body: {} })); } catch (e) { er(e.message); b.textContent = "Terminer et corriger"; busy = false; } };
+          try { await saveFi(); result(await api(`${base}/run/${R.id}/end`, { body: {} })); } catch (e) { er(e.message); b.textContent = "Terminer et corriger"; busy = false; } };
       }
       function result(X) {
         el.innerHTML = head + (X.passed ? `<div class="co-ok">${CHECK}</div>` : "") + `<div class="qz-q" style="${X.passed ? "text-align:center" : ""}">${X.passed ? "Exercice réussi" : "Pas encore : on recommence"} · ${X.score} / ${X.total}</div>

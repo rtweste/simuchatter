@@ -16,13 +16,14 @@ const COURSE = [
 // Formation continue (onglet Formation) : réservée aux chatters, après la formation de base
 const ADV = [
   { id: "tw7", title: "Vendre au bon moment", file: "vente-01-bon-moment.mp4", sub: "Les signaux, le post-follow, le follow-up, le fan qui disparaît" },
+  { id: "tw9", title: "Connaître son fan", file: "vente-03-connaitre.mp4", sub: "Les bonnes questions, rebondir, la fiche du fan · exercice au simulateur" },
   { id: "tw8", title: "Les relances après le média", file: "vente-02-relances.mp4", sub: "La séquence de relances, chaque réaction du fan, la frontière · exercice au simulateur" }];
 // Vidéos à revoir librement
 const EXTRA = [
   { id: "x-pres", title: "Présentation de StellADS", src: "/video/presentation-v4.mp4" },
   { id: "x-simu", title: "Le Simu Chatter", src: "/video/simu-chatter.mp4" }];
 // Exercices obligatoires : la vidéo s'arrête à la fin de chaque chapitre (at, en secondes) ; il faut tout réussir pour continuer. ok = la bonne réponse (jamais envoyée au navigateur)
-const QUIZ = { tw8: [{ id: "ex", at: 469.6, from: 112.6, title: "Les relances", sim: "relances", qs: [] }], tw7: [
+const QUIZ = { tw9: [{ id: "ex", at: 408.3, from: 97.0, title: "Connaître son fan", sim: "connaitre", qs: [] }], tw8: [{ id: "ex", at: 469.6, from: 112.6, title: "Les relances", sim: "relances", qs: [] }], tw7: [
   { id: "p1", at: 151.3, from: 28, title: "Le bon moment", qs: [
     { q: "Un fan vient d'arriver et t'écrit « Salut, ça va ? ». Que fais-tu ?", opts: ["Je crée le lien : je lui réponds et je lui pose une question", "Je lui propose un PPV tout de suite", "Je lui envoie la liste de mes prix"], ok: 0, why: "C'est un fan froid : il découvre. Ton objectif, c'est de créer le lien, pas de vendre." },
     { q: "Il répond vite, te pose des questions, complimente ton sourire, puis écrit « T'as des photos plus sexy ? ».", opts: ["J'attends encore quelques jours", "C'est le moment : « J'en ai, oui… tu veux voir ? »", "Je change de sujet"], ok: 1, why: "Plusieurs signaux d'engagement, puis un signal d'intention clair : c'est le bon moment pour proposer." },
