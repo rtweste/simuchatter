@@ -382,9 +382,10 @@ En français, ton neutre et bienveillant, phrases courtes.
 ${conv}`;
   // modèle d'évaluation d'abord (2 essais), puis le modèle rapide en secours : la note ne doit jamais manquer
   let last = null;
+  // Grok d'abord (comme le simulateur), Claude seulement s'il ne répond pas
   for (const model of [MODEL_EVAL, MODEL_EVAL, MODEL_HINT]) {
     try {
-      const res = await ask(prompt, model, 3000, { ...(tag || {}), kind: "apply" }, { tools: [APPLY_TOOL], tool_choice: { type: "tool", name: "note_candidat" } });
+      const res = await askSim(prompt, SIM_EVAL, model, 3000, { ...(tag || {}), kind: "apply" }, { tools: [APPLY_TOOL], tool_choice: { type: "tool", name: "note_candidat" } });
       const tu = res.content.find(c => c.type === "tool_use"), g = tu && tu.input;
       if (g && typeof g.score === "number" && g.criteres && g.verdict) return g;
       last = new Error(res.stop_reason === "max_tokens" ? "Correction coupée (trop longue)" : "Note du candidat illisible");
