@@ -296,6 +296,30 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
 .w-ring span{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .w-ring b{font-size:36px;font-weight:900;letter-spacing:-.05em;color:#fff;font-variant-numeric:tabular-nums;line-height:1}.w-ring small{font-size:11px;color:#7a7a7a;font-weight:800;margin-top:2px}
 .w-t{max-width:340px;margin:10px auto 18px;font-size:13.5px;line-height:1.55;color:#a8a8a8}
+.opts.yn{grid-template-columns:1fr 1fr}
+.done.bk{justify-content:flex-start;overflow-y:auto;padding-top:22px;padding-bottom:22px;scrollbar-width:none}.done.bk::-webkit-scrollbar{display:none}
+.done.bk>*{flex-shrink:0}.done.bk>.iv-days,.done.bk>.f,.done.bk>.iv-go,.done.bk>.l,.done.bk>.iv-h,.done.bk>.ferr{width:100%;box-sizing:border-box}
+.done.bk h2{font-size:25px;margin-top:8px}.done.bk .iv-tz{margin-top:6px}.done.bk .l{margin-top:10px}.done.bk .iv-go{margin-top:12px}.done.bk .iv-s{height:36px}.done.bk .w-ring{margin-bottom:0}.done.bk .w-ring{width:78px;height:78px;margin-top:10px}.done.bk .w-ring b{font-size:24px}.done.bk .w-ring small{font-size:10px}
+.done.bk .w-t{margin:8px auto 12px}.done.bk .w-steps{margin-top:14px}
+
+.res-dc{display:inline-flex;align-items:center;gap:10px;height:54px;padding:0 22px;border-radius:15px;background:#5865f2;color:#fff;font:900 15.5px Inter;text-decoration:none;box-shadow:0 14px 34px -12px rgba(88,101,242,.7);transition:filter .2s,transform .3s cubic-bezier(.3,1.6,.5,1)}
+.res-dc:hover{filter:brightness(1.08)}.res-dc:active{transform:scale(.96)}
+.iv-days{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 0}
+.iv-d{display:flex;flex-direction:column;gap:6px;padding:11px 9px 10px;border-radius:16px;background:#0f0f0f;border:1px solid #222}
+.iv-d b{font-size:13.5px;font-weight:900;color:#f2f2f2}.iv-d small{font-size:11px;color:#6a6a6a;font-weight:700;margin:-4px 0 2px}
+.iv-s{height:40px;border-radius:11px;border:1px solid #2a2a2a;background:#141414;color:#e6e6e6;font:800 14px Inter;cursor:pointer;transition:background .2s,border-color .2s,color .2s,transform .3s cubic-bezier(.3,1.6,.5,1)}
+.iv-s:hover:not(:disabled){border-color:#444}.iv-s:active:not(:disabled){transform:scale(.94)}
+.iv-s.on{background:#f2f2f2;color:#0a0a0a;border-color:#f2f2f2;box-shadow:0 8px 24px -8px rgba(255,255,255,.35)}
+.iv-s:disabled{opacity:.28;cursor:not-allowed;text-decoration:line-through}
+.iv-tz{font-size:11px;font-weight:800;letter-spacing:.12em;color:#6a6a6a;margin-top:8px;text-transform:uppercase}
+.iv-h{font-size:12px;color:#7a7a7a;font-weight:600;margin-top:6px;text-align:left}
+.iv-go{width:100%;height:52px;margin-top:14px;border:0;border-radius:15px;background:#f2f2f2;color:#0a0a0a;font:900 15px Inter;cursor:pointer;transition:opacity .2s,transform .3s cubic-bezier(.3,1.6,.5,1)}
+.iv-go:disabled{opacity:.35;cursor:not-allowed}.iv-go:active:not(:disabled){transform:scale(.97)}
+.iv-card{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0 4px;text-align:left;width:100%;box-sizing:border-box}
+.iv-card div{padding:13px 14px;border-radius:16px;background:#0f0f0f;border:1px solid #232323}
+.iv-card small{display:block;font-size:10px;font-weight:800;letter-spacing:.14em;color:#6a6a6a}.iv-card b{display:block;font-size:15px;font-weight:900;color:#fff;margin-top:5px;word-break:break-all}.iv-card span{display:block;font-size:12px;color:#8a8a8a;font-weight:600;margin-top:2px}
+.iv-card div:first-child{border-color:rgba(95,211,162,.35);background:rgba(95,211,162,.06)}
+@media(max-width:480px){.iv-days{gap:6px}.iv-d{padding:9px 6px}.iv-card{grid-template-columns:1fr}}
 .done.win .res-wa{margin:0 auto}
 .w-num{display:block;margin-top:9px;font-size:12px;color:#7a7a7a;font-weight:700;letter-spacing:.02em}
 .w-steps{display:flex;justify-content:center;gap:6px;margin-top:20px;flex-wrap:wrap}
@@ -410,7 +434,7 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
     el.innerHTML = `<span class="inv-av">${esc(n[0])}<i><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7"/></svg></i></span><div><b><em>${esc(n)}</em> t'invite à rejoindre l'équipe</b><small>${r.manager ? "Manager chez StellADS" : r.months >= 1 ? `Chatter chez StellADS depuis ${r.months} mois` : "Chatter chez StellADS"}</small></div>`;
     const ey = document.querySelector(".hero .ey"); if (ey) ey.parentNode.insertBefore(el, ey);
     window.__REFNAME = n; }).catch(() => {});
-  const A = { firstName: "", age: "", contactType: "whatsapp", contact: "", slots: [], exp: "", motivation: "", answers: [], quiz: [], testOn: false, consent: false };
+  const A = { firstName: "", age: "", contactType: "whatsapp", contact: "", slots: [], exp: "", motivation: "", hasPc: "", backup: "", backupHow: "", answers: [], quiz: [], testOn: false, consent: false };
   let C = null, cur = 0;
   // mêmes règles que le serveur : l'erreur s'affiche dès la première étape
   const badContact = () => { const v = A.contact.trim();
@@ -436,6 +460,14 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
       wire: s => s.querySelectorAll("[data-s]").forEach(b => b.onclick = e => { const r = b.getBoundingClientRect(); b.style.setProperty("--x", (e.clientX - r.left) + "px"); b.style.setProperty("--y", (e.clientY - r.top) + "px");
         const k = b.dataset.s; A.slots = A.slots.includes(k) ? A.slots.filter(x => x !== k) : [...A.slots, k]; b.classList.toggle("on"); }),
       check: () => A.slots.length ? "" : "Choisis au moins un créneau" },
+    { name: "Ton matériel", html: () => { const yn = (k, q, d) => `<label class="l r" style="--d:${d}">${q}</label><div class="opts yn">${[["yes", "Oui"], ["no", "Non"]].map(([v, l], i) => `<button type="button" class="opt r${A[k] === v ? " on" : ""}" style="--d:${d + 1 + i}" data-yn="${k}" data-v="${v}"><i></i>${l}</button>`).join("")}</div>`;
+        return `<h2 class="r" style="--d:0">Ton <em>matériel</em></h2><p class="hint r" style="--d:1">Le travail se fait sur ordinateur, avec une connexion stable.</p>
+        ${yn("hasPc", "AS-TU UN ORDINATEUR POUR TRAVAILLER ?", 2)}${yn("backup", "AS-TU UNE SOLUTION EN CAS DE COUPURE DE COURANT OU DE RÉSEAU ?", 5)}
+        <div id="bkW" class="r" style="--d:8;${A.backup === "yes" ? "" : "display:none"}"><input class="f" id="bk" maxlength="200" placeholder="Laquelle ? (ex. partage de connexion 4G, batterie…)" value="${esc(A.backupHow)}" style="margin-top:10px"></div>`; },
+      wire: s => { s.querySelectorAll("[data-yn]").forEach(b => b.onclick = () => { const k = b.dataset.yn; A[k] = b.dataset.v; s.querySelectorAll(`[data-yn="${k}"]`).forEach(x => x.classList.toggle("on", x === b));
+          if (k === "backup") { const w = s.querySelector("#bkW"); w.style.display = A.backup === "yes" ? "" : "none"; if (A.backup === "yes") s.querySelector("#bk").focus(); } });
+        s.querySelector("#bk").oninput = e => A.backupHow = e.target.value; },
+      check: () => !A.hasPc ? "Dis-nous si tu as un ordinateur pour travailler" : !A.backup ? "Dis-nous si tu as une solution en cas de coupure" : "" },
     { name: "Ton profil", html: () => `<h2 class="r" style="--d:0">Parle-nous de <em>toi</em></h2><p class="hint r" style="--d:1">Pas besoin d'expérience : on forme tout le monde.</p>
       <div class="opts">${Object.entries(C.exp).map(([k, l], i) => `<button type="button" class="opt r${A.exp === k ? " on" : ""}" style="--d:${i + 2}" data-e="${k}"><i></i>${esc(l)}</button>`).join("")}</div>
       <label class="l r" style="--d:5" for="mo">POURQUOI TU VEUX NOUS REJOINDRE ?</label><textarea class="f r" style="--d:6" id="mo" maxlength="800" placeholder="Quelques phrases suffisent">${esc(A.motivation)}</textarea>`,
@@ -444,8 +476,8 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
     { name: "Test de chatting", html: () => `<div id="ctW"></div>`, wire: s => ctMount(s.querySelector("#ctW")),
       check: () => !A.testOn ? "Lance le test de chatting" : A.quiz.length < (C.quiz || []).length ? "Réponds aux questions pour continuer le test" : A.answers.length < C.scenarios.length ? "Réponds au fan pour terminer le test" : "" },
     { name: "Envoi", html: () => `<h2 class="r" style="--d:0">On <em>vérifie</em> et on envoie</h2><p class="hint r" style="--d:1">Tu peux revenir en arrière pour modifier.</p>
-      <div class="recap">${[["Prénom", `${esc(A.firstName)}, ${esc(A.age)} ans`], [C.contact[A.contactType], esc(A.contact)], ["Shifts", A.slots.map(esc).join(" · ")], ["Expérience", esc(C.exp[A.exp] || "")]].map((x, i) => `<div class="r" style="--d:${i + 2}"><small>${x[0]}</small><b>${x[1]}</b></div>`).join("")}</div>
-      <div class="cons r${A.consent ? " on" : ""}" style="--d:6" id="cs" role="checkbox" aria-checked="${A.consent}" tabindex="0"><span class="bx"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>J'ai 18 ans ou plus et j'accepte que StellADS garde ces informations pour étudier ma candidature. Je peux demander leur suppression à tout moment.</span></div>`,
+      <div class="recap">${[["Prénom", `${esc(A.firstName)}, ${esc(A.age)} ans`], [C.contact[A.contactType], esc(A.contact)], ["Shifts", A.slots.map(esc).join(" · ")], ["Expérience", esc(C.exp[A.exp] || "")], ["Ordinateur", A.hasPc === "yes" ? "Oui" : "Non"], ["En cas de coupure", A.backup === "yes" ? "Oui" + (A.backupHow.trim() ? " · " + esc(A.backupHow.trim()) : "") : "Non"]].map((x, i) => `<div class="r" style="--d:${i + 2}"><small>${x[0]}</small><b>${x[1]}</b></div>`).join("")}</div>
+      <div class="cons r${A.consent ? " on" : ""}" style="--d:8" id="cs" role="checkbox" aria-checked="${A.consent}" tabindex="0"><span class="bx"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>J'ai 18 ans ou plus et j'accepte que StellADS garde ces informations pour étudier ma candidature. Je peux demander leur suppression à tout moment.</span></div>`,
       wire: s => { const c = s.querySelector("#cs"); c.onclick = c.onkeydown = e => { if (e.type === "keydown" && e.key !== " " && e.key !== "Enter") return; e.preventDefault(); A.consent = !A.consent; c.classList.toggle("on", A.consent); c.setAttribute("aria-checked", A.consent); paintBtn(); }; },
       check: () => A.consent ? "" : "Coche la case d'accord pour envoyer ta candidature" }];
 
@@ -573,13 +605,55 @@ canvas.fx{position:absolute;inset:0;pointer-events:none;z-index:4}
       R.forEach((r, i) => { setTimeout(() => r.classList.add("cur"), 700 + i * step); setTimeout(() => { r.classList.remove("cur"); r.classList.add("dn"); }, 700 + i * step + step - 40); });
       result(token, via, okView, 700 + R.length * step + 400); }, 300);
   }
+  // ---------- test réussi : il réserve son entretien (14 h ou 18 h, heure française, sur 3 jours), donne son pseudo Discord, puis reçoit le lien du serveur ----------
+  const DCI = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M19.6 5.3A16.6 16.6 0 0 0 15.5 4l-.5 1a15.4 15.4 0 0 0-6 0L8.5 4a16.6 16.6 0 0 0-4.1 1.3C1.8 9.2 1.1 13 1.4 16.8a16.8 16.8 0 0 0 5.1 2.6l1.1-1.7a10.8 10.8 0 0 1-1.7-.8l.4-.3a11.9 11.9 0 0 0 11.4 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.7a16.7 16.7 0 0 0 5.1-2.6c.4-4.4-.7-8.2-3-11.5zM8.5 14.5c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm7 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>';
+  let TOKEN = null;
+  const ring = sc0 => { const sc = Math.max(0, Math.min(100, Math.round(sc0 || 0))), C2 = 2 * Math.PI * 52;
+    return { html: `<div class="w-ring r" style="--d:2"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52" class="b"/><circle cx="60" cy="60" r="52" class="f" style="stroke-dasharray:${C2};stroke-dashoffset:${C2}"/></svg><span><b data-sc>0</b><small>/ 100</small></span></div>`,
+      run: D => { const f = D.querySelector(".w-ring .f"), n = D.querySelector("[data-sc]"), t1 = performance.now() + 700; if (!f) return;
+        (function an(t) { const k = Math.max(0, Math.min(1, (t - t1) / 1400)), e = 1 - Math.pow(1 - k, 3); f.style.strokeDashoffset = C2 * (1 - e * sc / 100); n.textContent = Math.round(e * sc); if (k < 1) requestAnimationFrame(an); })(performance.now()); } }; };
+  function book(u, first) {
+    const D = $("done"), name = esc(A.firstName.trim()), R = ring(u.score), days = [...new Set(u.slots.map(x => x.day))];
+    const dayName = (d, i) => i === 0 ? "Aujourd'hui" : i === 1 ? "Demain" : u.slots.find(x => x.day === d).label.split(" ")[0].replace(/^./, c => c.toUpperCase());
+    let pick = null;
+    D.className = "done win bk";
+    D.innerHTML = `<div class="w-eb r" style="--d:0"><i></i>TEST RÉUSSI</div>
+      <h2 class="r" style="--d:1">Bravo ${name}, tu es <em>qualifié.</em></h2>${first ? R.html : ""}
+      <p class="w-t r" style="--d:3">Dernière étape : choisis ton entretien, sur notre Discord.</p>
+      <div class="iv-days r" style="--d:4">${days.map((d, i) => { const L = u.slots.filter(x => x.day === d), lab = L[0].label.split(" ").slice(1).join(" ");
+        return `<div class="iv-d"><b>${dayName(d, i)}</b><small>${esc(lab)}</small>${L.map(x => `<button type="button" class="iv-s" data-at="${x.at}" ${x.ok ? "" : "disabled"}>${x.h} h</button>`).join("")}</div>`; }).join("")}</div>
+      <div class="iv-tz r" style="--d:5">Heure française</div>
+      <label class="l r" style="--d:6;text-align:left" for="dc">TON PSEUDO DISCORD <span style="letter-spacing:0;font-weight:600;color:#5f5f5f">· pour te reconnaître sur le serveur</span></label><input class="f r" style="--d:6" id="dc" maxlength="40" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. prenom_123">
+      <button type="button" class="iv-go r" style="--d:7" id="ivGo" disabled>Réserver mon entretien</button><div class="ferr" id="ivErr" role="alert"></div>`;
+    void D.offsetWidth; D.classList.add("on"); if (first) { R.run(D); confetti(); }
+    const go = D.querySelector("#ivGo"), dc = D.querySelector("#dc"), er = D.querySelector("#ivErr");
+    const paint = () => { go.disabled = !(pick && dc.value.trim().length >= 2); };
+    D.querySelectorAll(".iv-s").forEach(b => b.onclick = () => { pick = +b.dataset.at; D.querySelectorAll(".iv-s").forEach(x => x.classList.toggle("on", x === b)); er.textContent = ""; paint(); });
+    dc.oninput = () => { er.textContent = ""; paint(); };
+    go.onclick = async () => { go.disabled = true; go.textContent = "Réservation…";
+      try { const x = await api("/api/apply/book/" + TOKEN, { body: { at: pick, discord: dc.value.trim() }, noRedirect: true }); D.classList.remove("on"); setTimeout(() => booked({ ...u, booked: x.booked }), reduce ? 0 : 280); }
+      catch (e) { er.textContent = e.message; go.textContent = "Réserver mon entretien"; paint(); } };
+  }
+  function booked(u) {
+    const D = $("done"), b = u.booked, [day, hour] = b.label.split(" à ");
+    D.className = "done win";
+    D.innerHTML = `<div class="w-eb r" style="--d:0"><i></i>ENTRETIEN RÉSERVÉ</div>
+      <h2 class="r" style="--d:1">On se voit <em>${esc(day.split(" ")[0])} à ${esc(hour)}.</em></h2>
+      <div class="iv-card r" style="--d:2"><div><small>TON ENTRETIEN</small><b>${esc(day.replace(/^./, c => c.toUpperCase()))}</b><span>${esc(hour)} · heure française</span></div><div><small>TON PSEUDO DISCORD</small><b>${esc(b.discord)}</b><span>on te reconnaîtra avec</span></div></div>
+      <p class="w-t r" style="--d:3">Rejoins notre serveur Discord dès maintenant avec ce pseudo : c'est là que se passe ton entretien. Sois connecté quelques minutes avant l'heure.</p>
+      <a class="res-dc r" style="--d:4" href="${esc(b.link)}" target="_blank" rel="noopener">${DCI}Rejoindre le serveur Discord</a>
+      <div class="w-steps r" style="--d:5"><span class="sd"><i>✓</i>Test réussi</span><span class="sd"><i>✓</i>Entretien réservé</span><span class="cu"><i>3</i>Le Discord</span></div>`;
+    void D.offsetWidth; D.classList.add("on");
+  }
   // résultat du test : réussi → WhatsApp du manager · refusé → jauge sous le seuil et contact verrouillé
   function result(token, via, okView, minWait) {
+    TOKEN = token;
     const D = $("done"), t0 = Date.now(), name = esc(A.firstName.trim());
     const show = f => { const w = Math.max(0, minWait - (Date.now() - t0)); setTimeout(() => { D.classList.remove("on"); setTimeout(f, reduce ? 0 : 280); }, w); };
     const tick = async () => { let r = null; try { r = await api("/api/apply/result/" + token, { noRedirect: true }); } catch (e) { r = { state: "done" }; }
       if (r.state === "pending" && Date.now() - t0 < 90e3) return setTimeout(tick, 2500);
-      if (r.unlock) show(() => {
+      if (r.unlock && r.unlock.discord) show(() => { r.unlock.booked ? booked(r.unlock) : book(r.unlock, true); });
+      else if (r.unlock) show(() => {
         // écran de réussite : score, prochaine étape et bouton WhatsApp vers le manager
         const sc = Math.max(0, Math.min(100, Math.round(r.unlock.score || 0))), C = 2 * Math.PI * 52;
         D.className = "done win";

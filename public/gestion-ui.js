@@ -577,6 +577,7 @@ function renderCand() {
         ${scoreBadge(a)}</div>
       <div class="cmeta"><span>${cic(a.contactType)}${esc(a.contact)}</span><span>${esc(a.expLabel || "")}</span></div>
       <div class="chips">${a.slots.map(x => `<span>${esc(x)}</span>`).join("")}</div>
+      ${a.interviewLabel ? `<div class="civ"><i></i>Entretien ${esc(a.interviewLabel)}<em>${esc(a.discord || "")}</em></div>` : ""}
       <div class="cflags">${a.refBy ? `<span class="tag ref"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>Parrainé par ${esc(a.refBy)}</span>` : ""}${a.status === "accepted" ? '<span class="tag v">Compte créé</span>' : a.status === "refused" ? '<span class="tag w">Refusée</span>' : !a.seen ? '<span class="tag v"><i></i>Nouvelle</span>' : ""}${a.grade && a.grade.regles_ok === false ? '<span class="tag r">⚠ Règles</span>' : ""}${a.test.some(t => t.paste) ? '<span class="tag w">📋 Collé</span>' : ""}${a.grade && a.grade.style_ia ? '<span class="tag w">🤖 Style IA</span>' : ""}</div>
       <p class="ctest">${a.grade ? esc(a.grade.verdict) : `« ${esc(a.testReply || "")} »`}</p></div>`).join("")
     : `<div class="ld">${KF === "new" ? "Aucune nouvelle candidature. Partage le lien dans tes pubs 🙂" : "Rien ici pour l'instant."}</div>`;
@@ -607,9 +608,11 @@ function candFiche(a) {
   const sec = (l, h) => `<div class="sec"><span class="lab">${l}</span>${h}</div>`;
   openDr(`<div class="dh">${avatar(a.firstName)}<div><b>${esc(a.firstName)}, ${a.age} ans</b><small>Candidature ${ago(a.at)}${a.source ? " · pub : " + esc(a.source) : ""}</small></div><button class="x" aria-label="Fermer">✕</button></div>
     ${a.dup ? `<div class="cwarn">⚠ Ce contact a déjà envoyé ${a.dup} autre${a.dup > 1 ? "s" : ""} candidature${a.dup > 1 ? "s" : ""}.</div>` : ""}
+    ${a.interviewLabel ? sec("ENTRETIEN SUR DISCORD", `<div class="civ big"><i></i><span><b>${esc(a.interviewLabel.replace(/^./, c => c.toUpperCase()))}</b><small>heure française · pseudo Discord <b>${esc(a.discord || "")}</b></small></span></div>`) : ""}
     ${sec("CONTACT", `<a class="ccontact" href="${esc(contactUrl(a))}" target="_blank" rel="noopener">${cic(a.contactType)}<span><small>${esc(a.contactLabel)}</small>${esc(a.contact)}</span><em>Écrire →</em></a>`)}
     ${sec("DISPONIBILITÉS", `<div class="chips">${a.slots.map(x => `<span>${esc(x)}</span>`).join("")}</div>`)}
     ${sec("EXPÉRIENCE", `<div class="ctx">${esc(a.expLabel || "—")}</div>`)}
+    ${a.hasPc || a.backup ? sec("MATÉRIEL", `<div class="chips"><span class="${a.hasPc === "Non" ? "no" : "ok"}">Ordinateur : ${esc(a.hasPc || "—")}</span><span class="${a.backup && a.backup.startsWith("Non") ? "no" : "ok"}">Si coupure : ${esc(a.backup || "—")}</span></div>`) : ""}
     ${sec("MOTIVATION", `<div class="ctx">${esc(a.motivation || "")}</div>`)}
     ${sec(a.test.length ? "TEST DE CHATTING" : "PETIT TEST · RÉPONSE AU FAN", candTest(a))}
     <div data-acc>${a.status === "accepted" ? `<div class="cdone">✓ Compte élève créé${a.user ? ` : <b>${esc(a.user.username)}</b>` : ""}. Il apparaît dans Équipe → En formation.</div>`

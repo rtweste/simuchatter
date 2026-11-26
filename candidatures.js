@@ -6,7 +6,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   db.exec(`CREATE TABLE IF NOT EXISTS applications (id INTEGER PRIMARY KEY, at INTEGER NOT NULL, first_name TEXT NOT NULL, age INTEGER NOT NULL,
     contact_type TEXT NOT NULL, contact TEXT NOT NULL, slots TEXT NOT NULL DEFAULT '[]', exp TEXT, motivation TEXT, test_reply TEXT,
     source TEXT, status TEXT NOT NULL DEFAULT 'new', user_id INTEGER, decided_at INTEGER, decided_by INTEGER, ip_hash TEXT, seen INTEGER NOT NULL DEFAULT 0)`);
-  for (const [c, t] of [["quiz", "TEXT"], ["pub_token", "TEXT"], ["test_answers", "TEXT"], ["ai_score", "INTEGER"], ["ai_detail", "TEXT"], ["ai_at", "INTEGER"], ["ai_err", "TEXT"], ["ai_tries", "INTEGER NOT NULL DEFAULT 0"]])
+  for (const [c, t] of [["quiz", "TEXT"], ["pub_token", "TEXT"], ["test_answers", "TEXT"], ["ai_score", "INTEGER"], ["ai_detail", "TEXT"], ["ai_at", "INTEGER"], ["ai_err", "TEXT"], ["ai_tries", "INTEGER NOT NULL DEFAULT 0"], ["has_pc", "TEXT"], ["backup", "TEXT"], ["backup_how", "TEXT"], ["interview_at", "INTEGER"], ["discord", "TEXT"], ["booked_at", "INTEGER"]])
     if (!db.prepare("PRAGMA table_info(applications)").all().some(x => x.name === c)) db.exec(`ALTER TABLE applications ADD COLUMN ${c} ${t}`);
   // test de chatting : 3 situations de fans
   const SCEN = [
@@ -66,6 +66,19 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   const slots = () => (gest.agency().slots || []).map(s => ({ id: s[0], start: s[1], end: s[2] }));
   const EXP = { chat: "Oui, déjà chatter", sales: "Vente ou service client", none: "Aucune expérience" };
   const CONTACT = { whatsapp: "WhatsApp", telegram: "Telegram", email: "E-mail" };
+  const YN = { yes: "Oui", no: "Non" };
+  // ---------- entretien sur Discord : 14 h ou 18 h (heure française), aujourd'hui ou les 2 jours suivants ----------
+  const TZ = "Europe/Paris", HOURS = [14, 18];
+  const pDate = t => new Date(t).toLocaleDateString("sv-SE", { timeZone: TZ });
+  const offOf = t => { const p = new Date(t).toLocaleString("sv-SE", { timeZone: TZ }).replace(" ", "T") + "Z"; return Date.parse(p) - t; };
+  const parisTs = (d, h) => { const g = Date.parse(`${d}T${String(h).padStart(2, "0")}:00:00Z`); return g - offOf(g - offOf(g)); };
+  const ivSlots = () => { const now = Date.now(), out = [];
+    for (let k = 0; k < 3; k++) { const d = pDate(now + k * 864e5);
+      HOURS.forEach(h => { const at = parisTs(d, h); out.push({ at, day: d, h, ok: at > now + 15 * 60e3,
+        label: new Date(at).toLocaleDateString("fr-FR", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" }) }); }); }
+    return out; };
+  const discordOf = () => { const l = String((gest.agency() || {}).applyDiscord || "").trim(); return /^https:\/\/(discord\.gg|discord\.com\/invite)\/[\w-]{2,}$/i.test(l) ? l : null; };
+  const ivLabel = at => `${new Date(at).toLocaleDateString("fr-FR", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" })} à ${new Date(at).toLocaleTimeString("fr-FR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" }).replace(":", " h ").replace(" h 00", " h")}`;
 
   // ---------- un seul essai par mois : même adresse IP ou même contact (WhatsApp / Telegram / e-mail) ----------
   const COOL = 30 * 864e5;
@@ -94,12 +107,15 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   app.get("/api/apply/check", (req, res) => { const ct = CONTACT[req.query.type] ? req.query.type : null;
     res.json({ blocked: blockOf(req, ct, String(req.query.contact || "").slice(0, 80)) }); });
   // résultat du test : le WhatsApp du manager n'est donné que si le score atteint le seuil choisi dans les Réglages
-  const unlockOf = r => { const ag = gest.agency() || {}, wa = String(ag.applyWhatsapp || "").replace(/[^\d]/g, ""), min = Number.isFinite(+ag.applyUnlock) && ag.applyUnlock !== "" && ag.applyUnlock != null ? +ag.applyUnlock : 70;
+  const unlockOf = r => { const ag = gest.agency() || {}, dc = discordOf(), passed = r.ai_score != null && r.ai_score >= (Number.isFinite(+ag.applyUnlock) && ag.applyUnlock !== "" && ag.applyUnlock != null ? +ag.applyUnlock : 70) && (J(r.ai_detail) || {}).regles_ok !== false;
+    // réussi : il choisit son créneau d'entretien et donne son pseudo Discord, puis reçoit le lien du serveur
+    if (dc && passed) return { score: r.ai_score, discord: true, slots: r.interview_at ? null : ivSlots(), booked: r.interview_at ? { at: r.interview_at, label: ivLabel(r.interview_at), discord: r.discord, link: dc } : null };
+    const wa = String(ag.applyWhatsapp || "").replace(/[^\d]/g, ""), min = Number.isFinite(+ag.applyUnlock) && ag.applyUnlock !== "" && ag.applyUnlock != null ? +ag.applyUnlock : 70;
     const g = J(r.ai_detail) || {};   // une faute sur la règle de la rencontre ne débloque jamais le contact
     return wa.length >= 9 && r.ai_score != null && r.ai_score >= min && g.regles_ok !== false ? { score: r.ai_score, whatsapp: "+" + wa, link: `https://wa.me/${wa}?text=${encodeURIComponent(`Bonjour, je suis ${r.first_name}, je viens de réussir le test de chatting StellADS 🙂`)}` } : null; };
   app.get("/api/apply/result/:token", (req, res) => {
     const t = String(req.params.token || ""); if (!/^[a-f0-9]{24}$/.test(t)) return res.status(404).json({ error: "Introuvable" });
-    const r = db.prepare("SELECT * FROM applications WHERE pub_token = ?").get(t); if (!r || Date.now() - r.at > 3600e3) return res.status(404).json({ error: "Introuvable" });
+    const r = db.prepare("SELECT * FROM applications WHERE pub_token = ?").get(t); if (!r || Date.now() - r.at > 24 * 3600e3) return res.status(404).json({ error: "Introuvable" });
     if (r.ai_score == null && !r.ai_err && Date.now() - r.at < 120e3) return res.json({ state: "pending" });
     const ag = gest.agency() || {}, min = ag.applyUnlock != null && ag.applyUnlock !== "" && Number.isFinite(+ag.applyUnlock) ? +ag.applyUnlock : 70, g = J(r.ai_detail) || {};
     // passed : test réussi (même si le WhatsApp n'est pas encore renseigné) · graded : la correction a pu se faire
@@ -107,6 +123,19 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const graded = r.ai_score != null;
     res.json({ state: "done", unlock: unlockOf(r), graded, passed: graded && r.ai_score >= min && g.regles_ok !== false,
       score: graded ? Math.round(r.ai_score) : null, min: graded ? +min : null, rule: graded && g.regles_ok === false }); });
+  // réservation de l'entretien (seulement après un test réussi) : créneau + pseudo Discord → lien du serveur
+  app.post("/api/apply/book/:token", (req, res) => {
+    const t = String(req.params.token || ""); if (!/^[a-f0-9]{24}$/.test(t)) return res.status(404).json({ error: "Introuvable" });
+    const r = db.prepare("SELECT * FROM applications WHERE pub_token = ?").get(t); if (!r || Date.now() - r.at > 24 * 3600e3) return res.status(404).json({ error: "Lien expiré : refais ta candidature" });
+    const u = unlockOf(r); if (!u || !u.discord) return res.status(403).json({ error: "Réservation indisponible" });
+    if (r.interview_at) return res.json({ ok: true, booked: u.booked });
+    const b = req.body || {}, at = +b.at, sl = ivSlots().find(x => x.at === at && x.ok);
+    if (!sl) return res.status(400).json({ error: "Ce créneau n'est plus disponible, choisis-en un autre" });
+    const dc = String(b.discord || "").trim().replace(/^@/, "").slice(0, 40);
+    if (!/^[\w.]{2,32}(#\d{4})?$/.test(dc)) return res.status(400).json({ error: "Pseudo Discord invalide (ex. prenom_123)" });
+    db.prepare("UPDATE applications SET interview_at = ?, discord = ?, booked_at = ? WHERE id = ?").run(at, dc, Date.now(), r.id);
+    gest.log(null, "a", `Entretien réservé par **${r.first_name}** · ${ivLabel(at)}`, `Discord : ${dc}`);
+    res.json({ ok: true, booked: { at, label: ivLabel(at), discord: dc, link: discordOf() } }); });
   const hits = new Map();
   app.post("/api/apply", (req, res) => {
     const b = req.body || {}, ip = ipOf(req), now = Date.now();
@@ -129,6 +158,9 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     if (!EXP[b.exp]) return res.status(400).json({ error: "Indique ton expérience" });
     const mot = String(b.motivation || "").trim().slice(0, 800);
     if (mot.length < 15) return res.status(400).json({ error: "Dis-nous en quelques mots pourquoi tu veux nous rejoindre" });
+    if (!YN[b.hasPc]) return res.status(400).json({ error: "Dis-nous si tu as un ordinateur pour travailler" });
+    if (!YN[b.backup]) return res.status(400).json({ error: "Dis-nous si tu as une solution en cas de coupure" });
+    const bkHow = b.backup === "yes" ? String(b.backupHow || "").trim().slice(0, 200) : "";
     const answers = SCEN.filter(sc => LIVE.includes(sc.id)).map(sc => { const a = (Array.isArray(b.answers) ? b.answers : []).find(x => x && x.id === sc.id) || {};
       return { id: sc.id, text: String(a.text || "").trim().slice(0, 600), ms: Math.max(0, Math.min(36e5, Math.round(Number(a.ms) || 0))), paste: !!a.paste }; });
     if (answers.some(a => a.text.length < 5)) return res.status(400).json({ error: "Réponds au fan du test de chatting" });
@@ -138,8 +170,8 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const test = answers[0].text;
     if (!b.consent) return res.status(400).json({ error: "Coche la case d'accord pour envoyer ta candidature" });
     const src = String(b.source || "").toLowerCase().replace(/[^\w\-]/g, "").slice(0, 30) || null;
-    const newId = db.prepare("INSERT INTO applications (at, first_name, age, contact_type, contact, slots, exp, motivation, test_reply, test_answers, quiz, pub_token, source, ip_hash) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
-      .run(now, name, age, ct, contact, JSON.stringify(sl), b.exp, mot, test, JSON.stringify(answers), JSON.stringify(quiz), tok, src, ip).lastInsertRowid;
+    const newId = db.prepare("INSERT INTO applications (at, first_name, age, contact_type, contact, slots, exp, motivation, test_reply, test_answers, quiz, pub_token, source, ip_hash, has_pc, backup, backup_how) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+      .run(now, name, age, ct, contact, JSON.stringify(sl), b.exp, mot, test, JSON.stringify(answers), JSON.stringify(quiz), tok, src, ip, b.hasPc, b.backup, bkHow || null).lastInsertRowid;
     try { if (b.ref && ctx.referrals) ctx.referrals.attach(newId, b.ref); } catch (e) {}   // parrainage
     setTimeout(() => grade(newId), 50);   // correction par l'IA en arrière-plan : ne ralentit pas l'envoi
     h.push(now); hits.set(ip, h);
@@ -154,7 +186,9 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const rf = r.ref_user ? db.prepare("SELECT username, display_name FROM users WHERE id = ?").get(r.ref_user) : null;
     return { id: r.id, at: r.at, firstName: r.first_name, age: r.age, contactType: r.contact_type, contactLabel: CONTACT[r.contact_type], contact: r.contact,
       slots: J(r.slots) || [], exp: r.exp, expLabel: EXP[r.exp], motivation: r.motivation, testReply: r.test_reply, source: r.source, status: r.status,
-      decidedAt: r.decided_at, user: u, seen: !!r.seen, dup, refBy: rf ? (rf.display_name || rf.username) : null,
+      decidedAt: r.decided_at, user: u, seen: !!r.seen, dup,
+      hasPc: r.has_pc ? YN[r.has_pc] : null, backup: r.backup ? YN[r.backup] + (r.backup_how ? ` · ${r.backup_how}` : "") : null,
+      interviewAt: r.interview_at || null, interviewLabel: r.interview_at ? ivLabel(r.interview_at) : null, discord: r.discord || null, refBy: rf ? (rf.display_name || rf.username) : null,
       test: (J(r.test_answers) || []).map(a => { const sc = SCEN.find(x => x.id === a.id) || {}; return { ...a, who: sc.who, fan: sc.fan, goal: sc.goal }; }),
       quiz: quizOf(r), score: r.ai_score, grade: J(r.ai_detail), gradePending: !!r.test_answers && r.ai_score == null && !r.ai_err, gradeErr: r.ai_err }; };
   app.get("/api/admin/applications", auth, admin, (req, res) => {

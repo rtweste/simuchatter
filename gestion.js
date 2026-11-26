@@ -118,7 +118,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     tiers: compta.getTiers(), tolerance: a.tolerance ?? 5, missedAlert: a.missedAlert ?? 10, reminder: a.reminder ?? 30, creatorPct: a.creatorPct ?? 50,
     slots: a.slots || [["3–9", "03:00", "09:00"], ["9–15", "09:00", "15:00"], ["15–21", "15:00", "21:00"], ["21–3", "21:00", "03:00"]],
     fee: Number(getSet("platform_fee", "25")), goalCa: Number(getSet("goal_ca", "20000")), goalChatter: Number(getSet("goal_chatter", "300")),
-    rules: rules(), thresholds: th(), training: trCfg(), tlPrime: a.tlPrime ?? 30, assistantInfo: a.assistantInfo || "", pauseMax: a.pauseMax ?? 15, pauseCount: a.pauseCount ?? 2, applyWhatsapp: a.applyWhatsapp || "", applyUnlock: a.applyUnlock ?? 70,
+    rules: rules(), thresholds: th(), training: trCfg(), tlPrime: a.tlPrime ?? 30, assistantInfo: a.assistantInfo || "", pauseMax: a.pauseMax ?? 15, pauseCount: a.pauseCount ?? 2, applyWhatsapp: a.applyWhatsapp || "", applyDiscord: a.applyDiscord || "", applyUnlock: a.applyUnlock ?? 70,
     saleCats: SALECATS.cats(db), lateHours: SALECATS.lateHours(db) }; };
   const user = id => db.prepare("SELECT id, username, role, active, created_at FROM users WHERE id = ?").get(id);
   const model = id => db.prepare("SELECT id, name FROM models WHERE id = ?").get(id);
@@ -185,6 +185,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     if (b.saleCats !== undefined) { try { a.saleCats = SALECATS.clean(b.saleCats); } catch (e) { return res.status(400).json({ error: e.message }); } }
     if (b.lateHours !== undefined) { const v = num(b.lateHours, 1, 24 * 30); if (v === null) return res.status(400).json({ error: "Délai de retard invalide (en heures)" }); a.lateHours = v; }
     if (b.assistantInfo !== undefined) a.assistantInfo = String(b.assistantInfo || "").slice(0, 4000);
+    if (b.applyDiscord !== undefined) { const l = String(b.applyDiscord || "").trim().slice(0, 120); if (l && !/^https:\/\/(discord\.gg|discord\.com\/invite)\/[\w-]{2,}$/i.test(l)) return res.status(400).json({ error: "Lien Discord invalide (ex. https://discord.gg/abcd)" }); a.applyDiscord = l; }
     if (b.applyWhatsapp !== undefined) { const w = String(b.applyWhatsapp || "").replace(/[^\d+]/g, "").slice(0, 20); if (w && w.replace(/\D/g, "").length < 9) return res.status(400).json({ error: "Numéro WhatsApp du recrutement invalide (avec l'indicatif, ex. +33 6…)" }); a.applyWhatsapp = w; }
     for (const [k, lo, hi] of [["applyUnlock", 0, 100], ["tolerance", 0, 120], ["missedAlert", 1, 240], ["reminder", 5, 240], ["creatorPct", 0, 100], ["tlPrime", 0, 1000], ["pauseMax", 1, 180], ["pauseCount", 0, 10]]) if (b[k] !== undefined) { const v = num(b[k], lo, hi); if (v === null) return res.status(400).json({ error: "Valeur invalide : " + k }); a[k] = v; }
     if (b.slots !== undefined) {
