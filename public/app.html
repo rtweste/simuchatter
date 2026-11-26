@@ -439,6 +439,11 @@ details.dcard[open] summary{margin-bottom:12px}
 }
 @media (prefers-reduced-motion:reduce){.s-card,.s-fan,.s-row,.s-chart .cl,.s-chart .pt,.s-chart .ar{animation:none!important;opacity:1;stroke-dashoffset:0}.s-fan.on::before,.s-go::after{animation:none}}
 
+.cch{align-self:flex-end;max-width:min(78%,460px);margin:-2px 0 6px;padding:9px 12px;border-radius:13px;background:rgba(95,211,162,.07);border:1px solid rgba(95,211,162,.28);font-size:12.5px;line-height:1.45;color:#cfeee0;font-weight:600;animation:hintIn .5s cubic-bezier(.3,1.4,.5,1)}
+.cch b{display:flex;align-items:center;gap:6px;font-size:9.5px;letter-spacing:.16em;color:#5fd3a2;font-weight:900;margin-bottom:3px}.cch b i{width:6px;height:6px;border-radius:50%;background:#5fd3a2;box-shadow:0 0 8px #5fd3a2}
+.wu-bn{display:flex;align-items:center;gap:12px;margin:0 0 8px;padding:10px 14px;border-radius:15px;background:linear-gradient(100deg,rgba(95,211,162,.1),transparent 70%),#121212;border:1px solid rgba(95,211,162,.3)}
+.wu-bn .n{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:#5fd3a2;color:#04140c;font-weight:900;font-size:13px;flex:none}
+.wu-bn b{display:block;font-size:13.5px;font-weight:900;color:#f2f2f2}.wu-bn small{display:block;font-size:12px;color:#9ac9b4;font-weight:600;margin-top:1px;line-height:1.4}
 </style>
 <link rel="stylesheet" href="/eval-fx.css">
 <link rel="stylesheet" href="/chat-fx.css">
@@ -670,6 +675,11 @@ function openChat(sim) {
   $("demoBar").classList.toggle("hidden", !window.IS_ADMIN);
   $("infoBtn").setAttribute("aria-expanded", "false"); document.querySelector(".cq-dash").classList.remove("open");
   sys(`Session démarrée — tu écris en tant que ${sim.creator_name}`);
+  // échauffement : bandeau, conseils gratuits, coach sous chaque message
+  document.querySelectorAll(".wu-bn").forEach(x => x.remove());
+  document.querySelectorAll(".cq-lab").forEach(l => { const sp = l.querySelector("span"); if (sp && /^COACH/.test(l.textContent.trim())) sp.textContent = sim.warmup ? "gratuits à l'échauffement" : "−3 pts / conseil"; });
+  $("hintBtnM").setAttribute("aria-label", sim.warmup ? "Conseil du coach (gratuit)" : "Conseil du coach (−3 pts)");
+  if (sim.warmup) { const b = document.createElement("div"); b.className = "wu-bn"; b.innerHTML = `<span class="n">${sim.warmup}/2</span><div><b>Échauffement ${sim.warmup} sur 2</b><small>Cette session ne compte pas. Le coach commente chacun de tes messages, et les conseils 💡 sont gratuits.</small></div>`; $("msgs").before(b); }
   fitChat();
   updateStats();
 }
@@ -841,7 +851,15 @@ function send() {
   const text = $("input").value.trim(); if (!text || busy) return;
   FX.unlock();
   CQ.waiting = false;
-  act("message", { text }, () => { $("input").value = ""; growInput(); bubble("me", text); chatterCount++; updateStats(); });
+  let mine = null;
+  act("message", { text }, () => { $("input").value = ""; growInput(); bubble("me", text); mine = [...document.querySelectorAll("#msgs .msg.me")].pop(); chatterCount++; updateStats(); }).then(() => { if (SIM && SIM.warmup && mine) coachNote(mine); });
+}
+// échauffement (2 premières sessions des candidats) : le coach commente chaque message, juste en dessous
+async function coachNote(after) {
+  const d = document.createElement("div"); d.className = "cch"; d.innerHTML = `<b><i></i>COACH</b><span>…</span>`; after.after(d); scrollDown();
+  const el = d.querySelector("span");
+  try { const r = await api(`/api/sims/${SIM.id}/coach`, { body: {} }); el.textContent = ""; for (let i = 0; i <= r.text.length; i += 2) { el.textContent = r.text.slice(0, i); await sleep(10); } el.textContent = r.text; }
+  catch (e) { d.remove(); }
 }
 $("sendBtn").onclick = send;
 $("input").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
@@ -869,7 +887,7 @@ $("ppvSend").onclick = () => {
 
 async function askHint() {
   if (busy) return; setBusy(true);
-  const box = document.createElement("div"); box.className = "hint"; box.innerHTML = `<b class="hh">CONSEIL DU COACH <span>−3 pts</span></b><div>Le coach réfléchit…</div>`;
+  const box = document.createElement("div"); box.className = "hint"; box.innerHTML = `<b class="hh">CONSEIL DU COACH <span>${SIM.warmup ? "gratuit" : "−3 pts"}</span></b><div>Le coach réfléchit…</div>`;
   (innerWidth <= 860 ? $("hintsM") : $("hints")).prepend(box);
   const el = box.lastElementChild;
   try { const r = await api(`/api/sims/${SIM.id}/hint`, { body: {} }); SIM.hints = r.hints; el.textContent = "";

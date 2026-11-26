@@ -202,6 +202,11 @@
 .p-sh.now .st{background:#5fd3a2;box-shadow:0 0 0 3px rgba(95,211,162,.22);animation:pBl 1.2s infinite}
 .p-sh.now.r{border-color:rgba(224,122,122,.5)}.p-sh.now.r .st{background:#e07a7a;box-shadow:0 0 0 3px rgba(224,122,122,.22)}
 .p-sh.xc{border-style:dashed;border-color:#555;background:transparent}.p-sh.xc .st{border:1.5px dashed #999}
+.p-sh.tr{background:linear-gradient(100deg,rgba(212,175,55,.16),#1b1b1b 70%);border-color:rgba(212,175,55,.45);text-decoration:none;display:block}
+.p-sh.tr .cr{color:#d4af37}.p-sh.tr small{color:#c9a74a}
+.p-sh.tr.now{box-shadow:0 0 0 2px rgba(212,175,55,.25)}
+.p-dy.trn{border-color:rgba(212,175,55,.35);background:linear-gradient(100deg,rgba(212,175,55,.08),transparent 60%)}
+.p-tag.gd{color:#d4af37;background:rgba(212,175,55,.12)}.p-tag.gd i{background:#d4af37}
 .p-sh.hole{border-style:dashed;border-color:rgba(224,122,122,.6);background:transparent;color:#e0a3a3}.p-sh.hole small{color:#e0a3a3}
 .p-sh.new{animation:pIn .7s cubic-bezier(.3,1.4,.5,1) both;border-color:#ededed}
 .p-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:11.5px;color:#8a8a8a;font-weight:700}
@@ -534,6 +539,10 @@ function heroState() {
 let HS = null;
 function renderHero() {
   const st = heroState(), n = D.next, h = $("hero");
+  // chatter en formation : pas de pointage, seulement ses shifts accompagnés (planifiés par le manager)
+  if (window.STAGE) { const T = D.training || [], up = T.find(x => x.state !== "done") || null;
+    h.innerHTML = `<div><div class="p-lab">${up && up.state === "live" ? "Shift accompagné en cours" : up ? "Prochain shift accompagné" : "Shifts accompagnés"}</div><div class="p-who"><span class="p-av" style="background:rgba(212,175,55,.14);border-color:rgba(212,175,55,.4)">🎓</span><div><b>${up ? esc(up.model) : "Pas encore planifié"}</b><small>${up ? esc(up.when) : "Ton manager te planifie tes shifts accompagnés après le module 6 de ta formation."}</small></div></div>
+      <div class="p-acts">${up && up.state === "live" ? `<a class="p-wbtn" href="/messagerie" style="text-decoration:none;display:flex;align-items:center;justify-content:center">Ouvrir la messagerie</a>` : `<a class="p-wbtn" href="/ma-formation" style="text-decoration:none;display:flex;align-items:center;justify-content:center">Voir ma formation</a>`}</div></div>`; return; }
   const who = (name, sub, s) => `<div class="p-who"><span class="p-av">${esc(name[0] || "?")}</span><div><b>${esc(name)}</b><small>${sub}</small></div>${s ? `<span style="margin-left:auto">${slotHtml(s)}</span>` : ""}</div>`;
   const span = s => `${s.start} → ${s.end}${nextDay(s) ? " · finit le lendemain" : ""}${chezToi(s) ? ` <span class="tzh">· ${chezToi(s)}</span>` : ""}`;
   const same = HS === st + (n ? n.id : "") + (D.open ? D.open.id : "") + D.renforts.map(r => r.id).join(",") + (D.myHelp ? "h" : "");
@@ -629,8 +638,10 @@ function renderWeek() {
   $("wLab").textContent = weekLab(D.from);
   const t = todayIso(); let html = "", i = 0, hours = 0;
   for (let k = 0; k < 7; k++) {
-    const day = addD(D.from, k), list = D.week.filter(s => s.date === day), d = dOf(day);
+    const day = addD(D.from, k), list = D.week.filter(s => s.date === day), d = dOf(day), trl = (D.training || []).filter(s => s.date === day);
     const lab = `<div class="d">${DAYN[k]}<b>${d.getDate()}</b></div>`;
+    trl.forEach((s, j) => { html += `<div class="p-dy trn${day === t ? " today" : ""}" style="animation-delay:${.05 + i++ * .03}s">${j ? '<div class="d"></div>' : lab}<div class="m">🎓 <span style="margin-left:4px">${esc(s.model)}</span><small>${s.start} → ${s.end} · shift accompagné avec ton manager</small></div><div class="r"><span class="p-tag gd${s.state === "live" ? " live" : ""}"><i></i>${s.state === "live" ? "En cours" : s.state === "done" ? "Fait" : "En formation"}</span></div></div>`; });
+    if (!list.length && trl.length) continue;
     if (!list.length) { html += `<div class="p-dy off" style="animation-delay:${.05 + i++ * .03}s">${lab}<div class="m" style="color:#5a5a5a">Pas de shift</div><div class="r"><span class="p-mut">Repos</span></div></div>`; continue; }
     list.forEach((s, j) => {
       hours += (s.end_ms - s.start_ms) / 3.6e6;
@@ -742,12 +753,17 @@ function shHtml(s) {
 function rows() { const r = SLOTS.map(sl => ({ key: sl[0], sub: sl[2] < sl[1] ? `→ ${sl[2]} +1 j` : `${sl[1]} → ${sl[2]}`, test: s => isSlot(s, sl), slot: sl }));
   if (otherShifts().length) r.push({ key: "Autres", sub: "horaires libres", test: s => !SLOTS.some(sl => isSlot(s, sl)) }); return r; }
 function bindCells(root) {
+  root.querySelectorAll("a.p-sh.tr").forEach(e => e.onclick = ev => ev.stopPropagation());
   root.querySelectorAll("[data-sid]").forEach(e => e.onclick = ev => { ev.stopPropagation(); openShiftSheet(A.shifts.find(s => s.id === +e.dataset.sid)); });
   root.querySelectorAll(".p-cell").forEach(c => c.onclick = () => openShiftSheet(null, { date: c.dataset.d, slot: c.dataset.slot }));
 }
 // créneau en cours (aujourd'hui) : de start à end, en passant minuit si besoin
 function nowSlot() { const n = new Date(), m = n.getHours() * 60 + n.getMinutes(), mn = t => +t.slice(0, 2) * 60 + +t.slice(3);
   return SLOTS.find(sl => { const a = mn(sl[1]), b = mn(sl[2]); return b > a ? m >= a && m < b : m >= a || m < b; }); }
+// shifts accompagnés (chatters en formation) : rangés dans le créneau où ils commencent
+const mnOf = t => +t.slice(0, 2) * 60 + +t.slice(3);
+const inSlot = (s, sl) => { const m = mnOf(s.start), a = mnOf(sl[1]), b = mnOf(sl[2]); return b > a ? m >= a && m < b : m >= a || m < b; };
+const trHtml = s => `<a class="p-sh tr${s.state === "live" ? " now" : ""}" href="/suivi-formation?u=${s.user_id}" title="${esc(s.username)} · shift accompagné · ${esc(s.model)} · ${s.start}–${s.end}"><div class="l1"><span class="nm">🎓 ${esc(s.username)}</span>${s.state === "live" ? '<i class="st" style="background:#d4af37"></i>' : ""}<span class="cr">${esc(s.model)}</span></div><small>en formation · ${s.start}</small></a>`;
 function renderGrid() {
   const t = A.today, cur = nowSlot(); let h = "<div></div>";
   // si le créneau en cours a commencé la veille (ex. 21–3 à 1 h du matin), il appartient au jour d'avant
@@ -755,12 +771,12 @@ function renderGrid() {
   for (let k = 0; k < 7; k++) { const d = addD(A.from, k); h += `<div class="hd${d === t ? " today" : ""}">${DAYN[k]}<b>${dOf(d).getDate()}</b></div>`; }
   rows().forEach(r => { const isNow = cur && r.slot === cur && curDay >= A.from && curDay <= A.to;
     h += `<div class="p-sl">${r.key}${isNow ? '<span class="nwb">MAINTENANT</span>' : ""}<small>${r.sub}</small></div>`;
-    for (let k = 0; k < 7; k++) { const d = addD(A.from, k), ss = A.shifts.filter(s => s.date === d && r.test(s));
+    for (let k = 0; k < 7; k++) { const d = addD(A.from, k), ss = A.shifts.filter(s => s.date === d && r.test(s)), tr = (A.training || []).filter(s => s.date === d && (r.slot ? inSlot(s, r.slot) : !SLOTS.some(sl => inSlot(s, sl))));
       const covered = new Set(ss.filter(s => !(s.swap && s.swap.status === "open")).map(s => s.model_id));
       const miss = r.slot && d >= t && ss.length ? A.models.filter(m => !covered.has(m.id)) : [];
       const gaps = GAPS && miss.length ? `<div class="p-gaps">${miss.map(m => `<span style="--k:${colOf(m.id)}">${esc(m.name)}</span>`).join("")}</div>` : "";
-      const empty = !ss.length ? (r.slot && d >= t ? '<span class="nobody">Personne</span>' : '<span class="add">+</span>') : "";
-      h += `<div class="p-cell${d < t ? " past" : ""}${d === t ? " td" : ""}${isNow && d === curDay ? " nw" : ""}${ss.some(s => s.swap && s.swap.status === "open") ? " hole" : ""}" data-d="${d}" data-slot="${r.slot ? r.slot[0] : ""}">${ss.map(shHtml).join("")}${empty}${gaps}</div>`; } });
+      const empty = !ss.length && !tr.length ? (r.slot && d >= t ? '<span class="nobody">Personne</span>' : '<span class="add">+</span>') : "";
+      h += `<div class="p-cell${d < t ? " past" : ""}${d === t ? " td" : ""}${isNow && d === curDay ? " nw" : ""}${ss.some(s => s.swap && s.swap.status === "open") ? " hole" : ""}" data-d="${d}" data-slot="${r.slot ? r.slot[0] : ""}">${ss.map(shHtml).join("")}${tr.map(trHtml).join("")}${empty}${gaps}</div>`; } });
   $("grid").innerHTML = h; bindCells($("grid"));
   $("crLeg").innerHTML = `<span class="lb">CRÉATRICES</span>` + A.models.map(m => `<span class="c" style="--k:${colOf(m.id)}"><i></i>${esc(m.name)}</span>`).join("");
   $("gapTg").classList.toggle("on", GAPS);
@@ -1141,6 +1157,7 @@ document.querySelectorAll(".p-tabs button").forEach(b => b.onclick = () => {
 (async () => {
   const me = await api("/api/me");
   renderShell("planning", me);
+  if (me.stage === "formation") { window.STAGE = 1; document.querySelectorAll("#bourse, #pq").forEach(e => { const c = e.closest(".p-card"); if (c) c.style.display = "none"; }); }
   if (me.role === "admin") {
     $("adminView").classList.remove("hidden"); await loadAdmin();
     setInterval(() => { if (!document.hidden && !SHEET && !$("t-plan").classList.contains("hidden")) loadAdmin().catch(() => {}); }, 30000);

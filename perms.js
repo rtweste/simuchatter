@@ -35,7 +35,7 @@ module.exports = function perms(db, getAgency) {
 
   const rk = u => !u ? null : u.role === "admin" ? (u.grade === "founder" ? "founder" : u.grade === "assistant" ? "assistant" : "manager")
     : u.role === "chatter" ? (u.grade === "tl" ? "tl" : "chatter") : "trainee";
-  const LABEL = { founder: "Fondateur", manager: "Manager", assistant: "Assistante", tl: "Team Leader", chatter: "Chatter", trainee: "En formation" };
+  const LABEL = { founder: "Fondateur", manager: "Manager", assistant: "Assistante", tl: "Team Leader", chatter: "Chatter", trainee: "En sélection" };
 
   /* ---------- Assistante : routes manager autorisées ---------- */
   const A_GET = /^\/api\/(admin\/(alerts|planning|team(\/\d+)?|compta(\/month|\/history)?|agency|creators|activity|users|challenges(\/live)?|sales\/count|customs\/count|pauses\/live|pauses\/user\/\d+|announcements\/\d+\/reads|roles|clocks|handovers|sanctions)|chat\/.*)$/;

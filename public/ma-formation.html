@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ma formation — StellADS</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/formation.css">
+<style>
+/* « Ma formation » : l'accueil du chatter en formation */
+.pf-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.pf-dd{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:12px;font-weight:700;color:#7a7a7a}
+.pf-dd b{font-size:22px;font-weight:900;letter-spacing:-.03em;color:#f5f5f5}.pf-dd b span{color:#5a5a5a;font-size:.65em}
+/* barre : jour 1 + 9 modules */
+.pf-bar{display:grid;grid-template-columns:1.2fr repeat(9,1fr);gap:5px;margin:22px 0 6px}
+.pf-sg{position:relative;height:8px;border-radius:5px;background:#1c1c1c;overflow:hidden}
+.pf-sg i{position:absolute;inset:0;transform-origin:left;transform:scaleX(0);background:#5fd3a2;border-radius:inherit;animation:pfFill .9s cubic-bezier(.2,.8,.2,1) var(--d,0s) forwards}
+.pf-sg.cur{background:#2a2a2a}.pf-sg.cur i{background:linear-gradient(90deg,#ededed,#9a9a9a);transform:scaleX(var(--p,.12));animation:none;transition:transform 1s}
+.pf-sg.cur::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);transform:translateX(-100%);animation:pfShine 2.4s 1s infinite}
+.pf-bl{display:grid;grid-template-columns:1.2fr repeat(9,1fr);gap:5px;font-size:10px;font-weight:800;letter-spacing:.08em;color:#4f4f4f}
+.pf-bl span.ok{color:#5fd3a2}.pf-bl span.cur{color:#e6e6e6}
+@keyframes pfFill{to{transform:scaleX(1)}}
+@keyframes pfShine{to{transform:translateX(100%)}}
+.pf-g{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;margin-top:22px;align-items:start}
+/* à faire maintenant */
+.pf-now{position:relative;overflow:hidden;padding:26px 26px 24px;background:radial-gradient(120% 140% at 0% 0%,rgba(255,255,255,.07),transparent 55%),#111;border-color:#2a2a2a}
+.pf-now::before{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(95,211,162,.13),transparent 70%);pointer-events:none}
+.pf-now h2{font-size:30px;margin-top:10px}
+.pf-now p{margin:10px 0 0;color:#9a9a9a;font-size:14px;line-height:1.5;font-weight:600;max-width:520px}
+.pf-now .tr-wbtn{margin-top:20px;height:52px;padding:0 22px;font-size:15px;border:0;cursor:pointer;font-family:inherit}
+.pf-now .tr-wbtn svg{width:16px;height:16px}
+.pf-dots{display:flex;gap:6px;margin-top:16px}
+.pf-dots i{width:34px;height:6px;border-radius:4px;background:#262626}.pf-dots i.ok{background:#5fd3a2}.pf-dots i.c{background:#ededed;animation:trBl 1.6s infinite}
+.pf-now.cap{background:radial-gradient(120% 140% at 0% 0%,rgba(95,211,162,.1),transparent 55%),#111}
+.pf-now.ready{border-color:rgba(95,211,162,.4)}
+.pf-ey{display:inline-flex;align-items:center;gap:8px}.pf-ey i{width:7px;height:7px;border-radius:50%;background:#5fd3a2;animation:trBl 1.4s infinite}
+/* modules */
+.pf-m{display:flex;align-items:center;gap:13px;width:100%;padding:12px 13px;border-radius:15px;background:#141414;border:1px solid #1f1f1f;color:#e6e6e6;font-family:inherit;text-align:left;cursor:pointer;transition:border-color .2s,background .2s,transform .2s;animation:trUp .5s cubic-bezier(.2,.8,.2,1) var(--d,0s) both}
+.pf-m:hover:not(:disabled){border-color:#333;transform:translateY(-1px)}
+.pf-m .n{width:36px;height:36px;border-radius:12px;background:#1d1d1d;border:1px solid #2e2e2e;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;flex-shrink:0}
+.pf-m .n svg{width:15px;height:15px}
+.pf-m .t{flex:1;min-width:0}.pf-m .t b{display:block;font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pf-m .t small{display:block;font-size:11.5px;color:#7a7a7a;font-weight:700;margin-top:2px}
+.pf-m .st{display:flex;gap:4px;flex-shrink:0}
+.pf-m .st i{width:8px;height:8px;border-radius:3px;background:#262626}.pf-m .st i.ok{background:#5fd3a2}
+.pf-m .st em{font-style:normal;font-size:10px;font-weight:900;letter-spacing:.06em;color:#6a6a6a;margin-right:4px;align-self:center}
+.pf-m.ok .n{background:#5fd3a2;border-color:#5fd3a2;color:#0a0a0a}.pf-m.ok .t small{color:#5fd3a2}
+.pf-m.cur{border-color:rgba(255,255,255,.3);background:linear-gradient(135deg,#1c1c1c,#141414)}.pf-m.cur .n{background:#ededed;color:#0a0a0a;border-color:#ededed}
+.pf-m.lk{opacity:.45;cursor:not-allowed}.pf-m.lk .n{color:#6a6a6a}
+.pf-m.cap{opacity:.7}.pf-m.cap .t small{color:#c9a74a}
+.pf-ml{display:flex;flex-direction:column;gap:7px;margin-top:12px}
+/* shift accompagné */
+.pf-sh{display:flex;gap:14px;align-items:center;margin-top:12px;padding:14px;border-radius:16px;background:linear-gradient(100deg,rgba(212,175,55,.1),#141414 65%);border:1px solid rgba(212,175,55,.3)}
+.pf-sh .ic{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(212,175,55,.14);font-size:20px;flex-shrink:0}
+.pf-sh b{display:block;font-weight:900;font-size:15px}.pf-sh small{display:block;font-size:12px;color:#a99a6a;font-weight:700;margin-top:2px}
+.pf-sh.live{border-color:#d4af37;box-shadow:0 0 0 3px rgba(212,175,55,.12)}
+.pf-sh .go{margin-left:auto}
+.pf-lk{display:flex;gap:10px;align-items:center;margin-top:12px;padding:13px 14px;border-radius:14px;border:1px dashed #2a2a2a;color:#8a8a8a;font-size:12.5px;font-weight:600;line-height:1.45}
+.pf-lk svg{width:16px;height:16px;flex:none;color:#5a5a5a}
+.pf-fb{margin-top:12px;padding:14px 15px;border-radius:15px;background:#141414;border:1px solid #1f1f1f;font-size:13.5px;line-height:1.55;color:#d6d6d6;white-space:pre-wrap}
+.pf-fb small{display:block;font-size:11px;color:#6a6a6a;font-weight:800;letter-spacing:.06em;margin-bottom:6px;white-space:normal}
+details.pf-j1 summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px}
+details.pf-j1 summary::-webkit-details-marker{display:none}
+details.pf-j1 summary .chev{transition:transform .25s;color:#6a6a6a}details.pf-j1[open] summary .chev{transform:rotate(180deg)}
+@media(max-width:960px){.pf-g{grid-template-columns:1fr}.pf-now h2{font-size:25px}.pf-bl{display:none}.pf-dd{align-items:flex-start}}
+@media (prefers-reduced-motion:reduce){.pf-sg i{animation:none;transform:scaleX(1)}.pf-sg.cur::after{animation:none}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar" id="sidebar"></aside>
+<main class="main-area">
+<div class="wrap" id="root"></div>
+</main>
+</div>
+<script src="/common.js"></script>
+<script src="/formation-ui.js"></script>
+<script>
+(() => {
+  const root = document.getElementById("root"), { CHECK, PLAY, LOCK } = TRAINEE.icons, fmt = TRAINEE.fmt;
+  const ARW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+  const CHEV = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+  let S = null;
+  // ---------- les vidéos (jour 1 et modules) : le lecteur de la Formation, avec ses exercices ----------
+  const J1set = () => S.j1;
+  const MODset = () => ({ videos: S.mods.map(m => ({ ...m.video, n: m.n, locked: m.locked })), total: S.total, label: "MODULE",
+    endTitle1: "Vidéo et exercice validés", endSub: "Il te reste 3 entraînements au simulateur pour valider le module.", endBtn: "Voir mes entraînements" });
+  const play = (set, id) => TRAINEE.player(set === "base" ? J1set() : MODset(), id, () => load());
+  // replay libre d'un module validé
+  const replay = m => TRAINEE.player({ videos: [{ ...m.video, done: true, free: true, n: 0, locked: false }], total: 1, label: `MODULE ${m.n} · À REVOIR` }, m.id, () => load());
+  // ---------- entraînements : 3 sessions au simulateur, fan et situation tirés au hasard ----------
+  async function train(m) {
+    const k = Math.min(m.trainOk + 1, m.trainNeed), ov = document.createElement("div"); ov.className = "co-ov"; ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true");
+    ov.innerHTML = `<div class="co-w"><div class="co-hd"><div><div class="tr-eb">MODULE ${m.n} · ENTRAÎNEMENT</div><div class="co-ti">${esc(m.title)}</div></div><button class="co-x" aria-label="Fermer">✕</button></div>
+      <div class="co-vd qz"><div class="co-qz"><div class="qz-ld">Tirage du fan et de la situation…</div></div></div></div>`;
+    document.body.appendChild(ov); document.body.style.overflow = "hidden"; requestAnimationFrame(() => ov.classList.add("on"));
+    const el = ov.querySelector(".co-qz"), close = () => { ov.classList.remove("on"); setTimeout(() => ov.remove(), 400); document.body.style.overflow = ""; document.removeEventListener("keydown", key); load(); };
+    const key = e => { if (e.key === "Escape" && !el.querySelector(".sx-say")) close(); }; document.addEventListener("keydown", key);
+    ov.querySelector(".co-x").onclick = close;
+    const base = `/api/parcours/${m.id}/train`;
+    const open = async () => { el.innerHTML = `<div class="qz-ld">Tirage du fan et de la situation…</div>`; let R;
+      try { R = await api(base + "/start", { body: {} }); } catch (e) { el.innerHTML = `<div class="qz-ld">${esc(e.message)}</div><div class="qz-bt"><button class="co-gh" data-x>Fermer</button><button class="co-go" data-rt>Réessayer</button></div>`; el.querySelector("[data-x]").onclick = close; el.querySelector("[data-rt]").onclick = open; return; }
+      const n = Math.min((S.mods.find(x => x.id === m.id) || m).trainOk + 1, m.trainNeed);
+      const head = `<div class="tr-eb">ENTRAÎNEMENT ${n} / ${m.trainNeed} · ${esc(m.title).toUpperCase()}</div>`;
+      TRAINEE.simExo(el, { base, head, sim: { title: R.title, brief: R.brief }, run: R, onRev: () => { close(); setTimeout(() => replay(m), 450); }, revLabel: "Revoir la vidéo",
+        top: X => X.module ? `<div class="pf-dots" style="justify-content:center;margin:0 0 4px">${Array.from({ length: X.module.trainNeed }, (_, i) => `<i class="${i < X.module.trainOk ? "ok" : ""}"></i>`).join("")}</div>` : "",
+        contLabel: X => X.module && X.module.complete ? "Module validé 🎉" : "Entraînement suivant →", againLabel: "Fermer",
+        onCont: X => { if (X.module && X.module.complete) close(); else { S.mods.forEach(x => { if (x.id === m.id && X.module) x.trainOk = X.module.trainOk; }); open(); } },
+        onAgain: open });
+      // après une réussite, le bouton secondaire ferme
+      const obs = new MutationObserver(() => { const a = el.querySelector("[data-again]"); if (a && el.querySelector("[data-cont]")) a.onclick = close; }); obs.observe(el, { childList: true, subtree: true });
+    };
+    open();
+  }
+  // ---------- page ----------
+  const stateTxt = m => m.complete ? "Validé · revoir la vidéo" : m.cap ? "Se débloque demain (2 modules par jour)" : m.locked ? "Valide le module précédent" :
+    !m.exOk ? (m.video.pos > 3 ? `Vidéo en cours · reprendre à ${fmt(m.video.pos)}` : "Vidéo puis exercice au simulateur") : `Exercice ✓ · entraînement ${m.trainOk + 1} sur ${m.trainNeed}`;
+  function draw() {
+    const s = S, cur = s.mods.find(m => !m.complete && !m.locked), N = s.next, j1 = s.j1;
+    const curIdx = !j1.complete ? -1 : cur ? cur.n - 1 : s.done;
+    const segP = m => !m ? 0 : (m.exOk ? .4 : m.video.pos && m.video.dur ? .3 * Math.min(1, m.video.pos / m.video.dur) : .06) + (m.trainOk / m.trainNeed) * .6;
+    const bar = `<div class="pf-bar"><div class="pf-sg${j1.complete ? "" : " cur"}" style="--p:${j1.total ? Math.max(.08, j1.done / j1.total) : 0}"><i style="--d:.1s"></i></div>${s.mods.map((m, i) => `<div class="pf-sg${m.complete ? "" : i === curIdx ? " cur" : " no"}" style="--p:${Math.max(.08, segP(m))}">${m.complete ? `<i style="--d:${.15 + i * .07}s"></i>` : i === curIdx ? "<i></i>" : ""}</div>`).join("")}</div>
+      <div class="pf-bl"><span class="${j1.complete ? "ok" : "cur"}">JOUR 1</span>${s.mods.map((m, i) => `<span class="${m.complete ? "ok" : i === curIdx ? "cur" : ""}">${m.n}</span>`).join("")}</div>`;
+    // la seule chose à faire maintenant
+    const isTrain = N.kind === "train", nowCls = N.kind === "cap" || N.kind === "wait" ? " cap" : N.kind === "ready" ? " ready" : "";
+    const nowBtn = N.btn ? (N.href ? `<a class="tr-wbtn" href="${N.href}">${esc(N.btn)} ${ARW}</a>` : `<button class="tr-wbtn" data-now>${N.kind === "train" ? "" : PLAY.replace("<svg", '<svg width="16" height="16"')}${esc(N.btn)} ${N.kind === "train" ? ARW : ""}</button>`) : "";
+    const dots = isTrain && cur ? `<div class="pf-dots">${Array.from({ length: cur.trainNeed }, (_, i) => `<i class="${i < cur.trainOk ? "ok" : i === cur.trainOk ? "c" : ""}"></i>`).join("")}</div>` : "";
+    const now = `<section class="tr-card pf-now${nowCls}"><div class="tr-eb pf-ey"><i></i>${N.kind === "ready" ? "C'EST BON" : N.kind === "cap" ? "BRAVO POUR AUJOURD'HUI" : "À FAIRE MAINTENANT"}</div>
+      <h2>${esc(N.title)}</h2><p>${esc(N.sub)}</p>${dots}${nowBtn}</section>`;
+    // modules
+    const mods = `<section class="tr-card" style="--d:.06s"><div class="tr-ch"><h3>Tes <em>9 modules</em></h3><span class="tr-tag${s.done === s.total ? " g" : ""}">${s.done} / ${s.total}</span></div>
+      <div class="tr-mut">Chaque module : la vidéo et son exercice, puis 3 entraînements réussis au simulateur. ${s.perDay} modules par jour au maximum.</div>
+      <div class="pf-ml">${s.mods.map((m, i) => `<button class="pf-m${m.complete ? " ok" : m === cur ? " cur" : m.cap ? " cap lk" : m.locked ? " lk" : ""}" data-m="${m.id}" style="--d:${.05 + i * .035}s" ${m.locked ? "disabled" : ""}>
+        <span class="n">${m.complete ? CHECK : m.locked ? LOCK : m.n}</span><span class="t"><b>${esc(m.title)}</b><small>${stateTxt(m)}</small></span>
+        ${!m.locked && !m.complete ? `<span class="st"><em>${m.exOk ? "EXO ✓" : ""}</em>${Array.from({ length: m.trainNeed }, (_, k) => `<i class="${k < m.trainOk ? "ok" : ""}"></i>`).join("")}</span>` : ""}</button>`).join("")}</div></section>`;
+    // jour 1
+    const j1rows = j1.videos.map(v => `<button class="co-v${v.done && !v.locked ? " ok" : ""}${v.locked ? " lk" : ""}${j1.next && j1.next.id === v.id ? " nx" : ""}" data-j="${v.id}" ${v.locked ? "disabled" : ""}><span class="co-n">${v.locked ? LOCK : v.done ? CHECK : v.n}</span><span class="co-t"><b>${esc(v.title)}</b><small>${v.locked ? "Termine la vidéo précédente" : v.done ? "Vue · revoir" : v.pos > 3 ? `Reprendre à ${fmt(v.pos)}` : "À regarder"}</small></span><span class="co-pl">${v.locked ? "" : PLAY}</span></button>`).join("");
+    const j1card = j1.complete ? `<section class="tr-card co-card" style="--d:.04s"><details class="pf-j1"><summary><h3>Jour 1 · <em>les bases</em></h3><span style="display:flex;gap:8px;align-items:center"><span class="tr-tag g">Validé ✓</span><span class="chev">${CHEV}</span></span></summary><div class="co-list" style="margin-top:12px">${j1rows}</div></details></section>`
+      : `<section class="tr-card co-card" style="--d:.04s"><div class="tr-ch"><h3>Jour 1 · <em>les bases</em></h3><span class="tr-tag">${j1.done} / ${j1.total} vidéos</span></div><div class="tr-mut" style="margin:6px 0 2px">La bienvenue, puis la messagerie de A à Z. Regarde chaque vidéo jusqu'au bout.</div><div class="co-list">${j1rows}</div></section>`;
+    // shift accompagné
+    const t = Date.now(), up = s.sups.find(x => x.end_at > t), doneS = s.sups.filter(x => x.end_at <= t).length;
+    const shift = `<section class="tr-card" style="--d:.08s"><div class="tr-ch"><h3>Shift <em>accompagné</em></h3>${doneS ? `<span class="tr-tag">${doneS} fait${doneS > 1 ? "s" : ""}</span>` : ""}</div>
+      ${up ? `<div class="pf-sh${up.state === "live" ? " live" : ""}"><span class="ic">🎓</span><div><b>${up.state === "live" ? "En cours · " : ""}${esc(up.model)}</b><small>${esc(up.when)}</small></div>${up.state === "live" ? `<a class="tr-sb go" href="/messagerie">Ouvrir la messagerie</a>` : ""}</div>
+        <div class="tr-mut" style="margin-top:10px">${up.state === "live" ? "Ta messagerie est ouverte sur une quinzaine de fans réservés. Ton manager suit en direct." : "Pendant ce shift, ta messagerie s'ouvre sur une quinzaine de fans rien que pour toi. Ton manager suit en direct et te corrige."}</div>`
+      : s.supOpen ? `<div class="pf-lk">${LOCK.replace("<svg", '<svg style="color:#c9a74a"')}<span>Tu peux faire tes shifts accompagnés. Ton manager va t'en planifier un : tu recevras une notification.</span></div>`
+      : `<div class="pf-lk">${LOCK}<span>Débloqués après le module 6 « Ton shift ». Ton manager les planifie avec toi, 45 min à 1 h sur une créatrice.</span></div>`}</section>`;
+    const fb = s.lastNote ? `<section class="tr-card" style="--d:.1s"><div class="tr-ch"><h3>Retour de ton <em>manager</em></h3></div><div class="pf-fb"><small>SHIFT DU ${esc(s.lastNote.when.toUpperCase())} · ${esc(s.lastNote.model.toUpperCase())}</small>${esc(s.lastNote.notes)}</div></section>` : "";
+    // pour l'entretien final
+    const ty = s.typing ? Math.round(s.typing) : null, tyOk = ty != null && ty >= s.typingGoal;
+    const ck = (ok, b, sm, v, extra) => `<div class="tr-ck${ok ? " ok" : ""}"><span class="bx">${ok ? CHECK : ""}</span><div><b>${b}</b><small>${sm}</small></div><span class="v${ok ? "" : " no"}">${v}</span>${extra || ""}</div>`;
+    const fin = `<section class="tr-card" style="--d:.12s"><div class="tr-ch"><h3>Pour l'<em>entretien final</em></h3></div>
+      <div class="tr-cks">${ck(s.done === s.total, "Les 9 modules validés", "vidéo, exercice et 3 entraînements chacun", `${s.done} / ${s.total}`)}
+        ${ck(tyOk, `Frappe à ${s.typingGoal} mots/min`, `test de frappe, 90 % de précision · <a href="/tests?t=typing" style="color:#cfcfcf">${ty == null ? "faire le test" : "retenter"}</a>`, ty == null ? "—" : `${ty}`)}
+        ${ck(s.ready, "Entretien avec ton manager", s.ready ? "ton manager a été prévenu" : "dès que les deux sont verts", s.ready ? "à venir" : "")}</div></section>`;
+    root.innerHTML = `<div class="tr"><div class="pf-hd"><div><div class="tr-eb">MA FORMATION</div><h1 class="tr-ttl">${!j1.complete ? `Jour 1 · <em>les bases.</em>` : `Module <em>${Math.min(s.done + 1, s.total)} / ${s.total}.</em>`}</h1></div>
+      <div class="pf-dd"><b>Jour ${s.day}<span> / 14</span></b>${s.doneToday ? `${s.doneToday} module${s.doneToday > 1 ? "s" : ""} validé${s.doneToday > 1 ? "s" : ""} aujourd'hui` : "ta formation, une étape à la fois"}</div></div>
+      ${bar}<div class="pf-g"><div class="tr-col">${now}${mods}</div><div class="tr-col">${j1card}${shift}${fb}${fin}</div></div></div>`;
+    const nb = root.querySelector("[data-now]");
+    if (nb) nb.onclick = () => { if (N.kind === "train") train(s.mods.find(m => m.id === N.vid)); else if (N.vid) play(N.set, N.vid); };
+    root.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { const m = s.mods.find(x => x.id === b.dataset.m); if (!m || m.locked) return;
+      if (m.complete) replay(m); else if (!m.exOk) play("adv", m.id); else train(m); });
+    root.querySelectorAll("[data-j]").forEach(b => b.onclick = () => play("base", b.dataset.j));
+  }
+  async function load() { try { S = await api("/api/parcours"); draw(); } catch (e) { root.innerHTML = `<div class="tr"><div class="tr-ld">${esc(e.message)}</div></div>`; } }
+  (async () => { const ME = await api("/api/me"); if (ME.stage !== "formation") { location.replace("/home"); return; }
+    renderShell("ma-formation", ME); root.innerHTML = `<div class="tr"><div class="tr-ld">Chargement…</div></div>`; await load(); })();
+})();
+</script>
+</body>
+</html>

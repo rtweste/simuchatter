@@ -200,8 +200,12 @@ module.exports = function mount(app, db, auth, admin, { gest }) {
     else if (state === "pending") {
       let uid = null;
       if (t.conv_id) { const s = (db.prepare("SELECT user_id FROM twizz_sent WHERE conv_id = ? AND price IS NOT NULL AND at <= ? AND at > ? ORDER BY at DESC LIMIT 1").get(t.conv_id, at + 60e3, at - 7 * 864e5) || db.prepare("SELECT user_id FROM twizz_sent WHERE conv_id = ? AND at <= ? AND at > ? ORDER BY at DESC LIMIT 1").get(t.conv_id, at + 60e3, at - 7 * 864e5)); if (s) uid = s.user_id; }
-      if (!uid && modelId) uid = whoSold(modelId, at);
-      if (uid) makeSale(t, uid); else db.prepare("UPDATE twizz_tx SET state = 'ca_only' WHERE id = ?").run(id);   // personne à qui la relier : CA de l'agence, sans commission
+      // vente faite pendant un shift accompagné (chatter en formation, fan réservé) : CA de l'agence, aucune commission ; elle s'affiche dans sa fiche de formation
+      const supSale = (uid && (db.prepare("SELECT stage FROM users WHERE id = ?").get(uid) || {}).stage === "formation") || (app.locals.supFanAt && t.fan_id && app.locals.supFanAt(creatorId, t.fan_id, at));
+      if (supSale) { uid = null; db.prepare("UPDATE twizz_tx SET state = 'ca_only' WHERE id = ?").run(id); }
+      else if (!uid && modelId) uid = whoSold(modelId, at);
+      if (supSale) {}
+      else if (uid) makeSale(t, uid); else db.prepare("UPDATE twizz_tx SET state = 'ca_only' WHERE id = ?").run(id);   // personne à qui la relier : CA de l'agence, sans commission
     }
     try { if (app.locals.paidNotif) app.locals.paidNotif(id); } catch (e) {}   // achat d'un fan : le chatter concerné est prévenu (paid.js)
     return 1;

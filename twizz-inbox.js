@@ -98,14 +98,22 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai, notify }) {
   function accessOf(req) {
     const u = req.user; if (!u) return null;
     if (u.rk === "founder" && !req.viewAs) return { all: true, send: true, founder: true };
+    // chatter en formation : la messagerie s'ouvre seulement pendant son shift accompagné, sur ses fans réservés
+    if (u.stage === "formation") { const sp = app.locals.supAccess && app.locals.supAccess(u.id); if (!sp) return null;
+      return { all: false, cids: new Set([sp.cid]), send: !req.viewAs, founder: false, manager: false, sup: sp }; }
     if (!["manager", "chatter", "tl"].includes(u.rk) || (u.rk !== "manager" && !openOn())) return null;   // les managers n'attendent pas l'ouverture aux chatters
     const lv = levelOf(u.id, u.rk); if (!lv) return null;
     // vue « en tant que » du fondateur : il voit ce que voit la personne, sans pouvoir envoyer
     return { all: u.rk === "manager", cids: u.rk === "manager" ? null : scopeOf(u.id), send: lv >= 2 && !req.viewAs, founder: false, manager: u.rk === "manager" };
   }
   const inbox = (req, res, next) => { const a = accessOf(req);
+    if (!a && req.user.stage === "formation") return res.status(403).json({ error: "La messagerie s'ouvre pendant ton shift accompagné", sup: true });
     if (!a) return res.status(403).json({ error: openOn() ? `Tu n'as pas encore accès à la messagerie : demande ${req.user.rk === "manager" ? "au fondateur" : "à ton manager"}` : "Messagerie en test : réservée au fondateur" });
     if (req.params.cid && !a.all && !a.cids.has(req.params.cid)) return res.status(403).json({ error: "Cette créatrice ne fait pas partie des tiennes" });
+    // fans réservés à un shift accompagné : seul le chatter en formation y répond (les managers peuvent lire)
+    const cv = str(req.params.conv || (req.body && req.body.conversationId) || "");
+    if (cv && a.sup && !a.sup.convs.has(cv)) return res.status(403).json({ error: "Ce fan ne fait pas partie de ton shift accompagné" });
+    if (cv && !a.sup && !a.founder && !a.manager && req.params.cid && app.locals.supReserved && app.locals.supReserved(req.params.cid).has(cv)) return res.status(403).json({ error: "Ce fan est réservé à un shift accompagné en ce moment" });
     req.acc = a; next(); };
   // coffre et scripts : les managers y ont toujours accès (page Scripts), les autres selon leur accès à la messagerie
   const mgrOrInbox = (req, res, next) => req.user.role === "admin" && req.user.rk !== "assistant" && !req.viewAs ? (req.acc = accessOf(req) || { all: true, send: false }, next()) : inbox(req, res, next);
@@ -372,7 +380,18 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai, notify }) {
       if (notify && mg.length) notify.pushMany(mg, null, { title: `🗑 ${req.user.username} a supprimé un message`, body: `${name || "Un fan"} : ${what}`, url: "/messagerie?" + q, tag: "del-" + id }); } catch (e) {}
     return { ok: true }; }));
   const mgrView = req => !!req.user && !["chatter", "tl"].includes(req.user.rk);
-  const triOf = (cid, req) => { try { if (!app.locals.triInbox) return null; if (req.query.vue === "chatters" && mgrView(req)) return app.locals.triInbox(cid, { ...req.user, rk: "chatter" }); return app.locals.triInbox(cid, req.user); } catch (e) { return null; } };
+  const triBase = (cid, req) => { try { if (!app.locals.triInbox) return null; if (req.query.vue === "chatters" && mgrView(req)) return app.locals.triInbox(cid, { ...req.user, rk: "chatter" }); return app.locals.triInbox(cid, req.user); } catch (e) { return null; } };
+  // shifts accompagnés : le chatter en formation ne voit que ses fans ; les autres chatters ne les voient plus pendant le shift (les managers les voient, marqués)
+  const triOf = (cid, req) => { const a = req.acc || {};
+    if (a.sup) return f => a.sup.fans.has(f);
+    const base = triBase(cid, req), R = !a.founder && !a.manager && app.locals.supReserved ? app.locals.supReserved(cid) : null;
+    if (R && R.size) return f => !R.has(f) && (!base || base(f));
+    return base; };
+  const supMark = (cid, items) => { const R = app.locals.supReserved ? app.locals.supReserved(cid) : null; if (R && R.size) items.forEach(c => { if (c.fan && R.has(c.fan.id)) c.sup = true; }); return items; };
+  // liste du chatter en formation : ses fans réservés, même ceux qui ne sont pas sur les premières pages
+  const supFill = (req, items) => { const a = req.acc || {}; if (!a.sup) return items; const have = new Set(items.map(c => c.fan.id)), F = (app.locals.supFans && app.locals.supFans(req.user.id)) || [];
+    F.forEach(f => { if (!have.has(f.fan)) items.push({ id: f.conv, fan: { id: f.fan, name: f.name || "Fan" }, last: { id: "", text: "", type: "", at: null, fromFan: false }, unread: 0, type: "GENERAL", since: null, online: false, subscribed: null, tags: [] }); });
+    return items; };
   const triAvail = (cid, req) => { try { return mgrView(req) && !!app.locals.triInbox && !!app.locals.triInbox(cid, { ...req.user, rk: "chatter" }); } catch (e) { return false; } };
   // auteur du dernier message, faits du fan, aperçus, qui est dessus : pour toute liste de conversations
   function decorate(cid, items, req) {
@@ -403,7 +422,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, ai, notify }) {
       // la liste visible est courte : les pages suivantes sont lues tout de suite (3 de plus au maximum, gardées 45 s)
       for (let k = 0; k < 3 && items.length < 10 && raw.length && (!d || !d.totalPages || d.totalPages > outPage); k++) { outPage++; await new Promise(r => setTimeout(r, 350)); const jj = await GD(P(outPage), 45e3); d = jj && jj.data; const L = arr(jj); if (!L.length) break;
         const more = decorate(cid, applySeen(cid, L.map(c => conv(c, cid))), req), vis = more.filter(c => !c.fan.id || tri(c.fan.id)); hidden += more.length - vis.length; raw = L; items.push(...vis.filter(x => !items.some(y => y.id === x.id))); } }
-    return { tri: tri ? { hidden } : undefined, triAvail: triAvail(cid, req), items, page: outPage, more: !!(d && (d.totalPages ? outPage < d.totalPages : raw.length >= 10)), aiStopped, sample: req.query.debug ? arr(j)[0] : undefined };
+    if (req.acc && req.acc.sup && !q && type === "GENERAL") { items = supFill(req, items); hidden = 0; }
+    if (req.acc && (req.acc.manager || req.acc.founder)) supMark(cid, items);
+    return { tri: tri && !(req.acc && req.acc.sup) ? { hidden } : undefined, triAvail: req.acc && req.acc.sup ? false : triAvail(cid, req), items, page: outPage, more: !!(d && (d.totalPages ? outPage < d.totalPages : raw.length >= 10)), aiStopped, sample: req.query.debug ? arr(j)[0] : undefined };
   }));
   app.get("/api/twizz/inbox/:cid/messages/:conv", auth, inbox, wrap(async req => {
     const cid = creatorOk(req.params.cid), page = Math.max(1, +req.query.page || 1), fanId = str(req.query.fan);

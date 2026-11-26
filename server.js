@@ -123,7 +123,9 @@ function publicSim(s) {
     creator_name: s.creator_name, creator_style: s.creator_style, prices: s.prices,
     log: s.log, revenue: s.revenue, interest: s.interest, hints: s.hints, left: !!s.left_conv,
     avgRt: avg(s.rts), status: s.status, score: s.score, report: s.report ? J(s.report) : null,
-    started_at: s.started_at, ended_at: s.ended_at
+    started_at: s.started_at, ended_at: s.ended_at,
+    // échauffement n°1 ou n°2 (0 = session normale)
+    warmup: s.warmup ? db.prepare("SELECT COUNT(*) n FROM sims WHERE user_id = ? AND warmup = 1 AND id <= ?").get(s.user_id, s.id).n : 0
   };
 }
 
@@ -216,7 +218,7 @@ const PRESENCE = new Map(); global.PRESENCE = PRESENCE;
 function auth(req, res, next) {
   const tok = req.cookies.tok;
   if (!tok) return res.status(401).json({ error: "Non connecté" });
-  const row = db.prepare(`SELECT u.id, u.username, u.role, u.active, u.grade, u.team_lead, t.expires_at FROM tokens t
+  const row = db.prepare(`SELECT u.id, u.username, u.role, u.active, u.grade, u.team_lead, u.stage, t.expires_at FROM tokens t
     JOIN users u ON u.id = t.user_id WHERE t.token = ?`).get(tok);
   if (!row || row.expires_at < Date.now() || !row.active) return res.status(401).json({ error: "Session expirée" });
   row.rk = PERM.rk(row); req.user = row; PRESENCE.set(row.id, Date.now());
@@ -228,9 +230,15 @@ function auth(req, res, next) {
   }
   if (row.grade === "assistant" && req.path === "/api/home") PERM.stripMargin(res);
   if (row.role === "trainee" && TRAINEE_BLOCK.test(req.path)) return res.status(403).json({ error: "Réservé aux chatters : termine ta formation d'abord" });
+  if (row.stage === "formation" && STAGE_BLOCK.test(req.path)) return res.status(403).json({ error: "Pas encore : termine ta formation d'abord" });
   next();
 }
 const TRAINEE_BLOCK = /^\/api\/(sales|shifts|swaps|reinforce|help|planning|clock|my-pay|my-sanctions|home)(\/|$)/;
+// chatter en formation : pas de ventes, de paie, d'échanges de shifts ni de pointage tant qu'il n'a pas fini (il voit son planning et ses shifts accompagnés)
+const STAGE_BLOCK = /^\/api\/(sales|swaps|reinforce|help|clock|my-pay|my-sanctions|home)(\/|$)/;
+try { db.exec("ALTER TABLE users ADD COLUMN stage TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE users ADD COLUMN stage_at INTEGER"); } catch (e) {}
+try { db.exec("ALTER TABLE sims ADD COLUMN warmup INTEGER NOT NULL DEFAULT 0"); } catch (e) {}
 // rôles fins (Fondateur, Manager, Assistante, Team Leader) : voir perms.js
 const PERM = require("./perms")(db, () => GEST && GEST.agency());
 const admin = PERM.admin;
@@ -312,7 +320,7 @@ app.get("/api/me", auth, (req, res) => {
     if (deadline.state === "rejected") return res.status(401).json({ error: "Session expirée" }); }
   const tl = req.user.team_lead ? db.prepare("SELECT id, username FROM users WHERE id = ? AND active = 1 AND grade = 'tl'").get(req.user.team_lead) : null;
   const ob = db.prepare("SELECT onboarded_at, sells FROM users WHERE id = ?").get(req.user.id);
-  res.json({ id: req.user.id, username: req.user.username, role: req.user.role, grade: req.user.grade || null, rk: req.user.rk, roleLabel: PERM.LABEL[req.user.rk], onboarded: !!(ob && ob.onboarded_at),
+  res.json({ id: req.user.id, username: req.user.username, role: req.user.role, stage: req.user.stage || null, grade: req.user.grade || null, rk: req.user.rk, roleLabel: req.user.stage === "formation" ? "En formation" : PERM.LABEL[req.user.rk], onboarded: !!(ob && ob.onboarded_at),
     teamLead: tl ? { id: tl.id, username: tl.username } : null, dailyLimit: dailyLimit(), usedToday: used, introSeen: intro, ...profBits(req.user.id), simuIntroSeen: iu.simu_intro_seen ? 1 : 0, mgrIntroSeen: iu.mgr_intro_seen === MGR_INTRO_V ? 1 : 0, deadline,
     sells: req.user.role === "admin" && !!(ob && ob.sells), pushNeeded: !req.viewAs && pushNeeded(req.user),
     viewAs: req.viewAs ? { username: req.user.username, real: req.realUser.username } : null,
@@ -348,15 +356,17 @@ app.post("/api/sims", auth, async (req, res) => {
   const model = (modelId && db.prepare("SELECT * FROM models WHERE id = ?").get(modelId)) || db.prepare("SELECT * FROM models ORDER BY RANDOM() LIMIT 1").get();
   if (!persona || !model) return res.status(400).json({ error: "Profil ou créatrice invalide" });
   const diff = ["facile", "normal", "difficile"].includes(difficulty) ? difficulty : "normal";
-  if (req.user.role !== "admin") {
+  // échauffement : les 2 premières sessions d'un candidat ne comptent pas (coach automatique, conseils gratuits)
+  const warm = req.user.role === "trainee" && db.prepare("SELECT COUNT(*) n FROM sims WHERE user_id = ? AND warmup = 1 AND status = 'done'").get(req.user.id).n < 2 ? 1 : 0;
+  if (req.user.role !== "admin" && !warm) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    const used = db.prepare("SELECT COUNT(*) n FROM sims WHERE user_id = ? AND started_at >= ?").get(req.user.id, today.getTime()).n;
+    const used = db.prepare("SELECT COUNT(*) n FROM sims WHERE user_id = ? AND started_at >= ? AND warmup = 0").get(req.user.id, today.getTime()).n;
     if (used >= dailyLimit()) return res.status(429).json({ error: `Limite de ${dailyLimit()} simulations par jour atteinte.` });
   }
   // Ferme les anciennes simulations non terminées
   db.prepare("UPDATE sims SET status = 'abandoned', ended_at = ? WHERE user_id = ? AND status = 'active'").run(Date.now(), req.user.id);
-  const info = db.prepare(`INSERT INTO sims (user_id, persona_id, difficulty, creator_name, creator_style, prices, interest, budget, started_at)
-    VALUES (?,?,?,?,?,?,?,?,?)`).run(req.user.id, persona.id, diff, model.name, model.style, model.prices, persona.interest, persona.budget, Date.now());
+  const info = db.prepare(`INSERT INTO sims (user_id, persona_id, difficulty, creator_name, creator_style, prices, interest, budget, started_at, warmup)
+    VALUES (?,?,?,?,?,?,?,?,?,?)`).run(req.user.id, persona.id, diff, model.name, model.style, model.prices, persona.interest, persona.budget, Date.now(), warm);
   const sim = loadSim(info.lastInsertRowid);
   if (!persona.opens) {
     sim.fan_ready_at = Date.now(); saveSim(sim);
@@ -432,6 +442,12 @@ app.post("/api/sims/:id/hint", auth, async (req, res) => {
   });
 });
 
+// échauffement : une astuce courte sur le dernier message du chatter
+app.post("/api/sims/:id/coach", auth, async (req, res) => {
+  const sim = ownSim(req, res); if (!sim) return;
+  if (!sim.warmup) return res.status(400).json({ error: "Le coach automatique est réservé aux sessions d'échauffement" });
+  try { res.json({ text: await ai.coach(sim, PERSONAS.find(p => p.id === sim.persona_id)) }); } catch (e) { res.status(502).json({ error: "Le coach est indisponible" }); }
+});
 app.post("/api/sims/:id/end", auth, async (req, res) => {
   const sim = ownSim(req, res); if (!sim) return;
   if (sim.status === "done") return res.json(publicSim(sim));
@@ -442,7 +458,7 @@ app.post("/api/sims/:id/end", auth, async (req, res) => {
     const report = await ai.evaluate(sim, PERSONAS.find(p => p.id === sim.persona_id), stats);
     const raw = Math.max(0, Math.min(100, Math.round(Number(report.score) || 0)));
     report.rawScore = raw;
-    sim.score = Math.max(0, raw - sim.hints * HINT_PENALTY);
+    sim.score = Math.max(0, raw - (sim.warmup ? 0 : sim.hints * HINT_PENALTY));   // échauffement : conseils gratuits
     // décision de recrutement, d'après le barème de l'évaluation
     report.decision = sim.score >= 80 ? "excellent" : sim.score >= 70 ? "recrutable" : sim.score >= 50 ? "former" : "ecarter";
     sim.report = JSON.stringify(report);
@@ -568,7 +584,8 @@ const TWIZZ = require("./twizz")(app, db, auth, admin, { gest: GEST });   // CRM
 const INBOX = require("./twizz-inbox")(app, db, auth, admin, { twizz: TWIZZ, ai, notify: NOTIFY });   // messagerie Twizz (fondateur, puis l'équipe qu'il ouvre)
 require("./whales")(app, db, auth, admin, { inbox: INBOX, notify: NOTIFY });   // gros clients : sans réponse, refroidissement, relecture Grok quotidienne
 require("./paid")(app, db, auth, { notify: NOTIFY, inbox: INBOX, perms: PERM });   // achats des fans : le chatter est prévenu, avec le nom du fan et un lien vers la conversation
-require("./tri")(app, db, auth, { notify: NOTIFY, inbox: INBOX, perms: PERM });   // tri des fans par l'IA : payeurs, doutes, time wasters, et liste « à reprendre » pour les chatters
+require("./tri")(app, db, auth, { notify: NOTIFY, inbox: INBOX, perms: PERM });
+require("./parcours")(app, db, auth, admin, { gest: GEST, notify: NOTIFY, inbox: INBOX, perms: PERM });   // chatters en formation : modules, entraînements, shifts accompagnés, onglet Formation   // tri des fans par l'IA : payeurs, doutes, time wasters, et liste « à reprendre » pour les chatters
 require("./twizz-ai")(app, db, auth, admin, { twizz: TWIZZ, inbox: INBOX, notify: NOTIFY, gest: GEST, dataDir: path.dirname(DB_PATH) });   // IA de secours (Grok) quand un chatter manque
 require("./twizz-creator")(app, db, auth, admin, { gest: GEST, notify: NOTIFY, dataDir: path.dirname(DB_PATH) });   // publications et vidéos de présentation (compte de chaque créatrice)
 require("./controle")(app, db, auth, admin);   // « À vérifier » : ventes automatiques et médias offerts qui sortent des clous

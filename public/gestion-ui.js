@@ -201,16 +201,16 @@ function ivSum(c) {
   if (!c.training.ready && !iv.started) return "";
   const IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1z"/><path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 13l2 2 4-4"/></svg>';
   const when = ms => new Date(ms).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-  const sub = iv.done ? `Fait par ${esc(iv.by || "?")} · ${when(iv.doneAt)}` : iv.started ? `Commencé par ${esc(iv.by || "?")} · ${when(iv.startedAt)}` : c.training.ready ? "Ses critères sont verts : c'est le moment" : "Dernière étape avant de passer chatter";
+  const sub = iv.done ? `Fait par ${esc(iv.by || "?")} · ${when(iv.doneAt)}` : iv.started ? `Commencé par ${esc(iv.by || "?")} · ${when(iv.startedAt)}` : c.training.ready ? "Ses critères sont verts : c'est le moment" : "Dernière étape de la sélection";
   return `<div class="ivs" data-ivs><div class="h"><span class="ic">${IC}</span><div><b class="t">Entretien manager</b><small>${sub}</small></div>${iv.done ? `<span class="dec ${iv.decision}">${esc(iv.decisionLabel || "")}${iv.test ? " · test" : ""}</span>` : ""}</div>
     ${iv.done ? "" : `<div class="pg">${Array.from({ length: iv.total }, (_, k) => `<i class="${k < iv.answered ? "on" : ""}"></i>`).join("")}</div><div class="meta"><span>${iv.started ? "Enregistré automatiquement" : "6 questions · environ 10 min"}</span><b>${iv.answered} / ${iv.total} questions</b></div>`}
     <button class="go${iv.done ? " gh" : ""}" data-a="iv">${iv.done ? "Revoir l'entretien" : iv.started ? "Reprendre l'entretien" : "Commencer l'entretien"}</button></div>`;
 }
 function tfiche(c) {
   const tr = c.training, s = tr.stats, notes = n => `<div class="note"><button class="del" data-del="${n.id}" aria-label="Supprimer la note">✕</button><small>${esc(n.kind || "Remarque")} · ${dShort(n.created_at)}${n.by_name ? " · " + esc(n.by_name) : ""}</small>${esc(n.text)}</div>`;
-  openDr(`<div class="dh">${avatar(c.username)}<div><b>${esc(c.username)} ${tr.deadline && tr.deadline.state === "rejected" ? '<span class="tag w">Candidature refusée</span>' : tr.ready ? '<span class="tag v">Prêt</span>' : '<span class="tag f">En formation</span>'}</b><small>En formation depuis ${sinceTxt(c.created_at)}</small></div><button class="x" aria-label="Fermer">✕</button></div>
+  openDr(`<div class="dh">${avatar(c.username)}<div><b>${esc(c.username)} ${tr.deadline && tr.deadline.state === "rejected" ? '<span class="tag w">Candidature refusée</span>' : tr.ready ? '<span class="tag v">Prêt</span>' : '<span class="tag f">En sélection</span>'}</b><small>En sélection depuis ${sinceTxt(c.created_at)}</small></div><button class="x" aria-label="Fermer">✕</button></div>
     <div class="dk"><div><small>Score moyen (5 dern.)</small><b class="${s.avg5 >= 70 ? "g" : ""}" style="${s.avg5 >= 70 ? "color:#5fd3a2" : ""}">${s.avg5 ?? "—"}</b><em>meilleur : ${s.best ?? "—"}</em></div><div><small>Sessions terminées</small><b>${s.sessions}</b><em>dont ${s.hard} difficile${s.hard > 1 ? "s" : ""} réussie${s.hard > 1 ? "s" : ""}</em></div></div>
-    <div class="rdy${tr.ready ? "" : " no"}"><span class="ic">${tr.ready ? "✓" : tr.done}</span><span>${tr.ready ? `Les ${tr.total} critères sont remplis. ${esc(c.username)} peut passer chatter.` : `${tr.done} critère${tr.done > 1 ? "s" : ""} sur ${tr.total} rempli${tr.done > 1 ? "s" : ""}.`}</span></div>
+    <div class="rdy${tr.ready ? "" : " no"}"><span class="ic">${tr.ready ? "✓" : tr.done}</span><span>${tr.ready ? `Les ${tr.total} critères sont remplis. ${esc(c.username)} peut passer l'entretien.` : `${tr.done} critère${tr.done > 1 ? "s" : ""} sur ${tr.total} rempli${tr.done > 1 ? "s" : ""}.`}</span></div>
     <div class="sec"><span class="lab">CRITÈRES</span>${tr.criteria.map(k => `<div class="tck${k.ok ? " ok" : ""}"><span class="bx">${k.ok ? CK : ""}</span><div>${esc(k.label)}${k.sub ? `<small>${esc(k.sub)}</small>` : ""}</div><span class="v${k.ok ? "" : " no"}">${k.test ? '<span class="ttest">test</span>' : ""}${esc(k.value)}</span></div>`).join("")}</div>
     ${dlSec(c)}${ivSum(c)}
 
@@ -240,8 +240,8 @@ function tfiche(c) {
       if (a === "dlx") { await api(`/api/admin/users/${c.id}/deadline`, { body: { hours: 24 } });
         toast(tr.deadline.state === "rejected" ? `${esc(c.username)} a 24 h de plus · son compte est réactivé` : `${esc(c.username)} a 24 h de plus pour terminer sa formation`, true); S.ok(); close(); loadTeam(true); }
       if (a === "promote") { if (!tr.ready && !b.dataset.sure) { b.dataset.sure = 1; b.textContent = "Confirmer : il n'a pas rempli tous les critères"; return; }
-        await api(`/api/admin/users/${c.id}/promote`, { body: {} }); b.classList.remove("soft"); b.classList.add("done"); b.textContent = `✓ ${c.username} est chatter`;
-        toast(`${esc(c.username)} est maintenant chatter · il apparaît dans le planning et la paie`, true); S.ok();
+        await api(`/api/admin/users/${c.id}/promote`, { body: {} }); b.classList.remove("soft"); b.classList.add("done"); b.textContent = `✓ ${c.username} est retenu`;
+        toast(`${esc(c.username)} est retenu · il commence sa formation (onglet Formation › Recrues)`, true); S.ok();
         burst(b); setTimeout(() => { close(); loadTeam(true); }, 1300); }
       if (a === "tsim" || a === "tall" || a === "treset") { if (a === "treset" && !b.dataset.sure) { b.dataset.sure = 1; b.textContent = "Confirmer la remise à zéro"; return; }
         await api(`/api/admin/users/${c.id}/training-test`, { body: { mode: { tsim: "sim", tall: "all", treset: "reset" }[a] } });

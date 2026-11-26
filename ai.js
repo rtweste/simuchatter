@@ -211,6 +211,19 @@ Donne UN conseil concret et court (3 phrases max) pour le prochain message, en f
   return (await askSim(prompt, SIM_HINT, MODEL_HINT, 300, { sim: sim.id, user: sim.user_id, kind: "hint" })).trim();
 }
 
+// échauffement : une astuce très courte sur le DERNIER message du chatter (ce qui est bien, ou ce qu'il faut changer)
+async function coach(sim, persona) {
+  const last = [...sim.log].reverse().find(l => l.who === "chatter"); if (!last) return "";
+  const prompt = `Tu es coach bienveillant pour un débutant qui s'entraîne au chat de vente sur un simulateur (il incarne ${sim.creator_name}, une créatrice de contenu ; objectif de la session : ${persona ? persona.goal : "créer le lien puis vendre au bon moment"}).
+Conversation jusqu'ici :
+${transcript(sim.log) || "(vide)"}
+
+Son dernier message : « ${last.text} »
+Donne UNE astuce de 1 ou 2 phrases maximum sur ce dernier message : commence par ce qui est bien s'il y a quelque chose de bien (« Bonne question ouverte 👍 »), sinon dis simplement ce qu'il faudrait changer et pourquoi (« Attention, tu proposes un média trop tôt : il ne te connaît pas encore »). Tutoiement, français simple, pas de liste, pas de guillemets autour de ta réponse.`;
+  if (MOCK) return "Bonne question ouverte 👍 Continue à t'intéresser à lui avant de proposer quoi que ce soit.";
+  return (await askSim(prompt, SIM_HINT, MODEL_HINT, 160, { sim: sim.id, user: sim.user_id, kind: "coach" })).trim().replace(/^["«]\s*|\s*["»]$/g, "");
+}
+
 /* ---------- Évaluation ---------- */
 // Format imposé de l'évaluation : l'API renvoie directement un objet valide (plus d'erreur « réponse illisible »)
 const STR = { type: "string" };
@@ -477,4 +490,4 @@ La prochaine action doit être concrète et respectueuse : pas de fausse promess
   return { difficulte: ["facile", "moyenne", "difficile"].includes(x.difficulte) ? x.difficulte : "", prenom: S(x.prenom).slice(0, 40), brief: S(x.brief).slice(0, 400), etat: S(x.etat).slice(0, 240), action: S(x.action).slice(0, 240), profil: { anniv: S(p.anniv), ville: S(p.ville), metier: S(p.metier), gouts: S(p.gouts) } };
 }
 
-module.exports = { simProvider: () => (SIM_GROK() ? "grok" : "anthropic"), fanTurn, hint, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead, assistant, gradeApplicant, replies, scriptVariants, tagSuggest, fanBrief };
+module.exports = { simProvider: () => (SIM_GROK() ? "grok" : "anthropic"), fanTurn, hint, coach, evaluate, transcript, MOCK, setUsageHook, readSale, saleCanRead, assistant, gradeApplicant, replies, scriptVariants, tagSuggest, fanBrief };

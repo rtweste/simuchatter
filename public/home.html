@@ -1059,6 +1059,7 @@ async function load() {
     });
   }
   ME = await api("/api/me");
+  if (ME.stage === "formation") { location.replace("/ma-formation"); return; }   // chatter en formation : son accueil, c'est « Ma formation »
   renderShell("home", ME);
   // stagiaire : accueil de formation seulement
   if (ME.role === "trainee") { const box = $("hm"); box.className = ""; box.id = "trHome"; await TRAINEE.render(box, ME); return; }

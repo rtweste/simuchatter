@@ -42,11 +42,13 @@
     let L; try { L = await api("/api/formation"); } catch (e) { root.innerHTML = `<div class="tr"><div class="tr-ld">${esc(e.message)}</div></div>`; return; }
     const B = L.base, A = L.adv, X = { videos: L.extra, total: L.extra.length, label: "À REVOIR" };
     B.label = "FORMATION MESSAGERIE"; A.label = "FORMATION CONTINUE"; A.endTitle = "Formation terminée"; A.endText = "Vidéo et exercices validés. Bravo.";
-    A.lockText = L.trainee ? "Débloquée quand tu deviens chatter" : "Termine la vidéo précédente";
+    A.lockText = L.trainee ? "Pendant ta formation, si tu es retenu" : "Termine la vidéo précédente";
+    // chatter en formation : ses vidéos sont sur « Ma formation »
+    if (L.stage) { location.replace("/ma-formation"); return; }
     if (!L.trainee) B.next = null;
     const qz = A.videos.filter(v => v.quiz && !v.locked && !v.done).map(v => `<div class="fo-qz">${v.quiz.map(p => `<span class="${p.passed ? "ok" : ""}">${p.passed ? "✓ " : ""}Exercice ${p.n} · ${esc(p.title)}</span>`).join("")}</div>`).join("");
     root.innerHTML = `<div class="tr"><div class="tr-eb">FORMATION</div><h1 class="tr-ttl">Tes <em>vidéos.</em></h1>
-      <div class="fo-sub">${L.trainee ? "Commence par les bases de la messagerie. La formation continue se débloque quand ton manager te passe chatter." : "Les bases à revoir quand tu veux, et la formation continue : chaque chapitre se termine par un exercice à réussir."}</div>
+      <div class="fo-sub">${L.trainee ? "Pendant ta sélection, regarde ces deux vidéos. Les modules de formation s'ouvrent si tu es retenu après ton entretien." : "Les bases à revoir quand tu veux, et la formation continue : chaque chapitre se termine par un exercice à réussir."}</div>
       <div class="fo-g"><div class="fo-col">
         <section class="tr-card co-card"><div class="tr-ch"><h3>Formation <em>continue</em></h3><span class="tr-tag${A.complete ? " g" : ""}">${A.total ? (A.complete ? "Terminée ✓" : `${A.done} / ${A.total}`) : "Bientôt"}</span></div>
           <div class="tr-mut" style="margin:8px 0 4px">${L.trainee ? "Réservée aux chatters." : "La vidéo s'arrête à la fin de chaque chapitre : il faut réussir l'exercice pour continuer."}</div>
@@ -58,6 +60,12 @@
           <div class="tr-mut" style="margin:8px 0 4px">${!L.trainee ? "Les 6 vidéos de ta formation de base." : B.unlocked ? "Regarde chaque vidéo jusqu'au bout pour débloquer la suivante." : "Elles se débloquent quand tes critères du simulateur sont verts."}</div>
           <div class="co-list">${rows(B, "base")}</div></section>
       </div></div></div>`;
+    // candidat en sélection : seulement ses deux vidéos ; la messagerie et les modules sont pour la formation, s'il est retenu
+    if (L.trainee) root.innerHTML = `<div class="tr"><div class="tr-eb">SÉLECTION</div><h1 class="tr-ttl">Tes <em>vidéos.</em></h1>
+      <div class="fo-sub">Pendant ta sélection, regarde ces deux vidéos. La messagerie et les 9 modules de formation s'ouvrent si tu es retenu après ton entretien.</div>
+      <div class="fo-g"><div class="fo-col"><section class="tr-card co-card"><div class="tr-ch"><h3>Pour ta <em>sélection</em></h3></div><div class="co-list" style="margin-top:10px">${rows(X, "extra")}</div></section></div>
+        <div class="fo-col"><section class="tr-card co-card" style="--d:.05s"><div class="tr-ch"><h3>Ta <em>formation</em></h3><span class="tr-tag">Si tu es retenu</span></div>
+          <div class="fo-lk">${LOCK}<span>Jour 1 : la messagerie de A à Z. Puis 9 modules, chacun avec sa vidéo, son exercice et ses entraînements au simulateur, et des shifts accompagnés par ton manager.</span></div></section></div></div></div>`;
     const SETS = { base: B, adv: A, extra: X };
     const open = (k, id) => TRAINEE.player(SETS[k], id, next => render(next, k));
     root.querySelectorAll(".co-v[data-v]").forEach(b => b.onclick = () => open(b.dataset.k, b.dataset.v));

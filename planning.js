@@ -116,7 +116,8 @@ function mountPlanning(app, db, auth, admin) {
       return { id: m.id, name: m.name, help: h ? { id: h.id, at: h.created_at } : null, busy: on.length > 0, note };
     }).sort((a, b) => (b.help ? 2 : 0) + (!b.busy ? 1 : 0) - (a.help ? 2 : 0) - (!a.busy ? 1 : 0));
     const swaps = activeSwaps();
-    res.json({ now, today, from, to, week, next, open, renforts: renforts(`AND c.user_id = ${uid}`), candidates,
+    const training = app.locals.supWeek ? app.locals.supWeek(from, to).filter(s => s.user_id === uid) : [];   // shifts accompagnés (chatters en formation)
+    res.json({ now, today, from, to, week, training, next, open, renforts: renforts(`AND c.user_id = ${uid}`), candidates,
       myHelp: hs.find(h => h.for_user === uid && h.created_by === uid) || null,
       swaps: swaps.filter(w => w.from_user !== uid && (w.status === "open" || w.to_user === uid)),
       mySwaps: swaps.filter(w => w.from_user === uid),
@@ -215,7 +216,7 @@ function mountPlanning(app, db, auth, admin) {
     const people = db.prepare("SELECT id, username, role FROM users WHERE active = 1 AND role != 'trainee' ORDER BY role DESC, username").all();
     const pkey = periodOfDate(today);
     const usual = {}; try { db.prepare("SELECT user_id, model_id FROM user_models").all().forEach(r => (usual[r.user_id] = usual[r.user_id] || []).push(r.model_id)); } catch (e) {}
-    res.json({ now, today, from, to, shifts, people, usual, models: models(), slots: SLOTS(),
+    res.json({ now, today, from, to, shifts, training: app.locals.supWeek ? app.locals.supWeek(from, to) : [], people, usual, models: models(), slots: SLOTS(),
       dismissed: db.prepare("SELECT key FROM planning_dismiss").all().map(r => r.key),
       missing: around.filter(s => s.state === "missing" && s.late >= (+AG().missedAlert || 10)), swaps: activeSwaps(), renforts: renforts(), helps: helps(),
       punctuality: people.filter(p => p.role !== "admin").map(p => ({ id: p.id, username: p.username, ...punctuality(p.id, pkey) })).filter(p => p.total) });

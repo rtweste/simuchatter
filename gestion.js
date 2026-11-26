@@ -9,13 +9,12 @@ const E = n => (Math.round(n * 100) / 100).toLocaleString("fr-FR", { maximumFrac
 const COURSE = [
   { id: "tw1", title: "Ouvrir la messagerie", file: "messagerie-01-ouvrir.mp4" },
   { id: "tw2", title: "Envoyer un média payant", file: "messagerie-02-media-payant.mp4" },
-  { id: "tw3", title: "Prix et négo", file: "messagerie-03-prix-nego.mp4" },
-  { id: "tw4", title: "Connaître son fan", file: "messagerie-04-connaitre-son-fan.mp4" },
+  { id: "tw3", title: "Les prix et les promos dans la messagerie", file: "messagerie-03-prix-nego.mp4" },
+  { id: "tw4", title: "La fiche du fan dans la messagerie", file: "messagerie-04-connaitre-son-fan.mp4" },
   { id: "tw5", title: "Répondre vite", file: "messagerie-05-repondre-vite.mp4" },
-  { id: "tw6", title: "Le shift", file: "messagerie-06-shift.mp4" }];
+  { id: "tw6", title: "Le pointage et l'inbox", file: "messagerie-06-shift.mp4" }];
 // Formation continue (onglet Formation) : réservée aux chatters, après la formation de base
 const ADV = [
-  { id: "tw7", title: "Vendre au bon moment", file: "vente-01-bon-moment.mp4", sub: "Les signaux, le post-follow, le follow-up, le fan qui disparaît" },
   { id: "tw9", title: "Connaître son fan", file: "vente-03-connaitre.mp4", sub: "Les bonnes questions, rebondir, la fiche du fan · exercice au simulateur" },
   { id: "tw10", title: "La patience et les signaux d'achat", file: "vente-05-patience.mp4", sub: "Le fan pas prêt, les 4 signaux, la transition en douceur · exercice au simulateur" },
   { id: "tw12", title: "Faire monter l'envie et garder le contrôle", file: "vente-06-envie.mp4", sub: "Vendre par étapes, l'échange, garder le contrôle · exercice au simulateur" },
@@ -27,7 +26,7 @@ const ADV = [
   { id: "tw16", title: "Ton shift", file: "vente-10-shift.mp4", sub: "Pointer, l'ordre d'importance, 10 à 15 conversations, bien finir · exercice au simulateur" }];
 // Vidéos à revoir librement
 const EXTRA = [
-  { id: "x-pres", title: "Présentation de StellADS", src: "/video/presentation-v4.mp4" },
+  { id: "x-parcours", title: "Ton parcours chez StellADS", src: "/video/ton-parcours.mp4", for: ["trainee"] },
   { id: "x-simu", title: "Le Simu Chatter", src: "/video/simu-chatter.mp4" }];
 // Exercices obligatoires : la vidéo s'arrête à la fin de chaque chapitre (at, en secondes) ; il faut tout réussir pour continuer. ok = la bonne réponse (jamais envoyée au navigateur)
 const QUIZ = {
@@ -83,7 +82,7 @@ const DEFAULT_RULES = [
   { key: "fake", label: "Fausse vente ou capture truquée", detail: "faute grave", kind: "prime", amount: 0, points: 3 },
   { key: "rules", label: "Non-respect des consignes", detail: "manuel", kind: "warn", amount: 0, points: 1 }];
 const DEFAULT_TH = { warnAt: 3, suspendAt: 5, suspendDays: 7, windowDays: 30 };
-const TR_DEF = { sessions: { on: true, v: 8 }, avg: { on: true, v: 70 }, hard: { on: true, v: 2, score: 70 }, fans: { on: true, v: 3 }, rt: { on: true, v: 60 }, speed: { on: true, v: 10 }, typing: { on: true, v: 30 }, notify: true };
+const TR_DEF = { sessions: { on: true, v: 8 }, avg: { on: true, v: 70 }, hard: { on: true, v: 2, score: 70 }, fans: { on: true, v: 3 }, rt: { on: true, v: 60 }, speed: { on: true, v: 10 }, typing: { on: true, v: 50 }, notify: true };
 const KIND_LBL = { warn: "Avertissement", fine: "Retenue", prime: "Perte de prime", suspend: "Suspension" };
 
 module.exports = function mount(app, db, auth, admin, ctx) {
@@ -294,10 +293,12 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     return { unlocked, videos, done, total: videos.length, complete: videos.length > 0 && done === videos.length, next: videos.find(v => !v.done && !v.locked) || null };
   }
   // onglet Formation : les bases (les 6 vidéos de la messagerie), la formation continue (chatters), les vidéos à revoir
+  let stageLib = null;   // posé par parcours.js : les vidéos d'un chatter en formation (jour 1 + 9 modules, débloqués selon sa progression)
   function library(user) {
+    if (user.stage === "formation" && stageLib) { const L = stageLib(user.id); const ex = EXTRA.filter(x => !x.for && exists(require("path").join(__dirname, "public", x.src))).map(x => ({ id: x.id, n: 0, title: x.title, src: x.src, done: true, free: true, locked: false, pos: 0 })); return { trainee: false, stage: true, base: L.base, adv: L.adv, extra: ex }; }
     const tr = user.role === "trainee", base = tr ? training(user.id, true).course : course(user.id, true), adv = course(user.id, !tr, advList(), user.role === "admin");   // les managers ouvrent n'importe quelle vidéo de la formation continue
     if (!tr) base.videos.forEach(v => { v.free = true; v.locked = false; });   // un chatter revoit les bases librement
-    const extra = EXTRA.filter(x => exists(require("path").join(__dirname, "public", x.src))).map(x => ({ id: x.id, n: 0, title: x.title, src: x.src, done: true, free: true, locked: false, pos: 0 }));
+    const extra = EXTRA.filter(x => (!x.for || x.for.includes(user.role)) && exists(require("path").join(__dirname, "public", x.src))).map(x => ({ id: x.id, n: 0, title: x.title, src: x.src, done: true, free: true, locked: false, pos: 0 }));
     return { trainee: tr, base, adv, extra };
   }
   const vidOf = (user, id) => { const L = library(user), v = L.base.videos.find(x => x.id === id), a = L.adv.videos.find(x => x.id === id); return v ? { v, adv: false } : a ? { v: a, adv: true } : null; };
@@ -332,7 +333,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   const J = s => { try { return JSON.parse(s || "null"); } catch (e) { return null; } };
   function training(uid, noDl) {
     const c = trCfg();
-    const sims = db.prepare("SELECT persona_id, difficulty, score, rts, report, started_at FROM sims WHERE user_id = ? AND status = 'done' AND score IS NOT NULL ORDER BY started_at DESC").all(uid);
+    const sims = db.prepare("SELECT persona_id, difficulty, score, rts, report, started_at FROM sims WHERE user_id = ? AND status = 'done' AND score IS NOT NULL AND COALESCE(warmup, 0) = 0 ORDER BY started_at DESC").all(uid);
     const last5 = sims.slice(0, 5), avg5 = last5.length ? Math.round(mean(last5.map(s => s.score))) : null;
     const hardOk = sims.filter(s => s.difficulty === "difficile" && s.score >= c.hard.score).length;
     const fansOk = new Set(sims.filter(s => s.score >= 70).map(s => s.persona_id));
@@ -352,12 +353,13 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       { key: "typing", label: `Frappe d'au moins ${c.typing.v} mots/min`, sub: "test de frappe, 90 % de précision minimum", value: ty == null ? "—" : `${Math.round(ty)} mots/min`, ok: ty != null && ty >= c.typing.v, pct: (ty || 0) / c.typing.v, link: "/tests?t=typing" }];
     const byp = db.prepare("SELECT level FROM training_bypass WHERE user_id = ?").get(uid);
     const simCrit = all.filter(x => c[x.key].on).map(x => ({ ...x, pct: Math.max(0, Math.min(1, x.pct)) })).map(x => byp && !x.ok ? { ...x, ok: true, pct: 1, test: true } : x);
+    // sélection (24 h) : seulement le simulateur, la frappe et la connexion ; les vidéos de la messagerie passent au jour 1 de la formation
     const simReady = simCrit.every(x => x.ok), co = course(uid, simReady);
-    const criteria = co.total ? [...simCrit, { key: "course", label: "Formation messagerie terminée", sub: simReady ? `${co.total} vidéos à regarder jusqu'au bout` : "se débloque quand les critères du simulateur sont verts", value: `${co.done} / ${co.total}`, ok: co.complete, pct: co.done / co.total }] : simCrit;
+    const criteria = simCrit;
     const done = criteria.filter(x => x.ok).length, total = criteria.length, ready = total > 0 && done === total;
     const fans = PERS.map(p => ({ id: p.id, name: p.name, label: p.label, ok: fansOk.has(p.id) }));
     const miss = simCrit.find(x => !x.ok) || criteria.find(x => !x.ok), notFan = fans.find(f => !f.ok);
-    const tip = !miss ? "Tous tes critères sont verts : ton manager peut valider ta formation." :
+    const tip = !miss ? "Tous tes critères sont verts : ton manager va te proposer un entretien." :
       miss.key === "sessions" ? `Encore ${c.sessions.v - n} session${c.sessions.v - n > 1 ? "s" : ""} à terminer pour valider le premier critère.` :
       miss.key === "avg" ? `Ta moyenne est à ${avg5} : vise ${c.avg.v} ou plus sur tes prochaines sessions.` :
       miss.key === "hard" ? `Tente une session <b>difficile</b>${notFan ? ` contre <b>${notFan.label}</b>` : ""} : il t'en manque ${c.hard.v - hardOk}.` :
@@ -369,7 +371,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const u = db.prepare("SELECT username, role, created_at FROM users WHERE id = ?").get(uid);
     if (u && u.role === "trainee" && ready && c.notify && !db.prepare("SELECT 1 FROM training_ready WHERE user_id = ?").get(uid)) {
       db.prepare("INSERT OR IGNORE INTO training_ready (user_id, at) VALUES (?, ?)").run(uid, Date.now());
-      log(uid, "a", `**${u.username}** a rempli tous les critères de formation`, "Prêt : sa formation peut être validée");
+      log(uid, "a", `**${u.username}** a réussi la sélection`, "Prêt pour l'entretien : à convoquer");
     }
     let dl = null;
     if (u && u.role === "trainee" && !noDl) {
@@ -377,7 +379,8 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       if (r && ready && !r.met_at && !r.rejected_at) { db.prepare("UPDATE trainee_deadline SET met_at = ? WHERE user_id = ?").run(Date.now(), uid); r.met_at = Date.now(); }
       dl = dlView(r);
     }
-    return { criteria, done, total, ready, tip, fans, simReady, course: co, test: byp ? byp.level : null, deadline: dl, interview: u && u.role === "trainee" && !noDl && typeof interview === "function" ? interview(uid) : null,
+    let warmLeft = 0; try { warmLeft = Math.max(0, 2 - db.prepare("SELECT COUNT(*) n FROM sims WHERE user_id = ? AND warmup = 1").get(uid).n); } catch (e) {}
+    return { criteria, done, total, ready, tip, fans, simReady, warmLeft, course: co, test: byp ? byp.level : null, deadline: dl, interview: u && u.role === "trainee" && !noDl && typeof interview === "function" ? interview(uid) : null,
       day: u ? Math.floor((Date.now() - u.created_at) / 864e5) + 1 : 1,
       stats: { avg5, best: n ? Math.max(...sims.map(s => s.score)) : null, sessions: n, rt, hard: hardOk, trend: sims.slice(0, 8).map(s => s.score).reverse() } };
   }
@@ -546,7 +549,8 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   const runOf = (req, res, x) => { const r = EXO.load(+req.params.rid); if (!r || r.user_id !== x.uid || r.video_id !== x.v.id || r.part !== x.P.id) { res.status(404).json({ error: "Exercice introuvable" }); return null; } return r; };
   const exErr = (res, e) => res.status(e.status || 500).json({ error: e.status ? e.message : "Erreur, réessaie dans un instant" });
   app.post("/api/course/:id/sim/:part/start", auth, (req, res) => { const x = simOf(req, res); if (!x) return;
-    if (req.user.role !== "admin" && EXO.todayCount(x.uid) >= 15) return res.status(429).json({ error: "15 essais aujourd'hui : reviens demain, repose-toi un peu 🙂" });
+    const lim = req.user.stage === "formation" ? 40 : 15;   // en formation : les entraînements comptent aussi
+    if (req.user.role !== "admin" && EXO.todayCount(x.uid) >= lim) return res.status(429).json({ error: `${lim} essais aujourd'hui : reviens demain, repose-toi un peu 🙂` });
     res.json(EXO.pub(EXO.start(x.uid, x.v.id, x.P.id, x.P.sim))); });
   app.post("/api/course/:id/sim/:part/run/:rid", auth, async (req, res) => { const x = simOf(req, res); if (!x) return; const r = runOf(req, res, x); if (!r) return;
     try { res.json(await EXO.act(r, req.body || {})); } catch (e) { if (!e.status) console.error("Exercice", e.message); exErr(res, e); } });
@@ -563,7 +567,9 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const iv = interview(u.id);
     if (!iv.done && !req.body?.force) return res.status(400).json({ error: "Fais d'abord passer l'entretien" });
     if (iv.done && iv.decision === "refused" && !req.body?.force) return res.status(400).json({ error: "L'entretien est marqué « Refusé »" });
-    db.prepare("UPDATE users SET role = 'chatter' WHERE id = ?").run(u.id); db.prepare("DELETE FROM training_ready WHERE user_id = ?").run(u.id);
+    // retenu après l'entretien : il devient chatter EN FORMATION (le parcours de 1 à 2 semaines commence)
+    db.prepare("UPDATE users SET role = 'chatter', stage = 'formation', stage_at = ? WHERE id = ?").run(Date.now(), u.id); db.prepare("DELETE FROM training_ready WHERE user_id = ?").run(u.id);
+    const nm = db.prepare("SELECT username FROM users WHERE id = ?").get(u.id); log(req.user.id, "a", `**${nm ? nm.username : "?"}** est retenu : il passe en formation`, "Parcours chatter en formation");
     res.json({ ok: true });
   });
 
@@ -698,5 +704,5 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   // lecture du délai : si l'heure est passée, le refus est appliqué tout de suite (sans attendre le balayage de la minute)
   const refusedByInterview = uid => { const r = db.prepare("SELECT decision, done_at FROM interviews WHERE user_id = ?").get(uid); return !!(r && r.done_at && r.decision === "refused"); };
   const deadline = uid => { let r = dlRow(uid); if (r && !r.met_at && !r.rejected_at && r.deadline_at <= Date.now()) { rejectExpired(); r = dlRow(uid); } return dlView(r); };
-  return { middleware, log, agency, startDeadline, deadline, refusedByInterview, training };
+  return { middleware, log, agency, startDeadline, deadline, refusedByInterview, training, interview, course, courseList, advList, QUIZ, EXO, ADV, COURSE, setStageLib: f => { stageLib = f; } };
 };

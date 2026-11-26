@@ -919,6 +919,19 @@
   .tk-rt{position:sticky;bottom:0;z-index:6;background:linear-gradient(180deg,rgba(10,10,10,0),#0a0a0a 18px);padding-top:14px;margin-top:-4px}
   .go2{min-width:0;width:100%}.go2 .kbd{display:none}
 }
+.sup-row{display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:999px;font:800 10px Inter,sans-serif;color:#e6c869;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.35);margin-left:6px;white-space:nowrap;flex:none}
+.sup-lock{max-width:520px;margin:12vh auto 0;padding:34px 30px;border-radius:24px;background:radial-gradient(120% 120% at 0 0,rgba(212,175,55,.1),transparent 60%),#101010;border:1px solid #232323;text-align:center;font-family:Inter,sans-serif;animation:supUp .7s cubic-bezier(.16,1,.3,1) both}
+.sup-lock .ic{display:inline-flex;width:56px;height:56px;border-radius:18px;align-items:center;justify-content:center;font-size:26px;background:rgba(212,175,55,.14);border:1px solid rgba(212,175,55,.35)}
+.sup-lock .eb{margin-top:16px;font:800 10.5px Inter;letter-spacing:.2em;color:#a99a6a}
+.sup-lock h2{margin:8px 0 0;font:900 30px Inter;letter-spacing:-.04em;line-height:1.08;color:#f5f5f5}.sup-lock h2 em{font-style:italic;background:linear-gradient(100deg,#fff,#8a8a8a 55%,#e6e6e6);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.08em}
+.sup-lock .when{display:inline-flex;flex-direction:column;gap:3px;margin-top:18px;padding:12px 18px;border-radius:16px;background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.3)}
+.sup-lock .when b{font:900 16px Inter;color:#f2e2a8}.sup-lock .when span{font:700 12.5px Inter;color:#b8a978;text-transform:capitalize}
+.sup-lock p{margin:16px auto 0;max-width:400px;font:600 13.5px/1.55 Inter;color:#8a8a8a}
+.sup-lock .go{display:inline-flex;align-items:center;height:44px;margin-top:20px;padding:0 18px;border-radius:13px;background:#ededed;color:#0a0a0a;font:900 13.5px Inter;text-decoration:none}
+@keyframes supUp{from{opacity:0;transform:translateY(14px);filter:blur(4px)}}
+.sup-bar{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:9000;display:flex;align-items:center;gap:10px;padding:8px 16px;border-radius:999px;background:rgba(40,32,8,.92);border:1px solid rgba(212,175,55,.6);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);font:600 12.5px Inter;color:#d9c98f;white-space:nowrap;max-width:calc(100vw - 24px);overflow:hidden;box-shadow:0 14px 40px -10px #000}
+.sup-bar i{width:7px;height:7px;border-radius:50%;background:#d4af37;box-shadow:0 0 0 3px rgba(212,175,55,.22);animation:supBl 1.3s infinite;flex:none}.sup-bar b{color:#f5e6b0;font-weight:900}.sup-bar span{overflow:hidden;text-overflow:ellipsis}
+@keyframes supBl{50%{opacity:.3}}
 </style>
 </head>
 <body>
@@ -1132,7 +1145,7 @@ function rowHtml(c) { const waitMin = c.last.fromFan && c.last.at ? (Date.now() 
     const T = fanTagIds(c.fan.id).map(tagById).filter(Boolean).slice(0, other ? 1 : 2), sp = SPEND[c.fan.id];
     const val = sp && sp.total > 0 ? `<span class="val ${sp.total >= 300 ? "hi" : ""}">${E(sp.total)}</span>` : "";
     return `<button class="mx-c hl ${c.id === (CUR && CUR.id) ? "on" : ""} ${c.unread ? "un" : ""} ${p ? "pnd" : ""}" data-conv="${esc(c.id)}">${av(c.fan, c.online ? "rg" : "")}
-      <span class="t"><span class="nl">${p ? `<span class="pn-i" title="Épinglé${p.by ? " par " + esc(p.by) : ""}">${SV(IC.pin, 12, 2.6)}</span>` : ""}<b>${esc(c.fan.name)}</b>${other ? `<span class="ow-row" style="margin-left:0">${esc(inbName(o))}</span>` : ""}${T.map(t => tagPill(t)).join("")}</span><small>${prefix(c)}${esc(prev)}</small></span>
+      <span class="t"><span class="nl">${p ? `<span class="pn-i" title="Épinglé${p.by ? " par " + esc(p.by) : ""}">${SV(IC.pin, 12, 2.6)}</span>` : ""}<b>${esc(c.fan.name)}</b>${c.sup ? `<span class="sup-row" title="Réservé à un chatter en formation pendant son shift accompagné">🎓 formation</span>` : ""}${other ? `<span class="ow-row" style="margin-left:0">${esc(inbName(o))}</span>` : ""}${T.map(t => tagPill(t)).join("")}</span><small>${prefix(c)}${esc(prev)}</small></span>
       <span class="r">${hereChip(c)}${wait ? `<span class="wpl ${late ? "lt" : ""}" title="Attend une réponse depuis ${since(c.last.at)}">${SV(IC.clock, 10, 2.6)}${since(c.last.at)}</span>` : `<span>${ago(c.last.at)}</span>`}${c.unread ? `<span class="udot" title="${c.unread} message${c.unread > 1 ? "s" : ""} non lu${c.unread > 1 ? "s" : ""}"></span>` : val}</span></button>`; }
 // met à jour la liste sans tout redessiner (pas de clignotement) ; les lignes qui partent glissent hors de la liste
 // Safari garde parfois l'ancienne image d'une ligne remplacée : on lui fait repeindre la liste
@@ -2167,6 +2180,14 @@ document.addEventListener("keydown", e => { if (e.key !== "ArrowDown" || e.metaK
 (async () => {
   const me = await api("/api/me"); renderShell("messagerie", me);
   const sb = $("sidebar"); if (sb && !sb.classList.contains("mini")) { sb.classList.add("mini"); document.documentElement.classList.add("sb-mini"); }
+  // chatter en formation : la messagerie s'ouvre seulement pendant ses shifts accompagnés
+  if (me.stage === "formation" && !me.inbox) { let nx = null; try { nx = (await api("/api/parcours/shifts")).find(x => x.end_at > Date.now()); } catch (e) {}
+    $("mx").innerHTML = `<div class="sup-lock"><span class="ic">🎓</span><div class="eb">SHIFT ACCOMPAGNÉ</div><h2>${nx ? "Disponible pendant ton <em>prochain shift.</em>" : "Pas encore <em>ouverte.</em>"}</h2>
+      ${nx ? `<div class="when"><b>${esc(nx.model)}</b><span>${esc(nx.when)}</span></div><p>Ta messagerie s'ouvrira toute seule à l'heure du shift, sur une quinzaine de fans rien que pour toi. Ton manager suit en direct.</p>`
+        : `<p>Ton manager te planifiera un shift accompagné après le module 6 « Ton shift ». Tu recevras une notification.</p>`}<a class="go" href="/ma-formation">Retour à ma formation</a></div>`; return; }
+  if (me.stage === "formation") api("/api/parcours/shifts").then(L => { const s = L.find(x => x.state === "live"); if (!s) return; const b = document.createElement("div"); b.className = "sup-bar";
+    b.innerHTML = `<i></i><b>Shift accompagné · ${esc(s.model)}</b><span>jusqu'à ${s.end} · ${s.fans || "tes"} fans réservés · ton manager suit en direct</span>`; document.body.appendChild(b);
+    setTimeout(() => location.reload(), Math.max(5e3, s.end_at - Date.now() + 5e3)); }).catch(() => {});
   if (!(me.rk === "founder" && !me.viewAs) && !me.inbox) { $("mx").innerHTML = `<div class="mx-empty">La messagerie n'est pas encore ouverte pour toi : demande ${me.rk === "manager" ? "au fondateur" : "à ton manager"}.</div>`; return; }
   try { if (localStorage.getItem("mx:blur") === "0") $("swBlur").click(); } catch (e) {}
   try { ST = await api("/api/twizz/inbox/state"); } catch (e) { $("mx").innerHTML = `<div class="mx-empty">${esc(e.message)}</div>`; return; }

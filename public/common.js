@@ -72,6 +72,10 @@ const ICONS = {
 const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ""}</svg>`;
 const MODULES = [
   { id: "home", label: "Accueil", href: "/home", icon: "home", section: null, roles: ["admin", "chatter", "trainee"] },
+  { id: "ma-formation", label: "Ma formation", short: "Formation", href: "/ma-formation", icon: "gauge", section: null, roles: ["chatter"], when: me => me.stage === "formation",
+    desc: "Ton parcours de formation : la prochaine étape, tes modules, tes shifts accompagnés." },
+  { id: "suivi", label: "Recrues", href: "/suivi-formation", icon: "gauge", section: "Manager", roles: ["admin"], hide: ["assistant"], nodock: ["admin"],
+    desc: "La sélection de 24 h et les chatters en formation : progression, alertes, shifts accompagnés, entretiens." },
   { id: "simu", label: "Simu Chatter", short: "Simu", href: "/app", icon: "chat", section: "Formation", roles: ["admin", "chatter", "trainee"], hide: ["assistant"],
     desc: "Entraînez-vous face à un fan simulé par l'IA et recevez une évaluation détaillée." },
   { id: "tests", label: "Tests d'aptitude", short: "Tests", href: "/tests", icon: "gauge", section: "Formation", roles: ["admin", "trainee"], hide: ["assistant"],
@@ -112,7 +116,7 @@ const MODULES = [
     desc: "Les tags des fans : règles qui les posent tout seuls (gros payeur, nouveau, inactif…), tags de l'équipe et ce que valent leurs fans." },
   { id: "admin", label: "Gestion", href: "/admin", icon: "team", section: "Manager", roles: ["admin"],
     desc: "Équipe, créatrices et résultats des simulations." },
-  { id: "messagerie", label: "Messagerie Twizz", short: "Twizz", href: "/messagerie", icon: "chat", section: "Fondateur", roles: ["admin", "chatter"], when: me => RKOF(me) === "founder" || !!me.inbox, nodock: ["admin", "chatter", "tl"],
+  { id: "messagerie", label: "Messagerie Twizz", short: "Twizz", href: "/messagerie", icon: "chat", section: "Fondateur", roles: ["admin", "chatter"], when: me => RKOF(me) === "founder" || !!me.inbox || me.stage === "formation", nodock: ["admin", "chatter", "tl"],
     desc: "Version de test : les conversations Twizz de tes créatrices, directement sur le site." },
   { id: "fondateur", label: "Réglages fondateur", short: "Fondateur", href: "/fondateur", icon: "crown", section: "Fondateur", roles: ["admin"], only: ["founder"], nodock: ["admin"],
     desc: "Paliers de commission, part des créatrices, clôture des quinzaines et managers." },
@@ -128,7 +132,7 @@ const MGR_GROUPS = {
   "g-ventes": { label: "Ventes", icon: "receipt", tabs: [["ventes", "Ventes"], ["compta", "Compta"]] },
   "g-msg": { label: "Messagerie", short: "Twizz", icon: "bubbles", tabs: [["messagerie", "Conversations"], ["scripts", "Scripts"], ["tags", "Tags"], ["ia", "IA de secours"]] },
   "g-crea": { label: "Créatrices", icon: "spark", nodock: 1, tabs: [["creatrices", "Fiches"], ["publications", "Publications"], ["admin#crea", "Gestion des créatrices"]] },
-  "g-form": { label: "Formation", icon: "gauge", nodock: 1, tabs: [["simu", "Simu Chatter"], ["tests", "Tests d'aptitude"], ["formation", "Vidéos"]] },
+  "g-form": { label: "Formation", icon: "gauge", nodock: 1, tabs: [["suivi", "Recrues"], ["simu", "Simu Chatter"], ["tests", "Tests d'aptitude"], ["formation", "Vidéos"]] },
   "g-motiv": { label: "Motivation", icon: "flag", nodock: 1, tabs: [["defis", "Défis"], ["admin#stel", "Stella's"], ["boutique", "Boutique"], ["parrainage", "Parrainage"]] },
   "g-reg": { label: "Réglages agence", short: "Réglages", icon: "crown", nodock: 1, tabs: [["admin#reg", "Agence"], ["fondateur", "Fondateur"]] }
 };
@@ -174,7 +178,11 @@ function mountGTabs(mods, key) {
   bar.setAttribute("aria-label", g.label);
   bar.innerHTML = g.tabs.map(([k, l, h]) => `<a href="${h}" class="${k === key ? "on" : ""}" ${k === key ? 'aria-current="page"' : ""}>${esc(l)}</a>`).join("");
 }
-const modsFor = me => { const L = MODULES.filter(m => m.roles.includes(me.role) && (!m.only || m.only.includes(RKOF(me))) && (!m.when || m.when(me)) && !(m.hide || []).includes(RKOF(me)))
+// chatter en formation : seulement Ma formation, le simulateur, le planning, la messagerie (ouverte pendant ses shifts accompagnés) et le chat
+const STAGE_NAV = ["ma-formation", "simu", "planning", "messagerie", "chat"];
+const modsFor = me => { if (me.stage === "formation") return STAGE_NAV.map(id => MODULES.find(m => m.id === id)).filter(Boolean).map(m => ({ ...m, section: null, nodock: [],
+    ...(m.id === "messagerie" ? { label: "Messagerie", short: "Twizz", desc: "Ouverte pendant tes shifts accompagnés." } : {}), ...(m.id === "simu" ? { label: "Simulateur", short: "Simu" } : {}) }));
+  const L = MODULES.filter(m => m.roles.includes(me.role) && (!m.only || m.only.includes(RKOF(me))) && (!m.when || m.when(me)) && !(m.hide || []).includes(RKOF(me)))
   // les élèves voient le chat comme « Salon formation », dans la rubrique Formation
   .map(m => me.role === "trainee" && m.id === "chat" ? { ...m, label: "Salon formation", short: "Salon", section: "Formation", desc: "Le salon des élèves en formation et des managers." } : m);
   // messagerie ouverte à l'équipe : rangée juste après Ventes, avec le travail de tous les jours
@@ -342,7 +350,7 @@ function renderShell(active, me) {
     if (m.section && m.section !== sec) { sec = m.section; html += `<div class="sec">${esc(sec)}</div>`; }
     html += `<a href="${m.href}" style="--i:${i}" data-tip="${esc(m.label)}" data-k="${esc((m.keys || [m.id]).join(" "))}" class="${isOn(m) ? "on" : ""}" ${isOn(m) ? 'aria-current="page"' : ""}>${icon(m.icon)}<span class="lb">${chars(m.label)}</span><span class="sr">${esc(m.label)}</span>${badge(m) ? `<em class="navbadge hidden" data-badge="${m.id === "g-ventes" ? "ventes" : m.id}"></em>` : ""}</a>`;
   });
-  html += `<span class="nv-line" aria-hidden="true"></span></nav><div class="me">${me.role === "trainee" ? `<span class="av">${esc(me.username[0])}</span>` : `<a class="av" href="/profil" title="Mon profil" aria-label="Mon profil" style="${me.color ? `--ac:${esc(me.color)};` : ""}${me.avatar ? `background:#111 url(${esc(me.avatar)}) center/cover;font-size:0;` : ""}">${esc((me.name || me.username)[0])}</a>`}<div><b>${esc(me.name || me.username)}</b><small>${esc(me.roleLabel || (me.role === "admin" ? "Manager" : me.role === "trainee" ? "En formation" : "Chatter"))}</small></div>
+  html += `<span class="nv-line" aria-hidden="true"></span></nav><div class="me">${me.role === "trainee" ? `<span class="av">${esc(me.username[0])}</span>` : `<a class="av" href="/profil" title="Mon profil" aria-label="Mon profil" style="${me.color ? `--ac:${esc(me.color)};` : ""}${me.avatar ? `background:#111 url(${esc(me.avatar)}) center/cover;font-size:0;` : ""}">${esc((me.name || me.username)[0])}</a>`}<div><b>${esc(me.name || me.username)}</b><small>${esc(me.roleLabel || (me.role === "admin" ? "Manager" : me.role === "trainee" ? "En sélection" : "Chatter"))}</small></div>
     ${me.role === "trainee" && INTRO_ON ? `<button onclick="INTRO.show(ME_SHELL,{replay:true})" title="Revoir la présentation" aria-label="Revoir la présentation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg></button>` : ""}${me.role === "trainee" || me.role === "admin" ? "" : `<button onclick="openPush()" title="${IS_DESK ? "Notifications" : "Notifications sur le téléphone"}" aria-label="${IS_DESK ? "Notifications" : "Notifications sur le téléphone"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IS_DESK ? '<path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0"/>' : '<rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M10.5 18.5h3"/><circle cx="17.5" cy="5.5" r="3" fill="currentColor" stroke="none" opacity=".9"/>'}</svg></button>`}<button onclick="logout()" title="Déconnexion" aria-label="Déconnexion" style="margin-left:0">${icon("logout")}</button></div>`;
   el.innerHTML = html;
   if (me.role === "admin") loadAlerts("mountBell");   // cloche des alertes du shift
@@ -624,7 +632,7 @@ const PLANREM = (() => {
 // vidéo d'accueil : obligatoire pour les élèves, revisionnable à tout moment (fichier /video/presentation-v4.mp4)
 const INTRO_ON = true;
 const INTRO = window.INTRO = (() => {
-  const SRC = "/video/presentation-v4.mp4";
+  const SRC = "/video/presentation-v4.mp4", PSRC = "/video/ton-parcours.mp4";
   let box = null;
   const css = `
   .in-ov{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(5,5,5,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);opacity:0;transition:opacity .5s}
@@ -658,7 +666,11 @@ const INTRO = window.INTRO = (() => {
   const errRecent = src => { try { return Date.now() - (+localStorage.getItem("intro-err:" + src) || 0) < 12 * 3600e3; } catch (e) { return false; } };
   function show(me, opts = {}) {
     if (box) return;
-    const src = opts.src || SRC, seen = opts.seen || "/api/me/intro-seen";
+    // candidat en sélection : la vidéo « Ton parcours chez StellADS » (ce qui va se passer pour lui), à la place de la présentation de l'agence
+    const tr = me && me.role === "trainee" && !opts.src;
+    const src = opts.src || (tr ? PSRC : SRC), seen = opts.seen || "/api/me/intro-seen";
+    if (tr) opts = { eb: opts.replay ? "TON PARCOURS" : "BIENVENUE", title: opts.replay ? "Ton parcours en <em>2 minutes.</em>" : `Salut <em>${esc(me.name || me.username)}.</em>`,
+      sub: opts.replay ? "Tu peux avancer, revenir en arrière ou fermer quand tu veux." : "Avant de commencer, regarde cette vidéo de 2 minutes : elle t'explique ce qui va se passer pour toi.", endSub: "Tu peux la revoir quand tu veux en haut de la page.", ...opts };
     const st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
     box = document.createElement("div"); box.className = "in-ov"; box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true"); box.setAttribute("aria-label", "Vidéo de présentation");
     box.innerHTML = `<div class="in-w">
@@ -708,7 +720,7 @@ const INTRO = window.INTRO = (() => {
   // manager ou fondateur : la vidéo « côté manager », une seule fois, à la première connexion
   const mgr = me => errRecent("/video/manager.mp4") ? null : fetch("/video/manager.mp4", { method: "HEAD" }).then(r => { if (r.ok) show(me, { src: "/video/manager.mp4", seen: "/api/me/mgr-intro-seen", eb: "CÔTÉ MANAGER",
     title: "Tout piloter <em>de A à Z.</em>", sub: "Moins de trois minutes pour voir comment gérer l'équipe, du recrutement jusqu'à la paie.", endSub: "Tout est là. À toi de piloter." }); }).catch(() => {});
-  return { show, check: me => { if (!INTRO_ON || !me) return; if ((me.role === "trainee" || me.role === "chatter") && !me.introSeen) { if (!errRecent(SRC)) show(me, me.role === "chatter" ? { skip: true } : {}); }
+  return { show, check: me => { if (!INTRO_ON || !me) return; if ((me.role === "trainee" || me.role === "chatter") && !me.introSeen && me.stage !== "formation") { if (!errRecent(me.role === "trainee" ? PSRC : SRC)) show(me, me.role === "chatter" ? { skip: true } : {}); }
     else if (me.role === "admin" && ["founder", "manager"].includes(me.rk) && !me.mgrIntroSeen) mgr(me); } };
 })();
 
@@ -731,7 +743,7 @@ const DEADLINE = window.DEADLINE = (() => {
       const main = document.querySelector(".main-area"); if (!main) return;
       el = document.createElement("div"); el.className = "dlb"; el.setAttribute("role", "timer");
       el.innerHTML = `<span class="dlb-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12M6 22h12M7 2c0 5 10 6 10 10S7 17 7 22M17 2c0 5-10 6-10 10s10 5 10 10"/></svg></span>
-        <div class="dlb-tx"><b>Temps restant pour terminer ta formation</b><small>Si tous tes critères ne sont pas verts à la fin du compte à rebours, ton compte sera désactivé et ta candidature refusée.</small></div>
+        <div class="dlb-tx"><b>Temps restant pour réussir ta sélection</b><small>Si tous tes critères ne sont pas verts à la fin du compte à rebours, ton compte sera désactivé et ta candidature refusée.</small></div>
         <span class="dlb-clk" data-clk></span><span class="dlb-bar"><span class="dlb-fill"></span></span>`;
       main.prepend(el);
       t = setInterval(paint, 1000);
