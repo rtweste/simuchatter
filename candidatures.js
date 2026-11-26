@@ -27,6 +27,11 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   const quizOf = r => { const q = J(r.quiz); if (!Array.isArray(q)) return null;
     const items = QUIZ.map(x => { const a = q.find(y => y && y.id === x.id) || {}; return { id: x.id, q: x.q, crit: x.crit, choice: a.choice ?? null, answer: x.opts[a.choice] ?? null, good: x.opts[x.ok], ok: a.choice === x.ok }; });
     return { items, correct: items.filter(x => x.ok).length, total: items.length }; };
+  // ce que voient les managers : on cache les candidatures sans ordinateur et celles qui n'ont pas le score demandé (ou une faute sur la règle de la rencontre).
+  // Une candidature déjà traitée (compte créé, refusée) reste visible ; si la correction a échoué, elle reste visible pour pouvoir la relancer.
+  const minScore = () => { const ag = gest.agency() || {}; return Number.isFinite(+ag.applyUnlock) && ag.applyUnlock !== "" && ag.applyUnlock != null ? +ag.applyUnlock : 70; };
+  const passedOf = r => r.ai_score != null && r.ai_score >= minScore() && (J(r.ai_detail) || {}).regles_ok !== false;
+  const visible = r => r.status !== "new" || (r.has_pc !== "no" && (passedOf(r) || (r.ai_score == null && !!r.ai_err)));
   async function grade(id) {
     const r = db.prepare("SELECT * FROM applications WHERE id = ?").get(id); if (!r || !ai || !ai.gradeApplicant) return;
     const ans = J(r.test_answers) || []; if (!ans.length) return;
@@ -40,6 +45,9 @@ module.exports = function mount(app, db, auth, admin, ctx) {
         g.criteres = g.criteres || {}; if (irl) { g.criteres.regles = irl.ok ? Math.max(8, g.criteres.regles || 0) : Math.min(2, g.criteres.regles ?? 2); if (!irl.ok) { g.regles_ok = false; g.score = Math.min(g.score, 45); } }
         if (qz.correct < qz.total) (g.a_ameliorer = g.a_ameliorer || []).push(`Questions : ${qz.correct}/${qz.total} bonnes réponses`); }
       db.prepare("UPDATE applications SET ai_score = ?, ai_detail = ?, ai_at = ?, ai_err = NULL WHERE id = ?").run(Math.max(0, Math.min(100, Math.round(g.score))), JSON.stringify(g), Date.now(), id);
+      // les managers ne sont prévenus que des candidatures qu'ils verront (test réussi, avec un ordinateur)
+      const r2 = db.prepare("SELECT * FROM applications WHERE id = ?").get(id);
+      if (r.ai_score == null && r2.status === "new" && visible(r2)) gest.log(null, "a", `Nouvelle candidature de **${r2.first_name}** · test réussi (${r2.ai_score}/100)`, `${r2.age} ans · ${CONTACT[r2.contact_type]}${r2.source ? " · pub : " + r2.source : ""}`);
     } catch (e) { console.error("correction candidature", id, e.message || e);
       // une re-correction ratée ne fait pas disparaître la note d'avant
       if (!r.ai_detail) db.prepare("UPDATE applications SET ai_err = ? WHERE id = ?").run(String(e.message || e).slice(0, 200), id); }
@@ -107,7 +115,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
   app.get("/api/apply/check", (req, res) => { const ct = CONTACT[req.query.type] ? req.query.type : null;
     res.json({ blocked: blockOf(req, ct, String(req.query.contact || "").slice(0, 80)) }); });
   // résultat du test : le WhatsApp du manager n'est donné que si le score atteint le seuil choisi dans les Réglages
-  const unlockOf = r => { const ag = gest.agency() || {}, dc = discordOf(), passed = r.ai_score != null && r.ai_score >= (Number.isFinite(+ag.applyUnlock) && ag.applyUnlock !== "" && ag.applyUnlock != null ? +ag.applyUnlock : 70) && (J(r.ai_detail) || {}).regles_ok !== false;
+  const unlockOf = r => { if (r.has_pc === "no") return null; const ag = gest.agency() || {}, dc = discordOf(), passed = r.ai_score != null && r.ai_score >= (Number.isFinite(+ag.applyUnlock) && ag.applyUnlock !== "" && ag.applyUnlock != null ? +ag.applyUnlock : 70) && (J(r.ai_detail) || {}).regles_ok !== false;
     // réussi : il choisit son créneau d'entretien et donne son pseudo Discord, puis reçoit le lien du serveur
     if (dc && passed) return { score: r.ai_score, discord: true, slots: r.interview_at ? null : ivSlots(), booked: r.interview_at ? { at: r.interview_at, label: ivLabel(r.interview_at), discord: r.discord, link: dc } : null };
     const wa = String(ag.applyWhatsapp || "").replace(/[^\d]/g, ""), min = Number.isFinite(+ag.applyUnlock) && ag.applyUnlock !== "" && ag.applyUnlock != null ? +ag.applyUnlock : 70;
@@ -117,6 +125,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const t = String(req.params.token || ""); if (!/^[a-f0-9]{24}$/.test(t)) return res.status(404).json({ error: "Introuvable" });
     const r = db.prepare("SELECT * FROM applications WHERE pub_token = ?").get(t); if (!r || Date.now() - r.at > 24 * 3600e3) return res.status(404).json({ error: "Introuvable" });
     if (r.ai_score == null && !r.ai_err && Date.now() - r.at < 120e3) return res.json({ state: "pending" });
+    if (r.has_pc === "no") return res.json({ state: "done", unlock: null, graded: false, passed: false });   // sans ordinateur : candidature enregistrée, pas d'entretien
     const ag = gest.agency() || {}, min = ag.applyUnlock != null && ag.applyUnlock !== "" && Number.isFinite(+ag.applyUnlock) ? +ag.applyUnlock : 70, g = J(r.ai_detail) || {};
     // passed : test réussi (même si le WhatsApp n'est pas encore renseigné) · graded : la correction a pu se faire
     // score + seuil renvoyés aussi en cas de refus : l'écran « Presque » affiche la jauge et l'écart au seuil
@@ -175,7 +184,6 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     try { if (b.ref && ctx.referrals) ctx.referrals.attach(newId, b.ref); } catch (e) {}   // parrainage
     setTimeout(() => grade(newId), 50);   // correction par l'IA en arrière-plan : ne ralentit pas l'envoi
     h.push(now); hits.set(ip, h);
-    gest.log(null, "a", `Nouvelle candidature de **${name}**`, `${age} ans · ${CONTACT[ct]}${src ? " · pub : " + src : ""}`);
     res.json({ ok: true, token: tok });
   });
 
@@ -192,7 +200,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
       test: (J(r.test_answers) || []).map(a => { const sc = SCEN.find(x => x.id === a.id) || {}; return { ...a, who: sc.who, fan: sc.fan, goal: sc.goal }; }),
       quiz: quizOf(r), score: r.ai_score, grade: J(r.ai_detail), gradePending: !!r.test_answers && r.ai_score == null && !r.ai_err, gradeErr: r.ai_err }; };
   app.get("/api/admin/applications", auth, admin, (req, res) => {
-    const rows = db.prepare("SELECT * FROM applications ORDER BY (status = 'new') DESC, at DESC LIMIT 300").all().map(view);
+    const rows = db.prepare("SELECT * FROM applications ORDER BY (status = 'new') DESC, at DESC LIMIT 600").all().filter(visible).slice(0, 300).map(view);
     const since = Date.now() - 30 * 864e5, src = {};
     db.prepare("SELECT source, status FROM applications WHERE at > ?").all(since).forEach(r => { const k = r.source || "direct"; src[k] = src[k] || { n: 0, hired: 0 }; src[k].n++; if (r.status === "accepted") src[k].hired++; });
     res.json({ items: rows, counts: { new: rows.filter(r => r.status === "new").length, accepted: rows.filter(r => r.status === "accepted").length, refused: rows.filter(r => r.status === "refused").length },
@@ -202,7 +210,7 @@ module.exports = function mount(app, db, auth, admin, ctx) {
     const id = parseInt(req.params.id, 10); db.prepare("UPDATE applications SET ai_err = NULL, ai_score = NULL, ai_tries = 0 WHERE id = ?").run(id); await grade(id);
     const r = db.prepare("SELECT * FROM applications WHERE id = ?").get(id); if (!r) return res.status(404).json({ error: "Introuvable" }); res.json({ ok: true, item: view(r) });
   });
-  app.get("/api/admin/applications/count", auth, admin, (req, res) => res.json({ new: db.prepare("SELECT COUNT(*) n FROM applications WHERE status = 'new'").get().n }));
+  app.get("/api/admin/applications/count", auth, admin, (req, res) => res.json({ new: db.prepare("SELECT * FROM applications WHERE status = 'new'").all().filter(visible).length }));
   app.post("/api/admin/applications/:id/seen", auth, admin, (req, res) => { db.prepare("UPDATE applications SET seen = 1 WHERE id = ?").run(parseInt(req.params.id, 10)); res.json({ ok: true }); });
   // créer le compte élève de la personne (identifiant tiré du prénom, mot de passe généré)
   const WORDS = ["lune", "rose", "nova", "ciel", "jade", "opal", "vega", "luna", "zest", "miel", "aube", "iris", "sable", "perle"];
