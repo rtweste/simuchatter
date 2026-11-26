@@ -9,7 +9,7 @@ const J = (s, d) => { try { const x = JSON.parse(s); return x == null ? d : x; }
 const H = 3600e3, D = 864e5;
 
 // ordre des modules : les règles d'abord, « Ton shift » débloque les shifts accompagnés, les gros clients en dernier
-const MODS = ["tw15", "tw9", "tw10", "tw12", "tw11", "tw16", "tw17", "tw8", "tw18", "tw13", "tw14"];   // « Ton shift » reste 6e : il débloque les shifts accompagnés
+const MODS = ["tw15", "tw9", "tw10", "tw12", "tw11", "tw16", "tw17", "tw19", "tw8", "tw18", "tw13", "tw14"];   // « Ton shift » reste 6e : il débloque les shifts accompagnés
 const SUP_AFTER = "tw16", TRAIN_NEED = 3, PER_DAY = 2, TYPING_GOAL = 60, MAX_DAYS = 14;
 const WELCOME = { id: "tw0", title: "Bienvenue en formation", file: "formation-00-bienvenue.mp4", sub: "Comment se passe ta formation" };
 

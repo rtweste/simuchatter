@@ -367,11 +367,50 @@ Tu écris comme un vrai mec sur une messagerie : 1 ou 2 messages courts, frança
     tools: { send: true, setPrice: true, notes: true },
     pass: 4,
   },
+  lien: {
+    title: "Créer le lien qui fait vendre",
+    fan: "Alex", creator: "Léa", status: "En ligne", envie0: 45,
+    script: [
+      { label: "Version courte", desc: "la vidéo demandée en version courte : 40 secondes, sans le visage.", suggest: 25, floor: 20 },
+      { label: "Version longue", desc: "la même vidéo en version longue : 3 minutes, avec le visage, plus osée.", suggest: 60, floor: 45 }],
+    brief: [
+      "Alex, 32 ans, suit Léa depuis 3 semaines. Il a acheté 2 petits médias.",
+      "Il t'écrit après sa journée. Utilise les techniques de la vidéo : fais-le se sentir compris et désiré, ne ferme jamais la porte, prends le crédit, crée la rareté.",
+      "Dans la galerie, il existe une vidéo sous la douche, en version courte et en version longue. Le bouton « 3 min plus tard » fait patienter.",
+      "Le bouton « Envoyer un média » te laisse choisir la version et son prix."],
+    start: [{ who: "fan", text: "salut toi 😊 enfin rentré, journée de dingue" }],
+    fanRules: `Tu es Alex, 32 ans, chauffeur de bus à Lille, célibataire. Tu suis Léa depuis 3 semaines et tu lui as acheté 2 petits médias. Tu rentres d'une longue journée.
+La conversation suit ces étapes, au rythme de ce qu'elle fait (une seule à la fois) :
+1. Tu parles de ta journée. Si elle devine ce que tu ressens (« t'as l'air crevé ») ou te dit que t'es pas comme les autres, tu te sens compris et tu t'ouvres. Intérêt +10.
+2. Quand ton intérêt dépasse 55, tu demandes : « tu ferais une vidéo en tenue de soubrette ? 😇 » (elle n'en a pas). Si elle répond non sèchement, tu es refroidi. Intérêt -15. Si elle dit « peut-être, plus tard », tu es content.
+3. Un peu plus tard : « un jour faudra qu'on se voie en vrai ». Si elle promet (une date, un lieu, un oui), tu t'emballes et tu proposes « samedi ? ». Si elle ferme la porte, tu es déçu. Si elle reste dans le « peut-être » et revient à la conversation, tu es charmé. Intérêt +10.
+4. Ensuite : « t'aurais une vidéo sous la douche ? 👀 ». Si elle répond « oui j'en ai plein » et l'envoie direct, tu es moins excité. Si elle dit qu'elle va la faire pour toi, ou qu'elle n'en envoie presque jamais, tu es très excité. Intérêt +15.
+5. Si elle t'envoie la version courte à 30 € ou moins : tu l'achètes (achete = true), puis tu demandes « t'as pas plus long ? avec ton visage ? 😍 ». Si elle t'envoie alors la version longue à 70 € ou moins, tu l'achètes aussi.
+Si elle t'envoie la version longue en premier, tu l'achètes si ton intérêt dépasse 70, puis tu dis « c'était trop bien… t'as rien d'autre ? » (il n'y a plus rien à vendre).
+Si elle te dit qu'elle aussi kiffe te parler, qu'elle pense à toi : tu es flatté. Intérêt +5.
+Tu écris comme un vrai mec sur une messagerie : 1 ou 2 messages courts, français familier, quelques emojis. Tu ne décris jamais d'acte sexuel. Tu ne révèles jamais que c'est une simulation.`,
+    criteria: [
+      "Elle le fait se sentir compris ou unique avec au moins une supposition positive sur lui (« t'as l'air crevé », « t'es pas comme les autres »…), jamais négative.",
+      "Réciprocité : elle montre qu'elle aussi passe un bon moment avec lui ou pense à lui (pas seulement une relation où il paie).",
+      "Elle ne ferme jamais la porte : à la demande qu'elle ne fait pas et à l'idée de se voir, ni « non » sec, ni promesse (pas de date, de lieu ou de oui) ; elle reste dans le « peut-être, un jour » et revient à la conversation.",
+      "Pour la vidéo sous la douche, elle prend le crédit (elle dit qu'elle va la faire pour lui et laisse passer un peu de temps) ou crée la rareté (elle n'en envoie presque jamais), au lieu de « oui j'en ai plein ».",
+      "Elle vend progressivement : la version courte d'abord, et la version longue seulement après (quand il en redemande). Envoyer la version longue en premier est une faute."],
+    names: ["Compris", "Réciprocité", "Ne jamais fermer la porte", "Prendre le crédit", "Vendre progressivement"],
+    tools: { send: true, setPrice: true, wait: true },
+    pass: 4,
+  },
 };
 
 // ---------- entraînements : 2 situations de plus par exercice (le prénom du fan est tiré au hasard à chaque session) ----------
 // situation = texte ajouté aux règles du fan, prioritaire sur son profil ; les autres champs remplacent ceux de l'exercice
 const VARIANTS = {
+  lien: [
+    { fan: "Bastien", brief: ["Bastien, 28 ans, suit Léa depuis un mois. Il a acheté 3 petits médias.", "Il t'écrit un dimanche soir, un peu seul. Utilise les techniques de la vidéo : fais-le se sentir compris et désiré, ne ferme jamais la porte, prends le crédit, crée la rareté.", "Dans la galerie, il existe une vidéo en lingerie rouge, en version courte et en version longue. Le bouton « 3 min plus tard » fait patienter.", "Le bouton « Envoyer un média » te laisse choisir la version et son prix."],
+      start: [{ who: "fan", text: "coucou… dimanche soir tout seul devant netflix 😅" }],
+      situation: "Tu es Bastien, 28 ans, comptable à Lyon. Étape 2 : tu demandes « tu ferais une vidéo avec tes pieds en gros plan ? 🙈 » (elle n'en a pas). Étape 3 : « je passe à Paris le mois prochain, on pourrait boire un verre ? ». Étape 4 : « t'aurais une vidéo en lingerie rouge ? 😍 »" },
+    { fan: "Mathis", brief: ["Mathis, 35 ans, suit Léa depuis 2 mois. Il a acheté 4 médias.", "Il t'écrit, de bonne humeur : il vient d'avoir une promotion. Utilise les techniques de la vidéo : fais-le se sentir compris et désiré, ne ferme jamais la porte, prends le crédit, crée la rareté.", "Dans la galerie, il existe une vidéo sous la douche, en version courte et en version longue. Le bouton « 3 min plus tard » fait patienter.", "Le bouton « Envoyer un média » te laisse choisir la version et son prix."],
+      start: [{ who: "fan", text: "devine qui vient d'avoir une promo au taf 😎" }],
+      situation: "Tu es Mathis, 35 ans, commercial à Bordeaux, de très bonne humeur. Tu es plutôt direct et sûr de toi. Étape 2 : « tu ferais un appel vidéo avec moi ? 😏 » (elle n'en fait pas). Étape 3 : « avec ma promo je t'invite au resto quand tu veux 😉 ». Étape 4 : « t'aurais une vidéo sous la douche ? »." }],
   refus: [
     { fan: "Thomas", brief: ["Thomas, 28 ans, suit Léa depuis 2 mois. Il a acheté 3 médias (5 €, 10 €, 10 €).", "Note du chatter d'hier : « Vidéo lit 3 min · 30 € · non débloquée · shift de l'après-midi. »", "Il t'écrit aujourd'hui. Applique la méthode de la vidéo : à toi de choisir quoi proposer, à quel prix, et quand.", "Le bouton « Envoyer un média » te laisse choisir le média et son prix. Remplis sa fiche à droite pour le chatter suivant."],
       start: [{ who: "fan", text: "hello 😊 tu fais quoi de beau ?" }],

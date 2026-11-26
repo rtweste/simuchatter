@@ -25,7 +25,8 @@ const ADV = [
   { id: "tw15", title: "Les interdits", file: "vente-09-interdits.mp4", sub: "La liste rouge, rencontres, argent, vie privée, quand il insiste · exercice au simulateur" },
   { id: "tw16", title: "Ton shift", file: "vente-10-shift.mp4", sub: "Pointer, l'ordre d'importance, 10 à 15 conversations, bien finir · exercice au simulateur" },
   { id: "tw17", title: "Les time wasters", file: "vente-11-time-wasters.mp4", sub: "Repérer, dernier dans la file mais jamais ignoré, quand il remonte · exercice au simulateur" },
-  { id: "tw18", title: "Après un refus : ajuster le prix", file: "vente-12-apres-refus.mp4", sub: "Un refus donne une information, 25 → 10 → 5 €, la note pour le chatter suivant · exercice au simulateur" }];
+  { id: "tw18", title: "Après un refus : ajuster le prix", file: "vente-12-apres-refus.mp4", sub: "Un refus donne une information, 25 → 10 → 5 €, la note pour le chatter suivant · exercice au simulateur" },
+  { id: "tw19", title: "Créer le lien qui fait vendre", file: "vente-13-lien.mp4", sub: "Suppositions, réciprocité, ne jamais fermer la porte, prendre le crédit, rareté, urgence · exercice au simulateur" }];
 // Vidéos à revoir librement
 const EXTRA = [
   { id: "x-parcours", title: "Ton parcours chez StellADS", src: "/video/ton-parcours.mp4", for: ["trainee"] },
@@ -35,7 +36,8 @@ const QUIZ = {
   tw10: [{ id: "ex", at: 364.7, from: 86.8, title: "La patience", sim: "patience", qs: [] }],
   tw12: [{ id: "ex", at: 358.3, from: 88.4, title: "Faire monter l'envie", sim: "envie", qs: [] }],
   tw13: [{ id: "ex", at: 314.0, from: 75.8, title: "Après la session", sim: "apres", qs: [] }],
-  tw14: [{ id: "ex", at: 315.0, from: 75.0, title: "Les gros clients", sim: "gros", qs: [] }],
+  tw14: [{ id: "ex", at: 356.8, from: 75.0, title: "Les gros clients", sim: "gros", qs: [] }],
+  tw19: [{ id: "ex", at: 398.0, from: 10.8, title: "Créer le lien", sim: "lien", qs: [] }],
   tw18: [{ id: "ex", at: 216.5, from: 8.0, title: "Après un refus", sim: "refus", qs: [] }],
   tw17: [{ id: "ex", at: 453.0, from: 90.4, title: "Les time wasters", sim: "wasters", qs: [] }],
   tw15: [{ id: "ex", at: 331.0, from: 75.4, title: "Les interdits", sim: "interdits", qs: [] }],
