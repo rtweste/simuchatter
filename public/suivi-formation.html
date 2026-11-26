@@ -42,7 +42,7 @@ tbody tr.ck{cursor:pointer;transition:background .2s}tbody tr.ck:hover{backgroun
 .stp{--c:#9a9a9a;display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px 0 8px;border-radius:999px;font:800 12px Inter;white-space:nowrap;color:color-mix(in srgb,var(--c) 80%,#fff);background:color-mix(in srgb,var(--c) 12%,transparent);border:1px solid color-mix(in srgb,var(--c) 35%,transparent)}
 .stp i{width:6px;height:6px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
 .mb{min-width:170px}.mb .row{display:flex;justify-content:space-between;font:800 12px Inter;color:#e6e6e6}.mb .row span{color:#6a6a6a;font-weight:700}
-.mb .bar{display:grid;grid-template-columns:repeat(9,1fr);gap:3px;margin-top:6px}.mb .bar i{height:6px;border-radius:3px;background:#222}.mb .bar i.ok{background:#5fd3a2}.mb .bar i.c{background:#bdbdbd}
+.mb .bar{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:3px;margin-top:6px}.mb .bar i{height:6px;border-radius:3px;background:#222}.mb .bar i.ok{background:#5fd3a2}.mb .bar i.c{background:#bdbdbd}
 .mb small{display:block;font:600 11px Inter;color:#6a6a6a;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
 .ty{font:800 13px Inter;white-space:nowrap}.ty.ok{color:#5fd3a2}.ty.no{color:#bdbdbd}.ty small{color:#5a5a5a;font-weight:700}
 .cd{font:800 13px Inter;font-variant-numeric:tabular-nums;white-space:nowrap}.cd.hot{color:#ff8a8a}.cd small{display:block;font:600 11px Inter;color:#6a6a6a}
@@ -144,7 +144,7 @@ function tabs() {
   $("tabs").innerHTML = `<button class="tab ${TAB === "sel" ? "on" : ""}" data-t="sel">Sélection (24 h) <small>${nS}</small></button><button class="tab ${TAB === "form" ? "on" : ""}" data-t="form">En formation <small>${nF}</small>${al ? '<span class="dt"></span>' : ""}</button>`;
   $("tabs").querySelectorAll("[data-t]").forEach(b => b.onclick = () => { TAB = b.dataset.t; history.replaceState(null, "", TAB === "sel" ? "?t=sel" : location.pathname); draw(); });
   $("lead").innerHTML = TAB === "sel" ? "Les candidats ont <b>24 heures</b> pour réussir le simulateur, la frappe et la connexion. Ceux qui réussissent passent l'entretien : à toi de dire s'ils sont <b>retenus</b> (ils passent en formation) ou <b>refusés</b>."
-    : `Les chatters en formation : 9 modules, des entraînements et des shifts accompagnés. Clique sur quelqu'un pour voir sa fiche, planifier un shift ou le <b>passer chatter</b> (prime de formation de <b>${D.prime} €</b> ajoutée à sa première paie).`;
+    : `Les chatters en formation : tous les modules, des entraînements et des shifts accompagnés. Clique sur quelqu'un pour voir sa fiche, planifier un shift ou le <b>passer chatter</b> (prime de formation de <b>${D.prime} €</b> ajoutée à sa première paie).`;
 }
 // ---------- Sélection (24 h) ----------
 function drawSel() {

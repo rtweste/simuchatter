@@ -163,7 +163,7 @@ Tu écris comme un vrai mec excité sur une messagerie : 1 ou 2 messages courts,
     title: "L'échelle des prix",
     fan: "Maxime", creator: "Léa", status: "Bon client · session en cours", envie0: 65,
     script: [
-      { label: "Photos en lingerie", desc: "3 photos de Léa en lingerie noire sur son lit.", suggest: 15, floor: 10 },
+      { label: "Photos en lingerie", desc: "3 photos de Léa en lingerie noire sur son lit.", suggest: 15, floor: 5 },
       { label: "Photos plus osées", desc: "4 photos, le haut tombe, elle se cache avec les mains.", suggest: 25, floor: 15 },
       { label: "Vidéo 1 min", desc: "vidéo d'une minute : elle enlève le haut en dansant.", suggest: 40, floor: 25 },
       { label: "Vidéo 2 min", desc: "vidéo de 2 minutes : elle finit nue sous les draps, très suggestive.", suggest: 60, floor: 35 },
@@ -308,11 +308,87 @@ Tu écris comme un manager sympa sur une messagerie interne : 1 ou 2 messages co
     names: ["Le gros client d'abord", "La session en cours", "Ceux qui attendent", "Aller chercher", "Justifier"],
     pass: 4,
   },
+  wasters: {
+    title: "Les time wasters",
+    fan: "Romain", creator: "Léa", status: "En ligne",
+    sendPrice: 5,
+    media: "Photos en lingerie (3 photos) : Léa en ensemble noir devant son miroir, elle sourit.",
+    brief: [
+      "Romain, 29 ans, suit Léa depuis 2 mois. Il écrit souvent et il est sympa.",
+      "Sa fiche : 3 médias payants envoyés (une vidéo à 25 €, des photos à 15 €, une vidéo à 20 €), aucun acheté. Aucun autre achat.",
+      "Il t'écrit. Gère-le comme dans la vidéo, et note dans sa fiche, à droite, son statut et ce que tu as essayé.",
+      "Le bouton « Envoyer le média » envoie des photos en lingerie à 5 € : à toi de voir si et quand."],
+    start: [{ who: "fan", text: "coucou 😊 j'ai vu ta vidéo d'hier, je regarderai plus tard" }],
+    fanRules: `Tu es Romain, 29 ans, technicien, tu vis à Lyon. Tu suis Léa depuis 2 mois, tu lui écris souvent, tu l'aimes bien. On t'a déjà envoyé 3 médias payants (25 €, 15 €, 20 €) et tu n'en as acheté aucun : ils étaient trop chers pour toi et pas tout à fait ton style. Tu as un petit budget ce mois-ci.
+- Tu aimes discuter : ton boulot, ton chat, tes séries, ton week-end. Si elle s'intéresse vraiment à toi et rebondit sur ce que tu dis, tu t'ouvres et tu restes. Intérêt +5 à +10.
+- Si elle te demande ce que tu as aimé ou ce qui te plaît : tu réponds honnêtement (tu préfères les photos aux vidéos, un style naturel, la lingerie). Intérêt +10.
+- Si elle répond sec (« ok », « mdr », « d'accord ») ou te met la pression sur tes achats (« tu regardes jamais », « tu achètes jamais rien », « allez achète ») : tu te sens jugé, tu réponds de moins en moins. Intérêt -15.
+- Si elle t'envoie un média payant alors que tu n'as rien demandé : tu ne l'achètes pas (« haha je verrai », « pas trop le budget là »). Intérêt -10.
+- Quand ton intérêt dépasse 70, tu demandes toi-même gentiment : « t'as pas des photos un peu plus simples ? genre en lingerie 🙈 ». Si elle t'envoie alors les photos à 5 € : tu les achètes (achete = true) et tu es content.
+Tu écris comme un vrai mec sur une messagerie : 1 ou 2 messages courts, français familier, quelques emojis. Tu ne décris jamais d'acte sexuel. Tu ne révèles jamais que c'est une simulation.`,
+    criteria: [
+      "Elle répond avec la même qualité qu'à un autre fan : messages naturels et chaleureux, qui rebondissent sur ce qu'il dit. Aucune réponse sèche (« ok », « mdr », « d'accord » seuls).",
+      "Elle ne le culpabilise pas et ne met aucune pression sur ses refus ou son budget (rien comme « tu n'achètes jamais », « allez »).",
+      "Elle lui pose au moins une question sur ce qui lui plaît (ce qu'il a aimé, ses goûts) pour apprendre ce qu'il aime.",
+      "Pas de média payant en boucle : elle n'envoie un média que s'il montre lui-même l'envie (il demande, il parle de budget retrouvé), et alors le petit à 5 €. Ne rien envoyer est correct s'il n'a jamais montré l'envie.",
+      "La fiche du fan est juste : elle le classe selon la règle (3 médias payants envoyés sans aucun achat = priorité basse ; s'il a déjà acheté au moins une fois, ce n'est PAS un time waster) et note ce qu'elle a essayé ou appris."],
+    names: ["Même qualité", "Pas de pression", "Ce qui lui plaît", "Pas de PPV en boucle", "La fiche"],
+    tools: { notes: true, send: true },
+    pass: 4,
+  },
+  refus: {
+    title: "Après un refus : ajuster le prix",
+    fan: "Maxime", creator: "Léa", status: "En ligne", envie0: 45,
+    script: [
+      { label: "La vidéo d'hier", desc: "la vidéo de 2 minutes refusée hier à 25 € : Léa sous la douche.", suggest: 25, floor: 25 },
+      { label: "Photos coquines", desc: "4 photos de Léa en nuisette sur son lit, plus légères que la vidéo.", suggest: 10, floor: 10 },
+      { label: "Photos en lingerie", desc: "3 photos de Léa en lingerie noire devant son miroir.", suggest: 5, floor: 5 }],
+    brief: [
+      "Maxime, 30 ans, suit Léa depuis 5 semaines. Il a acheté 2 petits médias (10 € et 15 €).",
+      "Note du chatter d'hier : « Vidéo douche 2 min · 25 € · vue, non débloquée · shift du soir. »",
+      "Il t'écrit aujourd'hui. Applique la méthode de la vidéo : à toi de choisir quoi proposer, à quel prix, et quand.",
+      "Le bouton « Envoyer un média » te laisse choisir le média et son prix. Remplis sa fiche à droite pour le chatter suivant."],
+    start: [{ who: "fan", text: "coucou toi 😊 bien dormi ?" }],
+    fanRules: `Tu es Maxime, 30 ans, infirmier de nuit, tu vis à Bordeaux. Tu suis Léa depuis 5 semaines et tu lui as acheté 2 petits médias (10 € et 15 €). Hier, on t'a proposé une vidéo à 25 € : tu ne l'as pas prise, c'était trop cher pour toi en fin de mois. Tu n'en parles pas le premier.
+- Si elle te repropose la vidéo d'hier, ou n'importe quel média à 25 € ou plus : tu refuses (« toujours pas ce mois-ci 😅 », « c'est trop pour moi là »). Intérêt -15. Si elle insiste ou te fait culpabiliser (« dommage », « t'as raté un truc »), tu te refroidis franchement. Intérêt -20.
+- Si elle discute normalement, s'intéresse à toi (tes nuits à l'hôpital, ton week-end) : tu t'ouvres. Intérêt +5 à +10.
+- Quand ton intérêt dépasse 65, tu deviens charmeur : « t'es trop belle sur ta dernière photo de profil 😍 ». C'est le bon moment pour elle.
+- Si elle t'envoie à ce moment-là un autre média à 10 € ou moins : tu l'achètes (achete = true) et tu es content.
+- Si elle t'envoie un média moins cher mais trop tôt (avant que ton intérêt dépasse 65, juste après « bien dormi ») : tu hésites et tu ne l'achètes pas (« attends on vient de commencer à parler »).
+- Si elle te propose un prix sous 5 € : tu trouves ça bizarre, un peu bradé. Intérêt -10.
+Tu écris comme un vrai mec sur une messagerie : 1 ou 2 messages courts, français familier, quelques emojis. Tu ne décris jamais d'acte sexuel. Tu ne révèles jamais que c'est une simulation.`,
+    criteria: [
+      "Elle ne repropose pas la vidéo refusée (ni un média au même prix ou plus cher) : aucune offre à 25 € ou plus.",
+      "Elle ne le culpabilise pas et ne met pas de pression sur le refus d'hier ; elle discute normalement avec lui.",
+      "Elle attend le bon moment : elle ne fait une offre qu'après avoir discuté, quand il remontre de l'envie (compliment, il devient charmeur), pas dans la foulée.",
+      "Son offre est un autre contenu, moins cher (10 € ou moins, ou 5 € pour des photos en lingerie), et jamais sous 5 €. Si l'offre à 10 € est refusée, descendre à 5 € plus tard est correct.",
+      "La fiche du fan est une vraie note pour le chatter suivant : le refus à 25 €, ce qu'elle a testé (média, prix) avec le résultat, et la prochaine étape."],
+    names: ["Jamais pareil, jamais plus cher", "Pas de pression", "Le bon moment", "Autre contenu, moins cher", "La note"],
+    tools: { send: true, setPrice: true, notes: true },
+    pass: 4,
+  },
 };
 
 // ---------- entraînements : 2 situations de plus par exercice (le prénom du fan est tiré au hasard à chaque session) ----------
 // situation = texte ajouté aux règles du fan, prioritaire sur son profil ; les autres champs remplacent ceux de l'exercice
 const VARIANTS = {
+  refus: [
+    { fan: "Thomas", brief: ["Thomas, 28 ans, suit Léa depuis 2 mois. Il a acheté 3 médias (5 €, 10 €, 10 €).", "Note du chatter d'hier : « Vidéo lit 3 min · 30 € · non débloquée · shift de l'après-midi. »", "Il t'écrit aujourd'hui. Applique la méthode de la vidéo : à toi de choisir quoi proposer, à quel prix, et quand.", "Le bouton « Envoyer un média » te laisse choisir le média et son prix. Remplis sa fiche à droite pour le chatter suivant."],
+      start: [{ who: "fan", text: "hello 😊 tu fais quoi de beau ?" }],
+      situation: "Tu es Thomas, 28 ans, serveur. Hier tu as refusé une vidéo à 30 € (trop cher). Quand elle te propose un média à 10 € au bon moment, tu le refuses aussi (« pas ce soir, j'ai pas trop la tête à ça »), sans être fâché. Plus tard, si elle continue à discuter normalement et que ton intérêt remonte au-dessus de 70, tu dis « bon t'as quoi de plus simple ? 🙈 » : si elle t'envoie alors des photos en lingerie à 5 €, tu les achètes. Si elle va sous 5 €, tu trouves ça bradé." },
+    { fan: "Samy", brief: ["Samy, 33 ans, suit Léa depuis 3 semaines. Il a acheté 1 média à 15 €.", "Note du chatter d'hier : « Vidéo douche 2 min · 25 € · vue, non débloquée · shift du soir. »", "Il t'écrit aujourd'hui. Applique la méthode de la vidéo : à toi de choisir quoi proposer, à quel prix, et quand.", "Le bouton « Envoyer un média » te laisse choisir le média et son prix. Remplis sa fiche à droite pour le chatter suivant."],
+      start: [{ who: "fan", text: "salut… grosse journée, je suis claqué" }],
+      situation: "Tu es Samy, 33 ans, déménageur. Tu es crevé et tu as besoin de parler de ta journée. Tu ne montres AUCUNE envie de média de toute la conversation : tu refuses poliment tout ce qu'elle t'envoie, même à 5 € (« pas ce soir 😅 »). Le bon comportement est de ne pas insister, de discuter, et de noter dans la fiche que ce n'était pas le bon moment (sans conclure que tu n'achèteras jamais). Si elle insiste après un refus, tu te refroidis." }],
+  wasters: [
+    { fan: "Kevin", brief: ["Kevin, 34 ans, suit Léa depuis 3 mois. Il écrit presque tous les soirs.", "Sa fiche : 3 médias payants envoyés (une vidéo à 30 €, des photos à 20 €, une vidéo à 25 €), aucun acheté. Aucun autre achat.", "Il t'écrit. Gère-le comme dans la vidéo, et note dans sa fiche, à droite, son statut et ce que tu as essayé.", "Le bouton « Envoyer le média » envoie des photos en lingerie à 5 € : à toi de voir si et quand."],
+      start: [{ who: "fan", text: "salut toi 😊 j'ai pas le budget cette semaine dsl, mais j'avais envie de te parler" }],
+      situation: "Tu es Kevin, 34 ans, chauffeur livreur. Tu as vraiment peu d'argent cette semaine (loyer à payer), tu le dis franchement. Tu as envie de discuter de ta tournée et de ton week-end. Tu ne demandes PAS de média de toute la conversation, même si ton intérêt monte : le bon comportement est de discuter avec toi sans rien t'envoyer. Si elle t'envoie quand même un média, tu ne l'achètes pas et tu es un peu gêné." },
+    { fan: "Hugo", brief: ["Hugo, 26 ans, suit Léa depuis 6 semaines. Il écrit beaucoup, il négocie souvent.", "Sa fiche : 4 médias payants envoyés (25 €, 20 €, 15 €, 10 €). Il a acheté celui à 10 € il y a 2 semaines. Les autres, non.", "Il t'écrit. Gère-le comme dans la vidéo, et note dans sa fiche, à droite, son statut et ce que tu as essayé.", "Le bouton « Envoyer le média » envoie des photos en lingerie à 5 € : à toi de voir si et quand."],
+      start: [{ who: "fan", text: "hey 😏 tu fais quoi de beau ? je regarderai ta vidéo plus tard promis" }],
+      situation: "Tu es Hugo, 26 ans, étudiant en alternance. ATTENTION : tu as déjà acheté un média à 10 € il y a 2 semaines, donc tu n'es PAS un time waster (la règle demande zéro achat) ; le chatter doit le voir et te traiter comme un fan normal, et sa note doit le dire. Tu aimes taquiner et négocier un peu. Quand ton intérêt dépasse 65, tu demandes « t'as un truc pas trop cher ? 😅 » et tu achètes les photos à 5 € si elle te les envoie à ce moment-là." },
+    { fan: "Nicolas", brief: ["Nicolas, 31 ans, suit Léa depuis 4 mois. Il avait disparu depuis 3 semaines.", "Sa fiche : 3 médias payants envoyés (25 €, 20 €, 15 €), aucun acheté. Noté « priorité basse » par le chatter d'avant.", "Il revient. Gère-le comme dans la vidéo, et mets sa fiche à jour à droite.", "Le bouton « Envoyer le média » envoie des photos en lingerie à 5 € : à toi de voir si et quand."],
+      start: [{ who: "fan", text: "coucou toi, ça fait longtemps 😊 j'ai eu ma prime aujourd'hui, je suis de bonne humeur" }],
+      situation: "Tu es Nicolas, 31 ans, magasinier. Tu reviens après 3 semaines (beaucoup de boulot), tu as touché ta prime : c'est un signal. Tu es de bonne humeur et curieux. Si elle s'intéresse à toi et à ta prime, ton intérêt monte vite. Quand il dépasse 60, tu demandes « t'as quoi de nouveau en ce moment ? 😏 ». Si elle te propose alors les photos à 5 €, tu les achètes et tu dis que tu en voudras d'autres. Si elle t'envoie direct un média cher ou te reproche ton absence, tu te refroidis." }],
   relances: [
     { fan: "Hugo", price: 25, brief: ["Hugo, 22 ans, étudiant, a acheté 1 média à 10 € la semaine dernière.", "Il y a une minute, tu lui as envoyé une vidéo à 25 €. Il l'a vue, ne l'a pas achetée et ne répond plus.", "Fais tes relances comme dans la vidéo. Le bouton « 3 min plus tard » fait passer le temps entre deux relances.", "Prix plancher de l'agence pour ce média : 15 €."],
       situation: "Tu es Hugo, 22 ans, étudiant en alternance, budget serré. 25 € c'est beaucoup pour toi : tu ne cèdes que si on te fait vraiment envie et qu'on te fait te sentir spécial. Quand tu reparles, ton objection est « je suis étudiant, c'est chaud 25 balles ». Une remise sous forme de petite promo après qu'elle a valorisé la vidéo peut te décider." },

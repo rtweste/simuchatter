@@ -62,10 +62,10 @@
       </div></div></div>`;
     // candidat en sélection : seulement ses deux vidéos ; la messagerie et les modules sont pour la formation, s'il est retenu
     if (L.trainee) root.innerHTML = `<div class="tr"><div class="tr-eb">SÉLECTION</div><h1 class="tr-ttl">Tes <em>vidéos.</em></h1>
-      <div class="fo-sub">Pendant ta sélection, regarde ces deux vidéos. La messagerie et les 9 modules de formation s'ouvrent si tu es retenu après ton entretien.</div>
+      <div class="fo-sub">Pendant ta sélection, regarde ces deux vidéos. La messagerie et les modules de formation s'ouvrent si tu es retenu après ton entretien.</div>
       <div class="fo-g"><div class="fo-col"><section class="tr-card co-card"><div class="tr-ch"><h3>Pour ta <em>sélection</em></h3></div><div class="co-list" style="margin-top:10px">${rows(X, "extra")}</div></section></div>
         <div class="fo-col"><section class="tr-card co-card" style="--d:.05s"><div class="tr-ch"><h3>Ta <em>formation</em></h3><span class="tr-tag">Si tu es retenu</span></div>
-          <div class="fo-lk">${LOCK}<span>Jour 1 : la messagerie de A à Z. Puis 9 modules, chacun avec sa vidéo, son exercice et ses entraînements au simulateur, et des shifts accompagnés par ton manager.</span></div></section></div></div></div>`;
+          <div class="fo-lk">${LOCK}<span>Jour 1 : la messagerie de A à Z. Puis les modules, chacun avec sa vidéo, son exercice et ses entraînements au simulateur, et des shifts accompagnés par ton manager.</span></div></section></div></div></div>`;
     const SETS = { base: B, adv: A, extra: X };
     const open = (k, id) => TRAINEE.player(SETS[k], id, next => render(next, k));
     root.querySelectorAll(".co-v[data-v]").forEach(b => b.onclick = () => open(b.dataset.k, b.dataset.v));

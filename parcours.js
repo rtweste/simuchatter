@@ -9,7 +9,7 @@ const J = (s, d) => { try { const x = JSON.parse(s); return x == null ? d : x; }
 const H = 3600e3, D = 864e5;
 
 // ordre des modules : les règles d'abord, « Ton shift » débloque les shifts accompagnés, les gros clients en dernier
-const MODS = ["tw15", "tw9", "tw10", "tw12", "tw11", "tw16", "tw8", "tw13", "tw14"];
+const MODS = ["tw15", "tw9", "tw10", "tw12", "tw11", "tw16", "tw17", "tw8", "tw18", "tw13", "tw14"];   // « Ton shift » reste 6e : il débloque les shifts accompagnés
 const SUP_AFTER = "tw16", TRAIN_NEED = 3, PER_DAY = 2, TYPING_GOAL = 60, MAX_DAYS = 14;
 const WELCOME = { id: "tw0", title: "Bienvenue en formation", file: "formation-00-bienvenue.mp4", sub: "Comment se passe ta formation" };
 
@@ -50,12 +50,12 @@ module.exports = function mount(app, db, auth, admin, { gest: G, notify, inbox, 
     if (!j1.complete) { const v = j1.next || j1.videos.find(x => !x.done); next = { kind: "j1", title: v ? v.title : "Les bases", sub: `Jour 1 · vidéo ${v ? v.n : j1.done + 1} sur ${j1.total}`, btn: v && v.pos > 3 ? "Reprendre la vidéo" : "Regarder la vidéo", vid: v ? v.id : null, set: "base" }; }
     else if (cur) {
       const watchedEnough = cur.video.done || cur.exOk;
-      if (!cur.exOk) next = { kind: "video", mod: cur.id, title: cur.title, sub: `Module ${cur.n} sur 9 · ${cur.video.pos > 3 ? "reprends la vidéo, l'exercice t'attend à la fin" : "la vidéo, puis l'exercice au simulateur"}`, btn: cur.video.pos > 3 ? "Reprendre" : "Regarder la vidéo", vid: cur.id, set: "adv" };
-      else next = { kind: "train", mod: cur.id, title: cur.title, sub: `Module ${cur.n} sur 9 · entraînement ${cur.trainOk + 1} sur ${TRAIN_NEED}`, btn: `Lancer l'entraînement ${cur.trainOk + 1}/${TRAIN_NEED}`, vid: cur.id, n: cur.trainOk + 1 };
+      if (!cur.exOk) next = { kind: "video", mod: cur.id, title: cur.title, sub: `Module ${cur.n} sur ${mods.length} · ${cur.video.pos > 3 ? "reprends la vidéo, l'exercice t'attend à la fin" : "la vidéo, puis l'exercice au simulateur"}`, btn: cur.video.pos > 3 ? "Reprendre" : "Regarder la vidéo", vid: cur.id, set: "adv" };
+      else next = { kind: "train", mod: cur.id, title: cur.title, sub: `Module ${cur.n} sur ${mods.length} · entraînement ${cur.trainOk + 1} sur ${TRAIN_NEED}`, btn: `Lancer l'entraînement ${cur.trainOk + 1}/${TRAIN_NEED}`, vid: cur.id, n: cur.trainOk + 1 };
       if (!watchedEnough && cur.exOk) next.kind = "train";
     }
     else if (cap) next = { kind: "cap", title: "C'est tout pour aujourd'hui", sub: `${PER_DAY} modules validés aujourd'hui : le suivant se débloque demain. En attendant, entraîne-toi au simulateur ou travaille ta frappe.` };
-    else if (done === mods.length && (typing || 0) < TYPING_GOAL) next = { kind: "typing", title: "Ta vitesse de frappe", sub: `Les 9 modules sont validés 🎉 Il te reste à atteindre ${TYPING_GOAL} mots/min (ton meilleur : ${typing ? Math.round(typing) : "—"}).`, btn: "Faire le test de frappe", href: "/tests?t=typing" };
+    else if (done === mods.length && (typing || 0) < TYPING_GOAL) next = { kind: "typing", title: "Ta vitesse de frappe", sub: `Les ${mods.length} modules sont validés 🎉 Il te reste à atteindre ${TYPING_GOAL} mots/min (ton meilleur : ${typing ? Math.round(typing) : "—"}).`, btn: "Faire le test de frappe", href: "/tests?t=typing" };
     else if (done === mods.length) next = { kind: "ready", title: "Prêt pour l'entretien final", sub: "Tout est validé. Ton manager a été prévenu : il va te proposer ton entretien final." };
     else next = { kind: "wait", title: "Ta formation", sub: "La suite arrive bientôt." };
     const day = Math.max(1, Math.floor((t - since) / D) + 1), ready = done === mods.length && mods.length > 0 && (typing || 0) >= TYPING_GOAL;

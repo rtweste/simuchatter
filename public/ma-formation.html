@@ -121,8 +121,8 @@ details.pf-j1 summary .chev{transition:transform .25s;color:#6a6a6a}details.pf-j
     const s = S, cur = s.mods.find(m => !m.complete && !m.locked), N = s.next, j1 = s.j1;
     const curIdx = !j1.complete ? -1 : cur ? cur.n - 1 : s.done;
     const segP = m => !m ? 0 : (m.exOk ? .4 : m.video.pos && m.video.dur ? .3 * Math.min(1, m.video.pos / m.video.dur) : .06) + (m.trainOk / m.trainNeed) * .6;
-    const bar = `<div class="pf-bar"><div class="pf-sg${j1.complete ? "" : " cur"}" style="--p:${j1.total ? Math.max(.08, j1.done / j1.total) : 0}"><i style="--d:.1s"></i></div>${s.mods.map((m, i) => `<div class="pf-sg${m.complete ? "" : i === curIdx ? " cur" : " no"}" style="--p:${Math.max(.08, segP(m))}">${m.complete ? `<i style="--d:${.15 + i * .07}s"></i>` : i === curIdx ? "<i></i>" : ""}</div>`).join("")}</div>
-      <div class="pf-bl"><span class="${j1.complete ? "ok" : "cur"}">JOUR 1</span>${s.mods.map((m, i) => `<span class="${m.complete ? "ok" : i === curIdx ? "cur" : ""}">${m.n}</span>`).join("")}</div>`;
+    const bar = `<div class="pf-bar" style="grid-template-columns:1.2fr repeat(${s.total},1fr)"><div class="pf-sg${j1.complete ? "" : " cur"}" style="--p:${j1.total ? Math.max(.08, j1.done / j1.total) : 0}"><i style="--d:.1s"></i></div>${s.mods.map((m, i) => `<div class="pf-sg${m.complete ? "" : i === curIdx ? " cur" : " no"}" style="--p:${Math.max(.08, segP(m))}">${m.complete ? `<i style="--d:${.15 + i * .07}s"></i>` : i === curIdx ? "<i></i>" : ""}</div>`).join("")}</div>
+      <div class="pf-bl" style="grid-template-columns:1.2fr repeat(${s.total},1fr)"><span class="${j1.complete ? "ok" : "cur"}">JOUR 1</span>${s.mods.map((m, i) => `<span class="${m.complete ? "ok" : i === curIdx ? "cur" : ""}">${m.n}</span>`).join("")}</div>`;
     // la seule chose à faire maintenant
     const isTrain = N.kind === "train", nowCls = N.kind === "cap" || N.kind === "wait" ? " cap" : N.kind === "ready" ? " ready" : "";
     const nowBtn = N.btn ? (N.href ? `<a class="tr-wbtn" href="${N.href}">${esc(N.btn)} ${ARW}</a>` : `<button class="tr-wbtn" data-now>${N.kind === "train" ? "" : PLAY.replace("<svg", '<svg width="16" height="16"')}${esc(N.btn)} ${N.kind === "train" ? ARW : ""}</button>`) : "";
@@ -130,7 +130,7 @@ details.pf-j1 summary .chev{transition:transform .25s;color:#6a6a6a}details.pf-j
     const now = `<section class="tr-card pf-now${nowCls}"><div class="tr-eb pf-ey"><i></i>${N.kind === "ready" ? "C'EST BON" : N.kind === "cap" ? "BRAVO POUR AUJOURD'HUI" : "À FAIRE MAINTENANT"}</div>
       <h2>${esc(N.title)}</h2><p>${esc(N.sub)}</p>${dots}${nowBtn}</section>`;
     // modules
-    const mods = `<section class="tr-card" style="--d:.06s"><div class="tr-ch"><h3>Tes <em>9 modules</em></h3><span class="tr-tag${s.done === s.total ? " g" : ""}">${s.done} / ${s.total}</span></div>
+    const mods = `<section class="tr-card" style="--d:.06s"><div class="tr-ch"><h3>Tes <em>${s.total} modules</em></h3><span class="tr-tag${s.done === s.total ? " g" : ""}">${s.done} / ${s.total}</span></div>
       <div class="tr-mut">Chaque module : la vidéo et son exercice, puis 3 entraînements réussis au simulateur. ${s.perDay} modules par jour au maximum.</div>
       <div class="pf-ml">${s.mods.map((m, i) => `<button class="pf-m${m.complete ? " ok" : m === cur ? " cur" : m.cap ? " cap lk" : m.locked ? " lk" : ""}" data-m="${m.id}" style="--d:${.05 + i * .035}s" ${m.locked ? "disabled" : ""}>
         <span class="n">${m.complete ? CHECK : m.locked ? LOCK : m.n}</span><span class="t"><b>${esc(m.title)}</b><small>${stateTxt(m)}</small></span>
@@ -151,7 +151,7 @@ details.pf-j1 summary .chev{transition:transform .25s;color:#6a6a6a}details.pf-j
     const ty = s.typing ? Math.round(s.typing) : null, tyOk = ty != null && ty >= s.typingGoal;
     const ck = (ok, b, sm, v, extra) => `<div class="tr-ck${ok ? " ok" : ""}"><span class="bx">${ok ? CHECK : ""}</span><div><b>${b}</b><small>${sm}</small></div><span class="v${ok ? "" : " no"}">${v}</span>${extra || ""}</div>`;
     const fin = `<section class="tr-card" style="--d:.12s"><div class="tr-ch"><h3>Pour l'<em>entretien final</em></h3></div>
-      <div class="tr-cks">${ck(s.done === s.total, "Les 9 modules validés", "vidéo, exercice et 3 entraînements chacun", `${s.done} / ${s.total}`)}
+      <div class="tr-cks">${ck(s.done === s.total, `Les ${s.total} modules validés`, "vidéo, exercice et 3 entraînements chacun", `${s.done} / ${s.total}`)}
         ${ck(tyOk, `Frappe à ${s.typingGoal} mots/min`, `test de frappe, 90 % de précision · <a href="/tests?t=typing" style="color:#cfcfcf">${ty == null ? "faire le test" : "retenter"}</a>`, ty == null ? "—" : `${ty}`)}
         ${ck(s.ready, "Entretien avec ton manager", s.ready ? "ton manager a été prévenu" : "dès que les deux sont verts", s.ready ? "à venir" : "")}</div></section>`;
     root.innerHTML = `<div class="tr"><div class="pf-hd"><div><div class="tr-eb">MA FORMATION</div><h1 class="tr-ttl">${!j1.complete ? `Jour 1 · <em>les bases.</em>` : `Module <em>${Math.min(s.done + 1, s.total)} / ${s.total}.</em>`}</h1></div>

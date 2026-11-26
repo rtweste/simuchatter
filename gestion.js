@@ -23,7 +23,9 @@ const ADV = [
   { id: "tw13", title: "Après la session : le prochain rendez-vous", file: "vente-07-apres.mp4", sub: "Rester, ce que tu as ressenti, le prochain rendez-vous, la fiche · exercice au simulateur" },
   { id: "tw14", title: "Les gros clients", file: "vente-08-gros-clients.mp4", sub: "La petite amie parfaite, la priorité absolue, les garder des mois · exercice au simulateur" },
   { id: "tw15", title: "Les interdits", file: "vente-09-interdits.mp4", sub: "La liste rouge, rencontres, argent, vie privée, quand il insiste · exercice au simulateur" },
-  { id: "tw16", title: "Ton shift", file: "vente-10-shift.mp4", sub: "Pointer, l'ordre d'importance, 10 à 15 conversations, bien finir · exercice au simulateur" }];
+  { id: "tw16", title: "Ton shift", file: "vente-10-shift.mp4", sub: "Pointer, l'ordre d'importance, 10 à 15 conversations, bien finir · exercice au simulateur" },
+  { id: "tw17", title: "Les time wasters", file: "vente-11-time-wasters.mp4", sub: "Repérer, dernier dans la file mais jamais ignoré, quand il remonte · exercice au simulateur" },
+  { id: "tw18", title: "Après un refus : ajuster le prix", file: "vente-12-apres-refus.mp4", sub: "Un refus donne une information, 25 → 10 → 5 €, la note pour le chatter suivant · exercice au simulateur" }];
 // Vidéos à revoir librement
 const EXTRA = [
   { id: "x-parcours", title: "Ton parcours chez StellADS", src: "/video/ton-parcours.mp4", for: ["trainee"] },
@@ -34,6 +36,8 @@ const QUIZ = {
   tw12: [{ id: "ex", at: 358.3, from: 88.4, title: "Faire monter l'envie", sim: "envie", qs: [] }],
   tw13: [{ id: "ex", at: 314.0, from: 75.8, title: "Après la session", sim: "apres", qs: [] }],
   tw14: [{ id: "ex", at: 315.0, from: 75.0, title: "Les gros clients", sim: "gros", qs: [] }],
+  tw18: [{ id: "ex", at: 216.5, from: 8.0, title: "Après un refus", sim: "refus", qs: [] }],
+  tw17: [{ id: "ex", at: 453.0, from: 90.4, title: "Les time wasters", sim: "wasters", qs: [] }],
   tw15: [{ id: "ex", at: 331.0, from: 75.4, title: "Les interdits", sim: "interdits", qs: [] }],
   tw16: [{ id: "ex", at: 287.5, from: 71.7, title: "Ton shift", sim: "shift", qs: [] }],
   tw11: [{ id: "ex", at: 335.0, from: 92.4, title: "L'échelle des prix", sim: "prix", qs: [] }], tw9: [{ id: "ex", at: 408.3, from: 97.0, title: "Connaître son fan", sim: "connaitre", qs: [] }], tw8: [{ id: "ex", at: 469.6, from: 112.6, title: "Les relances", sim: "relances", qs: [] }], tw7: [
