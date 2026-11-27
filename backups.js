@@ -20,7 +20,10 @@ module.exports = function mount(app, db, auth, admin, { dbPath, notify, gest }) 
       return { file: f, date: m[1], time: m[2].slice(0, 2) + ":" + m[2].slice(2), manual: !!m[3], size: st.size, at: st.mtimeMs }; }).sort((a, b) => b.at - a.at);
   }
   // copie cohérente de la base, même pendant que le site tourne
+  const guard = require("./disk-guard");
   function snapshot(manual) {
+    // pas assez de place pour une copie de la base : on libère les plus vieilles sauvegardes, sinon on n'en fait pas (le site ne doit jamais remplir son disque)
+    if (!guard.make(dbPath, guard.need(dbPath))) throw new Error("disque presque plein : sauvegarde annulée, télécharge les sauvegardes puis agrandis le volume");
     const t = PZ(), file = `stellads-${t.date}-${t.hm}${manual ? "-manuelle" : ""}.db`, full = path.join(DIR, file), tmp = full + ".part";
     try { fs.unlinkSync(tmp); } catch (e) {}
     db.exec(`VACUUM INTO '${tmp.replace(/'/g, "''")}'`);
@@ -28,20 +31,21 @@ module.exports = function mount(app, db, auth, admin, { dbPath, notify, gest }) 
     rotate();
     return file;
   }
-  // on garde : les 14 dernières nuits, une par semaine sur 8 semaines, les 5 dernières manuelles
+  // on garde : les 5 dernières nuits, une par semaine sur 4 semaines, les 3 dernières manuelles (toutes sur le même disque que la base)
   function rotate() {
     const all = list(), keep = new Set(), weeks = new Set();
-    all.filter(b => !b.manual).forEach((b, i) => { if (i < 14) keep.add(b.file);
+    all.filter(b => !b.manual).forEach((b, i) => { if (i < 5) keep.add(b.file);
       const d = new Date(b.date + "T12:00:00Z"), wk = Math.floor((d.getTime() / 864e5 + 3) / 7);
-      if (Date.now() - b.at < 8 * 7 * 864e5 && !weeks.has(wk)) { weeks.add(wk); keep.add(b.file); } });
-    all.filter(b => b.manual).slice(0, 5).forEach(b => keep.add(b.file));
+      if (Date.now() - b.at < 4 * 7 * 864e5 && !weeks.has(wk)) { weeks.add(wk); keep.add(b.file); } });
+    all.filter(b => b.manual).slice(0, 3).forEach(b => keep.add(b.file));
     all.forEach(b => { if (!keep.has(b.file)) try { fs.unlinkSync(path.join(DIR, b.file)); } catch (e) {} });
   }
   // sauvegarde de nuit (à partir de 4 h, une fois par jour) et rappel du lundi
   function tick() {
     const t = PZ();
     try {
-      if (t.h >= 4 && !list().some(b => !b.manual && b.date === t.date)) { const f = snapshot(false); console.log("sauvegarde", f); }
+      if (t.h >= 4 && !list().some(b => !b.manual && b.date === t.date) && getSet("backup_skip") !== t.date) {
+        try { const f = snapshot(false); console.log("sauvegarde", f); } catch (e) { setSet("backup_skip", t.date); throw e; } }
     } catch (e) { console.error("sauvegarde", e.message); }
     try {
       if (t.wd.startsWith("lun") && t.h >= 10 && getSet("backup_reminder") !== t.date && notify && notify.pushMany) {
@@ -57,7 +61,7 @@ module.exports = function mount(app, db, auth, admin, { dbPath, notify, gest }) 
   app.get("/api/admin/backups", auth, admin, founder, (req, res) => {
     const dataSize = (() => { let n = 0; const walk = d => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name);
       if (f.isDirectory()) { if (p !== DIR) walk(p); } else try { n += fs.statSync(p).size; } catch (e) {} } }; try { walk(DATA); } catch (e) {} return n; })();
-    res.json({ list: list(), dataSize, keep: "14 dernières nuits, 1 par semaine sur 8 semaines, 5 manuelles" });
+    res.json({ list: list(), dataSize, keep: "5 dernières nuits, 1 par semaine sur 4 semaines, 3 manuelles", free: guard.free(DATA) });
   });
   app.post("/api/admin/backups", auth, admin, founder, (req, res) => {
     try { const f = snapshot(true); log(req.user.id, "a", `**${req.user.username}** a fait une sauvegarde manuelle`, f); res.json({ ok: true, file: f, list: list() }); }

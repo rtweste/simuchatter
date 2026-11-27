@@ -35,6 +35,9 @@ fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   fs.copyFileSync(src, DB_PATH); fs.writeFileSync(mark, new Date().toISOString());
   console.log("✅ Sauvegarde restaurée :", name);
 })();
+// disque plein (le volume de Railway) : avant d'ouvrir la base, on supprime les fichiers temporaires oubliés et, s'il le faut,
+// les plus vieilles sauvegardes automatiques (on garde toujours les 2 plus récentes), pour que le site puisse redémarrer.
+try { require("./disk-guard").boot(DB_PATH); } catch (e) { console.error("disque", e.message); }
 const db = new DatabaseSync(DB_PATH);
 // Coût de l'IA : chaque appel est enregistré avec son prix (dollars, tarifs Anthropic par million de tokens)
 db.exec("CREATE TABLE IF NOT EXISTS ai_usage (id INTEGER PRIMARY KEY, at INTEGER NOT NULL, sim_id INTEGER, user_id INTEGER, kind TEXT, model TEXT, in_tok INTEGER, out_tok INTEGER, cache_w INTEGER, cache_r INTEGER, cost REAL)");
