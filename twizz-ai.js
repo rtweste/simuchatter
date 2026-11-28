@@ -147,6 +147,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     if (x.kind === "reponse") try { db.prepare("INSERT INTO twizz_ai_msgday (day, calls, tin, tcached, cost) VALUES (?,1,?,?,?) ON CONFLICT(day) DO UPDATE SET calls = calls + 1, tin = tin + excluded.tin, tcached = tcached + excluded.tcached, cost = cost + excluded.cost").run(dayOf(Date.now()), tin, tc, cost); } catch (e) {} }
   // une fois : le coût déjà compté est recalculé aux vrais tarifs (l'ancien compteur sous-estimait la dépense d'environ 6 fois)
   if (!S.get("twizz_ai_usage_reprice_1", 0)) { try { db.prepare("UPDATE twizz_ai_usage SET cost = ((tin - tcached) * ? + tcached * ? + tout * ?) / 1e6 WHERE kind <> 'refus'").run(PRICE.in, PRICE.cached, PRICE.out); S.set("twizz_ai_usage_reprice_1", Date.now()); } catch (e) {} }
+  // pourquoi une réponse coûte plusieurs appels : on compte, par jour, le début de la consigne de réécriture (pour savoir quoi alléger)
+  db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_redo (day TEXT NOT NULL, why TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, why))");
+  function redo(messages) { try { const last = messages[messages.length - 1] || {}, why = last.role === "system" && !/^POUR CE MESSAGE/.test(str(last.content)) ? str(typeof last.content === "string" ? last.content : "").replace(/\s+/g, " ").slice(0, 70) : "(nouvel essai : photo refusée, refus de Grok…)";
+    db.prepare("INSERT INTO twizz_ai_redo (day, why, n) VALUES (?,?,1) ON CONFLICT(day, why) DO UPDATE SET n = n + 1").run(dayOf(Date.now()), why || "(autre)"); } catch (e) {} }
   function countRefusal() { const x = CTX.getStore() || {}; try { db.prepare(`INSERT INTO twizz_ai_usage (day, creator_id, kind, calls, tin, tcached, tout, cost) VALUES (?,?,?,1,0,0,0,?) ON CONFLICT(day, creator_id, kind) DO UPDATE SET calls = calls + 1, cost = cost + excluded.cost`).run(dayOf(Date.now()), x.cid || "", "refus", PRICE.refusal); } catch (e) {} hourAdd(x.cid, PRICE.refusal); }
   // plafond par heure et par créatrice : la dépense est notée par tranches de 5 minutes, et on regarde les 60 dernières minutes
   db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_hour (creator_id TEXT NOT NULL, slot INTEGER NOT NULL, cost REAL NOT NULL DEFAULT 0, PRIMARY KEY (creator_id, slot))");
@@ -282,6 +286,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   // compte xAI à sec vu il y a moins de 3 minutes : on n'appelle plus Grok (toutes les 3 minutes, une réponse retente sa chance et relance tout si le crédit est revenu)
   const creditOut = () => !!CREDIT.at && now() - CREDIT.at < 3 * 60e3;
   async function grok(messages, o = {}) {
+    { const x = CTX.getStore(); if (x && x.kind === "reponse" && x.n >= 1) redo(messages); }
     { const x = CTX.getStore(); if (x && x.kind === "reponse") { x.n = (x.n || 0) + 1; if (x.n > 3 && !o.must) throw fail("Limite de 3 appels à Grok pour cette réponse"); } }   // une réponse, plus deux réécritures au plus (avec une seule, des phrases de secours et des expressions interdites passaient) : au-delà, le site corrige lui-même
     const tool = o.tool === undefined ? TOOL : o.tool, body = { model: o.model || XMODEL(), messages, temperature: o.temp ?? (tool === TOOL ? 0.75 : 0.9), max_tokens: o.max || (tool === TOOL ? 500 : 900) };
     if (tool) { body.tools = [tool]; body.tool_choice = { type: "function", function: { name: tool.function.name } }; }
@@ -351,7 +356,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
         const markText = (C && C.mark) ? "Chacun de tes messages est signé 🤖 par le site." : "Le site prévient le fan que c'est ton IA qui répond.";
     const lockedRaw = str((C && C.locked) || "").trim();
     const locked = (lockedRaw || LOCKED_DEF).replace(/\{creatrice\}/gi, c.label).replace(/\{mark\}/g, markText);
-    return { base, auto, locked, profile, gen, live };
+    const scripts = sc.length ? `Messages de l'agence qui marchent bien (inspire-toi de l'idée et du ton, ne les recopie pas mot pour mot) :\n${sc.join("\n")}` : "";
+    const now = [`POUR CE MESSAGE (consignes du moment, elles complètent ce qui est au-dessus) :`, live.replace(scripts, "").trim()].join("\n\n");
+    return { base, auto, locked, profile, gen, live, scripts, now };
   }
   // scripts de la bibliothèque (épinglés et les plus utilisés d'abord) : des exemples de messages qui marchent
   const scriptsOf = cid => { try { return db.prepare("SELECT title, body, steps FROM twizz_scripts WHERE (creator_id IS NULL OR creator_id = '' OR creator_id = ?) AND COALESCE(ai, 0) = 0 ORDER BY COALESCE(pinned, 0) DESC, COALESCE(uses, 0) DESC LIMIT 12").all(cid)
@@ -380,6 +387,9 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       M.extra ? `Consignes du manager pour ${c.label}, à respecter absolument : ${M.extra}` : "", fiche.prices ? `Son catalogue et ses prix : ${fiche.prices}` : ""].filter(Boolean).join("\n\n");
   }
   const system = (...a) => { const p = parts(...a); return [p.base, p.auto, p.locked].filter(Boolean).join("\n\n"); };
+  // pour les vraies réponses : ce qui ne bouge pas (consignes, fiche, règles fixes) AVANT l'historique, et ce qui change à chaque tour
+  // (règles du moment, coffre, relance, heure, fan) APRÈS. Le cache de Grok reprend alors tout le début, historique compris (6 fois moins cher).
+  const systemSplit = (...a) => { const p = parts(...a); return { head: [p.base, p.profile, p.scripts, p.locked].filter(Boolean).join("\n\n"), tail: p.now }; };
   const lineOf = m => m.type === "FILE" && !m.fromFan ? `[média envoyé${m.price > 0 ? ` à ${m.price} € — ${m.status === "accepted" ? "acheté" : m.status === "refused" ? "REFUSÉ par le fan" : "pas encore acheté"}` : " gratuit"}${m.what ? ` — contenu : ${m.what}` : ""}]${m.text ? " " + m.text : ""}`
     : m.text || (m.medias.length ? (m.fromFan ? "[le fan envoie un média]" : "[média]") : "");
 
@@ -791,7 +801,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const B = J((db.prepare("SELECT data FROM twizz_fan_brief WHERE creator_id = ? AND fan_id = ?").get(cr.id, fanId) || {}).data, null) || {}; if (B.prenom) K.prenom = B.prenom; return K; };
   // refus du filtre de xAI : on réessaie une fois avec les messages les plus crus résumés entre crochets
   const CRU = /\b(?:doigt|suc(?:e|er|é)|bite|queue|chatte|baise|baiser|jouir|sperme|cul|seins?|nichons?|branl|gicl|orgasm|mouill|porn|nudes?|à poil|a poil|sodo|fellation|pipe|lécher|lèche|bander|bandé|excit)/i;
-  const soften = msgs => msgs.map((m, i) => { if (i === 0) return m; let t = Array.isArray(m.content) ? str((m.content[0] || {}).text) : str(m.content); if (!CRU.test(t)) return { ...m, content: t };
+  const soften = msgs => msgs.map((m, i) => { if (i === 0 || m.role === "system") return m; let t = Array.isArray(m.content) ? str((m.content[0] || {}).text) : str(m.content); if (!CRU.test(t)) return { ...m, content: t };
     return { ...m, content: m.role === "user" ? "[il t'écrit un message très osé, à caractère sexuel]" : "[tu lui as répondu sur le même ton coquin]" }; })
     .concat([{ role: "system", content: "Certains messages très crus ont été résumés entre crochets. Réponds de façon coquine et suggestive, sans détail cru, et continue la conversation normalement." }]);
   // tickets : libellé, prix permis, note pour Grok selon où en est le ticket du fan
@@ -1166,13 +1176,14 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const RO = { cid: cr.id, hold: hold && !brokeT(L.slice(-8).filter(m => m.fromFan).map(m => str(m.text)).join(" · ")), why: !relance && !!lastFan && WHYQ.test(str(lastFan.text).trim()), freeAsk: !relance && !!lastFan && FREEW.test(str(lastFan.text)), stopped, warm, heat: heat && !early, broke, early, ladder: lad, pending: !!(!sell.albums.length && pendOf(M, L)), priceAsk: priceAsk && sell.albums.length > 0, asked: wk.length && sell.albums.some(a => (a.all || []).length) ? { kws: wk, has: matchItems(sell.albums, wk).length > 0 } : null, known: knownOf(cr, c.fan.id), plan, relance: !!relance, busy, ticket: T, hot: hot && canSell, push, yes }, stage = stageOf(M, L, RO);   // où en est ce fan (méthode par étapes) : noté à chaque réponse, et donné comme objectif à Grok dans la nouvelle version
     const opt = { requirePromo: sell.requirePromo, script: busy ? "" : scriptNote(plan, coffre, sell, hot), rules: rulesOf(M, L, RO) };
     if (relance) opt.relance = { since: relance.since, unbought: sell.open ? sell.open.price : plan && plan.lock ? plan.lock.price : null };
-    const msgs = [{ role: "system", content: system(cr, M, ficheOf(cr), sell.albums, sell.note, fanInfo, C, opt) }];
+    const SP = systemSplit(cr, M, ficheOf(cr), sell.albums, sell.note, fanInfo, C, opt), msgs = [{ role: "system", content: SP.head }];
     // la dernière photo envoyée par le fan : Grok la regarde (les autres restent en texte)
     const lastPic = L.slice(-4).reverse().find(m => m.fromFan && m.medias.some(isImg)); let picUrl = null;   // seulement une photo toute récente : sinon elle repartirait à chaque réponse
     if (lastPic) { const x = lastPic.medias.find(isImg); try { picUrl = await toImage(x.thumb || x.url); } catch (e) { picUrl = null; } }
     L.forEach(m => { const t = m.fromFan ? lineOf(m) : untag(lineOf(m)); if (!t) return;
       const pic = m === lastPic && picUrl;
       msgs.push({ role: m.fromFan ? "user" : "assistant", content: pic ? [{ type: "text", text: m.text || "[le fan t'envoie cette photo]" }, { type: "image_url", image_url: { url: pic } }] : t }); });
+    msgs.push({ role: "system", content: SP.tail });   // consignes du moment : après l'historique, pour ne pas casser le cache
     let out = null, err = null; try { out = await grok(msgs); } catch (e) { err = e; }
     if (!out && picUrl && err.status !== 401) { msgs.forEach(m => { if (Array.isArray(m.content)) m.content = m.content[0].text; }); try { out = await grok(msgs); err = null; } catch (e) { err = e; } }   // image refusée : sans la photo
     if (!out && err && err.status === 403) { try { out = await grok(soften(msgs)); err = null; } catch (e) { err = e; } }   // refus : une seconde chance, adoucie
@@ -1653,7 +1664,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const FANS = { new: "pseudo : Thomas ; n'a encore jamais rien acheté", reg: "pseudo : Thomas ; prénom : Thomas ; ville : Lyon ; a déjà dépensé 150 € avec elle en 8 achats ; tags de l'équipe : Vidéos",
       big: "pseudo : Thomas ; prénom : Thomas ; métier : chef d'entreprise ; a déjà dépensé 850 € avec elle en 30 achats ; tags de l'équipe : Spender ; résumé de l'équipe : achète vite quand on le chauffe, aime qu'on se souvienne de lui" };
     const L = LL.map(m => ({ role: m.fromFan ? "user" : "assistant", content: m.fromFan ? lineOf(m) : untag(lineOf(m)) })).filter(m => m.content);
-    const TM = [{ role: "system", content: system(c, M, ficheOf(c), albums, sell.note, FANS[b.fan] || "", gcfg(), opt) }, ...L]; let out;
+    const SPT = systemSplit(c, M, ficheOf(c), albums, sell.note, FANS[b.fan] || "", gcfg(), opt), TM = [{ role: "system", content: SPT.head }, ...L, { role: "system", content: SPT.tail }]; let out;
     try { out = unleak(await grok(TM)); } catch (e) { if (e.status !== 403) throw e; out = unleak(await grok(soften(TM))); }   // refus du filtre : une seconde chance, adoucie
     if (meetOnly(out.laisser) || junkLeave(out.laisser)) { let again = null; try { again = unleak(await grok(TM.concat([{ role: "system", content: meetOnly(out.laisser) ? MEET_NOTE : STAY_NOTE }]))); } catch (e) {} if (again && !str(again.laisser).trim() && bubbles(again).length) out = again; else out.laisser = ""; }
     if (str(out.laisser).trim()) return { bulles: [], laisser: str(out.laisser).trim(), state: T0, burned: [...burned] };
@@ -1693,10 +1704,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const saidFreeT = FREEW.test(untag(str((LL.filter(m => !m.fromFan && str(m.text).trim()).pop() || {}).text))), noPayT = nv() && !act && !tk && (saidFreeT || brokeT(LL.slice(-8).filter(m => m.fromFan).map(m => str(m.text)).join(" · "))) && !WANTSEE.test(lfTT);
     if (noPayT && al) { al = null; it = null; }
     let B = noMeet(oneQ(bubbles(out)), !!al), guarded = false; if (held || noPayT) { B = B.filter(t => !fakeSend(t)); if (held && !B.length) B.push(TEASES[Math.floor(Math.random() * TEASES.length)]); }   // comme en vrai : plus de phrase toute faite ajoutée, sauf s'il ne reste rien if (busy) B = B.slice(0, 1); if (!act && !al && !tk && B.some(fakeSend)) { B = B.filter(t => !fakeSend(t)); guarded = true; }
-    if (B.some(PRICED)) { try { const again = unleak(await grok([{ role: "system", content: system(c, M, ficheOf(c), albums, sell.note, FANS[b.fan] || "", gcfg(), opt) }, ...L, { role: "system", content: NOPRICE }]));
+    if (B.some(PRICED)) { try { const again = unleak(await grok([{ role: "system", content: SPT.head }, ...L, { role: "system", content: SPT.tail }, { role: "system", content: NOPRICE }]));
       if (!str(again.laisser).trim()) B = oneQ(bubbles(again)); } catch (e) {} B = B.filter(t => !PRICED(t)); }
     const said = saidOf(LL).concat(nrm(lastFan.text).includes(" ") ? [nrm(lastFan.text)] : []), redit = fresh(B, said).length < B.length;
-    if (redit) { B = fresh(B, said); if (!B.length && !act) { try { const again = unleak(await grok([{ role: "system", content: system(c, M, ficheOf(c), albums, sell.note, FANS[b.fan] || "", gcfg(), opt) }, ...L, { role: "system", content: REDIT(bubbles(out)) }]));
+    if (redit) { B = fresh(B, said); if (!B.length && !act) { try { const again = unleak(await grok([{ role: "system", content: SPT.head }, ...L, { role: "system", content: SPT.tail }, { role: "system", content: REDIT(bubbles(out)) }]));
       if (!str(again.laisser).trim()) B = fresh(oneQ(bubbles(again)), said).filter(t => act || al || !fakeSend(t)); } catch (e) {} } }
     B = shape(B, LL);
     // même mise en forme finale qu'en vrai : aujourd'hui une seule bulle sans média ; nouvelle version, jusqu'à 3 bulles
