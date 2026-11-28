@@ -151,6 +151,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
   db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_redo (day TEXT NOT NULL, why TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, why))");
   function redo(messages) { try { const last = messages[messages.length - 1] || {}, why = last.role === "system" && !/^POUR CE MESSAGE/.test(str(last.content)) ? str(typeof last.content === "string" ? last.content : "").replace(/\s+/g, " ").slice(0, 70) : "(nouvel essai : photo refusée, refus de Grok…)";
     db.prepare("INSERT INTO twizz_ai_redo (day, why, n) VALUES (?,?,1) ON CONFLICT(day, why) DO UPDATE SET n = n + 1").run(dayOf(Date.now()), why || "(autre)"); } catch (e) {} }
+  const HSTART = new Map(), COLDAT = new Map();   // conversation → premier message de l'historique envoyé à Grok
   function countRefusal() { const x = CTX.getStore() || {}; try { db.prepare(`INSERT INTO twizz_ai_usage (day, creator_id, kind, calls, tin, tcached, tout, cost) VALUES (?,?,?,1,0,0,0,?) ON CONFLICT(day, creator_id, kind) DO UPDATE SET calls = calls + 1, cost = cost + excluded.cost`).run(dayOf(Date.now()), x.cid || "", "refus", PRICE.refusal); } catch (e) {} hourAdd(x.cid, PRICE.refusal); }
   // plafond par heure et par créatrice : la dépense est notée par tranches de 5 minutes, et on regarde les 60 dernières minutes
   db.exec("CREATE TABLE IF NOT EXISTS twizz_ai_hour (creator_id TEXT NOT NULL, slot INTEGER NOT NULL, cost REAL NOT NULL DEFAULT 0, PRIMARY KEY (creator_id, slot))");
@@ -210,7 +211,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       byCreator: by("creator_id"), byKind: by("kind"), redo: (() => { try { return db.prepare("SELECT why, SUM(n) n FROM twizz_ai_redo WHERE day >= ? GROUP BY why ORDER BY n DESC LIMIT 12").all(dayOf(Date.now() - 7 * 864e5)); } catch (e) { return []; } })(), calls, perReply: rep.length ? rep.reduce((a, r) => a + r.cost, 0) / Math.max(1, rep.reduce((a, r) => a + r.calls, 0)) : 0,
       cachedPct: R.reduce((a, r) => a + r.tin, 0) ? Math.round(100 * R.reduce((a, r) => a + r.tcached, 0) / R.reduce((a, r) => a + r.tin, 0)) : 0,
       // par jour : ce que coûte une réponse réellement envoyée (appels de réécriture compris), le nombre d'appels par réponse et la part en cache
-      daily: days.map(d => { const m = msgDay(d); return { day: d, cost: m.cost, calls: m.calls, sent: m.n, perMsg: m.n ? m.cost / m.n : 0, callsPerMsg: m.n ? m.calls / m.n : 0, cachedPct: m.tin ? Math.round(100 * m.tcached / m.tin) : 0 }; }) };
+      daily: days.map(d => { const m = msgDay(d); return { day: d, cost: m.cost, calls: m.calls, sent: m.n, perMsg: m.n ? m.cost / m.n : 0, callsPerMsg: m.n ? m.calls / m.n : 0, cachedPct: m.tin ? Math.round(100 * m.tcached / m.tin) : 0, tinPerCall: m.calls ? Math.round(m.tin / m.calls) : 0 }; }) };
   }
   const XBASE = () => str(process.env.XAI_BASE || "https://api.x.ai/v1").replace(/\/+$/, "");
   const XMODEL = () => str(process.env.XAI_MODEL || (MODELS[gcfg().model] || MODELS.fast)[0]);
@@ -1104,7 +1105,10 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     const M = mcfg(cr.id);
     const row = db.prepare("SELECT * FROM twizz_ai_convs WHERE run_id = ? AND conv_id = ?").get(r.id, c.id) || {};
     const j = await G(`/messages/find-all-messages?conversationId=${enc(c.id)}&creatorId=${enc(cr.id)}&page=1`, 0);
-    const L = ((j && j.data && j.data.data) || []).map(m => msg(m, c.fan.id)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(-20);
+    const ALL = ((j && j.data && j.data.data) || []).map(m => msg(m, c.fan.id)).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)), L = ALL.slice(-20);
+    // l'historique envoyé à Grok démarre au même message pendant une dizaine de tours (au lieu de glisser à chaque message) : le cache le reprend en entier
+    let H = L; { const k = c.id, a = HSTART.get(k), i = a ? ALL.findIndex(m => m.id === a) : -1;
+      if (i >= 0 && ALL.length - i <= 30) H = ALL.slice(i); else if (L[0]) HSTART.set(k, L[0].id); }
     const last = L[L.length - 1]; if (!last) return false;
     if (relance ? last.fromFan : (!last.fromFan || last.id === row.last_fan_msg)) return false;   // le fan a réécrit, ou déjà répondu
     // un message de l'équipe dans la conversation ces 30 dernières minutes, envoyé du site ou directement sur Twizz : un chatter s'en occupe, l'IA ne répond pas
@@ -1180,7 +1184,7 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
     // la dernière photo envoyée par le fan : Grok la regarde (les autres restent en texte)
     const lastPic = L.slice(-4).reverse().find(m => m.fromFan && m.medias.some(isImg)); let picUrl = null;   // seulement une photo toute récente : sinon elle repartirait à chaque réponse
     if (lastPic) { const x = lastPic.medias.find(isImg); try { picUrl = await toImage(x.thumb || x.url); } catch (e) { picUrl = null; } }
-    L.forEach(m => { const t = m.fromFan ? lineOf(m) : untag(lineOf(m)); if (!t) return;
+    H.forEach(m => { const t = m.fromFan ? lineOf(m) : untag(lineOf(m)); if (!t) return;
       const pic = m === lastPic && picUrl;
       msgs.push({ role: m.fromFan ? "user" : "assistant", content: pic ? [{ type: "text", text: m.text || "[le fan t'envoie cette photo]" }, { type: "image_url", image_url: { url: pic } }] : t }); });
     msgs.push({ role: "system", content: SP.tail });   // consignes du moment : après l'historique, pour ne pas casser le cache
@@ -1297,7 +1301,8 @@ module.exports = function mount(app, db, auth, admin, { twizz, inbox, notify, ge
       let again = null; try { again = unleak(await grok(msgs.concat([{ role: "system", content: "Ta réponse disait que tu envoyais ou préparais un média alors qu'aucun ne part avec ce message : c'est interdit. Réécris ta réponse sans ça." }]))); } catch (e) {}
       B = fresh((again && !str(again.laisser).trim() ? bubbles(again) : B).filter(t => !fakeSend(t)), said); }
     // ça ne chauffe toujours pas et sa réponse reste sage : Grok est relancé une fois pour flirter
-    if (M.sell && !relance && !busy && !f && !act && !tk && coldOf(L) && B.length && !B.some(t => SPICY.test(t))) { let again = null;
+    // une seule réécriture « trop sage » toutes les 10 minutes par conversation : la consigne est déjà dans le premier appel
+    if (M.sell && !relance && !busy && !f && !act && !tk && coldOf(L) && B.length && !B.some(t => SPICY.test(t)) && now() - (COLDAT.get(c.id) || 0) > 10 * 60e3) { let again = null; COLDAT.set(c.id, now());
       try { again = unleak(await grok(msgs.concat([{ role: "system", content: COLD_NOTE + " Ta réponse est encore trop sage : réécris-la avec un vrai flirt (un compliment osé, un sous-entendu, ce que tu portes)." }]))); } catch (e) {}
       const B2 = again && !str(again.laisser).trim() ? fresh(oneQ(bubbles(again)), said).filter(t => !PRICED(t)) : []; if (B2.length) B = B2; }
     B = shape(B, L);
